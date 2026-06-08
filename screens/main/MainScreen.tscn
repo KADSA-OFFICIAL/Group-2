@@ -1,0 +1,231 @@
+[gd_scene load_steps=2 format=3 uid="uid://main_screen"]
+
+[ext_resource type="Script" path="res://screens/main/main_screen.gd" id="1_script"]
+
+[node name="MainScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.0784314, 0.0588235, 0.14902, 1)
+
+[node name="TopBar" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 80
+grow_horizontal = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PlayerCard" type="PanelContainer" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/PlayerCard"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Avatar" type="Label" parent="TopBar/HBoxContainer/PlayerCard/HBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(48, 48)
+text = "👤"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TopBar/HBoxContainer/PlayerCard/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="PlayerName" type="Label" parent="TopBar/HBoxContainer/PlayerCard/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "별고래  MAX"
+
+[node name="LevelLabel" type="Label" parent="TopBar/HBoxContainer/PlayerCard/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Lv.73"
+theme_override_font_sizes/font_size = 13
+
+[node name="Spacer" type="Control" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ClockLabel" type="Label" parent="TopBar/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "PM 12:00"
+
+[node name="LeftRail" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -120.0
+offset_right = 60.0
+offset_bottom = 120.0
+grow_vertical = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="LeftRail"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AttendBtn" type="Button" parent="LeftRail/VBoxContainer"]
+layout_mode = 2
+text = "출\n석"
+
+[node name="EventBtn" type="Button" parent="LeftRail/VBoxContainer"]
+layout_mode = 2
+text = "이\n벤\n트"
+
+[node name="PassBtn" type="Button" parent="LeftRail/VBoxContainer"]
+layout_mode = 2
+text = "패\n스"
+
+[node name="CharacterArea" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -250.0
+offset_right = 200.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Placeholder" type="Label" parent="CharacterArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "[ 캐릭터 ]"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.741176, 0.666667, 1, 0.3)
+
+[node name="NameCard" type="PanelContainer" parent="CharacterArea"]
+layout_mode = 1
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -40.0
+grow_vertical = 0
+
+[node name="Label" type="Label" parent="CharacterArea/NameCard"]
+layout_mode = 2
+text = "별고래"
+horizontal_alignment = 1
+
+[node name="BottomNav" type="MarginContainer" parent="."]
+layout_mode = 1
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -80.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="HBoxContainer" type="HBoxContainer" parent="BottomNav"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="MissionBtn" type="Button" parent="BottomNav/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "임무"
+
+[node name="GachaBtn" type="Button" parent="BottomNav/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "모집"
+
+[node name="CharBtn" type="Button" parent="BottomNav/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "캐릭터"
+
+[node name="CraftBtn" type="Button" parent="BottomNav/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "제조"
+
+[node name="ShopBtn" type="Button" parent="BottomNav/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "상점"
+
+[node name="DailyBtn" type="Button" parent="BottomNav/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "미션"
+
+[node name="GuildBtn" type="Button" parent="BottomNav/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "교단"
+
+[node name="StoryBtn" type="Button" parent="BottomNav/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "스토리"
+
+[node name="ConquerArea" type="MarginContainer" parent="."]
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -160.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 96
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ConquerArea"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="NextStage" type="Label" parent="ConquerArea/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "다음: 33-9"
+horizontal_alignment = 2
+
+[node name="ConquerButton" type="Button" parent="ConquerArea/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 56)
+text = "정복"
+theme_override_font_sizes/font_size = 24

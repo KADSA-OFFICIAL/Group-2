@@ -11,12 +11,21 @@ config_version=5
 [application]
 
 config/name="stoneage shipduck game"
-run/main_scene="res://main.tscn"
+run/main_scene="res://screens/main/MainScreen.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
 [autoload]
 
+GameData="*res://autoload/game_data.gd"
+ScreenManager="*res://autoload/screen_manager.gd"
 EventBus="*res://autoload/EventBus.gd"
 GameManager="*res://autoload/GameManager.gd"
 SaveSystem="*res://autoload/SaveSystem.gd"

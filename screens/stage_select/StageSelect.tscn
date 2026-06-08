@@ -1,0 +1,237 @@
+[gd_scene load_steps=2 format=3 uid="uid://stage_select"]
+
+[ext_resource type="Script" path="res://screens/stage_select/stage_select.gd" id="1_script"]
+
+[node name="StageSelect" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.0784314, 0.0588235, 0.14902, 1)
+
+[node name="TopBar" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 72
+grow_horizontal = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BackButton" type="Button" parent="TopBar/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "← 메인"
+
+[node name="ChapterSelector" type="PanelContainer" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/ChapterSelector"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PrevChapter" type="Button" parent="TopBar/HBoxContainer/ChapterSelector/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "◀"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TopBar/HBoxContainer/ChapterSelector/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="ChapterNumber" type="Label" parent="TopBar/HBoxContainer/ChapterSelector/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "33장"
+horizontal_alignment = 1
+
+[node name="ChapterName" type="Label" parent="TopBar/HBoxContainer/ChapterSelector/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "균열의 새벽"
+horizontal_alignment = 1
+
+[node name="NextChapter" type="Button" parent="TopBar/HBoxContainer/ChapterSelector/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "▶"
+
+[node name="DifficultyToggle" type="HBoxContainer" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="DiffNormal" type="Button" parent="TopBar/HBoxContainer/DifficultyToggle"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "보통"
+
+[node name="DiffHard" type="Button" parent="TopBar/HBoxContainer/DifficultyToggle"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "어려움"
+
+[node name="Spacer" type="Control" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Content" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 72
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="PathArea" type="Control" parent="Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MapLine" type="Line2D" parent="Content/PathArea"]
+unique_name_in_owner = true
+width = 3.0
+default_color = Color(0.745098, 0.666667, 1, 0.35)
+
+[node name="Track" type="Control" parent="Content/PathArea"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DetailPanel" type="PanelContainer" parent="Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(460, 0)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Content/DetailPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="PanelContainer" parent="Content/DetailPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Content/DetailPanel/VBoxContainer/Header"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="StageCode" type="Label" parent="Content/DetailPanel/VBoxContainer/Header/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "33-9"
+theme_override_font_sizes/font_size = 14
+
+[node name="StageName" type="Label" parent="Content/DetailPanel/VBoxContainer/Header/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "무너진 성소"
+theme_override_font_sizes/font_size = 22
+
+[node name="PowerRow" type="HBoxContainer" parent="Content/DetailPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Content/DetailPanel/VBoxContainer/PowerRow"]
+layout_mode = 2
+text = "권장 전투력"
+size_flags_horizontal = 3
+
+[node name="PowerValue" type="Label" parent="Content/DetailPanel/VBoxContainer/PowerRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0"
+
+[node name="CostRow" type="HBoxContainer" parent="Content/DetailPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Content/DetailPanel/VBoxContainer/CostRow"]
+layout_mode = 2
+text = "소모 스태미나"
+size_flags_horizontal = 3
+
+[node name="CostValue" type="Label" parent="Content/DetailPanel/VBoxContainer/CostRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0"
+
+[node name="StarRow" type="HBoxContainer" parent="Content/DetailPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Content/DetailPanel/VBoxContainer/StarRow"]
+layout_mode = 2
+text = "최고 기록"
+size_flags_horizontal = 3
+
+[node name="StarValue" type="Label" parent="Content/DetailPanel/VBoxContainer/StarRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "미개방"
+
+[node name="RewardsLabel" type="Label" parent="Content/DetailPanel/VBoxContainer"]
+layout_mode = 2
+text = "획득 보상"
+
+[node name="DropRow" type="HBoxContainer" parent="Content/DetailPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Actions" type="HBoxContainer" parent="Content/DetailPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SweepButton" type="Button" parent="Content/DetailPanel/VBoxContainer/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "소탕"
+
+[node name="DeployButton" type="Button" parent="Content/DetailPanel/VBoxContainer/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "출격"
+
+[node name="Toast" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -24.0
+offset_right = 200.0
+offset_bottom = 24.0
+grow_horizontal = 2
+grow_vertical = 2
+visible = false
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
