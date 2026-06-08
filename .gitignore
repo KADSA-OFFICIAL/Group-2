@@ -1,3 +1,23 @@
-# Godot 4+ specific ignores
+# Godot 4
 .godot/
+*.translation
+
+# 빌드 결과물
 /android/
+/ios/
+/export/
+*.apk
+*.aab
+*.ipa
+
+# OS 자동생성 파일
+.DS_Store
+Thumbs.db
+
+# 에디터 설정
+.vscode/
+.idea/
+
+# 압축 파일
+*.zip
+*.tar.gz
