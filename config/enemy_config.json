@@ -1,0 +1,17 @@
+{
+  "training_goblin": {
+    "max_hp": 30,
+    "hp_regen": 0,
+    "base_damage": 5,
+    "base_speed": 100,
+    "max_speed": 150,
+    "acceleration": 500,
+    "attack_cooldown": 1.5,
+    "attack_range": 25,
+    "attack_damage": 8,
+    "knockback_force": 150,
+    "detection_range": 300,
+    "patrol_range": 200,
+    "wander_time": 2.0
+  }
+}
