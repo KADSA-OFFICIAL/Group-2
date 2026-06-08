@@ -34,14 +34,25 @@ func load_game() -> Dictionary:
 		print("Error parsing JSON: ", error)
 		return get_default_save()
 	
-	return json.data as Dictionary
+	var data = json.data as Dictionary
+	
+	# Load currencies to CurrencySystem if available
+	if data.has("currencies") and CurrencySystem:
+		for currency_type in data["currencies"]:
+			CurrencySystem.set_currency(currency_type, data["currencies"][currency_type])
+	
+	return data
 
 func get_default_save() -> Dictionary:
 	return {
 		"player_hp": 100,
 		"player_position": {"x": 0, "y": 0},
 		"stage": "Stage1_1",
-		"playtime": 0.0
+		"playtime": 0.0,
+		"currencies": {
+			"gold": 0,
+			"diamond": 0
+		}
 	}
 
 func clear_save() -> bool:
