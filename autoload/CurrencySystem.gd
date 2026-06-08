@@ -1,6 +1,9 @@
 extends Node
 
-# Dictionary to store currency amounts: {"gold": 100, "diamond": 50}
+# Dictionary to store currency amounts
+# 장비 제작 재료: stone, tin, copper, iron_ore, coal
+# 통화: gold
+# 특수 재화: faith_stone
 var currencies: Dictionary = {}
 
 # Signal for currency changes
