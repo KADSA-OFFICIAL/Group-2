@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://c4rq7nas2b1f"]
+
+[ext_resource type="PackedScene" uid="uid://d87uv8f6k3n8" path="res://stage/Stage1_1.tscn"]
+[ext_resource type="Script" path="res://camera/GameCamera.gd"]
+[ext_resource type="Script" path="res://ui/HUD.gd"]
+[ext_resource type="Script" path="res://debug/DebugOverlay.gd"]
+
+[node name="Main" type="Node2D"]
+
+[node name="Stage1_1" parent="." instance=ExtResource("uid://d87uv8f6k3n8")]
+
+[node name="GameCamera" type="Camera2D" parent="."]
+script = ExtResource("res://camera/GameCamera.gd")
+zoom = 1.5
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("res://ui/HUD.gd")
+layer = 1
+
+[node name="DebugOverlay" type="CanvasLayer" parent="."]
+script = ExtResource("res://debug/DebugOverlay.gd")
+layer = 2
+
