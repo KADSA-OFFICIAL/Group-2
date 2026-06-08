@@ -48,6 +48,14 @@ signal stage_started(stage_name)
 @warning_ignore("unused_signal")
 signal stage_completed(stage_name)
 
+# Currency signals
+@warning_ignore("unused_signal")
+signal currency_changed(currency_type: String, amount: int, new_balance: int)
+@warning_ignore("unused_signal")
+signal currency_added(currency_type: String, amount: int, new_balance: int)
+@warning_ignore("unused_signal")
+signal currency_subtracted(currency_type: String, amount: int, new_balance: int)
+
 # AI signals
 @warning_ignore("unused_signal")
 signal enemy_spotted(enemy, target)

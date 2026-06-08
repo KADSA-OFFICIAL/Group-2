@@ -4,6 +4,9 @@ static var active_enemies: Array = []
 
 func _ready():
 	name = "GameManager"
+	# Load game data on startup
+	var save_data = SaveSystem.load_game()
+	print("Game loaded! Currencies: ", CurrencySystem.get_all_currencies())
 
 static func register_enemy(enemy):
 	if not active_enemies.has(enemy):
