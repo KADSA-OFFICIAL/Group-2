@@ -50,8 +50,13 @@ func get_default_save() -> Dictionary:
 		"stage": "Stage1_1",
 		"playtime": 0.0,
 		"currencies": {
+			"stone": 0,
+			"tin": 0,
+			"copper": 0,
+			"iron_ore": 0,
+			"coal": 0,
 			"gold": 0,
-			"diamond": 0
+			"faith_stone": 0
 		}
 	}
 
