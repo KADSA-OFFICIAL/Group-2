@@ -1,5 +1,6 @@
 ## res://screens/stage_select/stage_select.gd
-## 정복(스테이지 선택) 화면 로직.
+## 정복(스테이지 선택) 화면 로직. HTML 프로토타입의 JS 를 그대로 옮긴 초안.
+## 씬 트리는 GODOT_ARCHITECTURE.md 5번 참고. ⭐노드는 Unique Name(%) 으로 참조.
 
 extends Control
 
@@ -11,6 +12,7 @@ extends Control
 @onready var chapter_name: Label   = %ChapterName
 @onready var diff_normal: Button   = %DiffNormal
 @onready var diff_hard: Button     = %DiffHard
+@onready var stamina_label: Label  = %StaminaLabel
 @onready var track: Control        = %Track
 @onready var map_line: Line2D      = %MapLine
 @onready var stage_code: Label     = %StageCode
@@ -25,19 +27,20 @@ extends Control
 
 # ── 상태 ──
 var _chapters: Array[ChapterData] = []
-var _chap_index: int = 2
+var _chap_index: int = 2          # 33장
 var _hard: bool = false
-var _sel_index: int = 8
-var _node_wraps: Array[Control] = []
+var _sel_index: int = 8           # 33-9
+var _node_wraps: Array[Control] = []   # 맵 노드(생성됨)
 
 const COLS := 5
 
+# ── 드롭 더미 (HTML 과 동일) ──
 const DROPS_NORMAL := [["🪙","골드",true],["📘","강화서",false],["🔮","마정석",false],["🧩","조각",true]]
 const DROPS_HARD   := [["🪙","골드",true],["📕","상급 강화서",false],["💎","순도 마정석",false],["🧩","★조각",true],["🎀","한정 재료",true]]
 
 
 func _ready() -> void:
-	theme = ThemeFactory.build()
+	theme = ThemeFactory.build()   # 폰트는 프로젝트 기본에서 가져옴
 
 	back_button.pressed.connect(func(): ScreenManager.pop())
 	prev_chapter.pressed.connect(func(): _change_chapter(-1))
@@ -48,13 +51,17 @@ func _ready() -> void:
 	deploy_button.pressed.connect(_on_deploy)
 	track.resized.connect(_layout_nodes)
 
+	GameData.stamina_changed.connect(func(c, m): _refresh_stamina())
+
 	toast_label.visible = false
 	_refresh_chapters()
-	await get_tree().process_frame
+	_refresh_stamina()
+	await get_tree().process_frame   # 레이아웃 확정 후 노드 배치
 	_render_map()
 	_fill_panel()
 
 
+# ─────────────────────────────────────────────
 func _refresh_chapters() -> void:
 	_chapters = ChapterDB.all_chapters(_hard)
 	var ch := _chapters[_chap_index]
@@ -64,6 +71,11 @@ func _refresh_chapters() -> void:
 	diff_hard.button_pressed = _hard
 
 
+func _refresh_stamina() -> void:
+	stamina_label.text = GameData.stamina_text()
+
+
+# ── 뱀 모양 경로 좌표 (Track 크기 기준 %) ──
 func _node_pct(i: int) -> Vector2:
 	var col := i % COLS
 	var row := i / COLS
@@ -73,6 +85,7 @@ func _node_pct(i: int) -> Vector2:
 
 
 func _render_map() -> void:
+	# 기존 노드 제거
 	for w in _node_wraps:
 		w.queue_free()
 	_node_wraps.clear()
@@ -103,6 +116,7 @@ func _make_node(s: StageData, i: int) -> Control:
 	btn.pressed.connect(_on_node_pressed.bind(i))
 	wrap.add_child(btn)
 
+	# 별 표시
 	if s.stars >= 0:
 		var stars := Label.new()
 		stars.name = "Stars"
@@ -118,7 +132,7 @@ func _make_node(s: StageData, i: int) -> Control:
 
 func _node_box(s: StageData) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
-	sb.set_corner_radius_all(40)
+	sb.set_corner_radius_all(40)            # 원형
 	sb.set_border_width_all(3)
 	if s.is_locked():
 		sb.bg_color = ThemeFactory.C_BG1
@@ -126,7 +140,7 @@ func _node_box(s: StageData) -> StyleBoxFlat:
 	elif s.is_cleared():
 		sb.bg_color = Color("1c4d36")
 		sb.border_color = Color("2f7d52")
-	else:
+	else:  # current
 		sb.bg_color = ThemeFactory.C_BG2
 		sb.border_color = ThemeFactory.C_CYAN
 	return sb
@@ -145,7 +159,7 @@ func _layout_nodes() -> void:
 		var pct := _node_pct(i)
 		var center := Vector2(pct.x * sz.x, pct.y * sz.y)
 		var w := _node_wraps[i]
-		w.position = center - Vector2(40, 50)
+		w.position = center - Vector2(40, 50)   # 노드 80x100 의 중심 보정
 		pts.append(center)
 	map_line.points = pts
 	map_line.width = 3.0
@@ -169,6 +183,7 @@ func _update_selection_visual() -> void:
 			_node_wraps[i].scale = Vector2.ONE
 
 
+# ── 우측 상세 패널 ──
 func _fill_panel() -> void:
 	var s: StageData = _chapters[_chap_index].stages[_sel_index]
 	stage_code.text = s.code
@@ -180,15 +195,17 @@ func _fill_panel() -> void:
 		"font_color",
 		ThemeFactory.C_GOOD if GameData.combat_power >= s.recommended_power else ThemeFactory.C_BAD)
 
-	cost_value.text = "%d" % s.stamina_cost
+	cost_value.text = "%d  / %d 보유" % [s.stamina_cost, GameData.stamina]
 	star_value.text = ("%d / 3 ★" % s.stars) if s.stars >= 0 else "미개방"
 
+	# 드롭
 	for c in drop_row.get_children():
 		c.queue_free()
 	var drops = DROPS_HARD if _hard else DROPS_NORMAL
 	for d in drops:
 		drop_row.add_child(_make_drop(d[0], d[1], d[2]))
 
+	# 소탕은 클리어한 스테이지만
 	sweep_button.disabled = not s.is_cleared()
 	sweep_button.text = "소탕 ×%d" % s.sweep_ticket_cost if s.is_cleared() else "소탕(클리어 시)"
 
@@ -209,6 +226,7 @@ func _make_drop(icon: String, _name: String, first: bool) -> Control:
 	return p
 
 
+# ── 액션 ──
 func _change_chapter(delta: int) -> void:
 	var nc := _chap_index + delta
 	if nc < 0 or nc >= _chapters.size():
@@ -234,16 +252,21 @@ func _on_sweep() -> void:
 	var s: StageData = _chapters[_chap_index].stages[_sel_index]
 	if not s.is_cleared():
 		return
+	# TODO: 소탕 티켓 차감 + 보상 지급 로직 연결
 	_toast("%s 소탕 — 보상 즉시 획득" % s.code)
 
 
 func _on_deploy() -> void:
 	var s: StageData = _chapters[_chap_index].stages[_sel_index]
+	# 전투력 미달이어도 막지 않고 경고만 (도전/과금 유도)
 	if GameData.combat_power < s.recommended_power:
 		_toast("권장 전투력 미달 — 그래도 출격 가능")
+	# TODO: 편성 화면으로 push
+	# ScreenManager.push(preload("res://screens/formation/Formation.tscn"))
 	_toast("편성 화면으로 이동 → 출격 (%s)" % s.code)
 
 
+# ── 유틸 ──
 func _comma(v: int) -> String:
 	var s := str(v)
 	var out := ""

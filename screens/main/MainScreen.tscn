@@ -69,6 +69,70 @@ theme_override_font_sizes/font_size = 13
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="StaminaBox" type="PanelContainer" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/StaminaBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Label" type="Label" parent="TopBar/HBoxContainer/StaminaBox/HBoxContainer"]
+layout_mode = 2
+text = "⚡"
+
+[node name="StaminaLabel" type="Label" parent="TopBar/HBoxContainer/StaminaBox/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "93 / 206"
+
+[node name="GoldBox" type="PanelContainer" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/GoldBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Label" type="Label" parent="TopBar/HBoxContainer/GoldBox/HBoxContainer"]
+layout_mode = 2
+text = "🪙"
+
+[node name="GoldLabel" type="Label" parent="TopBar/HBoxContainer/GoldBox/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "130,605,248"
+
+[node name="GemsBox" type="PanelContainer" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/GemsBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Label" type="Label" parent="TopBar/HBoxContainer/GemsBox/HBoxContainer"]
+layout_mode = 2
+text = "💎"
+
+[node name="GemsLabel" type="Label" parent="TopBar/HBoxContainer/GemsBox/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "51,118"
+
+[node name="TokenBox" type="PanelContainer" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/TokenBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Label" type="Label" parent="TopBar/HBoxContainer/TokenBox/HBoxContainer"]
+layout_mode = 2
+text = "🔮"
+
+[node name="TokenLabel" type="Label" parent="TopBar/HBoxContainer/TokenBox/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "1,250"
+
 [node name="ClockLabel" type="Label" parent="TopBar/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2

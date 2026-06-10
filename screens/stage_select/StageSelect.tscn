@@ -95,6 +95,22 @@ text = "어려움"
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="StaminaBox" type="PanelContainer" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/StaminaBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Label" type="Label" parent="TopBar/HBoxContainer/StaminaBox/HBoxContainer"]
+layout_mode = 2
+text = "⚡"
+
+[node name="StaminaLabel" type="Label" parent="TopBar/HBoxContainer/StaminaBox/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "93 / 206"
+
 [node name="Content" type="HBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
