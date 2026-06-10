@@ -4,6 +4,8 @@
 
 extends Control
 
+const _GlowButtonScript := preload("res://ui/glow_button.gd")
+
 # ── 노드 참조 (Unique Name) ──
 @onready var back_button: Button   = %BackButton
 @onready var prev_chapter: Button  = %PrevChapter
@@ -22,7 +24,7 @@ extends Control
 @onready var star_value: Label     = %StarValue
 @onready var drop_row: HBoxContainer = %DropRow
 @onready var sweep_button: Button  = %SweepButton
-@onready var deploy_button: Button = %DeployButton
+@onready var actions: HBoxContainer = %Actions
 @onready var toast_label: Label    = %Toast
 
 # ── 상태 ──
@@ -51,7 +53,16 @@ func _ready() -> void:
 	diff_normal.pressed.connect(func(): _set_difficulty(false))
 	diff_hard.pressed.connect(func(): _set_difficulty(true))
 	sweep_button.pressed.connect(_on_sweep)
-	deploy_button.pressed.connect(_on_deploy)
+
+	var deploy := GlowButton.new()
+	deploy.text = "출격"
+	deploy.subtitle = "편성 후 전투"
+	deploy.icon = load("res://assets/icons/conquest.svg")
+	deploy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deploy.custom_minimum_size = Vector2(180, 78)
+	deploy.pressed.connect(_on_deploy)
+	actions.add_child(deploy)
+
 	track.resized.connect(_layout_nodes)
 
 	GameData.stamina_changed.connect(func(_c, _m): _refresh_stamina())
@@ -106,10 +117,10 @@ func _render_map() -> void:
 
 
 func _make_node(s: StageData, i: int) -> Control:
-	var wrap := Control.new()
-	wrap.custom_minimum_size = Vector2(80, 100)
-	wrap.size = Vector2(80, 100)
-	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var node_wrap := Control.new()
+	node_wrap.custom_minimum_size = Vector2(80, 100)
+	node_wrap.size = Vector2(80, 100)
+	node_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var btn := Button.new()
 	btn.name = "Core"
@@ -118,7 +129,7 @@ func _make_node(s: StageData, i: int) -> Control:
 	btn.disabled = s.is_locked()
 	btn.add_theme_stylebox_override("normal", _node_box(s))
 	btn.pressed.connect(_on_node_pressed.bind(i))
-	wrap.add_child(btn)
+	node_wrap.add_child(btn)
 
 	# 별 표시
 	if s.stars >= 0:
@@ -129,9 +140,9 @@ func _make_node(s: StageData, i: int) -> Control:
 		stars.size = Vector2(80, 16)
 		stars.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		stars.add_theme_color_override("font_color", ThemeFactory.C_GOLD)
-		wrap.add_child(stars)
+		node_wrap.add_child(stars)
 
-	return wrap
+	return node_wrap
 
 
 func _node_box(s: StageData) -> StyleBoxFlat:

@@ -18,25 +18,25 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 80
 grow_horizontal = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_top = 6
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_top = 16
 theme_override_constants/margin_bottom = 6
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 14
 
 [node name="PlayerCard" type="PanelContainer" parent="TopBar/HBoxContainer"]
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/PlayerCard"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 
-[node name="Avatar" type="PanelContainer" parent="TopBar/HBoxContainer/PlayerCard/HBoxContainer"]
+[node name="Avatar" type="Panel" parent="TopBar/HBoxContainer/PlayerCard/HBoxContainer"]
 layout_mode = 2
-custom_minimum_size = Vector2(52, 52)
+custom_minimum_size = Vector2(56, 56)
 
 [node name="LevelBadge" type="Label" parent="TopBar/HBoxContainer/PlayerCard/HBoxContainer/Avatar"]
 unique_name_in_owner = true
@@ -59,12 +59,12 @@ theme_override_constants/separation = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "별고래"
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 19
 
 [node name="ExpBar" type="ProgressBar" parent="TopBar/HBoxContainer/PlayerCard/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(120, 8)
+custom_minimum_size = Vector2(150, 10)
 min_value = 0.0
 max_value = 10000.0
 value = 6200.0
@@ -74,35 +74,36 @@ show_percentage = false
 unique_name_in_owner = true
 layout_mode = 2
 text = "EXP 6,200 / 10,000"
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.741, 0.667, 0.898, 1)
 
 [node name="Currencies" type="HBoxContainer" parent="TopBar/HBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 
 [node name="Stamina" type="PanelContainer" parent="TopBar/HBoxContainer/Currencies"]
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/Currencies/Stamina"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 6
 
-[node name="Icon" type="Label" parent="TopBar/HBoxContainer/Currencies/Stamina/HBoxContainer"]
+[node name="Icon" type="TextureRect" parent="TopBar/HBoxContainer/Currencies/Stamina/HBoxContainer"]
 layout_mode = 2
-text = "⚡"
-theme_override_font_sizes/font_size = 15
+custom_minimum_size = Vector2(22, 22)
+stretch_mode = 2
+modulate = Color(0.255, 0.878, 0.902, 1)
 
 [node name="StaminaValue" type="Label" parent="TopBar/HBoxContainer/Currencies/Stamina/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "93 / 206"
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 17
 
 [node name="PlusButton" type="Button" parent="TopBar/HBoxContainer/Currencies/Stamina/HBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(22, 22)
-text = "+"
+text = "＋"
 theme_override_font_sizes/font_size = 13
 
 [node name="Gold" type="PanelContainer" parent="TopBar/HBoxContainer/Currencies"]
@@ -110,23 +111,24 @@ layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/Currencies/Gold"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 6
 
-[node name="Icon" type="Label" parent="TopBar/HBoxContainer/Currencies/Gold/HBoxContainer"]
+[node name="Icon" type="TextureRect" parent="TopBar/HBoxContainer/Currencies/Gold/HBoxContainer"]
 layout_mode = 2
-text = "🪙"
-theme_override_font_sizes/font_size = 15
+custom_minimum_size = Vector2(22, 22)
+stretch_mode = 2
+modulate = Color(1.0, 0.847, 0.42, 1)
 
 [node name="GoldValue" type="Label" parent="TopBar/HBoxContainer/Currencies/Gold/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "130,605,248"
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 17
 
 [node name="PlusButton" type="Button" parent="TopBar/HBoxContainer/Currencies/Gold/HBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(22, 22)
-text = "+"
+text = "＋"
 theme_override_font_sizes/font_size = 13
 
 [node name="Gem" type="PanelContainer" parent="TopBar/HBoxContainer/Currencies"]
@@ -134,23 +136,24 @@ layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/Currencies/Gem"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 6
 
-[node name="Icon" type="Label" parent="TopBar/HBoxContainer/Currencies/Gem/HBoxContainer"]
+[node name="Icon" type="TextureRect" parent="TopBar/HBoxContainer/Currencies/Gem/HBoxContainer"]
 layout_mode = 2
-text = "💎"
-theme_override_font_sizes/font_size = 15
+custom_minimum_size = Vector2(22, 22)
+stretch_mode = 2
+modulate = Color(1.0, 0.435, 0.71, 1)
 
 [node name="GemValue" type="Label" parent="TopBar/HBoxContainer/Currencies/Gem/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "51,118"
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 17
 
 [node name="PlusButton" type="Button" parent="TopBar/HBoxContainer/Currencies/Gem/HBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(22, 22)
-text = "+"
+text = "＋"
 theme_override_font_sizes/font_size = 13
 
 [node name="Token" type="PanelContainer" parent="TopBar/HBoxContainer/Currencies"]
@@ -158,17 +161,24 @@ layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/Currencies/Token"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 6
 
-[node name="Icon" type="Label" parent="TopBar/HBoxContainer/Currencies/Token/HBoxContainer"]
+[node name="Icon" type="TextureRect" parent="TopBar/HBoxContainer/Currencies/Token/HBoxContainer"]
 layout_mode = 2
-text = "🔮"
-theme_override_font_sizes/font_size = 15
+custom_minimum_size = Vector2(22, 22)
+stretch_mode = 2
+modulate = Color(0.776, 0.659, 1.0, 1)
 
 [node name="TokenValue" type="Label" parent="TopBar/HBoxContainer/Currencies/Token/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "1,250"
+theme_override_font_sizes/font_size = 17
+
+[node name="PlusButton" type="Button" parent="TopBar/HBoxContainer/Currencies/Token/HBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(22, 22)
+text = "＋"
 theme_override_font_sizes/font_size = 13
 
 [node name="Spacer" type="Control" parent="TopBar/HBoxContainer"]
@@ -177,86 +187,89 @@ size_flags_horizontal = 3
 
 [node name="SysButtons" type="HBoxContainer" parent="TopBar/HBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 8
 
 [node name="Notice" type="Button" parent="TopBar/HBoxContainer/SysButtons"]
 layout_mode = 2
-custom_minimum_size = Vector2(34, 34)
-text = "🔔"
-theme_override_font_sizes/font_size = 16
+custom_minimum_size = Vector2(44, 44)
+expand_icon = true
+theme_override_constants/icon_max_width = 26
 
 [node name="Mail" type="Button" parent="TopBar/HBoxContainer/SysButtons"]
 layout_mode = 2
-custom_minimum_size = Vector2(34, 34)
-text = "✉"
-theme_override_font_sizes/font_size = 16
+custom_minimum_size = Vector2(44, 44)
+expand_icon = true
+theme_override_constants/icon_max_width = 26
 
 [node name="Settings" type="Button" parent="TopBar/HBoxContainer/SysButtons"]
 layout_mode = 2
-custom_minimum_size = Vector2(34, 34)
-text = "☰"
-theme_override_font_sizes/font_size = 16
+custom_minimum_size = Vector2(44, 44)
+expand_icon = true
+theme_override_constants/icon_max_width = 26
 
 ; ── LeftRail ───────────────────────────────────────────────────────────────
 [node name="LeftRail" type="VBoxContainer" parent="."]
 layout_mode = 1
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_top = -130.0
-offset_right = 70.0
-offset_bottom = 130.0
+anchor_top = 0.18
+anchor_bottom = 0.18
+offset_top = 0.0
+offset_right = 110.0
+offset_bottom = 260.0
+offset_left = 20.0
 grow_vertical = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 10
 
 [node name="EventBtn" type="Button" parent="LeftRail"]
 layout_mode = 2
-custom_minimum_size = Vector2(58, 72)
-text = "🎉\nEVENT"
-theme_override_font_sizes/font_size = 11
+custom_minimum_size = Vector2(90, 60)
+text = "이벤트"
+theme_override_font_sizes/font_size = 15
 
 [node name="AttendBtn" type="Button" parent="LeftRail"]
 layout_mode = 2
-custom_minimum_size = Vector2(58, 52)
-text = "📅\n출석"
-theme_override_font_sizes/font_size = 11
+custom_minimum_size = Vector2(90, 50)
+text = "출석"
+theme_override_font_sizes/font_size = 15
 
 [node name="PassBtn" type="Button" parent="LeftRail"]
 layout_mode = 2
-custom_minimum_size = Vector2(58, 52)
-text = "🎟\n패스"
-theme_override_font_sizes/font_size = 11
+custom_minimum_size = Vector2(90, 50)
+text = "패스"
+theme_override_font_sizes/font_size = 15
 
 ; ── EventBanners ───────────────────────────────────────────────────────────
 [node name="EventBanners" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchor_left = 1.0
-anchor_top = 0.28
+anchor_top = 0.18
 anchor_right = 1.0
-anchor_bottom = 0.28
+anchor_bottom = 0.18
 offset_left = -230.0
-offset_top = -70.0
-offset_right = -8.0
-offset_bottom = 70.0
+offset_top = 0.0
+offset_right = -18.0
+offset_bottom = 160.0
 grow_horizontal = 0
 grow_vertical = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 
 [node name="PickupBanner" type="PanelContainer" parent="EventBanners"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 68)
 
 [node name="Label" type="Label" parent="EventBanners/PickupBanner"]
 layout_mode = 2
 text = "★3 픽업 모집 중!"
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(1, 0.88, 0.18, 1)
 
 [node name="StoryBanner" type="PanelContainer" parent="EventBanners"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 68)
 
 [node name="Label" type="Label" parent="EventBanners/StoryBanner"]
 layout_mode = 2
 text = "한정 스토리 해금"
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 15
 
 ; ── CenterStage ────────────────────────────────────────────────────────────
 [node name="CenterStage" type="Control" parent="."]
@@ -272,16 +285,6 @@ offset_right = 220.0
 offset_bottom = 60.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="Glow" type="TextureRect" parent="CenterStage"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-expand_mode = 1
 
 [node name="CharacterPlaceholder" type="Control" parent="CenterStage"]
 layout_mode = 1
@@ -320,349 +323,11 @@ theme_override_constants/separation = 2
 layout_mode = 2
 text = "대표 캐릭터"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 18
 
 [node name="SubLabel" type="Label" parent="CenterStage/NameCard/VBoxContainer"]
 layout_mode = 2
-text = "★★★ · 교단:새벽단"
+text = "★★★ · 교단: 새벽단"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 12
-theme_override_colors/font_color = Color(0.741176, 0.666667, 1, 0.8)
-
-; ══════════════════════════════════════════════════════════════════════════
-; 하단 바 — 내비게이션(40×40 아이콘) + 구분선 여백 + 정복 버튼 (같은 높이)
-; ══════════════════════════════════════════════════════════════════════════
-[node name="NavPanel" type="PanelContainer" parent="."]
-layout_mode = 1
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -90.0
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="OuterRow" type="HBoxContainer" parent="NavPanel"]
-layout_mode = 2
-theme_override_constants/separation = 0
-
-; ── BottomNav ── (H expand, 각 버튼: 40×40 아이콘 + 이름 텍스트)
-[node name="BottomNav" type="HBoxContainer" parent="NavPanel/OuterRow"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_constants/separation = 0
-
-; Hunt ──────────
-[node name="Hunt" type="Button" parent="NavPanel/OuterRow/BottomNav"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-text = ""
-
-[node name="VBox" type="VBoxContainer" parent="NavPanel/OuterRow/BottomNav/Hunt"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="Icon" type="Label" parent="NavPanel/OuterRow/BottomNav/Hunt/VBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(40, 40)
-text = "🏹"
-horizontal_alignment = 1
-vertical_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 24
-
-[node name="Name" type="Label" parent="NavPanel/OuterRow/BottomNav/Hunt/VBox"]
-layout_mode = 2
-text = "임무"
-horizontal_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 11
-
-; Recruit ──────────
-[node name="Recruit" type="Button" parent="NavPanel/OuterRow/BottomNav"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-text = ""
-
-[node name="VBox" type="VBoxContainer" parent="NavPanel/OuterRow/BottomNav/Recruit"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="Icon" type="Label" parent="NavPanel/OuterRow/BottomNav/Recruit/VBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(40, 40)
-text = "🎲"
-horizontal_alignment = 1
-vertical_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(1, 0.875, 0.42, 1)
-
-[node name="Name" type="Label" parent="NavPanel/OuterRow/BottomNav/Recruit/VBox"]
-layout_mode = 2
-text = "모집"
-horizontal_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(1, 0.875, 0.42, 1)
-
-; Characters ──────────
-[node name="Characters" type="Button" parent="NavPanel/OuterRow/BottomNav"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-text = ""
-
-[node name="VBox" type="VBoxContainer" parent="NavPanel/OuterRow/BottomNav/Characters"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="Icon" type="Label" parent="NavPanel/OuterRow/BottomNav/Characters/VBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(40, 40)
-text = "👥"
-horizontal_alignment = 1
-vertical_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 24
-
-[node name="Name" type="Label" parent="NavPanel/OuterRow/BottomNav/Characters/VBox"]
-layout_mode = 2
-text = "캐릭터"
-horizontal_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 11
-
-; Craft ──────────
-[node name="Craft" type="Button" parent="NavPanel/OuterRow/BottomNav"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-text = ""
-
-[node name="VBox" type="VBoxContainer" parent="NavPanel/OuterRow/BottomNav/Craft"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="Icon" type="Label" parent="NavPanel/OuterRow/BottomNav/Craft/VBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(40, 40)
-text = "⚒"
-horizontal_alignment = 1
-vertical_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 24
-
-[node name="Name" type="Label" parent="NavPanel/OuterRow/BottomNav/Craft/VBox"]
-layout_mode = 2
-text = "제조"
-horizontal_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 11
-
-; Shop ──────────
-[node name="Shop" type="Button" parent="NavPanel/OuterRow/BottomNav"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-text = ""
-
-[node name="VBox" type="VBoxContainer" parent="NavPanel/OuterRow/BottomNav/Shop"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="Icon" type="Label" parent="NavPanel/OuterRow/BottomNav/Shop/VBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(40, 40)
-text = "🛒"
-horizontal_alignment = 1
-vertical_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 24
-
-[node name="Name" type="Label" parent="NavPanel/OuterRow/BottomNav/Shop/VBox"]
-layout_mode = 2
-text = "상점"
-horizontal_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 11
-
-; Mission ──────────
-[node name="Mission" type="Button" parent="NavPanel/OuterRow/BottomNav"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-text = ""
-
-[node name="VBox" type="VBoxContainer" parent="NavPanel/OuterRow/BottomNav/Mission"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="Icon" type="Label" parent="NavPanel/OuterRow/BottomNav/Mission/VBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(40, 40)
-text = "✅"
-horizontal_alignment = 1
-vertical_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 24
-
-[node name="Name" type="Label" parent="NavPanel/OuterRow/BottomNav/Mission/VBox"]
-layout_mode = 2
-text = "미션"
-horizontal_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 11
-
-; Faction ──────────
-[node name="Faction" type="Button" parent="NavPanel/OuterRow/BottomNav"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-text = ""
-
-[node name="VBox" type="VBoxContainer" parent="NavPanel/OuterRow/BottomNav/Faction"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="Icon" type="Label" parent="NavPanel/OuterRow/BottomNav/Faction/VBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(40, 40)
-text = "🏰"
-horizontal_alignment = 1
-vertical_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 24
-
-[node name="Name" type="Label" parent="NavPanel/OuterRow/BottomNav/Faction/VBox"]
-layout_mode = 2
-text = "교단"
-horizontal_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 11
-
-; Story ──────────
-[node name="Story" type="Button" parent="NavPanel/OuterRow/BottomNav"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-text = ""
-
-[node name="VBox" type="VBoxContainer" parent="NavPanel/OuterRow/BottomNav/Story"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="Icon" type="Label" parent="NavPanel/OuterRow/BottomNav/Story/VBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(40, 40)
-text = "📖"
-horizontal_alignment = 1
-vertical_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 24
-
-[node name="Name" type="Label" parent="NavPanel/OuterRow/BottomNav/Story/VBox"]
-layout_mode = 2
-text = "스토리"
-horizontal_alignment = 1
-mouse_filter = 2
-theme_override_font_sizes/font_size = 11
-
-; ── 구분 여백 ──
-[node name="Divider" type="Control" parent="NavPanel/OuterRow"]
-layout_mode = 2
-custom_minimum_size = Vector2(20, 0)
-
-; ── ConquestSection (우측 고정폭, 같은 높이) ──
-[node name="ConquestSection" type="VBoxContainer" parent="NavPanel/OuterRow"]
-layout_mode = 2
-custom_minimum_size = Vector2(175, 0)
-size_flags_vertical = 3
-theme_override_constants/separation = 2
-
-[node name="NextStageLabel" type="Label" parent="NavPanel/OuterRow/ConquestSection"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "33-9  다음 정복 스테이지"
-horizontal_alignment = 2
-theme_override_font_sizes/font_size = 10
-theme_override_colors/font_color = Color(0.741176, 0.666667, 1, 0.75)
-
-[node name="ConquestButton" type="Button" parent="NavPanel/OuterRow/ConquestSection"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-text = "▶  정복"
-theme_override_font_sizes/font_size = 20
-
-; ── Toast ──────────────────────────────────────────────────────────────────
-[node name="Toast" type="Label" parent="."]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -240.0
-offset_top = -24.0
-offset_right = 240.0
-offset_bottom = 24.0
-grow_horizontal = 2
-grow_vertical = 2
-visible = false
-text = ""
-horizontal_alignment = 1
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(1.0, 0.773, 0.298, 1)
