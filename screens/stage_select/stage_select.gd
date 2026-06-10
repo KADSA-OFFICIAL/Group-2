@@ -41,6 +41,9 @@ const DROPS_HARD   := [["🪙","골드",true],["📕","상급 강화서",false],
 
 func _ready() -> void:
 	theme = ThemeFactory.build()   # 폰트는 프로젝트 기본에서 가져옴
+	var bg := ThemeFactory.make_background()
+	add_child(bg)
+	move_child(bg, 0)
 
 	back_button.pressed.connect(func(): ScreenManager.pop())
 	prev_chapter.pressed.connect(func(): _change_chapter(-1))
@@ -51,7 +54,7 @@ func _ready() -> void:
 	deploy_button.pressed.connect(_on_deploy)
 	track.resized.connect(_layout_nodes)
 
-	GameData.stamina_changed.connect(func(c, m): _refresh_stamina())
+	GameData.stamina_changed.connect(func(_c, _m): _refresh_stamina())
 
 	toast_label.visible = false
 	_refresh_chapters()
@@ -78,6 +81,7 @@ func _refresh_stamina() -> void:
 # ── 뱀 모양 경로 좌표 (Track 크기 기준 %) ──
 func _node_pct(i: int) -> Vector2:
 	var col := i % COLS
+	@warning_ignore("integer_division")
 	var row := i / COLS
 	var x_pct := (10.0 + col * 20.0) if (row % 2 == 0) else (90.0 - col * 20.0)
 	var y_pct := 18.0 + row * 42.0
@@ -93,9 +97,9 @@ func _render_map() -> void:
 	var stages := _chapters[_chap_index].stages
 	for i in stages.size():
 		var s: StageData = stages[i]
-		var wrap := _make_node(s, i)
-		track.add_child(wrap)
-		_node_wraps.append(wrap)
+		var node_wrap := _make_node(s, i)
+		track.add_child(node_wrap)
+		_node_wraps.append(node_wrap)
 
 	_layout_nodes()
 	_update_selection_visual()
