@@ -21,31 +21,32 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.0784314, 0.0588235, 0.14902, 1)
 
+; ── TopBar ─────────────────────────────────────────────────────────────────
 [node name="TopBar" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 80
+offset_bottom = 72
 grow_horizontal = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_bottom = 6
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
 [node name="PlayerCard" type="PanelContainer" parent="TopBar/HBoxContainer"]
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/PlayerCard"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 
 [node name="Avatar" type="Label" parent="TopBar/HBoxContainer/PlayerCard/HBoxContainer"]
 layout_mode = 2
-custom_minimum_size = Vector2(48, 48)
+custom_minimum_size = Vector2(44, 44)
 text = "👤"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -58,115 +59,175 @@ theme_override_constants/separation = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "별고래  MAX"
+theme_override_font_sizes/font_size = 14
 
 [node name="LevelLabel" type="Label" parent="TopBar/HBoxContainer/PlayerCard/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Lv.73"
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 
 [node name="Spacer" type="Control" parent="TopBar/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
+; ── 스태미나 알약 ──
 [node name="StaminaBox" type="PanelContainer" parent="TopBar/HBoxContainer"]
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/StaminaBox"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
-[node name="Label" type="Label" parent="TopBar/HBoxContainer/StaminaBox/HBoxContainer"]
+[node name="Icon" type="Label" parent="TopBar/HBoxContainer/StaminaBox/HBoxContainer"]
 layout_mode = 2
 text = "⚡"
+theme_override_font_sizes/font_size = 15
 
 [node name="StaminaLabel" type="Label" parent="TopBar/HBoxContainer/StaminaBox/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "93 / 206"
+theme_override_font_sizes/font_size = 13
 
+[node name="AddStaminaBtn" type="Button" parent="TopBar/HBoxContainer/StaminaBox/HBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(22, 22)
+text = "+"
+theme_override_font_sizes/font_size = 13
+
+; ── 골드 알약 ──
 [node name="GoldBox" type="PanelContainer" parent="TopBar/HBoxContainer"]
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/GoldBox"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
-[node name="Label" type="Label" parent="TopBar/HBoxContainer/GoldBox/HBoxContainer"]
+[node name="Icon" type="Label" parent="TopBar/HBoxContainer/GoldBox/HBoxContainer"]
 layout_mode = 2
 text = "🪙"
+theme_override_font_sizes/font_size = 15
 
 [node name="GoldLabel" type="Label" parent="TopBar/HBoxContainer/GoldBox/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "130,605,248"
+theme_override_font_sizes/font_size = 13
 
+[node name="AddGoldBtn" type="Button" parent="TopBar/HBoxContainer/GoldBox/HBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(22, 22)
+text = "+"
+theme_override_font_sizes/font_size = 13
+
+; ── 젬 알약 ──
 [node name="GemsBox" type="PanelContainer" parent="TopBar/HBoxContainer"]
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/GemsBox"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
-[node name="Label" type="Label" parent="TopBar/HBoxContainer/GemsBox/HBoxContainer"]
+[node name="Icon" type="Label" parent="TopBar/HBoxContainer/GemsBox/HBoxContainer"]
 layout_mode = 2
 text = "💎"
+theme_override_font_sizes/font_size = 15
 
 [node name="GemsLabel" type="Label" parent="TopBar/HBoxContainer/GemsBox/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "51,118"
+theme_override_font_sizes/font_size = 13
 
+[node name="AddGemsBtn" type="Button" parent="TopBar/HBoxContainer/GemsBox/HBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(22, 22)
+text = "+"
+theme_override_font_sizes/font_size = 13
+
+; ── 교단 토큰 알약 ──
 [node name="TokenBox" type="PanelContainer" parent="TopBar/HBoxContainer"]
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TopBar/HBoxContainer/TokenBox"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
-[node name="Label" type="Label" parent="TopBar/HBoxContainer/TokenBox/HBoxContainer"]
+[node name="Icon" type="Label" parent="TopBar/HBoxContainer/TokenBox/HBoxContainer"]
 layout_mode = 2
 text = "🔮"
+theme_override_font_sizes/font_size = 15
 
 [node name="TokenLabel" type="Label" parent="TopBar/HBoxContainer/TokenBox/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "1,250"
+theme_override_font_sizes/font_size = 13
 
-[node name="ClockLabel" type="Label" parent="TopBar/HBoxContainer"]
+; ── 우측 아이콘 ──
+[node name="RightIcons" type="HBoxContainer" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="ClockLabel" type="Label" parent="TopBar/HBoxContainer/RightIcons"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "PM 12:00"
+theme_override_font_sizes/font_size = 12
 
+[node name="BellBtn" type="Button" parent="TopBar/HBoxContainer/RightIcons"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = "🔔"
+
+[node name="MailBtn" type="Button" parent="TopBar/HBoxContainer/RightIcons"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = "✉"
+
+[node name="MenuBtn" type="Button" parent="TopBar/HBoxContainer/RightIcons"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+text = "☰"
+
+; ── 좌측 레일 (이벤트·패스·출석) ───────────────────────────────────────────
 [node name="LeftRail" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_top = -120.0
-offset_right = 60.0
-offset_bottom = 120.0
+offset_top = -160.0
+offset_right = 70.0
+offset_bottom = 160.0
 grow_vertical = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_bottom = 6
 
 [node name="VBoxContainer" type="VBoxContainer" parent="LeftRail"]
 layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="AttendBtn" type="Button" parent="LeftRail/VBoxContainer"]
-layout_mode = 2
-text = "출\n석"
+theme_override_constants/separation = 6
 
 [node name="EventBtn" type="Button" parent="LeftRail/VBoxContainer"]
 layout_mode = 2
-text = "이\n벤\n트"
+custom_minimum_size = Vector2(56, 72)
+text = "🎉\nEVENT"
+theme_override_font_sizes/font_size = 11
+
+[node name="AttendBtn" type="Button" parent="LeftRail/VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 52)
+text = "📅\n출석"
+theme_override_font_sizes/font_size = 11
 
 [node name="PassBtn" type="Button" parent="LeftRail/VBoxContainer"]
 layout_mode = 2
-text = "패\n스"
+custom_minimum_size = Vector2(56, 52)
+text = "🎟\n패스"
+theme_override_font_sizes/font_size = 11
 
+; ── 캐릭터 영역 ────────────────────────────────────────────────────────────
 [node name="CharacterArea" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 8
@@ -175,9 +236,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = -250.0
+offset_top = -260.0
 offset_right = 200.0
-offset_bottom = 50.0
+offset_bottom = 60.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -207,63 +268,131 @@ layout_mode = 2
 text = "별고래"
 horizontal_alignment = 1
 
+; ── 가이드 미션 패널 (우측) ────────────────────────────────────────────────
+[node name="GuideMission" type="PanelContainer" parent="."]
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -80.0
+offset_top = 80.0
+offset_right = -8.0
+offset_bottom = 190.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="GuideMission"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="GuideIcon" type="Label" parent="GuideMission/VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(64, 64)
+text = "🌟"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 36
+
+[node name="GuideLabel" type="Label" parent="GuideMission/VBoxContainer"]
+layout_mode = 2
+text = "가이드\n미션"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 11
+
+; ── 이벤트 배너 (좌하단 플로팅) ───────────────────────────────────────────
+[node name="EventBanner" type="PanelContainer" parent="."]
+layout_mode = 1
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = -178.0
+offset_right = 340.0
+offset_bottom = -102.0
+grow_vertical = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="EventBanner"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="EventTag" type="Label" parent="EventBanner/VBoxContainer"]
+layout_mode = 2
+text = "  EVENT!"
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(1, 0.88, 0.18, 1)
+
+[node name="EventTitle" type="Label" parent="EventBanner/VBoxContainer"]
+layout_mode = 2
+text = "  ★3 픽업 모집 중!"
+theme_override_font_sizes/font_size = 14
+
+; ── 하단 내비게이션 (아이콘 + 텍스트) ─────────────────────────────────────
 [node name="BottomNav" type="MarginContainer" parent="."]
 layout_mode = 1
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -80.0
+offset_top = -82.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_bottom = 6
 
 [node name="HBoxContainer" type="HBoxContainer" parent="BottomNav"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="MissionBtn" type="Button" parent="BottomNav/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "임무"
+text = "🏹\n임무"
+theme_override_font_sizes/font_size = 11
 
 [node name="GachaBtn" type="Button" parent="BottomNav/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "모집"
+text = "🎲\n모집"
+theme_override_font_sizes/font_size = 11
 
 [node name="CharBtn" type="Button" parent="BottomNav/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "캐릭터"
+text = "👥\n캐릭터"
+theme_override_font_sizes/font_size = 11
 
 [node name="CraftBtn" type="Button" parent="BottomNav/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "제조"
+text = "⚒\n제조"
+theme_override_font_sizes/font_size = 11
 
 [node name="ShopBtn" type="Button" parent="BottomNav/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "상점"
+text = "🛒\n상점"
+theme_override_font_sizes/font_size = 11
 
 [node name="DailyBtn" type="Button" parent="BottomNav/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "미션"
+text = "✅\n미션"
+theme_override_font_sizes/font_size = 11
 
 [node name="GuildBtn" type="Button" parent="BottomNav/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "교단"
+text = "🏰\n교단"
+theme_override_font_sizes/font_size = 11
 
 [node name="StoryBtn" type="Button" parent="BottomNav/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "스토리"
+text = "📖\n스토리"
+theme_override_font_sizes/font_size = 11
 
+; ── 정복 버튼 (우하단 CTA) ─────────────────────────────────────────────────
 [node name="ConquerArea" type="MarginContainer" parent="."]
 layout_mode = 1
 anchor_left = 1.0
@@ -271,25 +400,26 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -200.0
-offset_top = -160.0
+offset_top = -172.0
 grow_horizontal = 0
 grow_vertical = 0
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 96
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 92
 
 [node name="VBoxContainer" type="VBoxContainer" parent="ConquerArea"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="NextStage" type="Label" parent="ConquerArea/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "다음: 33-9"
 horizontal_alignment = 2
+theme_override_font_sizes/font_size = 13
 
 [node name="ConquerButton" type="Button" parent="ConquerArea/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(160, 56)
-text = "정복"
-theme_override_font_sizes/font_size = 24
+text = "▶  정복"
+theme_override_font_sizes/font_size = 22
