@@ -1,7 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://dxkrmw3yp86b6"]
+[gd_scene load_steps=6 format=3 uid="uid://dxkrmw3yp86b6"]
 
-[ext_resource type="Script" path="res://entities/player/Player.gd"]
-[ext_resource type="Script" path="res://entities/player/PlayerController.gd"]
+[ext_resource type="Script" path="res://entities/player/Player.gd" id="1_player"]
+[ext_resource type="Script" path="res://entities/player/PlayerController.gd" id="2_ctrl"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1"]
 radius = 10.0
@@ -14,7 +14,7 @@ radius = 30.0
 radius = 40.0
 
 [node name="Player" type="CharacterBody2D"]
-script = ExtResource("res://entities/player/Player.gd")
+script = ExtResource("1_player")
 position = Vector2(0, 0)
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
@@ -39,5 +39,5 @@ shape = SubResource("CircleShape2D_2")
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 
 [node name="PlayerController" type="Node" parent="."]
-script = ExtResource("res://entities/player/PlayerController.gd")
+script = ExtResource("2_ctrl")
 
