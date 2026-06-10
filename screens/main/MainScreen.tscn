@@ -332,99 +332,105 @@ horizontal_alignment = 1
 theme_override_font_sizes/font_size = 12
 theme_override_colors/font_color = Color(0.741176, 0.666667, 1, 0.8)
 
-; ── BottomNav ──────────────────────────────────────────────────────────────
+; ── 하단 바: 내비게이션 + 정복 버튼 (같은 높이) ────────────────────────────
 [node name="NavPanel" type="PanelContainer" parent="."]
 layout_mode = 1
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -76.0
+offset_top = -82.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="BottomNav" type="HBoxContainer" parent="NavPanel"]
+[node name="OuterRow" type="HBoxContainer" parent="NavPanel"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+; ── BottomNav (좌측 확장) ──
+[node name="BottomNav" type="HBoxContainer" parent="NavPanel/OuterRow"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 4
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
 
-[node name="Hunt" type="Button" parent="NavPanel/BottomNav"]
+[node name="Hunt" type="Button" parent="NavPanel/OuterRow/BottomNav"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 text = "🏹\n임무"
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 
-[node name="Recruit" type="Button" parent="NavPanel/BottomNav"]
+[node name="Recruit" type="Button" parent="NavPanel/OuterRow/BottomNav"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 text = "🎲\n모집"
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 theme_override_colors/font_color = Color(1, 0.875, 0.42, 1)
 
-[node name="Characters" type="Button" parent="NavPanel/BottomNav"]
+[node name="Characters" type="Button" parent="NavPanel/OuterRow/BottomNav"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 text = "👥\n캐릭터"
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 
-[node name="Craft" type="Button" parent="NavPanel/BottomNav"]
+[node name="Craft" type="Button" parent="NavPanel/OuterRow/BottomNav"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 text = "⚒\n제조"
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 
-[node name="Shop" type="Button" parent="NavPanel/BottomNav"]
+[node name="Shop" type="Button" parent="NavPanel/OuterRow/BottomNav"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 text = "🛒\n상점"
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 
-[node name="Mission" type="Button" parent="NavPanel/BottomNav"]
+[node name="Mission" type="Button" parent="NavPanel/OuterRow/BottomNav"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 text = "✅\n미션"
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 
-[node name="Faction" type="Button" parent="NavPanel/BottomNav"]
+[node name="Faction" type="Button" parent="NavPanel/OuterRow/BottomNav"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 text = "🏰\n교단"
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 
-[node name="Story" type="Button" parent="NavPanel/BottomNav"]
+[node name="Story" type="Button" parent="NavPanel/OuterRow/BottomNav"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 text = "📖\n스토리"
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 
-; ── ConquestCTA ────────────────────────────────────────────────────────────
-[node name="ConquestCTA" type="VBoxContainer" parent="."]
-layout_mode = 1
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -190.0
-offset_top = -168.0
-offset_right = -12.0
-offset_bottom = -84.0
-grow_horizontal = 0
-grow_vertical = 0
-theme_override_constants/separation = 4
+; ── ConquestSection (우측 고정폭) ──
+[node name="ConquestSection" type="VBoxContainer" parent="NavPanel/OuterRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(175, 0)
+size_flags_vertical = 3
+theme_override_constants/separation = 2
 
-[node name="NextStageLabel" type="Label" parent="ConquestCTA"]
+[node name="NextStageLabel" type="Label" parent="NavPanel/OuterRow/ConquestSection"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "33-9"
+text = "33-9  다음 정복 스테이지"
 horizontal_alignment = 2
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.741176, 0.666667, 1, 0.85)
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.741176, 0.666667, 1, 0.75)
 
-[node name="ConquestButton" type="Button" parent="ConquestCTA"]
+[node name="ConquestButton" type="Button" parent="NavPanel/OuterRow/ConquestSection"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(166, 56)
-text = "정복 / CONQUEST"
-theme_override_font_sizes/font_size = 18
+size_flags_vertical = 3
+text = "▶  정복\nCONQUEST"
+theme_override_font_sizes/font_size = 16
 
 ; ── Toast ──────────────────────────────────────────────────────────────────
 [node name="Toast" type="Label" parent="."]
