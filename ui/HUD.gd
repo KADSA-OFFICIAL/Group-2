@@ -69,9 +69,14 @@ func update_enemy_count():
 
 func update_currency_display():
 	if CurrencySystem:
+		var stone = CurrencySystem.get_balance("stone")
+		var tin = CurrencySystem.get_balance("tin")
+		var copper = CurrencySystem.get_balance("copper")
+		var iron_ore = CurrencySystem.get_balance("iron_ore")
+		var coal = CurrencySystem.get_balance("coal")
 		var gold = CurrencySystem.get_balance("gold")
-		var diamond = CurrencySystem.get_balance("diamond")
-		currency_label.text = "Gold: %d | Diamond: %d" % [gold, diamond]
+		var faith_stone = CurrencySystem.get_balance("faith_stone")
+		currency_label.text = "Stone: %d | Tin: %d | Copper: %d | Iron: %d | Coal: %d | Gold: %d | Faith: %d" % [stone, tin, copper, iron_ore, coal, gold, faith_stone]
 
 func _on_damage_taken(_target, _damage, _position):
 	# Could add floating damage text here
