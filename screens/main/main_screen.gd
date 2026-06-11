@@ -58,8 +58,8 @@ func _ready() -> void:
 	_bind_icons()
 	GameData.stamina_changed.connect(func(c, m): stamina_value.text = "%d / %d" % [c, m])
 
+	_build_toast()        # toast 먼저 생성 — set_active()가 시그널 emit해 _show_toast()를 즉시 호출함
 	_build_bottom_bar()
-	_build_toast()
 
 
 func _bind_icons() -> void:

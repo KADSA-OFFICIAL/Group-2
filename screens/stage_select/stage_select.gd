@@ -54,7 +54,7 @@ func _ready() -> void:
 	diff_hard.pressed.connect(func(): _set_difficulty(true))
 	sweep_button.pressed.connect(_on_sweep)
 
-	var deploy := GlowButton.new()
+	var deploy := _GlowButtonScript.new()
 	deploy.text = "출격"
 	deploy.subtitle = "편성 후 전투"
 	deploy.icon = load("res://assets/icons/conquest.svg")
