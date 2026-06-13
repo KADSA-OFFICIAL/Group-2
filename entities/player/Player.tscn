@@ -1,0 +1,43 @@
+[gd_scene load_steps=6 format=3 uid="uid://dxkrmw3yp86b6"]
+
+[ext_resource type="Script" path="res://entities/player/Player.gd" id="1_player"]
+[ext_resource type="Script" path="res://entities/player/PlayerController.gd" id="2_ctrl"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1"]
+radius = 10.0
+height = 30.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 30.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_2"]
+radius = 40.0
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_player")
+position = Vector2(0, 0)
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(2, 2)
+self_modulate = Color(0, 0.5, 1, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CapsuleShape2D_1")
+
+[node name="AttackArea2D" type="Area2D" parent="." groups=["attack"]]
+position = Vector2(30, 0)
+
+[node name="AttackCollision" type="CollisionShape2D" parent="AttackArea2D"]
+shape = SubResource("CircleShape2D_1")
+
+[node name="ParryArea2D" type="Area2D" parent="." groups=["parry"]]
+position = Vector2(0, 0)
+
+[node name="ParryCollision" type="CollisionShape2D" parent="ParryArea2D"]
+shape = SubResource("CircleShape2D_2")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="PlayerController" type="Node" parent="."]
+script = ExtResource("2_ctrl")
+
