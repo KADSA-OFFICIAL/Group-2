@@ -4,7 +4,7 @@
 extends Control
 
 # ── 상점 아이템 정의 ──────────────────────────────────────────────────────
-const SHOP_ITEMS: Array[Dictionary] = [
+var SHOP_ITEMS = [
 	{id="b1", nm="강화서 ×3",  ic="📘", cost=200, limit=3,
 	 action=func(): GameData.mats["book"] = GameData.mats.get("book", 0) + 3},
 	{id="b2", nm="마정석 ×5",  ic="🔩", cost=300, limit=2,
@@ -13,8 +13,7 @@ const SHOP_ITEMS: Array[Dictionary] = [
 	 action=func(): GameData.add_currency("gems", 100)},
 ]
 
-# 멤버 목록 (하드코딩)
-const MEMBERS: Array[Dictionary] = [
+const MEMBERS = [
 	{rank="단장",   name="별고래", lv=73},
 	{rank="부단장", name="세라",   lv=70},
 	{rank="단원",   name="카이",   lv=66},

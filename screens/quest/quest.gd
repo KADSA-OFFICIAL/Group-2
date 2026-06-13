@@ -3,7 +3,7 @@
 
 extends Control
 
-const QUESTS: Array[Dictionary] = [
+const QUESTS = [
 	{id = "q1", nm = "첫 번째 스테이지 클리어",  cond_desc = "스테이지 1회 이상 클리어",      rw = {k = "gems",          a = 100}},
 	{id = "q2", nm = "캐릭터 편성하기",            cond_desc = "스테이지 클리어 1회 이상",      rw = {k = "gold",          a = 200000}},
 	{id = "q3", nm = "첫 모집 (가챠) 수행",        cond_desc = "모집 1회 이상",                  rw = {k = "gems",          a = 150}},

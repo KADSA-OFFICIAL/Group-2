@@ -4,7 +4,7 @@
 extends Control
 
 # ── 미션 정의 ──────────────────────────────────────────────────────────────
-const DAILY_MISSIONS: Array[Dictionary] = [
+const DAILY_MISSIONS = [
 	{id="d1", nm="스테이지 3회 클리어",  goal=3,  rw={k="gems",    a=30}},
 	{id="d2", nm="로그인 보상",           goal=1,  rw={k="stamina", a=20}},
 	{id="d3", nm="재화 소비",             goal=1,  rw={k="gold",    a=50000}},
@@ -12,14 +12,14 @@ const DAILY_MISSIONS: Array[Dictionary] = [
 	{id="d5", nm="모집 1회",              goal=1,  rw={k="gems",    a=20}},
 ]
 
-const WEEKLY_MISSIONS: Array[Dictionary] = [
+const WEEKLY_MISSIONS = [
 	{id="w1", nm="스테이지 20회 클리어",  goal=20, rw={k="gems",          a=100}},
 	{id="w2", nm="10회 모집",             goal=10, rw={k="gems",          a=200}},
 	{id="w3", nm="제조 3회",              goal=3,  rw={k="gold",          a=200000}},
 	{id="w4", nm="길드 보상 수령",        goal=1,  rw={k="faction_token", a=100}},
 ]
 
-const ACHIEVE_MISSIONS: Array[Dictionary] = [
+const ACHIEVE_MISSIONS = [
 	{id="a1", nm="첫 클리어",             goal=1,  rw={k="gems", a=50}},
 	{id="a2", nm="클리어 10회",           goal=10, rw={k="gems", a=100}},
 	{id="a3", nm="캐릭터 15명 보유",      goal=15, rw={k="gems", a=150}},
@@ -168,7 +168,7 @@ func _rebuild_list() -> void:
 	for child in _list_root.get_children():
 		child.queue_free()
 
-	var missions: Array[Dictionary]
+	var missions: Array
 	match _current_tab:
 		0: missions = DAILY_MISSIONS
 		1: missions = WEEKLY_MISSIONS

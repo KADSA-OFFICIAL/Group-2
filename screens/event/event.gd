@@ -3,14 +3,14 @@
 
 extends Control
 
-const MISSIONS: Array[Dictionary] = [
+const MISSIONS = [
 	{id = "e1", nm = "로그인 7일 달성",    goal = 7,  rw = {k = "event_coin", a = 100}},
 	{id = "e2", nm = "스테이지 5회 클리어", goal = 5,  rw = {k = "event_coin", a = 150}},
 	{id = "e3", nm = "10회 모집",           goal = 10, rw = {k = "event_coin", a = 200}},
 	{id = "e4", nm = "강화 5회",            goal = 5,  rw = {k = "event_coin", a = 50}},
 ]
 
-const SHOP_ITEMS: Array[Dictionary] = [
+const SHOP_ITEMS = [
 	{id = "x1", nm = "보석 ×100",  ic = "💎", cost = 200, lim = 3, rw = {k = "gems",    a = 100}},
 	{id = "x2", nm = "강화서 ×5",  ic = "📘", cost = 100, lim = 5, rw = {k = "book",    a = 5}},
 	{id = "x3", nm = "조각 ×10",   ic = "🧩", cost = 50,  lim = 2, rw = {k = "shards",  a = 10}},

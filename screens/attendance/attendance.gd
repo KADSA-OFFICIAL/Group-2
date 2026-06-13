@@ -4,7 +4,7 @@
 extends Control
 
 # 보상 정의 (1-indexed; index 0 unused)
-const DAY_REWARDS: Array[Dictionary] = [
+const DAY_REWARDS = [
 	{},                                   # 0 unused
 	{k = "gold",    a = 10000},           # day 1
 	{k = "gems",    a = 50},              # day 2

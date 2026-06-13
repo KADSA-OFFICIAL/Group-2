@@ -119,7 +119,7 @@ var mails: Array[Dictionary] = [
 ]
 
 # ── 타이틀 목록 ──
-const TITLES: Array[Dictionary] = [
+const TITLES = [
 	{id="t1", nm="별빛 수호자"},
 	{id="t2", nm="마정석 수집가"},
 	{id="t3", nm="폭풍의 심장"},

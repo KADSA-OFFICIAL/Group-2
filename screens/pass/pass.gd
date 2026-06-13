@@ -4,7 +4,7 @@
 extends Control
 
 # 티어 정의
-const TIERS: Array[Dictionary] = [
+const TIERS = [
 	{n = 1, req = 1,  free = {k = "gems",    a = 50},   prem = {k = "gems", a = 200}},
 	{n = 2, req = 3,  free = {k = "gold",    a = 100000}, prem_multi = [{k = "gems", a = 300}, {k = "gold", a = 100000}]},
 	{n = 3, req = 7,  free = {k = "stamina", a = 60},   prem = {k = "gems", a = 500}},

@@ -4,7 +4,7 @@
 extends Control
 
 # ── 레시피 정의 ───────────────────────────────────────────────────────────
-const RECIPES: Array[Dictionary] = [
+const RECIPES = [
 	{id="c1", nm="고급 강화서",  ic="📗", cost={book=5,  dust=20}, out="book2",   qty=1},
 	{id="c2", nm="정제 마정석",  ic="💎", cost={ore=10,  dust=15}, out="gems",    qty=50},
 	{id="c3", nm="무작위 조각",  ic="🧩", cost={book=3,  ore=3},   out="shards",  qty=10, target_roster=true},
