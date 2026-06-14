@@ -154,6 +154,95 @@ func _ready() -> void:
 				ScreenManager.push(QUEST_SCR))
 		outer_vbox.add_child(_guide_label)
 	_update_guide_tracker()
+	_apply_circle_icons()
+
+
+func _make_circle_sb(bg: Color, border: Color = Color(0, 0, 0, 0), bw: int = 0) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.set_corner_radius_all(999)
+	sb.bg_color = bg
+	sb.border_color = border
+	sb.set_border_width_all(bw)
+	sb.set_content_margin_all(5)
+	return sb
+
+
+func _apply_circle_icons() -> void:
+	# ── 시스템 버튼 (알림·메일·설정) ──
+	for nm in ["Notice", "Mail", "Settings"]:
+		var btn := get_node_or_null("TopBar/HBoxContainer/SysButtons/" + nm) as Button
+		if btn == null:
+			continue
+		btn.custom_minimum_size = Vector2(30, 30)
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.add_theme_stylebox_override("normal",
+			_make_circle_sb(ThemeFactory.C_BG2, Color(ThemeFactory.C_LINE), 1))
+		btn.add_theme_stylebox_override("hover",
+			_make_circle_sb(Color(ThemeFactory.C_CYAN, 0.18), ThemeFactory.C_CYAN, 1))
+		btn.add_theme_stylebox_override("pressed",
+			_make_circle_sb(Color(ThemeFactory.C_CYAN, 0.30), ThemeFactory.C_CYAN, 2))
+
+	# ── 플레이어 아바타 패널 → 원형 ──
+	var avatar := get_node_or_null(
+		"TopBar/HBoxContainer/PlayerCard/HBoxContainer/Avatar") as PanelContainer
+	if avatar == null:
+		# reparent 후 경로가 달라질 수 있으므로 이름으로 탐색
+		avatar = find_child("Avatar", true, false) as PanelContainer
+	if avatar != null:
+		avatar.custom_minimum_size = Vector2(38, 38)
+		avatar.add_theme_stylebox_override("panel",
+			_make_circle_sb(ThemeFactory.C_BG2, ThemeFactory.C_CYAN, 2))
+		var badge := avatar.get_node_or_null("LevelBadge") as Label
+		if badge != null:
+			badge.add_theme_font_size_override("font_size", 10)
+
+	# ── 재화 아이콘 배지 ──
+	var curr_hbox := get_node_or_null("TopBar/HBoxContainer/Currencies") as HBoxContainer
+	if curr_hbox != null:
+		for curr_panel in curr_hbox.get_children():
+			if not (curr_panel is PanelContainer):
+				continue
+			var inner := curr_panel.get_child(0)
+			if inner == null:
+				continue
+			var icon_lbl := inner.get_node_or_null("Icon") as Label
+			if icon_lbl == null:
+				continue
+			icon_lbl.add_theme_font_size_override("font_size", 13)
+			icon_lbl.custom_minimum_size = Vector2(22, 22)
+			icon_lbl.add_theme_stylebox_override("normal",
+				_make_circle_sb(Color(ThemeFactory.C_BG2, 0.9)))
+			var val_lbl := inner.get_node_or_null(StringName("StaminaValue")) as Label
+			if val_lbl == null:
+				val_lbl = inner.get_node_or_null(StringName("GoldValue")) as Label
+			if val_lbl == null:
+				val_lbl = inner.get_node_or_null(StringName("GemValue")) as Label
+			if val_lbl == null:
+				val_lbl = inner.get_node_or_null(StringName("TokenValue")) as Label
+			if val_lbl != null:
+				val_lbl.add_theme_font_size_override("font_size", 12)
+			var plus_btn := inner.get_node_or_null("PlusButton") as Button
+			if plus_btn != null:
+				plus_btn.custom_minimum_size = Vector2(18, 18)
+				plus_btn.add_theme_font_size_override("font_size", 11)
+				plus_btn.add_theme_stylebox_override("normal",
+					_make_circle_sb(ThemeFactory.C_BG2, Color(ThemeFactory.C_LINE), 1))
+				plus_btn.add_theme_stylebox_override("hover",
+					_make_circle_sb(Color(ThemeFactory.C_CYAN, 0.2), ThemeFactory.C_CYAN, 1))
+
+	# ── 좌측 단축 버튼 (이벤트·출석·패스) ──
+	for nm in ["EventBtn", "AttendBtn", "PassBtn"]:
+		var btn := get_node_or_null("LeftRail/" + nm) as Button
+		if btn == null:
+			continue
+		btn.custom_minimum_size = Vector2(46, 46)
+		btn.add_theme_font_size_override("font_size", 10)
+		btn.add_theme_stylebox_override("normal",
+			_make_circle_sb(ThemeFactory.C_BG2, Color(ThemeFactory.C_LINE), 1))
+		btn.add_theme_stylebox_override("hover",
+			_make_circle_sb(Color(ThemeFactory.C_CYAN, 0.18), ThemeFactory.C_CYAN, 1))
+		btn.add_theme_stylebox_override("pressed",
+			_make_circle_sb(Color(ThemeFactory.C_CYAN, 0.28), ThemeFactory.C_CYAN, 2))
 
 
 func _update_guide_tracker() -> void:
