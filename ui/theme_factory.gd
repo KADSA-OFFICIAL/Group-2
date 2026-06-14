@@ -153,3 +153,58 @@ static func accent_box(radius: int = 16) -> StyleBoxFlat:
 	sb.set_border_width_all(2)
 	sb.anti_aliasing = true
 	return sb
+
+# ════════════════════════════════════════════════════════
+#  범용 헬퍼 (블루아카이브/트릭컬 스타일 메인 재설계용)
+# ════════════════════════════════════════════════════════
+
+const C_VIOLET := Color("c6a8ff")
+
+# 완전한 원형 배지/아이콘
+static func circle_box(bg: Color, border: Color = Color(0, 0, 0, 0),
+		bw: int = 0, pad: int = 6) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_corner_radius_all(999)
+	sb.border_color = border
+	sb.set_border_width_all(bw)
+	sb.set_content_margin_all(pad)
+	sb.anti_aliasing = true
+	return sb
+
+# 둥근 사각 (네비 박스/패널)
+static func round_box(bg: Color, radius: int = 16, border: Color = Color(0, 0, 0, 0),
+		bw: int = 0, shadow: int = 0, pad: int = 0) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_corner_radius_all(radius)
+	sb.border_color = border
+	sb.set_border_width_all(bw)
+	if shadow > 0:
+		sb.shadow_color = C_SHADOW
+		sb.shadow_size = shadow
+		sb.shadow_offset = Vector2(0, 4)
+	if pad > 0:
+		sb.set_content_margin_all(pad)
+	sb.anti_aliasing = true
+	return sb
+
+# 그라데이션 둥근 박스 (배너/CTA) — StyleBoxTexture 라운드
+static func gradient_round_box(a: Color, b: Color, angle_deg: float = 120.0,
+		radius: int = 18) -> StyleBoxFlat:
+	# StyleBoxTexture 는 코너 라운드가 약해, 중간색 단색 + 보더로 근사
+	var mix := a.lerp(b, 0.5)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = mix
+	sb.set_corner_radius_all(radius)
+	sb.anti_aliasing = true
+	return sb
+
+# 재화 종류별 대표 색
+static func currency_color(kind: String) -> Color:
+	match kind:
+		"stamina": return C_CYAN
+		"gold":    return C_GOLD
+		"gems":    return C_PINK
+		"token":   return C_VIOLET
+	return C_INK
