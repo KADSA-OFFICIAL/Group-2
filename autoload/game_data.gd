@@ -54,6 +54,10 @@ var quest_claims: Dictionary = {}
 # ── 출석 ──
 var attend: Dictionary = {"day": 0, "done_today": false}
 
+# ── 리셋 추적 (에폭 기준 일/주 번호) ──
+var last_reset_day: int = -1
+var last_reset_week: int = -1
+
 # ── 제조 큐 ──
 var craft_queue: Array = []
 
@@ -241,6 +245,7 @@ var _loaded := false
 
 func _ready() -> void:
 	load_state()
+	_apply_resets()
 	# 변경 시 자동 저장
 	currency_changed.connect(func(_k, _a): save_state())
 	roster_changed.connect(func(): save_state())
@@ -277,6 +282,7 @@ func save_state() -> void:
 		"pass_claims": pass_claims, "pass_premium": pass_premium, "quest_claims": quest_claims,
 		"attend": attend, "settings": settings,
 		"roster": roster, "mails": mails,
+		"last_reset_day": last_reset_day, "last_reset_week": last_reset_week,
 	}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f == null:
@@ -318,6 +324,8 @@ func load_state() -> void:
 	guild_checked = bool(d.get("guild_checked", guild_checked))
 	event_coin = int(d.get("event_coin", event_coin))
 	pass_premium = bool(d.get("pass_premium", pass_premium))
+	last_reset_day = int(d.get("last_reset_day", last_reset_day))
+	last_reset_week = int(d.get("last_reset_week", last_reset_week))
 
 	stats = _int_dict(d.get("stats", stats), stats)
 	mats = _int_dict(d.get("mats", mats), mats)
@@ -340,6 +348,35 @@ func reset_save() -> void:
 	# 설정 화면의 데이터 초기화용
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
+
+
+# ── 일일/주간 리셋 ──────────────────────────────────────
+func _apply_resets() -> void:
+	var unix: int = int(Time.get_unix_time_from_system())
+	var day_num: int = unix / 86400          # 에폭 이후 일 수
+	var week_num: int = day_num / 7
+	var changed := false
+
+	if last_reset_day != day_num:
+		# 일일 미션·상점/이벤트 구매 제한·오늘 출석 초기화
+		for k in ["d1", "d2", "d3", "d4", "d5"]:
+			mission_claims.erase(k)
+		shop_buys.clear()
+		event_buys.clear()
+		attend["done_today"] = false
+		last_reset_day = day_num
+		changed = true
+
+	if last_reset_week != week_num:
+		# 주간 미션·교단 상점 구매 제한 초기화
+		for k in ["w1", "w2", "w3"]:
+			mission_claims.erase(k)
+		guild_buys.clear()
+		last_reset_week = week_num
+		changed = true
+
+	if changed and _loaded:
+		save_state()
 
 
 # ── 직렬화 헬퍼 ─────────────────────────────────────────
