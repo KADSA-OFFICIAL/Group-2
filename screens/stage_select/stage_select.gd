@@ -106,10 +106,10 @@ func _render_map() -> void:
 
 
 func _make_node(s: StageData, i: int) -> Control:
-	var wrap := Control.new()
-	wrap.custom_minimum_size = Vector2(80, 100)
-	wrap.size = Vector2(80, 100)
-	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var node_wrap := Control.new()
+	node_wrap.custom_minimum_size = Vector2(80, 100)
+	node_wrap.size = Vector2(80, 100)
+	node_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var btn := Button.new()
 	btn.name = "Core"
@@ -118,7 +118,7 @@ func _make_node(s: StageData, i: int) -> Control:
 	btn.disabled = s.is_locked()
 	btn.add_theme_stylebox_override("normal", _node_box(s))
 	btn.pressed.connect(_on_node_pressed.bind(i))
-	wrap.add_child(btn)
+	node_wrap.add_child(btn)
 
 	# 별 표시
 	if s.stars >= 0:
@@ -129,9 +129,9 @@ func _make_node(s: StageData, i: int) -> Control:
 		stars.size = Vector2(80, 16)
 		stars.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		stars.add_theme_color_override("font_color", ThemeFactory.C_GOLD)
-		wrap.add_child(stars)
+		node_wrap.add_child(stars)
 
-	return wrap
+	return node_wrap
 
 
 func _node_box(s: StageData) -> StyleBoxFlat:

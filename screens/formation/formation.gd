@@ -138,15 +138,15 @@ func _build_stage_info() -> Control:
 
 # ── 팀 슬롯 ──────────────────────────────────────────────
 func _build_slots_section() -> Control:
-	var wrap := VBoxContainer.new()
-	wrap.add_theme_constant_override("separation", 6)
+	var section := VBoxContainer.new()
+	section.add_theme_constant_override("separation", 6)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12)
 	margin.add_theme_constant_override("margin_right", 12)
 	margin.add_theme_constant_override("margin_top", 10)
 	margin.add_theme_constant_override("margin_bottom", 4)
-	wrap.add_child(margin)
+	section.add_child(margin)
 
 	var slot_row := HBoxContainer.new()
 	slot_row.add_theme_constant_override("separation", 8)
@@ -164,7 +164,7 @@ func _build_slots_section() -> Control:
 	pw_margin.add_theme_constant_override("margin_right", 12)
 	pw_margin.add_theme_constant_override("margin_top", 0)
 	pw_margin.add_theme_constant_override("margin_bottom", 4)
-	wrap.add_child(pw_margin)
+	section.add_child(pw_margin)
 
 	_team_power_label = Label.new()
 	_team_power_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -173,7 +173,7 @@ func _build_slots_section() -> Control:
 	pw_margin.add_child(_team_power_label)
 	_refresh_team_power()
 
-	return wrap
+	return section
 
 
 func _make_slot_button(index: int) -> Button:

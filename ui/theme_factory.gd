@@ -71,7 +71,7 @@ static func gradient_tex(a: Color, b: Color, angle_deg: float = 120.0) -> Gradie
 	tex.fill_to   = Vector2(0.5, 0.5) + dir
 	return tex
 
-static func texture_box(tex: Texture2D, radius: int = 20) -> StyleBoxTexture:
+static func texture_box(tex: Texture2D, _radius: int = 20) -> StyleBoxTexture:
 	var sb := StyleBoxTexture.new()
 	sb.texture = tex
 	sb.content_margin_left = 28
