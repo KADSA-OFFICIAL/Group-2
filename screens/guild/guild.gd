@@ -277,7 +277,7 @@ func _make_shop_section() -> VBoxContainer:
 
 	_shop_cards.clear()
 	for item in SHOP_ITEMS:
-		var card_data := {"btn": null as Button, "id": str(item.get("id", ""))}
+		var card_data: Dictionary = {"btn": null, "id": str(item.get("id", ""))}
 		var card := _make_shop_card(item, card_data)
 		section.add_child(card)
 		_shop_cards.append(card_data)

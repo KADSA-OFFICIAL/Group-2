@@ -174,7 +174,7 @@ func _build_missions() -> void:
 
 	for m in MISSIONS:
 		var prog := _get_mission_prog(m)
-		var done := prog >= m.goal
+		var done: bool = prog >= m.goal
 		var claimed := GameData.event_claims.has(m.id)
 
 		var row := PanelContainer.new()
@@ -223,7 +223,7 @@ func _build_shop() -> void:
 
 	for item in SHOP_ITEMS:
 		var bought: int = GameData.event_buys.get(item.id, 0)
-		var maxed := bought >= item.lim
+		var maxed: bool = bought >= item.lim
 
 		var row := PanelContainer.new()
 		row.add_theme_stylebox_override("panel", ThemeFactory.glass_panel(false, 14))

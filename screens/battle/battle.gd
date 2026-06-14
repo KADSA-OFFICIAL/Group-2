@@ -471,7 +471,7 @@ func _fire(f: Dictionary) -> void:
 			bullets.append(_make_bullet(px, py, aim_dir.x, aim_dir.y, dmg, 520.0, 1))
 		"spread":
 			for off in [-0.25, 0.0, 0.25]:
-				var a := atan2(aim_dir.y, aim_dir.x) + off
+				var a: float = atan2(aim_dir.y, aim_dir.x) + off
 				bullets.append(_make_bullet(px, py, cos(a), sin(a), dmg, 480.0, 1))
 		"melee":
 			_melee_hit(dmg, f["range"])
@@ -517,8 +517,8 @@ func _update_bullets(delta: float) -> void:
 		# 적 충돌
 		var hit := false
 		for e in enemies:
-			var dx := b["x"] - e["x"]
-			var dy := b["y"] - e["y"]
+			var dx: float = float(b["x"]) - float(e["x"])
+			var dy: float = float(b["y"]) - float(e["y"])
 			if dx*dx + dy*dy < (e["r"] + b["r"]) * (e["r"] + b["r"]):
 				e["hp"] -= b["dmg"]
 				_add_spark(e["x"], e["y"])
@@ -528,8 +528,8 @@ func _update_bullets(delta: float) -> void:
 					break
 		# 보스 충돌
 		if boss != null:
-			var dx := b["x"] - boss["x"]
-			var dy := b["y"] - boss["y"]
+			var dx: float = float(b["x"]) - float(boss["x"])
+			var dy: float = float(b["y"]) - float(boss["y"])
 			if dx*dx + dy*dy < (boss["r"] + b["r"]) * (boss["r"] + b["r"]):
 				boss["hp"] -= b["dmg"]
 				_add_spark(boss["x"], boss["y"])
@@ -548,8 +548,8 @@ func _update_bullets(delta: float) -> void:
 		eb["t"] += delta
 		if eb["t"] > 2.0 or eb["x"] < 0 or eb["x"] > W or eb["y"] < 0 or eb["y"] > H:
 			continue
-		var dx := eb["x"] - px
-		var dy := eb["y"] - py
+		var dx: float = float(eb["x"]) - px
+		var dy: float = float(eb["y"]) - py
 		if dx*dx + dy*dy < (12 + eb["r"]) * (12 + eb["r"]):
 			_hit_player(int(eb["dmg"]))
 			continue
@@ -581,8 +581,8 @@ func _update_enemies(delta: float) -> void:
 	for e in enemies:
 		if e["hit_cd"] > 0.0:
 			e["hit_cd"] -= delta
-		var dx := px - e["x"]
-		var dy := py - e["y"]
+		var dx: float = px - float(e["x"])
+		var dy: float = py - float(e["y"])
 		var dist := sqrt(dx*dx + dy*dy)
 		if dist > 0.5:
 			e["x"] += (dx / dist) * e["spd"] * delta
@@ -602,8 +602,8 @@ func _update_boss(delta: float) -> void:
 		_check_room_clear()
 		return
 	# 추적
-	var dx := px - boss["x"]
-	var dy := py - boss["y"]
+	var dx: float = px - float(boss["x"])
+	var dy: float = py - float(boss["y"])
 	var dist := sqrt(dx*dx + dy*dy)
 	if dist > 0.5:
 		boss["x"] += (dx / dist) * boss["spd"] * delta
@@ -658,8 +658,8 @@ func _check_room_clear() -> void:
 func _update_portal(_delta: float) -> void:
 	if portal == null:
 		return
-	var dx := px - portal["x"]
-	var dy := py - portal["y"]
+	var dx: float = px - float(portal["x"])
+	var dy: float = py - float(portal["y"])
 	if sqrt(dx*dx + dy*dy) < portal["r"] + 14.0:
 		portal = null
 		_enter_room(room_idx + 1)

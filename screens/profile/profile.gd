@@ -233,7 +233,7 @@ func _build_title_buttons() -> void:
 
 	for t in GameData.TITLES:
 		var unlocked := GameData.is_title_unlocked(t.id)
-		var is_current := (t.id == GameData.title)
+		var is_current: bool = (t.id == GameData.title)
 
 		var btn := Button.new()
 		var icon_str: String = t.get("ic", "")

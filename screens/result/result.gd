@@ -321,7 +321,7 @@ func _build_team_section() -> Control:
 		var ch := _find_char(str(cid))
 		if ch.is_empty():
 			continue
-		var is_mvp := ch.get("n", "") == mvp_name
+		var is_mvp: bool = ch.get("n", "") == mvp_name
 
 		var chip := PanelContainer.new()
 		var chip_sb := ThemeFactory.pill(ThemeFactory.C_BG2, 20)
