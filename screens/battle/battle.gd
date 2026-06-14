@@ -177,11 +177,14 @@ func _build_hud() -> void:
 	boss_track.add_child(_boss_bar_fill)
 	boss_container.visible = false
 
-	# 하단 왼쪽: 활성 캐릭터 HP
+	# 하단 왼쪽: 활성 캐릭터 HP (아래에서 위로 자라 화면 안에 유지)
 	var hp_panel := PanelContainer.new()
 	hp_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	hp_panel.position = Vector2(8, -80)
-	hp_panel.custom_minimum_size = Vector2(220, 68)
+	hp_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	hp_panel.offset_left = 8
+	hp_panel.offset_top = -66
+	hp_panel.offset_bottom = -66
+	hp_panel.custom_minimum_size = Vector2(220, 64)
 	hp_panel.add_theme_stylebox_override("panel", ThemeFactory.glass_panel(true, 10))
 	root.add_child(hp_panel)
 
@@ -207,10 +210,13 @@ func _build_hud() -> void:
 	_active_hp_lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
 	hp_vbox.add_child(_active_hp_lbl)
 
-	# 슬롯 (최대 5)
+	# 슬롯 (최대 5) — 화면 하단에서 위로 자라게 (잘림 방지)
 	var slots_hbox := HBoxContainer.new()
 	slots_hbox.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	slots_hbox.position = Vector2(8, -8)
+	slots_hbox.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	slots_hbox.offset_left = 8
+	slots_hbox.offset_top = -8
+	slots_hbox.offset_bottom = -8
 	slots_hbox.add_theme_constant_override("separation", 4)
 	root.add_child(slots_hbox)
 	_slot_panels = []
