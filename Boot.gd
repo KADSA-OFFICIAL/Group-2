@@ -6,9 +6,11 @@ extends Node
 
 func _ready() -> void:
 	# project.godot 에디터 덮어쓰기 방지 — 코드로 직접 설정
+	# EXPAND: 비율 왜곡 없이 어떤 창 비율에서도 화면을 꽉 채운다
+	# (앵커 기반 UI 가 늘어난 뷰포트에 맞춰 자동 재배치됨)
 	var w := get_window()
 	w.content_scale_mode   = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
-	w.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+	w.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 	w.content_scale_size   = Vector2i(1280, 720)
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MAXIMIZED)
 	ScreenManager.push(preload("res://screens/main/MainScreen.tscn"))

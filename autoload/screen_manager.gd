@@ -21,6 +21,12 @@ func push(scene: PackedScene) -> void:
 		_stack.back().visible = false
 	var inst := scene.instantiate() as Control
 	_layer.add_child(inst)
+	# 모든 화면을 뷰포트 전체로 강제 — 어떤 화면 비율에서도 꽉 차게
+	inst.set_anchors_preset(Control.PRESET_FULL_RECT)
+	inst.offset_left = 0
+	inst.offset_top = 0
+	inst.offset_right = 0
+	inst.offset_bottom = 0
 	_stack.append(inst)
 
 ## 뒤로가기. 마지막 한 장은 남긴다.
