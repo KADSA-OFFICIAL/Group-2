@@ -212,13 +212,13 @@ func _apply_circle_icons() -> void:
 			icon_lbl.custom_minimum_size = Vector2(22, 22)
 			icon_lbl.add_theme_stylebox_override("normal",
 				_make_circle_sb(Color(ThemeFactory.C_BG2, 0.9)))
-			var val_lbl := inner.get_node_or_null(StringName("StaminaValue")) as Label
+			var val_lbl := inner.get_node_or_null("StaminaValue") as Label
 			if val_lbl == null:
-				val_lbl = inner.get_node_or_null(StringName("GoldValue")) as Label
+				val_lbl = inner.get_node_or_null("GoldValue") as Label
 			if val_lbl == null:
-				val_lbl = inner.get_node_or_null(StringName("GemValue")) as Label
+				val_lbl = inner.get_node_or_null("GemValue") as Label
 			if val_lbl == null:
-				val_lbl = inner.get_node_or_null(StringName("TokenValue")) as Label
+				val_lbl = inner.get_node_or_null("TokenValue") as Label
 			if val_lbl != null:
 				val_lbl.add_theme_font_size_override("font_size", 12)
 			var plus_btn := inner.get_node_or_null("PlusButton") as Button
