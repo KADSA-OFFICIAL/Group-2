@@ -84,22 +84,29 @@ func _ready() -> void:
 
 
 # ── 뷰포트 + 게임월드 ────────────────────────────────────
+# SubViewport 는 960×540 고정 렌더, TextureRect 가 화면 전체로 스케일.
+# (SubViewportContainer.stretch 는 뷰포트 자체를 키워 고정좌표 그리기가
+#  좌상단에만 남는 문제가 있어 사용하지 않음)
 func _build_viewport() -> void:
-	var svc := SubViewportContainer.new()
-	svc.set_anchors_preset(Control.PRESET_FULL_RECT)
-	svc.stretch = true
-	add_child(svc)
-
 	_viewport = SubViewport.new()
 	_viewport.size = Vector2i(W, H)
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	_viewport.transparent_bg = false
-	svc.add_child(_viewport)
+	add_child(_viewport)
 
 	_game_world = Node2D.new()
 	_game_world.name = "GameWorld"
 	_viewport.add_child(_game_world)
 	_game_world.draw.connect(_on_draw)
+
+	# 렌더 결과를 화면 전체에 채워 표시 (입력 매핑이 'world fills viewport'를
+	# 전제로 하므로 STRETCH_SCALE 로 꽉 채운다)
+	var tex := TextureRect.new()
+	tex.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tex.texture = _viewport.get_texture()
+	tex.stretch_mode = TextureRect.STRETCH_SCALE
+	tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(tex)
 
 
 func _on_draw() -> void:
