@@ -230,3 +230,179 @@ func guide_current() -> String:
 		if not quest_claims.has(QUEST_IDS[i]):
 			return QUEST_NMS[i]
 	return ""
+
+
+# ════════════════════════════════════════════════════════
+#  저장 / 불러오기 (진행 영속화)
+# ════════════════════════════════════════════════════════
+const SAVE_PATH := "user://prototype_save.json"
+var _loaded := false
+
+
+func _ready() -> void:
+	load_state()
+	# 변경 시 자동 저장
+	currency_changed.connect(func(_k, _a): save_state())
+	roster_changed.connect(func(): save_state())
+	# 주기적 자동 저장 (시그널 없이 dict 만 바뀌는 경우 대비)
+	var t := Timer.new()
+	t.wait_time = 20.0
+	t.autostart = true
+	t.timeout.connect(save_state)
+	add_child(t)
+
+
+func _notification(what: int) -> void:
+	# 창 닫기·앱 일시정지·종료 시 저장
+	if what == NOTIFICATION_WM_CLOSE_REQUEST \
+			or what == NOTIFICATION_APPLICATION_PAUSED \
+			or what == NOTIFICATION_EXIT_TREE:
+		save_state()
+
+
+func save_state() -> void:
+	if not _loaded:
+		# 아직 불러오기 전이면 저장 안 함 (기본값으로 덮어쓰기 방지)
+		return
+	var d := {
+		"player_name": player_name, "level": level, "is_max_level": is_max_level,
+		"exp_current": exp_current, "exp_to_next": exp_to_next,
+		"title": title, "avatar": avatar, "cleared": cleared,
+		"stamina": stamina, "stamina_max": stamina_max,
+		"gold": gold, "gems": gems, "faction_token": faction_token, "sweep_tickets": sweep_tickets,
+		"stats": stats, "mats": mats,
+		"mission_claims": mission_claims, "shop_buys": shop_buys, "guild_buys": guild_buys,
+		"guild_checked": guild_checked, "event_coin": event_coin,
+		"event_claims": event_claims, "event_buys": event_buys,
+		"pass_claims": pass_claims, "pass_premium": pass_premium, "quest_claims": quest_claims,
+		"attend": attend, "settings": settings,
+		"roster": roster, "mails": mails,
+	}
+	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if f == null:
+		push_warning("save_state: 파일 열기 실패 — %s" % FileAccess.get_open_error())
+		return
+	f.store_string(JSON.stringify(d))
+	f.close()
+
+
+func load_state() -> void:
+	if not FileAccess.file_exists(SAVE_PATH):
+		_loaded = true
+		return
+	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if f == null:
+		_loaded = true
+		return
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	f.close()
+	if typeof(parsed) != TYPE_DICTIONARY:
+		_loaded = true
+		return
+	var d: Dictionary = parsed
+
+	player_name = str(d.get("player_name", player_name))
+	level = int(d.get("level", level))
+	is_max_level = bool(d.get("is_max_level", is_max_level))
+	exp_current = int(d.get("exp_current", exp_current))
+	exp_to_next = int(d.get("exp_to_next", exp_to_next))
+	title = str(d.get("title", title))
+	avatar = str(d.get("avatar", avatar))
+	cleared = int(d.get("cleared", cleared))
+	stamina = int(d.get("stamina", stamina))
+	stamina_max = int(d.get("stamina_max", stamina_max))
+	gold = int(d.get("gold", gold))
+	gems = int(d.get("gems", gems))
+	faction_token = int(d.get("faction_token", faction_token))
+	sweep_tickets = int(d.get("sweep_tickets", sweep_tickets))
+	guild_checked = bool(d.get("guild_checked", guild_checked))
+	event_coin = int(d.get("event_coin", event_coin))
+	pass_premium = bool(d.get("pass_premium", pass_premium))
+
+	stats = _int_dict(d.get("stats", stats), stats)
+	mats = _int_dict(d.get("mats", mats), mats)
+	if d.has("mission_claims"): mission_claims = _to_dict(d["mission_claims"])
+	if d.has("shop_buys"): shop_buys = _int_dict(d["shop_buys"], {})
+	if d.has("guild_buys"): guild_buys = _int_dict(d["guild_buys"], {})
+	if d.has("event_claims"): event_claims = _to_dict(d["event_claims"])
+	if d.has("event_buys"): event_buys = _int_dict(d["event_buys"], {})
+	if d.has("pass_claims"): pass_claims = _to_dict(d["pass_claims"])
+	if d.has("quest_claims"): quest_claims = _to_dict(d["quest_claims"])
+	if d.has("attend"): attend = _to_dict(d["attend"])
+	if d.has("settings"): settings = _to_dict(d["settings"])
+	if d.has("roster"): roster = _load_roster(d["roster"])
+	if d.has("mails"): mails = _load_mails(d["mails"])
+
+	_loaded = true
+
+
+func reset_save() -> void:
+	# 설정 화면의 데이터 초기화용
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.remove_absolute(SAVE_PATH)
+
+
+# ── 직렬화 헬퍼 ─────────────────────────────────────────
+func _to_dict(v: Variant) -> Dictionary:
+	return v if typeof(v) == TYPE_DICTIONARY else {}
+
+
+func _int_dict(v: Variant, fallback: Dictionary) -> Dictionary:
+	# 숫자 값을 int 로 정규화 (JSON 은 float 로 파싱될 수 있음)
+	if typeof(v) != TYPE_DICTIONARY:
+		return fallback.duplicate()
+	var out := {}
+	for k in v:
+		var val: Variant = v[k]
+		if typeof(val) == TYPE_FLOAT:
+			out[k] = int(val)
+		else:
+			out[k] = val
+	return out
+
+
+func _load_roster(arr: Variant) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if typeof(arr) != TYPE_ARRAY:
+		return roster
+	for e in arr:
+		if typeof(e) != TYPE_DICTIONARY:
+			continue
+		var c: Dictionary = {}
+		for k in e:
+			c[k] = e[k]
+		for nk in ["r", "lv", "pw", "shards"]:
+			if c.has(nk):
+				c[nk] = int(c[nk])
+		out.append(c)
+	return out if not out.is_empty() else roster
+
+
+func _load_mails(arr: Variant) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if typeof(arr) != TYPE_ARRAY:
+		return mails
+	for e in arr:
+		if typeof(e) != TYPE_DICTIONARY:
+			continue
+		var m: Dictionary = {}
+		for k in e:
+			m[k] = e[k]
+		if m.has("days"):
+			m["days"] = int(m["days"])
+		if m.has("claimed"):
+			m["claimed"] = bool(m["claimed"])
+		# 보상 배열 내 수치 int 정규화
+		if m.has("rw") and typeof(m["rw"]) == TYPE_ARRAY:
+			var rws: Array = []
+			for rw in m["rw"]:
+				if typeof(rw) == TYPE_DICTIONARY:
+					var r: Dictionary = {}
+					for k in rw:
+						r[k] = rw[k]
+					if r.has("a"):
+						r["a"] = int(r["a"])
+					rws.append(r)
+			m["rw"] = rws
+		out.append(m)
+	return out if not out.is_empty() else mails

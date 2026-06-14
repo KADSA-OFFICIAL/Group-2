@@ -121,7 +121,7 @@ func _ready() -> void:
 	reset_btn.text = "데이터 초기화"
 	reset_btn.add_theme_font_size_override("font_size", 15)
 	reset_btn.add_theme_color_override("font_color", ThemeFactory.C_BAD)
-	reset_btn.pressed.connect(func(): _toast("데이터 초기화 기능은 아직 구현 중이야"))
+	reset_btn.pressed.connect(_on_reset_data)
 	acct_vbox.add_child(reset_btn)
 
 	# ── 버전 ──
@@ -235,6 +235,11 @@ func _on_quality_select(opt: String, btn_hbox: HBoxContainer, options: Array) ->
 			b.add_theme_stylebox_override("normal", ThemeFactory.accent_box(10))
 		else:
 			b.remove_theme_stylebox_override("normal")
+
+
+func _on_reset_data() -> void:
+	GameData.reset_save()
+	_toast("데이터 초기화 — 게임을 재시작하면 처음부터 시작해")
 
 
 func _toast(msg: String) -> void:
