@@ -68,6 +68,17 @@ func _ready() -> void:
 			b.button_group = _nav_group
 			b.add_theme_stylebox_override("pressed", ThemeFactory.accent_box(14))
 			b.pressed.connect(_on_nav_pressed.bind(b))
+			# 아이콘 크기·간격 코드로 강제 (에디터 tscn 덮어쓰기 방지)
+			var vbox := b.get_node_or_null("VBox") as VBoxContainer
+			if vbox != null:
+				vbox.add_theme_constant_override("separation", 2)
+				var icon_lbl := vbox.get_node_or_null("Icon") as Label
+				if icon_lbl != null:
+					icon_lbl.add_theme_font_size_override("font_size", 18)
+					icon_lbl.custom_minimum_size = Vector2(26, 26)
+				var name_lbl := vbox.get_node_or_null("Name") as Label
+				if name_lbl != null:
+					name_lbl.add_theme_font_size_override("font_size", 11)
 	var hunt := bottom_nav.get_node_or_null("Hunt") as Button
 	if hunt:
 		hunt.button_pressed = true
@@ -91,6 +102,11 @@ func _ready() -> void:
 	conquest_button.add_theme_stylebox_override("pressed", ThemeFactory.cta_box())
 	conquest_button.pressed.connect(_on_conquest)
 	next_stage_label.text = "33-9"
+
+	# NavPanel 높이 축소 (작아진 아이콘에 맞춤)
+	var nav_panel := get_node_or_null("NavPanel") as PanelContainer
+	if nav_panel != null:
+		nav_panel.offset_top = -72.0
 
 	toast_label.visible = false
 
