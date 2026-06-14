@@ -80,22 +80,63 @@ static func texture_box(tex: Texture2D, _radius: int = 20) -> StyleBoxTexture:
 	sb.content_margin_bottom = 16
 	return sb
 
+# ── 버튼 StyleBox (둥근 글래스) ─────────────────────────
+static func button_box(bg: Color, border: Color, radius: int = 12) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_corner_radius_all(radius)
+	sb.border_color = border
+	sb.set_border_width_all(2)
+	sb.content_margin_left = 14
+	sb.content_margin_right = 14
+	sb.content_margin_top = 8
+	sb.content_margin_bottom = 8
+	sb.anti_aliasing = true
+	return sb
+
 # ── Theme 본체 ─────────────────────────────────────────
 static func build(default_font: Font = null) -> Theme:
 	var t := Theme.new()
 	if default_font:
 		t.default_font = default_font
-	t.default_font_size = 18
+	t.default_font_size = 16
 
 	t.set_color("font_color", "Label", C_INK)
 
-	t.set_stylebox("normal", "Button", glass_panel(false, 18))
-	t.set_stylebox("hover",  "Button", glass_panel(true, 18))
-	t.set_stylebox("pressed","Button", glass_panel(true, 18))
-	t.set_color("font_color", "Button", C_INK)
-	t.set_color("font_hover_color", "Button", C_CYAN)
+	# 버튼 — 둥근 글래스, 상태별 색
+	t.set_stylebox("normal",   "Button", button_box(C_GLASS, C_LINE, 12))
+	t.set_stylebox("hover",    "Button", button_box(C_GLASS_STRONG, C_CYAN, 12))
+	t.set_stylebox("pressed",  "Button", button_box(Color(C_CYAN, 0.22), C_CYAN, 12))
+	t.set_stylebox("disabled", "Button", button_box(Color(0.5, 0.5, 0.6, 0.10), Color(C_LINE, 0.4), 12))
+	var focus := StyleBoxFlat.new()
+	focus.bg_color = Color(0, 0, 0, 0)
+	focus.set_corner_radius_all(12)
+	focus.border_color = Color(C_CYAN, 0.0)
+	t.set_stylebox("focus", "Button", focus)
+	t.set_color("font_color",          "Button", C_INK)
+	t.set_color("font_hover_color",    "Button", C_CYAN)
+	t.set_color("font_pressed_color",  "Button", C_CYAN)
+	t.set_color("font_disabled_color", "Button", C_INK_FAINT)
+	t.set_font_size("font_size", "Button", 15)
 
-	t.set_stylebox("panel", "PanelContainer", glass_panel(false, 22))
+	# 패널
+	t.set_stylebox("panel", "PanelContainer", glass_panel(false, 18))
+	t.set_stylebox("panel", "Panel", glass_panel(false, 18))
+
+	# 프로그레스바 — 둥근 트랙/필
+	var pb_bg := round_box(Color(0, 0, 0, 0.32), 8)
+	var pb_fg := round_box(C_CYAN, 8)
+	t.set_stylebox("background", "ProgressBar", pb_bg)
+	t.set_stylebox("fill", "ProgressBar", pb_fg)
+	t.set_color("font_color", "ProgressBar", C_INK)
+
+	# 라인에딧 (설정 이름 입력)
+	var le := round_box(Color(0, 0, 0, 0.32), 10, C_LINE, 2, 0, 8)
+	var le_focus := round_box(Color(0, 0, 0, 0.32), 10, C_CYAN, 2, 0, 8)
+	t.set_stylebox("normal", "LineEdit", le)
+	t.set_stylebox("focus", "LineEdit", le_focus)
+	t.set_color("font_color", "LineEdit", C_INK)
+	t.set_color("caret_color", "LineEdit", C_CYAN)
 
 	return t
 
@@ -208,3 +249,49 @@ static func currency_color(kind: String) -> Color:
 		"gems":    return C_PINK
 		"token":   return C_VIOLET
 	return C_INK
+
+# ── 공용 뒤로가기 버튼 ──────────────────────────────────
+static func back_button(on_back: Callable) -> Button:
+	var b := Button.new()
+	b.text = "← 뒤로"
+	b.add_theme_font_size_override("font_size", 15)
+	b.custom_minimum_size = Vector2(0, 38)
+	b.add_theme_stylebox_override("normal",  button_box(C_GLASS, C_LINE, 999))
+	b.add_theme_stylebox_override("hover",   button_box(C_GLASS_STRONG, C_CYAN, 999))
+	b.add_theme_stylebox_override("pressed", button_box(Color(C_CYAN, 0.22), C_CYAN, 999))
+	if on_back.is_valid():
+		b.pressed.connect(on_back)
+	return b
+
+# ── 공용 상단바 (뒤로 + 제목 + 우측 영역) ───────────────
+# 반환: { "bar": MarginContainer, "row": HBoxContainer, "title": Label }
+static func make_top_bar(title_text: String, on_back: Callable) -> Dictionary:
+	var bar := MarginContainer.new()
+	bar.add_theme_constant_override("margin_left", 14)
+	bar.add_theme_constant_override("margin_right", 14)
+	bar.add_theme_constant_override("margin_top", 12)
+	bar.add_theme_constant_override("margin_bottom", 8)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	bar.add_child(row)
+
+	row.add_child(back_button(on_back))
+
+	var title := Label.new()
+	title.text = title_text
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", C_CYAN)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(title)
+
+	return {"bar": bar, "row": row, "title": title}
+
+# ── 섹션 헤더 라벨 ──────────────────────────────────────
+static func section_label(text: String, accent: Color = C_CYAN) -> Label:
+	var lb := Label.new()
+	lb.text = text
+	lb.add_theme_font_size_override("font_size", 18)
+	lb.add_theme_color_override("font_color", accent)
+	return lb
