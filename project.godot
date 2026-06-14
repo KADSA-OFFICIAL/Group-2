@@ -34,8 +34,10 @@ TelegraphSystem="*res://systems/TelegraphSystem.gd"
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
+window/size/resizable=true
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/dpi/allow_hidpi=true
 
 [input]
 

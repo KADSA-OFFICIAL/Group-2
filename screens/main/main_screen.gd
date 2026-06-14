@@ -94,30 +94,24 @@ func _ready() -> void:
 
 	toast_label.visible = false
 
-	# ── 길라잡이 트래커 (메인 화면 하단 좌측) ──
-	_guide_label = Label.new()
-	_guide_label.name = "GuideTracker"
-	_guide_label.set_anchor(SIDE_LEFT, 0.0)
-	_guide_label.set_anchor(SIDE_RIGHT, 0.0)
-	_guide_label.set_anchor(SIDE_BOTTOM, 1.0)
-	_guide_label.set_anchor(SIDE_TOP, 1.0)
-	_guide_label.offset_left = 16
-	_guide_label.offset_right = 420
-	_guide_label.offset_bottom = -56
-	_guide_label.offset_top = -100
-	_guide_label.grow_horizontal = Control.GROW_DIRECTION_END
-	_guide_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_guide_label.add_theme_font_size_override("font_size", 14)
-	_guide_label.add_theme_color_override("font_color", ThemeFactory.C_CYAN)
-	var gs := ThemeFactory.glass_panel(false, 40)
-	gs.bg_color = Color(0.04, 0.03, 0.09, 0.65)
-	gs.border_color = Color(ThemeFactory.C_CYAN.r, ThemeFactory.C_CYAN.g, ThemeFactory.C_CYAN.b, 0.45)
-	_guide_label.add_theme_stylebox_override("normal", gs)
-	_guide_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	_guide_label.gui_input.connect(func(ev: InputEvent):
-		if ev is InputEventMouseButton and ev.pressed:
-			ScreenManager.push(QUEST_SCR))
-	add_child(_guide_label)
+	# ── 길라잡이 트래커 (PlayerCard 아이콘·이름 아래) ──
+	var player_card := get_node("TopBar/HBoxContainer/PlayerCard") as PanelContainer
+	var inner_hbox := player_card.get_child(0) as HBoxContainer
+	if inner_hbox != null:
+		var outer_vbox := VBoxContainer.new()
+		outer_vbox.add_theme_constant_override("separation", 3)
+		inner_hbox.reparent(outer_vbox, false)
+		player_card.add_child(outer_vbox)
+
+		_guide_label = Label.new()
+		_guide_label.name = "GuideTracker"
+		_guide_label.add_theme_font_size_override("font_size", 12)
+		_guide_label.add_theme_color_override("font_color", ThemeFactory.C_CYAN)
+		_guide_label.mouse_filter = Control.MOUSE_FILTER_STOP
+		_guide_label.gui_input.connect(func(ev: InputEvent):
+			if ev is InputEventMouseButton and ev.pressed:
+				ScreenManager.push(QUEST_SCR))
+		outer_vbox.add_child(_guide_label)
 	_update_guide_tracker()
 
 
@@ -126,9 +120,9 @@ func _update_guide_tracker() -> void:
 		return
 	var cur := GameData.guide_current()
 	if cur == "":
-		_guide_label.text = "  🎉 모든 임무 완료!  "
+		_guide_label.text = "🎉 모든 임무 완료!"
 	else:
-		_guide_label.text = "  📌 다음 임무  ·  %s  ›  " % cur
+		_guide_label.text = "📌 다음 임무 · %s ›" % cur
 
 
 func _bind_player() -> void:
