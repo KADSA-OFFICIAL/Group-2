@@ -3,22 +3,24 @@
 
 extends Control
 
-# 보상 정의 (1-indexed; index 0 unused)
+# HTML DAYS 배열 그대로 (1-indexed; index 0 unused)
 const DAY_REWARDS = [
-	{},                                   # 0 unused
-	{k = "gold",    a = 10000},           # day 1
-	{k = "gems",    a = 50},              # day 2
-	{k = "stamina", a = 30},              # day 3
-	{k = "gems",    a = 100},             # day 4
-	{k = "gold",    a = 50000},           # day 5
-	{k = "gems",    a = 200},             # day 6
-	{k = "gems",    a = 500},             # day 7 (stamina 60 added separately)
+	{},                                       # 0 unused
+	{k = "gold",   a = 100000},               # day 1: 골드 10만
+	{k = "gems",   a = 50},                   # day 2: 보석 50
+	{k = "book",   a = 3},                    # day 3: 강화서 ×3 (mat)
+	{k = "gems",   a = 100},                  # day 4: 보석 100
+	{k = "ore",    a = 3},                    # day 5: 마정석 ×3 (mat)
+	{k = "gold",   a = 300000},               # day 6: 골드 30만
+	{k = "gems",   a = 300, shard = 10},      # day 7: 보석 300 + 랜덤 조각 +10
 ]
 
 const REWARD_ICONS: Dictionary = {
 	"gold":    "🪙",
 	"gems":    "💎",
 	"stamina": "⚡",
+	"book":    "📘",
+	"ore":     "🔮",
 }
 
 var _grid_row: HBoxContainer
@@ -128,11 +130,14 @@ func _refresh() -> void:
 	_build_grid()
 	_streak_label.text = "연속 %d일 출석 중" % GameData.attend.day
 
-	if GameData.attend.done_today:
-		_cta_button.text = "오늘 완료"
+	if GameData.attend.day >= 7:
+		_cta_button.text = "이번 달 출석 완료! 🎉"
+		_cta_button.disabled = true
+	elif GameData.attend.done_today:
+		_cta_button.text = "오늘은 출석 완료 — 내일 다시!"
 		_cta_button.disabled = true
 	else:
-		_cta_button.text = "오늘 출석 체크"
+		_cta_button.text = "오늘 출석 보상 받기"
 		_cta_button.disabled = false
 
 
@@ -190,14 +195,14 @@ func _make_day_box(day_num: int, completed_day: int) -> Control:
 	# 보상 아이콘
 	var rw: Dictionary = DAY_REWARDS[day_num]
 	var icon_label := Label.new()
-	icon_label.text = REWARD_ICONS.get(rw.k, "?")
+	icon_label.text = REWARD_ICONS.get(rw.k, "🎁")
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	icon_label.add_theme_font_size_override("font_size", 24)
 	inner.add_child(icon_label)
 
 	# 보상 수량
 	var amount_label := Label.new()
-	var extra := " +⚡60" if (day_num == 7) else ""
+	var extra := " +🧩" if rw.has("shard") else ""
 	amount_label.text = _comma(rw.a) + extra
 	amount_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	amount_label.add_theme_font_size_override("font_size", 11)
@@ -218,26 +223,35 @@ func _make_day_box(day_num: int, completed_day: int) -> Control:
 func _on_claim() -> void:
 	if GameData.attend.done_today:
 		return
+	if GameData.attend.day >= 7:
+		return
 
 	var next_day: int = GameData.attend.day + 1
-	if next_day > 7:
-		next_day = 1
-
 	var rw: Dictionary = DAY_REWARDS[next_day]
-	GameData.add_currency(rw.k, rw.a)
 
-	# day 7 보너스 스태미나
-	if next_day == 7:
-		GameData.add_currency("stamina", 60)
+	var rw_text: String
+	match rw.k:
+		"book":
+			GameData.mats["book"] = GameData.mats.get("book", 0) + rw.a
+			rw_text = "📘 강화서 +%d" % rw.a
+		"ore":
+			GameData.mats["ore"] = GameData.mats.get("ore", 0) + rw.a
+			rw_text = "🔮 마정석 +%d" % rw.a
+		_:
+			GameData.add_currency(rw.k, rw.a)
+			rw_text = REWARD_ICONS.get(rw.k, "") + " " + _comma(rw.a)
+
+	# day 7: 랜덤 캐릭터 조각 +10
+	if rw.has("shard") and GameData.roster.size() > 0:
+		var idx := randi() % GameData.roster.size()
+		var char_nm: String = GameData.roster[idx].get("n", "?")
+		GameData.roster[idx]["shards"] = GameData.roster[idx].get("shards", 0) + rw.shard
+		rw_text += " · %s 조각 +%d" % [char_nm, rw.shard]
 
 	GameData.attend.day = next_day
 	GameData.attend.done_today = true
 
-	# 7일 완료 시 day 리셋 예약 (다음 날 done_today = false 처리는 게임 세션 시작 로직에서)
-	var rw_text: String = REWARD_ICONS.get(rw.k, "") + " " + _comma(rw.a)
-	if next_day == 7:
-		rw_text += " +⚡60"
-	_toast("%s 수령!" % rw_text)
+	_toast("%d일차 출석 — %s 수령!" % [next_day, rw_text])
 	_refresh()
 
 

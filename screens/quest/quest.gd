@@ -4,13 +4,16 @@
 extends Control
 
 const QUESTS = [
-	{id = "q1", nm = "첫 번째 스테이지 클리어",  cond_desc = "스테이지 1회 이상 클리어",      rw = {k = "gems",          a = 100}},
-	{id = "q2", nm = "캐릭터 편성하기",            cond_desc = "스테이지 클리어 1회 이상",      rw = {k = "gold",          a = 200000}},
-	{id = "q3", nm = "첫 모집 (가챠) 수행",        cond_desc = "모집 1회 이상",                  rw = {k = "gems",          a = 150}},
-	{id = "q4", nm = "캐릭터 강화하기",            cond_desc = "강화 1회 이상",                  rw = {k = "stamina",       a = 60}},
-	{id = "q5", nm = "제조소에서 아이템 제조",     cond_desc = "아이템 제조 1회 이상",           rw = {k = "gems",          a = 200}},
-	{id = "q6", nm = "교단 체크인",                cond_desc = "교단 체크인 완료",               rw = {k = "faction_token", a = 200}},
-	{id = "q7", nm = "10회 스테이지 클리어",       cond_desc = "스테이지 10회 이상 클리어",      rw = {k = "gems",          a = 500}},
+	{id = "q1",  nm = "첫 출석",           cond_desc = "출석 화면에서 오늘의 보상을 받자",            rw = {k = "gems",  a = 50}},
+	{id = "q2",  nm = "우편 정리",          cond_desc = "우편함에서 보상을 1통 이상 수령",             rw = {k = "gold",  a = 100000}},
+	{id = "q3",  nm = "첫 모집",            cond_desc = "모집에서 새 캐릭터를 뽑아보자 (1회)",          rw = {k = "gems",  a = 100}},
+	{id = "q4",  nm = "단련 시작",          cond_desc = "캐릭터를 1회 레벨업",                        rw = {k = "gold",  a = 100000}},
+	{id = "q5",  nm = "첫 사냥",            cond_desc = "정복 → 편성 → 전투에서 1회 승리",             rw = {k = "gems",  a = 100}},
+	{id = "q6",  nm = "공방 가동",          cond_desc = "제조에서 아무 레시피나 1회 제조 시작",         rw = {k = "gold",  a = 150000}},
+	{id = "q7",  nm = "교단 인사",          cond_desc = "교단에서 출석 체크 (토큰 획득)",              rw = {k = "gems",  a = 50}},
+	{id = "q8",  nm = "균열 돌파",          cond_desc = "스테이지 33-9 클리어",                       rw = {k = "gems",  a = 200}},
+	{id = "q9",  nm = "첫 승급",            cond_desc = "조각을 모아 캐릭터를 1회 승급 (★ 상승)",       rw = {k = "gems",  a = 150}},
+	{id = "q10", nm = "새벽의 군주 토벌",   cond_desc = "챕터 보스 스테이지 33-10 클리어",             rw = {k = "gems",  a = 500}},
 ]
 
 const REWARD_ICONS: Dictionary = {
@@ -120,13 +123,21 @@ func _ready() -> void:
 
 func _cond_met(q: Dictionary) -> bool:
 	match q.id:
-		"q1": return GameData.cleared >= 1
-		"q2": return GameData.stats.clears >= 1
-		"q3": return GameData.stats.pulls >= 1
-		"q4": return GameData.stats.levelups >= 1
-		"q5": return GameData.stats.crafts >= 1
-		"q6": return GameData.guild_checked
-		"q7": return GameData.cleared >= 10
+		"q1":  return GameData.attend.get("day", 0) >= 1
+		"q2":
+			var claimed_count := 0
+			for m in GameData.mails:
+				if m.get("claimed", false):
+					claimed_count += 1
+			return claimed_count >= 1
+		"q3":  return GameData.stats.get("pulls", 0) >= 1
+		"q4":  return GameData.stats.get("levelups", 0) >= 1
+		"q5":  return GameData.stats.get("clears", 0) >= 1
+		"q6":  return GameData.stats.get("crafts", 0) >= 1
+		"q7":  return GameData.guild_checked
+		"q8":  return GameData.cleared >= 9
+		"q9":  return GameData.stats.get("promos", 0) >= 1
+		"q10": return GameData.cleared >= 10
 	return false
 
 

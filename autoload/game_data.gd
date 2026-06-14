@@ -28,7 +28,8 @@ var faction_token: int = 1_250
 var sweep_tickets: int = 40
 
 # ── 전투 ──
-var combat_power: int = 48_200
+var combat_power: int:
+	get: return total_power()
 
 # ── 스탯 ──
 var stats: Dictionary = {
@@ -118,13 +119,22 @@ var mails: Array[Dictionary] = [
 	{id="m7", tt="기력 응원 선물",       from="운영팀", days=2,  rw=[{k="stamina", a=60}],                 claimed=false},
 ]
 
-# ── 타이틀 목록 ──
+# ── 아바타 목록 ──
+const AVATARS := ["🦊", "🐱", "🐰", "🐺", "🦉", "🐯", "🐧", "🦄"]
+
+# ── 타이틀 목록 (HTML TITLES 그대로) ──
 const TITLES = [
-	{id="t1", nm="별빛 수호자"},
-	{id="t2", nm="마정석 수집가"},
-	{id="t3", nm="폭풍의 심장"},
-	{id="t4", nm="고요한 관측자"},
-	{id="t5", nm="수집가"},
+	{id="t1",  ic="🌱", nm="새내기 사냥꾼",   cond="기본 제공"},
+	{id="t2",  ic="🗡️", nm="첫 사냥의 추억",  cond="전투 1회 승리"},
+	{id="t3",  ic="🌒", nm="균열을 걷는 자",  cond="33-9 클리어"},
+	{id="t4",  ic="👑", nm="새벽의 정복자",   cond="챕터 보스 33-10 격파"},
+	{id="t5",  ic="📚", nm="수집가",         cond="캐릭터 15명 보유"},
+	{id="t6",  ic="✨", nm="운명의 큰손",     cond="모집 10회"},
+	{id="t7",  ic="🔥", nm="단련의 달인",     cond="레벨업 20회"},
+	{id="t8",  ic="🌟", nm="별의 인도자",     cond="승급 1회"},
+	{id="t9",  ic="🛡️", nm="교단의 기둥",    cond="교단 출석 1회"},
+	{id="t10", ic="📅", nm="성실의 표본",     cond="출석 7일 달성"},
+	{id="t11", ic="🧭", nm="길라잡이 졸업생", cond="길라잡이 임무 10개 완료"},
 ]
 
 
@@ -186,3 +196,37 @@ func role_icon(role: String) -> String:
 		"방어": return "🛡"
 		"지원": return "💫"
 	return "?"
+
+
+func is_title_unlocked(tid: String) -> bool:
+	match tid:
+		"t1":  return true
+		"t2":  return stats.get("clears", 0) >= 1
+		"t3":  return cleared >= 9
+		"t4":  return cleared >= 10
+		"t5":  return roster.size() >= 15
+		"t6":  return stats.get("pulls", 0) >= 10
+		"t7":  return stats.get("levelups", 0) >= 20
+		"t8":  return stats.get("promos", 0) >= 1
+		"t9":  return guild_checked
+		"t10": return attend.get("day", 0) >= 7
+		"t11": return quest_claims.size() >= 10
+	return false
+
+
+func title_label() -> String:
+	for t in TITLES:
+		if t.id == title:
+			return t.nm
+	return "—"
+
+
+func guide_current() -> String:
+	# Returns the name of the first unclaimed quest step, or "" if all done.
+	const QUEST_IDS := ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10"]
+	const QUEST_NMS := ["첫 출석", "우편 정리", "첫 모집", "단련 시작", "첫 사냥",
+		"공방 가동", "교단 인사", "균열 돌파", "첫 승급", "새벽의 군주 토벌"]
+	for i in QUEST_IDS.size():
+		if not quest_claims.has(QUEST_IDS[i]):
+			return QUEST_NMS[i]
+	return ""

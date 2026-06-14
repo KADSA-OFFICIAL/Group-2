@@ -130,8 +130,17 @@ func _rebuild_list() -> void:
 	for child in _list_root.get_children():
 		child.queue_free()
 
+	var sorted_mails := GameData.mails.duplicate()
+	sorted_mails.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var ac := bool(a.get("claimed", false))
+		var bc := bool(b.get("claimed", false))
+		if ac == bc:
+			return false
+		return not ac
+	)
+
 	var all_claimed := true
-	for mail in GameData.mails:
+	for mail in sorted_mails:
 		if not bool(mail.get("claimed", false)):
 			all_claimed = false
 		var row := _make_mail_row(mail)

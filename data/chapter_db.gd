@@ -9,8 +9,8 @@ const STAGE_NAMES := [
 	"관문", "폐허 입구", "무너진 다리", "성벽", "안마당",
 	"회랑", "제단", "봉인의 방", "무너진 성소", "새벽의 군주",
 ]
-# 스테이지 1~8 의 클리어 별 개수 (더미)
-const CLEARED_STARS := [3, 3, 2, 3, 3, 2, 3, 3]
+# HTML clearedStars 그대로 — 클리어 후 맵에 표시할 별 개수 (10스테이지 분)
+const CLEARED_STARS := [3, 3, 2, 3, 3, 2, 3, 3, 1, 1]
 
 const CHAPTER_DEFS := [
 	{"num": "31장", "name": "잿빛 평원"},
@@ -31,6 +31,7 @@ static func make_chapter(number_label: String, name: String, hard: bool) -> Chap
 	ch.name = name
 	var base: float = 1.6 if hard else 1.0
 	var chap_num := number_label.trim_suffix("장")
+	var cleared: int = GameData.cleared
 	for i in STAGE_NAMES.size():
 		var n := i + 1
 		var s := StageData.new()
@@ -38,10 +39,9 @@ static func make_chapter(number_label: String, name: String, hard: bool) -> Chap
 		s.code = "%s-%d" % [chap_num, n]
 		s.name = STAGE_NAMES[i]
 		s.is_boss = (n == 10)
-		# 더미 진행도: 1~8 클리어, 9 현재, 10 잠김
-		if n <= 8:
-			s.stars = CLEARED_STARS[i]
-		elif n == 9:
+		if n <= cleared:
+			s.stars = CLEARED_STARS[i] if i < CLEARED_STARS.size() else 3
+		elif n == cleared + 1:
 			s.stars = 0
 		else:
 			s.stars = -1

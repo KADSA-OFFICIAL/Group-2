@@ -4,17 +4,20 @@
 extends Control
 
 const MISSIONS = [
-	{id = "e1", nm = "로그인 7일 달성",    goal = 7,  rw = {k = "event_coin", a = 100}},
-	{id = "e2", nm = "스테이지 5회 클리어", goal = 5,  rw = {k = "event_coin", a = 150}},
-	{id = "e3", nm = "10회 모집",           goal = 10, rw = {k = "event_coin", a = 200}},
-	{id = "e4", nm = "강화 5회",            goal = 5,  rw = {k = "event_coin", a = 50}},
+	{id = "e1", nm = "축제 사냥 — 스테이지 2회 클리어",  goal = 2, rw = {k = "event_coin", a = 30}},
+	{id = "e2", nm = "축제 모집 — 모집 1회",             goal = 1, rw = {k = "event_coin", a = 20}},
+	{id = "e3", nm = "축제 단련 — 레벨업 2회",           goal = 2, rw = {k = "event_coin", a = 20}},
+	{id = "e4", nm = "축제 출석 — 출석 1회",             goal = 1, rw = {k = "event_coin", a = 20}},
+	{id = "e5", nm = "축제 대장정 — 스테이지 5회 클리어", goal = 5, rw = {k = "event_coin", a = 60}},
 ]
 
 const SHOP_ITEMS = [
-	{id = "x1", nm = "보석 ×100",  ic = "💎", cost = 200, lim = 3, rw = {k = "gems",    a = 100}},
-	{id = "x2", nm = "강화서 ×5",  ic = "📘", cost = 100, lim = 5, rw = {k = "book",    a = 5}},
-	{id = "x3", nm = "조각 ×10",   ic = "🧩", cost = 50,  lim = 2, rw = {k = "shards",  a = 10}},
-	{id = "x4", nm = "골드 50만",  ic = "🪙", cost = 150, lim = 2, rw = {k = "gold",    a = 500000}},
+	{id = "x1", nm = "보석 50",          ic = "💎", cost = 30,  lim = 2, rw = {k = "gems",    a = 50}},
+	{id = "x2", nm = "골드 20만",        ic = "🪙", cost = 20,  lim = 3, rw = {k = "gold",    a = 200000}},
+	{id = "x3", nm = "조각 +10",         ic = "🧩", cost = 50,  lim = 2, rw = {k = "shard",   a = 10}},
+	{id = "x4", nm = "마정석 ×5",        ic = "🔮", cost = 25,  lim = 3, rw = {k = "ore",     a = 5}},
+	{id = "x5", nm = "모집권 (보석 160)", ic = "🎟️", cost = 80,  lim = 1, rw = {k = "gems",    a = 160}},
+	{id = "x6", nm = "기력 +60",         ic = "⚡", cost = 15,  lim = 3, rw = {k = "stamina", a = 60}},
 ]
 
 var _coin_label: Label
@@ -153,10 +156,11 @@ func _ready() -> void:
 
 func _get_mission_prog(m: Dictionary) -> int:
 	match m.id:
-		"e1": return GameData.attend.day
-		"e2": return GameData.stats.clears
-		"e3": return GameData.stats.pulls
-		"e4": return GameData.stats.levelups
+		"e1": return GameData.stats.get("clears", 0)
+		"e2": return GameData.stats.get("pulls", 0)
+		"e3": return GameData.stats.get("levelups", 0)
+		"e4": return GameData.attend.get("day", 0)
+		"e5": return GameData.stats.get("clears", 0)
 	return 0
 
 
@@ -291,15 +295,16 @@ func _on_shop_buy(item: Dictionary) -> void:
 	GameData.event_coin -= item.cost
 	GameData.event_buys[item.id] = bought + 1
 
-	match item.id:
-		"x1": GameData.add_currency("gems", item.rw.a)
-		"x2": GameData.mats.book += item.rw.a
-		"x3":
-			# 랜덤 캐릭터 조각
+	var rw: Dictionary = item.rw
+	match rw.k:
+		"gems", "gold", "stamina":
+			GameData.add_currency(rw.k, rw.a)
+		"ore":
+			GameData.mats["ore"] = GameData.mats.get("ore", 0) + rw.a
+		"shard":
 			if GameData.roster.size() > 0:
 				var idx := randi() % GameData.roster.size()
-				GameData.roster[idx].shards += item.rw.a
-		"x4": GameData.add_currency("gold", item.rw.a)
+				GameData.roster[idx]["shards"] = GameData.roster[idx].get("shards", 0) + rw.a
 
 	_refresh_coin()
 	_build_shop()

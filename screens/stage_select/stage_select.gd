@@ -266,6 +266,7 @@ func _on_deploy() -> void:
 	GameData.battle["n"] = _sel_index
 	GameData.battle["reco"] = s.recommended_power
 	GameData.battle["hard"] = _hard
+	GameData.battle["cost"] = s.stamina_cost
 	if GameData.combat_power < s.recommended_power:
 		_toast("권장 전투력 미달 — 그래도 출격 가능")
 	ScreenManager.push(preload("res://screens/formation/Formation.tscn"))

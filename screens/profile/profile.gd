@@ -97,9 +97,36 @@ func _ready() -> void:
 	_cp_label.add_theme_color_override("font_color", ThemeFactory.C_GOLD)
 	badge_row.add_child(_cp_label)
 
+	# ── 아바타 선택 섹션 ──
+	var av_header := Label.new()
+	av_header.text = "아바타 선택"
+	av_header.add_theme_font_size_override("font_size", 18)
+	av_header.add_theme_color_override("font_color", ThemeFactory.C_CYAN)
+	vbox.add_child(av_header)
+
+	var av_panel := PanelContainer.new()
+	av_panel.add_theme_stylebox_override("panel", ThemeFactory.glass_panel(false, 14))
+	vbox.add_child(av_panel)
+
+	var av_hbox := HBoxContainer.new()
+	av_hbox.name = "AvHbox"
+	av_hbox.add_theme_constant_override("separation", 8)
+	av_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	av_panel.add_child(av_hbox)
+
+	for av in GameData.AVATARS:
+		var av_btn := Button.new()
+		av_btn.text = av
+		av_btn.add_theme_font_size_override("font_size", 28)
+		av_btn.custom_minimum_size = Vector2(52, 52)
+		if av == GameData.avatar:
+			av_btn.add_theme_stylebox_override("normal", ThemeFactory.accent_box(26))
+		av_btn.pressed.connect(_on_select_avatar.bind(av_hbox, av))
+		av_hbox.add_child(av_btn)
+
 	# ── 칭호 변경 섹션 ──
 	var title_section_lbl := Label.new()
-	title_section_lbl.text = "보유 칭호"
+	title_section_lbl.text = "칭호 선택"
 	title_section_lbl.add_theme_font_size_override("font_size", 18)
 	title_section_lbl.add_theme_color_override("font_color", ThemeFactory.C_CYAN)
 	vbox.add_child(title_section_lbl)
@@ -116,9 +143,17 @@ func _ready() -> void:
 	title_panel.add_child(title_margin)
 
 	_title_buttons_hbox = HBoxContainer.new()
+	_title_buttons_hbox.name = "TitleHbox"
 	_title_buttons_hbox.add_theme_constant_override("separation", 8)
 	_title_buttons_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	title_margin.add_child(_title_buttons_hbox)
+	_title_buttons_hbox.set_h_size_flags(Control.SIZE_EXPAND_FILL)
+
+	var title_scroll := ScrollContainer.new()
+	title_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	title_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	title_scroll.custom_minimum_size = Vector2(0, 80)
+	title_scroll.add_child(_title_buttons_hbox)
+	title_margin.add_child(title_scroll)
 
 	# ── 스탯 그리드 ──
 	var stats_lbl := Label.new()
@@ -197,17 +232,39 @@ func _build_title_buttons() -> void:
 		c.queue_free()
 
 	for t in GameData.TITLES:
-		var btn := Button.new()
+		var unlocked := GameData.is_title_unlocked(t.id)
 		var is_current := (t.id == GameData.title)
-		btn.text = t.nm + (" (현재)" if is_current else "")
-		btn.add_theme_font_size_override("font_size", 14)
+
+		var btn := Button.new()
+		var icon_str: String = t.get("ic", "")
+		btn.text = "%s %s\n%s" % [icon_str, t.nm, ("✅ 장착 중" if is_current else ("🔓 해금" if unlocked else "🔒 " + t.get("cond", "")))]
+		btn.custom_minimum_size = Vector2(160, 60)
+		btn.add_theme_font_size_override("font_size", 12)
+		btn.disabled = not unlocked
+
 		if is_current:
 			btn.add_theme_stylebox_override("normal",  ThemeFactory.accent_box(12))
 			btn.add_theme_stylebox_override("hover",   ThemeFactory.accent_box(12))
 			btn.add_theme_stylebox_override("pressed", ThemeFactory.accent_box(12))
 			btn.add_theme_color_override("font_color", ThemeFactory.C_BG0)
+		elif not unlocked:
+			var lock_sb := ThemeFactory.glass_panel(false, 12)
+			lock_sb.bg_color = Color(0.1, 0.1, 0.1, 0.4)
+			btn.add_theme_stylebox_override("normal", lock_sb)
+			btn.add_theme_color_override("font_color", ThemeFactory.C_INK_FAINT)
+
 		btn.pressed.connect(_on_select_title.bind(t.id, t.nm))
 		_title_buttons_hbox.add_child(btn)
+
+
+func _on_select_avatar(av_hbox: HBoxContainer, av: String) -> void:
+	GameData.avatar = av
+	for child in av_hbox.get_children():
+		child.remove_theme_stylebox_override("normal")
+		if child is Button and child.text == av:
+			child.add_theme_stylebox_override("normal", ThemeFactory.accent_box(26))
+	_refresh_player_card()
+	_toast("아바타 변경!")
 
 
 func _on_select_title(title_id: String, title_nm: String) -> void:

@@ -9,6 +9,8 @@ var _selected_index: int = -1
 var _detail_panel: PanelContainer
 var _detail_vbox: VBoxContainer
 var _title_label: Label
+var _gold_label: Label
+var _gems_label: Label
 var _toast_label: Label
 var _toast_timer: SceneTreeTimer
 var _card_nodes: Array[PanelContainer] = []
@@ -25,10 +27,46 @@ func _ready() -> void:
 
 
 # ─────────────────────────────────────────────
+# HP/ATK 계산 (HTML 공식 그대로)
+# ─────────────────────────────────────────────
+func _calc_hp(ch: Dictionary) -> int:
+	var base_hp: int
+	match ch.get("role", ""):
+		"공격": base_hp = 160
+		"방어": base_hp = 310
+		_:      base_hp = 210  # 지원
+	var lv: int = ch.get("lv", 1)
+	var r:  int = ch.get("r",  1)
+	return roundi(base_hp * (1.0 + lv / 130.0) * (1.0 + r * 0.08))
+
+
+func _calc_atk(ch: Dictionary) -> int:
+	var base_atk: int
+	match ch.get("role", ""):
+		"공격": base_atk = 13
+		"방어": base_atk = 30
+		_:      base_atk = 17  # 지원
+	var lv: int = ch.get("lv", 1)
+	var r:  int = ch.get("r",  1)
+	return roundi(base_atk * (1.0 + lv / 130.0) * (1.0 + r * 0.08))
+
+
+func _lv_cost(ch: Dictionary) -> int:
+	return 600 * ch.get("lv", 1)
+
+
+func _promo_cost(ch: Dictionary) -> int:
+	return 15 * ch.get("r", 1)
+
+
+func _pw_gain_per_lv(ch: Dictionary) -> int:
+	return 160 + ch.get("r", 1) * 30
+
+
+# ─────────────────────────────────────────────
 # UI 빌드
 # ─────────────────────────────────────────────
 func _build_ui() -> void:
-	# 루트 VBox: 상단바 + 콘텐츠
 	var root_vbox := VBoxContainer.new()
 	root_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root_vbox.add_theme_constant_override("separation", 0)
@@ -58,13 +96,39 @@ func _build_top_bar(parent: Container) -> void:
 	back.pressed.connect(func(): ScreenManager.pop())
 	hbox.add_child(back)
 
-	# 제목 (나중에 갱신)
+	# 제목
 	_title_label = Label.new()
 	_title_label.text = _make_title()
-	_title_label.add_theme_font_size_override("font_size", 20)
+	_title_label.add_theme_font_size_override("font_size", 18)
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hbox.add_child(_title_label)
+
+	# 골드 표시
+	var gold_pill := PanelContainer.new()
+	gold_pill.add_theme_stylebox_override("panel", ThemeFactory.pill(ThemeFactory.C_BG2, 20))
+	hbox.add_child(gold_pill)
+	_gold_label = Label.new()
+	_gold_label.text = "🪙 %s" % _comma(GameData.gold)
+	_gold_label.add_theme_font_size_override("font_size", 14)
+	_gold_label.add_theme_color_override("font_color", ThemeFactory.C_GOLD)
+	gold_pill.add_child(_gold_label)
+
+	# 보석 표시
+	var gem_pill := PanelContainer.new()
+	gem_pill.add_theme_stylebox_override("panel", ThemeFactory.pill(ThemeFactory.C_BG2, 20))
+	hbox.add_child(gem_pill)
+	_gems_label = Label.new()
+	_gems_label.text = "💎 %s" % _comma(GameData.gems)
+	_gems_label.add_theme_font_size_override("font_size", 14)
+	_gems_label.add_theme_color_override("font_color", ThemeFactory.C_CYAN)
+	gem_pill.add_child(_gems_label)
+
+	# 통화 변경 구독
+	GameData.currency_changed.connect(func(_k, _a):
+		_gold_label.text = "🪙 %s" % _comma(GameData.gold)
+		_gems_label.text = "💎 %s" % _comma(GameData.gems)
+	)
 
 
 func _make_title() -> String:
@@ -92,7 +156,7 @@ func _build_roster_panel(parent: Container) -> void:
 	margin.add_theme_constant_override("margin_top", 8)
 	margin.add_theme_constant_override("margin_bottom", 8)
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	margin.size_flags_stretch_ratio = 0.6
+	margin.size_flags_stretch_ratio = 0.58
 	parent.add_child(margin)
 
 	var scroll := ScrollContainer.new()
@@ -118,7 +182,7 @@ func _make_char_card(ch: Dictionary, idx: int) -> PanelContainer:
 	var r: int = ch.get("r", 1)
 
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(100, 120)
+	card.custom_minimum_size = Vector2(100, 130)
 
 	var sb := ThemeFactory.glass_panel(false, 14)
 	sb.content_margin_left = 6
@@ -135,40 +199,51 @@ func _make_char_card(ch: Dictionary, idx: int) -> PanelContainer:
 	vbox.add_theme_constant_override("separation", 2)
 	card.add_child(vbox)
 
-	# 역할 아이콘 + 이름
+	# 역할 배지 (오른쪽 정렬)
+	var badge_row := HBoxContainer.new()
+	badge_row.add_theme_constant_override("separation", 0)
+	vbox.add_child(badge_row)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	badge_row.add_child(spacer)
+	var role_badge := Label.new()
+	role_badge.text = GameData.role_icon(ch.get("role", ""))
+	role_badge.add_theme_font_size_override("font_size", 12)
+	badge_row.add_child(role_badge)
+
+	# 초상화 (색깔 원 대신 역할 이모지 크게)
+	var portrait_lbl := Label.new()
+	portrait_lbl.text = GameData.role_icon(ch.get("role", ""))
+	portrait_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	portrait_lbl.add_theme_font_size_override("font_size", 36)
+	vbox.add_child(portrait_lbl)
+
+	# 이름
 	var name_lbl := Label.new()
-	name_lbl.text = "%s %s" % [GameData.role_icon(ch.get("role", "")), ch.get("n", "?")]
+	name_lbl.text = ch.get("n", "?")
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.add_theme_font_size_override("font_size", 14)
+	name_lbl.add_theme_font_size_override("font_size", 13)
 	name_lbl.clip_text = true
 	vbox.add_child(name_lbl)
-
-	# Lv
-	var lv_lbl := Label.new()
-	lv_lbl.text = "Lv.%d" % ch.get("lv", 1)
-	lv_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lv_lbl.add_theme_font_size_override("font_size", 12)
-	lv_lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM if true else ThemeFactory.C_INK)
-	vbox.add_child(lv_lbl)
-
-	# 전투력
-	var pw_lbl := Label.new()
-	pw_lbl.text = _comma(ch.get("pw", 0))
-	pw_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pw_lbl.add_theme_font_size_override("font_size", 12)
-	pw_lbl.add_theme_color_override("font_color", ThemeFactory.C_AMBER)
-	vbox.add_child(pw_lbl)
 
 	# 별 등급
 	var star_lbl := Label.new()
 	star_lbl.text = GameData.star_label(r)
 	star_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	star_lbl.add_theme_font_size_override("font_size", 13)
+	star_lbl.add_theme_font_size_override("font_size", 12)
 	match r:
 		3: star_lbl.add_theme_color_override("font_color", ThemeFactory.C_PINK)
 		2: star_lbl.add_theme_color_override("font_color", ThemeFactory.C_CYAN)
 		_: star_lbl.add_theme_color_override("font_color", ThemeFactory.C_LINE)
 	vbox.add_child(star_lbl)
+
+	# Lv
+	var lv_lbl := Label.new()
+	lv_lbl.text = "Lv.%d" % ch.get("lv", 1)
+	lv_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lv_lbl.add_theme_font_size_override("font_size", 11)
+	lv_lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
+	vbox.add_child(lv_lbl)
 
 	# 클릭 감지용 Button (투명 오버레이)
 	var btn := Button.new()
@@ -193,7 +268,7 @@ func _build_detail_panel(parent: Container) -> void:
 	margin.add_theme_constant_override("margin_top", 8)
 	margin.add_theme_constant_override("margin_bottom", 8)
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	margin.size_flags_stretch_ratio = 0.4
+	margin.size_flags_stretch_ratio = 0.42
 	parent.add_child(margin)
 
 	_detail_panel = PanelContainer.new()
@@ -203,7 +278,7 @@ func _build_detail_panel(parent: Container) -> void:
 	margin.add_child(_detail_panel)
 
 	_detail_vbox = VBoxContainer.new()
-	_detail_vbox.add_theme_constant_override("separation", 10)
+	_detail_vbox.add_theme_constant_override("separation", 8)
 	_detail_panel.add_child(_detail_vbox)
 
 	_show_detail_empty()
@@ -216,7 +291,7 @@ func _show_detail_empty() -> void:
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM if true else ThemeFactory.C_INK)
+	lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
 	_detail_vbox.add_child(lbl)
 
 
@@ -224,88 +299,179 @@ func _show_detail_char(idx: int) -> void:
 	_clear_detail()
 	var ch: Dictionary = GameData.roster[idx]
 	var r: int = ch.get("r", 1)
+	var lv: int = ch.get("lv", 1)
 
-	# 역할 이모지 (큰)
-	var icon_lbl := Label.new()
-	icon_lbl.text = GameData.role_icon(ch.get("role", ""))
-	icon_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_lbl.add_theme_font_size_override("font_size", 70)
-	_detail_vbox.add_child(icon_lbl)
+	# ── 상단 스크롤 가능 영역 ──
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_detail_vbox.add_child(scroll)
 
-	# 이름
+	var inner := VBoxContainer.new()
+	inner.add_theme_constant_override("separation", 8)
+	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(inner)
+
+	# 초상화 영역 (좌: 큰 초상화 | 우: 이름/별/역할)
+	var portrait_row := HBoxContainer.new()
+	portrait_row.add_theme_constant_override("separation", 12)
+	inner.add_child(portrait_row)
+
+	# 큰 초상화 컨테이너
+	var portrait_panel := PanelContainer.new()
+	portrait_panel.custom_minimum_size = Vector2(80, 90)
+	var port_sb := ThemeFactory.glass_panel(false, 16)
+	portrait_panel.add_theme_stylebox_override("panel", port_sb)
+	portrait_row.add_child(portrait_panel)
+
+	var portrait_lbl := Label.new()
+	portrait_lbl.text = GameData.role_icon(ch.get("role", ""))
+	portrait_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	portrait_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	portrait_lbl.add_theme_font_size_override("font_size", 44)
+	portrait_panel.add_child(portrait_lbl)
+
+	# 이름/별/역할/조각 세로 블록
+	var name_vbox := VBoxContainer.new()
+	name_vbox.add_theme_constant_override("separation", 4)
+	name_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	portrait_row.add_child(name_vbox)
+
 	var name_lbl := Label.new()
 	name_lbl.text = ch.get("n", "?")
-	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.add_theme_font_size_override("font_size", 22)
-	_detail_vbox.add_child(name_lbl)
+	name_lbl.add_theme_font_size_override("font_size", 20)
+	name_vbox.add_child(name_lbl)
 
-	# 별 등급
 	var star_lbl := Label.new()
 	star_lbl.text = GameData.star_label(r)
-	star_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	star_lbl.add_theme_font_size_override("font_size", 18)
+	star_lbl.add_theme_font_size_override("font_size", 16)
 	match r:
 		3: star_lbl.add_theme_color_override("font_color", ThemeFactory.C_PINK)
 		2: star_lbl.add_theme_color_override("font_color", ThemeFactory.C_CYAN)
 		_: star_lbl.add_theme_color_override("font_color", ThemeFactory.C_LINE)
-	_detail_vbox.add_child(star_lbl)
+	name_vbox.add_child(star_lbl)
 
-	# 구분선
-	var sep := HSeparator.new()
-	_detail_vbox.add_child(sep)
+	# 역할 배지
+	var role_hbox := HBoxContainer.new()
+	role_hbox.add_theme_constant_override("separation", 4)
+	name_vbox.add_child(role_hbox)
+	var role_chip := PanelContainer.new()
+	var role_sb := ThemeFactory.pill(ThemeFactory.C_BG2, 12)
+	role_chip.add_theme_stylebox_override("panel", role_sb)
+	role_hbox.add_child(role_chip)
+	var role_lbl := Label.new()
+	role_lbl.text = "%s %s" % [GameData.role_icon(ch.get("role", "")), ch.get("role", "?")]
+	role_lbl.add_theme_font_size_override("font_size", 13)
+	role_chip.add_child(role_lbl)
 
-	# Lv / 역할 / 무기 행
-	_add_info_row("레벨", "Lv.%d" % ch.get("lv", 1))
-	_add_info_row("역할", ch.get("role", "?"))
-	_add_info_row("무기", ch.get("weapon", "?"))
-	_add_info_row("조각", "%d / 30" % ch.get("shards", 0))
+	# 조각 수
+	var shard_lbl := Label.new()
+	shard_lbl.text = "🧩 조각: %d개" % ch.get("shards", 0)
+	shard_lbl.add_theme_font_size_override("font_size", 13)
+	shard_lbl.add_theme_color_override("font_color", ThemeFactory.C_AMBER)
+	name_vbox.add_child(shard_lbl)
 
-	# 전투력
-	var pw_lbl := Label.new()
-	pw_lbl.text = "전투력: %s" % _comma(ch.get("pw", 0))
-	pw_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pw_lbl.add_theme_font_size_override("font_size", 16)
-	pw_lbl.add_theme_color_override("font_color", ThemeFactory.C_AMBER)
-	_detail_vbox.add_child(pw_lbl)
+	# ── 스탯 박스 ──
+	var stat_panel := PanelContainer.new()
+	var stat_sb := ThemeFactory.glass_panel(false, 14)
+	stat_sb.content_margin_top = 10
+	stat_sb.content_margin_bottom = 10
+	stat_panel.add_theme_stylebox_override("panel", stat_sb)
+	inner.add_child(stat_panel)
 
-	var sep2 := HSeparator.new()
-	_detail_vbox.add_child(sep2)
+	var stat_vbox := VBoxContainer.new()
+	stat_vbox.add_theme_constant_override("separation", 5)
+	stat_panel.add_child(stat_vbox)
 
-	# 강화 버튼
-	var lv_cost := ch.get("lv", 1) * 500
+	_add_stat_row(stat_vbox, "레벨", "Lv.%d" % lv, ThemeFactory.C_INK)
+	_add_stat_row(stat_vbox, "전투력", _comma(ch.get("pw", 0)), ThemeFactory.C_AMBER)
+	_add_stat_row(stat_vbox, "HP", _comma(_calc_hp(ch)), ThemeFactory.C_GOOD)
+	_add_stat_row(stat_vbox, "ATK", _comma(_calc_atk(ch)), ThemeFactory.C_PINK)
+	_add_stat_row(stat_vbox, "무기", ch.get("weapon", "?"), ThemeFactory.C_INK_DIM)
+
+	# ── 강화 버튼 영역 ──
+	var btn_sep := HSeparator.new()
+	inner.add_child(btn_sep)
+
+	# 강화 (Lv.N) 버튼
+	var cost1 := _lv_cost(ch)
+	var gain1 := _pw_gain_per_lv(ch)
 	var upgrade_btn := Button.new()
-	upgrade_btn.text = "강화하기 (🪙 %s)" % _comma(lv_cost)
-	upgrade_btn.add_theme_stylebox_override("normal", ThemeFactory.accent_box(14))
-	upgrade_btn.pressed.connect(_on_upgrade.bind(idx))
-	_detail_vbox.add_child(upgrade_btn)
-
-	# 돌파 버튼
-	var promote_btn := Button.new()
-	promote_btn.text = "돌파 (🧩 30 조각)"
-	if r >= 3:
-		promote_btn.disabled = true
-		promote_btn.text = "돌파 (최대 등급)"
+	upgrade_btn.text = "강화 (Lv.%d)  🪙 %s  +전투력 %d" % [lv, _comma(cost1), gain1]
+	upgrade_btn.custom_minimum_size = Vector2(0, 44)
+	upgrade_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	upgrade_btn.add_theme_font_size_override("font_size", 14)
+	var up_sb := ThemeFactory.accent_box(14)
+	upgrade_btn.add_theme_stylebox_override("normal", up_sb)
+	if GameData.gold < cost1:
+		upgrade_btn.disabled = true
 	else:
-		promote_btn.pressed.connect(_on_promote.bind(idx))
-	var promote_sb := ThemeFactory.glass_panel(false, 14)
-	promote_sb.border_color = ThemeFactory.C_GOLD
-	promote_btn.add_theme_stylebox_override("normal", promote_sb)
-	_detail_vbox.add_child(promote_btn)
+		upgrade_btn.pressed.connect(_on_upgrade.bind(idx))
+	inner.add_child(upgrade_btn)
+
+	# 강화 (×10) 버튼
+	var cost10 := _calc_10lv_cost(ch)
+	var upgrade10_btn := Button.new()
+	upgrade10_btn.text = "강화 (×10)  🪙 %s" % _comma(cost10)
+	upgrade10_btn.custom_minimum_size = Vector2(0, 44)
+	upgrade10_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	upgrade10_btn.add_theme_font_size_override("font_size", 14)
+	var up10_sb := ThemeFactory.glass_panel(false, 14)
+	up10_sb.border_color = ThemeFactory.C_CYAN
+	up10_sb.set_border_width_all(2)
+	upgrade10_btn.add_theme_stylebox_override("normal", up10_sb)
+	if GameData.gold < cost10:
+		upgrade10_btn.disabled = true
+	else:
+		upgrade10_btn.pressed.connect(_on_upgrade_10.bind(idx))
+	inner.add_child(upgrade10_btn)
+
+	# 승급 버튼
+	var promo_cost := _promo_cost(ch)
+	var promote_btn := Button.new()
+	var promo_sb := ThemeFactory.glass_panel(false, 14)
+	if r >= 5:
+		promote_btn.text = "최대 등급"
+		promote_btn.disabled = true
+		promo_sb.border_color = ThemeFactory.C_LINE
+	else:
+		promote_btn.text = "승급  🧩 %d 조각" % promo_cost
+		promo_sb.border_color = ThemeFactory.C_GOLD
+		promo_sb.set_border_width_all(2)
+		if ch.get("shards", 0) < promo_cost:
+			promote_btn.disabled = true
+		else:
+			promote_btn.pressed.connect(_on_promote.bind(idx))
+	promote_btn.custom_minimum_size = Vector2(0, 44)
+	promote_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	promote_btn.add_theme_font_size_override("font_size", 14)
+	promote_btn.add_theme_stylebox_override("normal", promo_sb)
+	inner.add_child(promote_btn)
 
 
-func _add_info_row(label_text: String, value_text: String) -> void:
+func _calc_10lv_cost(ch: Dictionary) -> int:
+	var total := 0
+	var lv: int = ch.get("lv", 1)
+	for i in 10:
+		total += 600 * (lv + i)
+	return total
+
+
+func _add_stat_row(parent: Container, label_text: String, value_text: String, value_color: Color) -> void:
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 8)
-	_detail_vbox.add_child(hbox)
+	parent.add_child(hbox)
 
 	var lbl := Label.new()
 	lbl.text = label_text
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM if true else ThemeFactory.C_INK)
+	lbl.add_theme_font_size_override("font_size", 14)
+	lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
 	hbox.add_child(lbl)
 
 	var val := Label.new()
 	val.text = value_text
+	val.add_theme_font_size_override("font_size", 14)
+	val.add_theme_color_override("font_color", value_color)
 	hbox.add_child(val)
 
 
@@ -319,10 +485,10 @@ func _build_toast() -> void:
 	_toast_label = Label.new()
 	_toast_label.name = "Toast"
 	_toast_label.set_anchors_preset(Control.PRESET_CENTER)
-	_toast_label.offset_left = -200.0
-	_toast_label.offset_top = -24.0
-	_toast_label.offset_right = 200.0
-	_toast_label.offset_bottom = 24.0
+	_toast_label.offset_left = -220.0
+	_toast_label.offset_top = -28.0
+	_toast_label.offset_right = 220.0
+	_toast_label.offset_bottom = 28.0
 	_toast_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_toast_label.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -331,7 +497,7 @@ func _build_toast() -> void:
 	var toast_sb := ThemeFactory.glass_panel(true, 20)
 	toast_sb.bg_color = Color(0.08, 0.05, 0.18, 0.92)
 	_toast_label.add_theme_stylebox_override("normal", toast_sb)
-	_toast_label.add_theme_font_size_override("font_size", 16)
+	_toast_label.add_theme_font_size_override("font_size", 15)
 	add_child(_toast_label)
 
 
@@ -365,13 +531,14 @@ func _refresh_card_highlights() -> void:
 
 func _on_upgrade(idx: int) -> void:
 	var ch: Dictionary = GameData.roster[idx]
-	var cost := ch.get("lv", 1) * 500
+	var cost := _lv_cost(ch)
 	if GameData.gold < cost:
 		_toast("🪙 골드 부족 (%s 필요)" % _comma(cost))
 		return
 	GameData.add_currency("gold", -cost)
-	ch["lv"] = ch.get("lv", 1) + 3
-	ch["pw"] = ch.get("pw", 0) + 300
+	var gain := _pw_gain_per_lv(ch)
+	ch["lv"] = ch.get("lv", 1) + 1
+	ch["pw"] = ch.get("pw", 0) + gain
 	GameData.stats["levelups"] = GameData.stats.get("levelups", 0) + 1
 	_title_label.text = _make_title()
 	_show_detail_char(idx)
@@ -379,46 +546,58 @@ func _on_upgrade(idx: int) -> void:
 	_toast("✅ %s 강화 완료 → Lv.%d" % [ch.get("n", "?"), ch.get("lv", 1)])
 
 
+func _on_upgrade_10(idx: int) -> void:
+	var ch: Dictionary = GameData.roster[idx]
+	var total_cost := _calc_10lv_cost(ch)
+	if GameData.gold < total_cost:
+		_toast("🪙 골드 부족 (%s 필요)" % _comma(total_cost))
+		return
+	GameData.add_currency("gold", -total_cost)
+	var total_gain := 0
+	var r: int = ch.get("r", 1)
+	for i in 10:
+		total_gain += 160 + r * 30
+	ch["lv"] = ch.get("lv", 1) + 10
+	ch["pw"] = ch.get("pw", 0) + total_gain
+	GameData.stats["levelups"] = GameData.stats.get("levelups", 0) + 10
+	_title_label.text = _make_title()
+	_show_detail_char(idx)
+	_refresh_card_at(idx)
+	_toast("✅ %s ×10 강화 완료 → Lv.%d" % [ch.get("n", "?"), ch.get("lv", 1)])
+
+
 func _on_promote(idx: int) -> void:
 	var ch: Dictionary = GameData.roster[idx]
-	if ch.get("shards", 0) < 30:
-		_toast("🧩 조각 부족 (%d / 30)" % ch.get("shards", 0))
+	var cost := _promo_cost(ch)
+	if ch.get("shards", 0) < cost:
+		_toast("🧩 조각 부족 (%d / %d)" % [ch.get("shards", 0), cost])
 		return
-	if ch.get("r", 1) >= 3:
+	if ch.get("r", 1) >= 5:
 		_toast("이미 최고 등급입니다")
 		return
-	ch["shards"] = ch.get("shards", 0) - 30
+	ch["shards"] = ch.get("shards", 0) - cost
 	ch["r"] = ch.get("r", 1) + 1
-	var new_pw := int(ch.get("pw", 0) * 1.20)
-	ch["pw"] = new_pw
+	ch["pw"] = ch.get("pw", 0) + 1500
 	GameData.stats["promos"] = GameData.stats.get("promos", 0) + 1
 	_title_label.text = _make_title()
 	_show_detail_char(idx)
 	_refresh_card_at(idx)
-	_toast("🌟 %s 돌파 → %s" % [ch.get("n", "?"), GameData.star_label(ch.get("r", 1))])
+	_toast("🌟 %s 승급 → %s" % [ch.get("n", "?"), GameData.star_label(ch.get("r", 1))])
 
 
 func _refresh_card_at(idx: int) -> void:
 	if idx < 0 or idx >= _card_nodes.size():
 		return
-	var card := _card_nodes[idx]
-	var ch: Dictionary = GameData.roster[idx]
-	var r: int = ch.get("r", 1)
-
-	# 카드 내부 라벨 갱신 (VBoxContainer 의 자식들)
-	var vbox: VBoxContainer = null
-	for child in card.get_children():
-		if child is VBoxContainer:
-			vbox = child
-			break
-	if vbox == null:
-		return
-	var children := vbox.get_children()
-	if children.size() >= 4:
-		(children[0] as Label).text = "%s %s" % [GameData.role_icon(ch.get("role", "")), ch.get("n", "?")]
-		(children[1] as Label).text = "Lv.%d" % ch.get("lv", 1)
-		(children[2] as Label).text = _comma(ch.get("pw", 0))
-		(children[3] as Label).text = GameData.star_label(r)
+	# 카드를 완전히 재빌드
+	var old_card := _card_nodes[idx]
+	var grid := old_card.get_parent()
+	var position_in_grid := old_card.get_index()
+	old_card.queue_free()
+	var new_card := _make_char_card(GameData.roster[idx], idx)
+	grid.add_child(new_card)
+	grid.move_child(new_card, position_in_grid)
+	_card_nodes[idx] = new_card
+	_refresh_card_highlights()
 
 
 # ─────────────────────────────────────────────
@@ -447,7 +626,3 @@ func _toast(msg: String) -> void:
 
 func _hide_toast() -> void:
 	_toast_label.visible = false
-
-
-# ThemeFactory 에 없는 상수를 로컬에서 참조하기 위한 프록시
-var C_INK_DIM := ThemeFactory.C_INK_DIM

@@ -5,25 +5,24 @@ extends Control
 
 # ── 미션 정의 ──────────────────────────────────────────────────────────────
 const DAILY_MISSIONS = [
-	{id="d1", nm="스테이지 3회 클리어",  goal=3,  rw={k="gems",    a=30}},
-	{id="d2", nm="로그인 보상",           goal=1,  rw={k="stamina", a=20}},
-	{id="d3", nm="재화 소비",             goal=1,  rw={k="gold",    a=50000}},
-	{id="d4", nm="캐릭터 강화 1회",       goal=1,  rw={k="gems",    a=10}},
-	{id="d5", nm="모집 1회",              goal=1,  rw={k="gems",    a=20}},
+	{id="d1", ic="⚔️", nm="스테이지 1회 클리어",  goal=1,  rw={k="gems", a=50}},
+	{id="d2", ic="🗺️", nm="스테이지 3회 클리어",  goal=3,  rw={k="gold", a=50000}},
+	{id="d3", ic="✨",  nm="모집 1회",             goal=1,  rw={k="gems", a=30}},
+	{id="d4", ic="📈",  nm="캐릭터 레벨업 1회",    goal=1,  rw={k="gold", a=30000}},
+	{id="d5", ic="🎁",  nm="일일 미션 4개 완료",   goal=4,  rw={k="gems", a=100}},
 ]
 
 const WEEKLY_MISSIONS = [
-	{id="w1", nm="스테이지 20회 클리어",  goal=20, rw={k="gems",          a=100}},
-	{id="w2", nm="10회 모집",             goal=10, rw={k="gems",          a=200}},
-	{id="w3", nm="제조 3회",              goal=3,  rw={k="gold",          a=200000}},
-	{id="w4", nm="길드 보상 수령",        goal=1,  rw={k="faction_token", a=100}},
+	{id="w1", ic="⚔️", nm="스테이지 10회 클리어",  goal=10, rw={k="gems", a=300}},
+	{id="w2", ic="✨",  nm="모집 10회",             goal=10, rw={k="gems", a=200}},
+	{id="w3", ic="📈",  nm="캐릭터 레벨업 20회",    goal=20, rw={k="gold", a=200000}},
 ]
 
 const ACHIEVE_MISSIONS = [
-	{id="a1", nm="첫 클리어",             goal=1,  rw={k="gems", a=50}},
-	{id="a2", nm="클리어 10회",           goal=10, rw={k="gems", a=100}},
-	{id="a3", nm="캐릭터 15명 보유",      goal=15, rw={k="gems", a=150}},
-	{id="a4", nm="★3 캐릭터 보유",       goal=1,  rw={k="gems", a=200}},
+	{id="a1", ic="🏴",  nm="33-9 클리어",           goal=1,  rw={k="gems", a=100}},
+	{id="a2", ic="👑",  nm="챕터 보스 격파 (33-10)", goal=1,  rw={k="gems", a=300}},
+	{id="a3", ic="👥",  nm="캐릭터 15명 보유",       goal=15, rw={k="gems", a=150}},
+	{id="a4", ic="🌟",  nm="★4 캐릭터 보유",         goal=1,  rw={k="gems", a=200}},
 ]
 
 # ── 런타임 상태 ───────────────────────────────────────────────────────────
@@ -185,24 +184,31 @@ func _rebuild_list() -> void:
 func _get_progress(m: Dictionary) -> int:
 	match m.id:
 		"d1": return GameData.stats.get("clears", 0)
-		"d2": return 1
-		"d3": return 1
+		"d2": return GameData.stats.get("clears", 0)
+		"d3": return GameData.stats.get("pulls", 0)
 		"d4": return GameData.stats.get("levelups", 0)
-		"d5": return GameData.stats.get("pulls", 0)
+		"d5": return _daily_claimed_count()
 		"w1": return GameData.stats.get("clears", 0)
 		"w2": return GameData.stats.get("pulls", 0)
-		"w3": return GameData.stats.get("crafts", 0)
-		"w4": return 1 if GameData.guild_checked else 0
-		"a1": return GameData.cleared
-		"a2": return GameData.cleared
+		"w3": return GameData.stats.get("levelups", 0)
+		"a1": return 1 if GameData.cleared >= 9 else 0
+		"a2": return 1 if GameData.cleared >= 10 else 0
 		"a3": return GameData.roster.size()
-		"a4": return _has_star3()
+		"a4": return _has_star4()
 	return 0
 
 
-func _has_star3() -> int:
+func _daily_claimed_count() -> int:
+	var count := 0
+	for id in ["d1", "d2", "d3", "d4"]:
+		if GameData.mission_claims.get(id, false):
+			count += 1
+	return count
+
+
+func _has_star4() -> int:
 	for c in GameData.roster:
-		if int(c.get("r", 0)) >= 3:
+		if int(c.get("r", 0)) >= 4:
 			return 1
 	return 0
 

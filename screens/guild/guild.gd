@@ -5,12 +5,19 @@ extends Control
 
 # ── 상점 아이템 정의 ──────────────────────────────────────────────────────
 var SHOP_ITEMS = [
-	{id="b1", nm="강화서 ×3",  ic="📘", cost=200, limit=3,
-	 action=func(): GameData.mats["book"] = GameData.mats.get("book", 0) + 3},
-	{id="b2", nm="마정석 ×5",  ic="🔩", cost=300, limit=2,
-	 action=func(): GameData.mats["ore"] = GameData.mats.get("ore", 0) + 5},
-	{id="b3", nm="보석 ×100",  ic="💎", cost=800, limit=1,
-	 action=func(): GameData.add_currency("gems", 100)},
+	{id="g1", nm="조각 상자",   ic="🧩", cost=80,  limit=3,
+	 action=func():
+		if GameData.roster.size() > 0:
+			var idx := randi() % GameData.roster.size()
+			GameData.roster[idx]["shards"] = GameData.roster[idx].get("shards", 0) + 10},
+	{id="g2", nm="골드 상자",   ic="🪙", cost=50,  limit=5,
+	 action=func(): GameData.add_currency("gold", 300000)},
+	{id="g3", nm="보석 주머니", ic="💎", cost=100, limit=2,
+	 action=func(): GameData.add_currency("gems", 50)},
+	{id="g4", nm="기력 회복",   ic="⚡", cost=60,  limit=3,
+	 action=func(): GameData.add_currency("stamina", 60)},
+	{id="g5", nm="강화서 묶음", ic="📘", cost=30,  limit=3,
+	 action=func(): GameData.add_currency("gold", 120000)},
 ]
 
 const MEMBERS = [
@@ -194,7 +201,7 @@ func _make_checkin_section() -> PanelContainer:
 		_checkin_btn.text = "오늘 수령 완료"
 		_checkin_btn.disabled = true
 	else:
-		_checkin_btn.text = "오늘의 교단 보상 수령 (+교단 토큰 50)"
+		_checkin_btn.text = "출석 체크  토큰 +20"
 		_checkin_btn.disabled = false
 		_checkin_btn.add_theme_stylebox_override("normal",  ThemeFactory.accent_box(14))
 		_checkin_btn.add_theme_stylebox_override("hover",   ThemeFactory.accent_box(14))
@@ -345,15 +352,15 @@ func _on_checkin() -> void:
 	if GameData.guild_checked:
 		return
 	GameData.guild_checked = true
-	GameData.add_currency("faction_token", 50)
-	_checkin_btn.text = "오늘 수령 완료"
+	GameData.add_currency("faction_token", 20)
+	_checkin_btn.text = "출석 완료  내일 다시!"
 	_checkin_btn.disabled = true
 	_checkin_btn.remove_theme_stylebox_override("normal")
 	_checkin_btn.remove_theme_stylebox_override("hover")
 	_checkin_btn.remove_theme_stylebox_override("pressed")
 	_checkin_btn.remove_theme_color_override("font_color")
 	_token_title.text = "교단 상점 (보유 🔮%d)" % GameData.faction_token
-	_toast("교단 토큰 +50 수령!")
+	_toast("교단 토큰 +20 수령!")
 
 
 func _on_shop_buy(item: Dictionary) -> void:

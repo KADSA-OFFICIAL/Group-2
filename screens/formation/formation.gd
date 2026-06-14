@@ -424,7 +424,6 @@ func _build_bottom_bar() -> Control:
 
 
 func _on_deploy() -> void:
-	# 팀에 최소 1명 있는지 확인
 	var filled: Array[String] = []
 	for cid in _team:
 		if cid != "":
@@ -434,7 +433,11 @@ func _on_deploy() -> void:
 		_toast("최소 1명 선택")
 		return
 
-	# GameData 에 팀 저장
+	var stam_cost: int = GameData.battle.get("cost", 10)
+	if not GameData.spend_stamina(stam_cost):
+		_toast("⚡ 기력 부족! (%d 필요)" % stam_cost)
+		return
+
 	GameData.battle["team"] = filled
 	var total := 0
 	for cid in filled:

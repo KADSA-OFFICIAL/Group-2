@@ -1,5 +1,5 @@
 ## res://screens/shop/shop.gd
-## 상점 화면. 교환소(골드) 탭 + 패키지(보석) 탭.
+## 상점 화면. 교환(골드/보석) 탭 + 패키지(현금) 탭.
 ## 모든 UI 는 _ready() 에서 코드로 빌드.
 
 extends Control
@@ -20,25 +20,28 @@ var _gems_label: Label
 var _toast_label: Label
 var _toast_timer: SceneTreeTimer
 
-# ── 교환소 아이템 정의 ──
+# ── 탭 버튼 참조 ──
+var _tab_btn_ex: Button
+var _tab_btn_pkg: Button
+
+# ── 교환소 아이템 정의 (HTML 기준) ──
 const EXCHANGE_ITEMS := [
-	{id="ex_book",  icon="📘", name="강화서 ×5",    cost=50000,  currency="gold", reward_kind="book",  reward_amt=5,  limit=3},
-	{id="ex_ore",   icon="🔮", name="마정석 ×10",   cost=30000,  currency="gold", reward_kind="ore",   reward_amt=10, limit=3},
-	{id="ex_dust",  icon="🌫", name="분진 ×20",     cost=20000,  currency="gold", reward_kind="dust",  reward_amt=20, limit=3},
-	{id="ex_gems",  icon="💎", name="보석 ×50",     cost=500000, currency="gold", reward_kind="gems",  reward_amt=50, limit=3},
+	{id="ex_gold_sm",  icon="🪙", name="골드 꾸러미",      desc="골드 +500,000",              cost=100,    currency="gems", reward_kind="gold",    reward_amt=500000,  limit=5},
+	{id="ex_gold_lg",  icon="💰", name="큰 골드 꾸러미",   desc="골드 +2,500,000",            cost=450,    currency="gems", reward_kind="gold",    reward_amt=2500000, limit=2},
+	{id="ex_shard",    icon="🧩", name="조각 상자",         desc="랜덤 캐릭터 조각 +10",       cost=300000, currency="gold", reward_kind="shards",  reward_amt=10,      limit=3},
+	{id="ex_stamina",  icon="⚡", name="기력 회복",         desc="기력 +60 (최대 206)",        cost=50,     currency="gems", reward_kind="stamina", reward_amt=60,      limit=3},
 ]
 
-# ── 패키지 아이템 정의 ──
+# ── 패키지 아이템 정의 (HTML 기준) ──
 const PACKAGE_ITEMS := [
-	{id="pkg_starter", icon="🎁", name="스타터 팩 ×1", cost=0,   currency="gems",
-		rewards=[{kind="gold", amt=500000}, {kind="gems", amt=200}],
-		limit=1, limit_label="1회 한정"},
-	{id="pkg_weekly",  icon="📅", name="주간 팩",       cost=980, currency="gems",
-		rewards=[{kind="gems", amt=1980}, {kind="gold", amt=200000}],
-		limit=1, limit_label="1회 (주간)"},
-	{id="pkg_adv",     icon="🧭", name="모험가 팩",     cost=480, currency="gems",
-		rewards=[{kind="stamina", amt=120}, {kind="book", amt=3}],
-		limit=0, limit_label=""},
+	{id="pkg_starter", icon="🎁", name="초보자 패키지",       price_label="₩5,900 (데모 수령)",
+		rewards=[{kind="gems", amt=300}, {kind="gold", amt=500000}],     limit=1},
+	{id="pkg_monthly", icon="📅", name="월간 패스",            price_label="₩4,900 (데모 수령)",
+		rewards=[{kind="gems", amt=300}],                                  limit=1},
+	{id="pkg_gems1200",icon="💎", name="보석 1,200개",         price_label="₩12,000",
+		rewards=[{kind="gems", amt=1200}],                                 limit=1},
+	{id="pkg_pickup",  icon="👑", name="픽업 응원 패키지",     price_label="₩9,900",
+		rewards=[{kind="gems", amt=600}],                                  limit=1},
 ]
 
 
@@ -114,7 +117,6 @@ func _build_currency_bar(parent: Container) -> void:
 	hbox.add_theme_constant_override("separation", 24)
 	panel.add_child(hbox)
 
-	# 골드
 	var gold_hbox := HBoxContainer.new()
 	gold_hbox.add_theme_constant_override("separation", 6)
 	gold_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -129,7 +131,6 @@ func _build_currency_bar(parent: Container) -> void:
 	_gold_label.add_theme_color_override("font_color", ThemeFactory.C_GOLD)
 	gold_hbox.add_child(_gold_label)
 
-	# 보석
 	var gem_hbox := HBoxContainer.new()
 	gem_hbox.add_theme_constant_override("separation", 6)
 	gem_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -144,7 +145,6 @@ func _build_currency_bar(parent: Container) -> void:
 	_gems_label.add_theme_color_override("font_color", ThemeFactory.C_CYAN)
 	gem_hbox.add_child(_gems_label)
 
-	# 통화 변경 구독
 	GameData.currency_changed.connect(func(_k, _a):
 		_gold_label.text = _comma(GameData.gold)
 		_gems_label.text = _comma(GameData.gems)
@@ -163,38 +163,37 @@ func _build_tab_buttons(parent: Container) -> void:
 	hbox.add_theme_constant_override("separation", 8)
 	margin.add_child(hbox)
 
-	var tab_ex := Button.new()
-	tab_ex.name = "TabExchange"
-	tab_ex.text = "교환소"
-	tab_ex.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tab_ex.custom_minimum_size = Vector2(0, 44)
-	tab_ex.toggle_mode = true
-	tab_ex.button_pressed = true
-	tab_ex.pressed.connect(func(): _switch_tab(Tab.EXCHANGE))
-	hbox.add_child(tab_ex)
+	_tab_btn_ex = Button.new()
+	_tab_btn_ex.text = "교환"
+	_tab_btn_ex.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tab_btn_ex.custom_minimum_size = Vector2(0, 44)
+	_tab_btn_ex.pressed.connect(func(): _switch_tab(Tab.EXCHANGE))
+	hbox.add_child(_tab_btn_ex)
 
-	var tab_pkg := Button.new()
-	tab_pkg.name = "TabPackage"
-	tab_pkg.text = "패키지"
-	tab_pkg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tab_pkg.custom_minimum_size = Vector2(0, 44)
-	tab_pkg.toggle_mode = true
-	tab_pkg.pressed.connect(func(): _switch_tab(Tab.PACKAGE))
-	hbox.add_child(tab_pkg)
+	_tab_btn_pkg = Button.new()
+	_tab_btn_pkg.text = "패키지"
+	_tab_btn_pkg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tab_btn_pkg.custom_minimum_size = Vector2(0, 44)
+	_tab_btn_pkg.pressed.connect(func(): _switch_tab(Tab.PACKAGE))
+	hbox.add_child(_tab_btn_pkg)
 
 
 func _build_tab_contents(parent: Container) -> void:
+	# 두 컨테이너를 같은 스크롤 안에 넣고 visible 로 전환
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	parent.add_child(scroll)
 
-	_exchange_container = _build_exchange_tab()
-	scroll.add_child(_exchange_container)
+	# 스크롤 안에 VBox 로 둘 다 담기
+	var wrapper := VBoxContainer.new()
+	wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(wrapper)
 
-	# 패키지 탭은 같은 스크롤에 담기 위해 별도 처리
-	# (두 컨테이너를 교대로 visible)
+	_exchange_container = _build_exchange_tab()
+	wrapper.add_child(_exchange_container)
+
 	_package_container = _build_package_tab()
-	scroll.add_child(_package_container)
+	wrapper.add_child(_package_container)
 
 
 func _build_exchange_tab() -> Control:
@@ -210,7 +209,7 @@ func _build_exchange_tab() -> Control:
 	margin.add_child(vbox)
 
 	var header := Label.new()
-	header.text = "🏪  교환소  —  골드로 재료 교환"
+	header.text = "🏪  교환  —  재화로 아이템 교환"
 	header.add_theme_font_size_override("font_size", 16)
 	header.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
 	vbox.add_child(header)
@@ -229,18 +228,24 @@ func _make_exchange_card(item: Dictionary) -> Control:
 	sb.content_margin_bottom = 10
 	panel.add_theme_stylebox_override("panel", sb)
 
+	var buy_count := _get_buy_count(item.id)
+	var limit: int = item.get("limit", 3)
+	var sold_out := buy_count >= limit
+	if sold_out:
+		sb.bg_color = Color(0.12, 0.10, 0.22, 0.5)
+
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 12)
 	panel.add_child(hbox)
 
-	# 아이콘
 	var icon_lbl := Label.new()
 	icon_lbl.text = item.get("icon", "?")
-	icon_lbl.add_theme_font_size_override("font_size", 36)
+	icon_lbl.add_theme_font_size_override("font_size", 34)
 	icon_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if sold_out:
+		icon_lbl.modulate.a = 0.45
 	hbox.add_child(icon_lbl)
 
-	# 이름 + 제한 표시
 	var info_vbox := VBoxContainer.new()
 	info_vbox.add_theme_constant_override("separation", 2)
 	info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -249,29 +254,38 @@ func _make_exchange_card(item: Dictionary) -> Control:
 	var name_lbl := Label.new()
 	name_lbl.text = item.get("name", "?")
 	name_lbl.add_theme_font_size_override("font_size", 16)
+	if sold_out:
+		name_lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
 	info_vbox.add_child(name_lbl)
 
+	var desc_lbl := Label.new()
+	desc_lbl.text = item.get("desc", "")
+	desc_lbl.add_theme_font_size_override("font_size", 13)
+	desc_lbl.add_theme_color_override("font_color", ThemeFactory.C_AMBER)
+	info_vbox.add_child(desc_lbl)
+
+	var cost_icon: String = "💎" if item.get("currency", "gold") == "gems" else "🪙"
 	var cost_lbl := Label.new()
-	cost_lbl.text = "🪙 %s" % _comma(item.get("cost", 0))
+	cost_lbl.text = "%s %s" % [cost_icon, _comma(item.get("cost", 0))]
 	cost_lbl.add_theme_font_size_override("font_size", 14)
-	cost_lbl.add_theme_color_override("font_color", ThemeFactory.C_GOLD)
+	cost_lbl.add_theme_color_override("font_color",
+		ThemeFactory.C_CYAN if item.get("currency", "gold") == "gems" else ThemeFactory.C_GOLD)
 	info_vbox.add_child(cost_lbl)
 
+	var remain := limit - buy_count
 	var limit_lbl := Label.new()
-	limit_lbl.text = "(일 3회 제한)"
+	limit_lbl.text = "구매 가능 %d / %d" % [remain, limit]
 	limit_lbl.add_theme_font_size_override("font_size", 12)
 	limit_lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
 	info_vbox.add_child(limit_lbl)
 
-	# 구매 버튼
-	var buy_count := _get_buy_count(item.id)
 	var btn := Button.new()
 	btn.name = "BuyBtn_" + item.id
-	btn.custom_minimum_size = Vector2(100, 40)
+	btn.custom_minimum_size = Vector2(90, 40)
 	btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
-	if buy_count >= item.get("limit", 3):
-		btn.text = "오늘 완료"
+	if sold_out:
+		btn.text = "품절"
 		btn.disabled = true
 		var dim_sb := ThemeFactory.glass_panel(false, 12)
 		dim_sb.bg_color = Color(0.2, 0.2, 0.2, 0.4)
@@ -285,7 +299,6 @@ func _make_exchange_card(item: Dictionary) -> Control:
 		btn.pressed.connect(_on_exchange_buy.bind(item, panel))
 
 	hbox.add_child(btn)
-
 	return panel
 
 
@@ -302,7 +315,7 @@ func _build_package_tab() -> Control:
 	margin.add_child(vbox)
 
 	var header := Label.new()
-	header.text = "📦  패키지  —  보석으로 특별 혜택"
+	header.text = "📦  패키지  —  특별 혜택"
 	header.add_theme_font_size_override("font_size", 16)
 	header.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
 	vbox.add_child(header)
@@ -329,14 +342,14 @@ func _make_package_card(item: Dictionary) -> Control:
 	hbox.add_theme_constant_override("separation", 12)
 	panel.add_child(hbox)
 
-	# 아이콘
 	var icon_lbl := Label.new()
 	icon_lbl.text = item.get("icon", "?")
-	icon_lbl.add_theme_font_size_override("font_size", 36)
+	icon_lbl.add_theme_font_size_override("font_size", 34)
 	icon_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if is_bought:
+		icon_lbl.modulate.a = 0.45
 	hbox.add_child(icon_lbl)
 
-	# 정보
 	var info_vbox := VBoxContainer.new()
 	info_vbox.add_theme_constant_override("separation", 3)
 	info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -360,26 +373,13 @@ func _make_package_card(item: Dictionary) -> Control:
 		rw_lbl.add_theme_color_override("font_color", ThemeFactory.C_AMBER)
 		rewards_hbox.add_child(rw_lbl)
 
-	# 비용
-	var cost_lbl := Label.new()
-	var cost_val: int = item.get("cost", 0)
-	if cost_val == 0:
-		cost_lbl.text = "💎 무료!"
-		cost_lbl.add_theme_color_override("font_color", ThemeFactory.C_GOOD)
-	else:
-		cost_lbl.text = "💎 %s" % _comma(cost_val)
-		cost_lbl.add_theme_color_override("font_color", ThemeFactory.C_CYAN)
-	cost_lbl.add_theme_font_size_override("font_size", 14)
-	info_vbox.add_child(cost_lbl)
-
-	# 제한
-	var limit_label: String = item.get("limit_label", "")
-	if limit_label != "":
-		var lim_lbl := Label.new()
-		lim_lbl.text = "(%s)" % limit_label
-		lim_lbl.add_theme_font_size_override("font_size", 12)
-		lim_lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
-		info_vbox.add_child(lim_lbl)
+	# 가격 라벨
+	var price_lbl := Label.new()
+	price_lbl.text = item.get("price_label", "")
+	price_lbl.add_theme_font_size_override("font_size", 14)
+	price_lbl.add_theme_color_override("font_color",
+		ThemeFactory.C_GOOD if item.get("price_label", "").contains("데모") else ThemeFactory.C_CYAN)
+	info_vbox.add_child(price_lbl)
 
 	# 구매 버튼
 	var btn := Button.new()
@@ -395,22 +395,21 @@ func _make_package_card(item: Dictionary) -> Control:
 		btn.add_theme_stylebox_override("normal", dim_sb)
 		btn.add_theme_stylebox_override("disabled", dim_sb)
 	else:
-		btn.text = "무료 수령" if cost_val == 0 else "구매"
+		btn.text = "데모 수령" if item.get("price_label", "").contains("데모") else "구매"
 		btn.add_theme_stylebox_override("normal", ThemeFactory.cta_box())
 		btn.add_theme_stylebox_override("hover",   ThemeFactory.cta_box())
 		btn.add_theme_stylebox_override("pressed", ThemeFactory.cta_box())
 		btn.pressed.connect(_on_package_buy.bind(item, panel))
 
 	hbox.add_child(btn)
-
 	return panel
 
 
 func _reward_text(rw: Dictionary) -> String:
 	match rw.get("kind", ""):
-		"gold":    return "🪙 %s" % _comma(rw.get("amt", 0))
-		"gems":    return "💎 %s" % _comma(rw.get("amt", 0))
-		"stamina": return "⚡ %d" % rw.get("amt", 0)
+		"gold":    return "🪙 +%s" % _comma(rw.get("amt", 0))
+		"gems":    return "💎 +%s" % _comma(rw.get("amt", 0))
+		"stamina": return "⚡ +%d" % rw.get("amt", 0)
 		"book":    return "📘 ×%d" % rw.get("amt", 0)
 		"ore":     return "🔮 ×%d" % rw.get("amt", 0)
 		"dust":    return "🌫 ×%d" % rw.get("amt", 0)
@@ -425,16 +424,13 @@ func _switch_tab(tab: Tab) -> void:
 	_exchange_container.visible = (tab == Tab.EXCHANGE)
 	_package_container.visible = (tab == Tab.PACKAGE)
 
-	# 탭 버튼 강조
-	var tab_ex := get_node_or_null("VBoxContainer/MarginContainer3/HBoxContainer/TabExchange") as Button
-	var tab_pkg := get_node_or_null("VBoxContainer/MarginContainer3/HBoxContainer/TabPackage") as Button
-	if tab_ex and tab_pkg:
+	if _tab_btn_ex and _tab_btn_pkg:
 		if tab == Tab.EXCHANGE:
-			tab_ex.add_theme_stylebox_override("normal", ThemeFactory.accent_box(14))
-			tab_pkg.remove_theme_stylebox_override("normal")
+			_tab_btn_ex.add_theme_stylebox_override("normal", ThemeFactory.accent_box(14))
+			_tab_btn_pkg.remove_theme_stylebox_override("normal")
 		else:
-			tab_pkg.add_theme_stylebox_override("normal", ThemeFactory.accent_box(14))
-			tab_ex.remove_theme_stylebox_override("normal")
+			_tab_btn_pkg.add_theme_stylebox_override("normal", ThemeFactory.accent_box(14))
+			_tab_btn_ex.remove_theme_stylebox_override("normal")
 
 
 # ─────────────────────────────────────────────
@@ -442,58 +438,60 @@ func _switch_tab(tab: Tab) -> void:
 # ─────────────────────────────────────────────
 func _on_exchange_buy(item: Dictionary, card: PanelContainer) -> void:
 	var cost: int = item.get("cost", 0)
-	if GameData.gold < cost:
+	var currency: String = item.get("currency", "gold")
+
+	if currency == "gems" and GameData.gems < cost:
+		_toast("💎 보석 부족 (%s 필요)" % _comma(cost))
+		return
+	if currency == "gold" and GameData.gold < cost:
 		_toast("🪙 골드 부족 (%s 필요)" % _comma(cost))
 		return
 
 	var buy_count := _get_buy_count(item.id)
 	if buy_count >= item.get("limit", 3):
-		_toast("오늘 구매 한도에 도달했습니다")
+		_toast("구매 한도에 도달했습니다")
 		return
 
-	GameData.add_currency("gold", -cost)
+	GameData.add_currency(currency, -cost)
 
-	# 재료 지급
 	var rk: String = item.get("reward_kind", "")
 	var ra: int = item.get("reward_amt", 0)
 	match rk:
-		"book":   GameData.mats["book"]  = GameData.mats.get("book",  0) + ra
-		"ore":    GameData.mats["ore"]   = GameData.mats.get("ore",   0) + ra
-		"dust":   GameData.mats["dust"]  = GameData.mats.get("dust",  0) + ra
-		"gems":   GameData.add_currency("gems", ra)
+		"gold":    GameData.add_currency("gold", ra)
+		"stamina": GameData.add_currency("stamina", ra)
+		"gems":    GameData.add_currency("gems", ra)
+		"shards":
+			# 랜덤 캐릭터에 조각 추가
+			if GameData.roster.size() > 0:
+				var target := GameData.roster[randi() % GameData.roster.size()]
+				target["shards"] = target.get("shards", 0) + ra
+				GameData.roster_changed.emit()
+		"book":  GameData.mats["book"]  = GameData.mats.get("book",  0) + ra
+		"ore":   GameData.mats["ore"]   = GameData.mats.get("ore",   0) + ra
+		"dust":  GameData.mats["dust"]  = GameData.mats.get("dust",  0) + ra
 
-	# 구매 횟수 기록
 	GameData.shop_buys[item.id] = buy_count + 1
 
 	var new_count := _get_buy_count(item.id)
 	var limit: int = item.get("limit", 3)
 
-	# 버튼 상태 갱신
 	var btn := card.get_node_or_null("HBoxContainer/BuyBtn_" + item.id) as Button
 	if btn and new_count >= limit:
-		btn.text = "오늘 완료"
+		btn.text = "품절"
 		btn.disabled = true
 
 	_toast("✅ %s 구매 완료 (%d / %d)" % [item.get("name", ""), new_count, limit])
 
 
 func _on_package_buy(item: Dictionary, card: PanelContainer) -> void:
-	var cost: int = item.get("cost", 0)
-	if cost > 0 and GameData.gems < cost:
-		_toast("💎 보석 부족 (%s 필요)" % _comma(cost))
-		return
-
 	if _is_package_bought(item.id):
 		_toast("이미 구매한 패키지입니다")
 		return
 
-	if cost > 0:
-		GameData.add_currency("gems", -cost)
-
 	# 보상 지급
 	for rw in item.get("rewards", []):
 		var kind: String = rw.get("kind", "")
-		var amt: int  = rw.get("amt", 0)
+		var amt: int = rw.get("amt", 0)
 		match kind:
 			"gold", "gems", "stamina":
 				GameData.add_currency(kind, amt)
@@ -501,21 +499,19 @@ func _on_package_buy(item: Dictionary, card: PanelContainer) -> void:
 			"ore":  GameData.mats["ore"]   = GameData.mats.get("ore",   0) + amt
 			"dust": GameData.mats["dust"]  = GameData.mats.get("dust",  0) + amt
 
-	# 구매 기록 (한도 있는 패키지만)
 	if item.get("limit", 0) > 0:
 		GameData.shop_buys[item.id] = true
 
-	# 버튼 그레이 처리
-	var btn := card.get_node_or_null("HBoxContainer/BuyBtn_" + item.id) as Button
-	if btn and item.get("limit", 0) > 0:
-		btn.text = "구매 완료"
-		btn.disabled = true
-
-	# 보상 설명
 	var rw_parts: Array[String] = []
 	for rw in item.get("rewards", []):
 		rw_parts.append(_reward_text(rw))
 	_toast("✅ %s 수령: %s" % [item.get("name", ""), " / ".join(rw_parts)])
+
+	# 버튼 갱신
+	var btn := card.get_node_or_null("HBoxContainer/BuyBtn_" + item.id) as Button
+	if btn and item.get("limit", 0) > 0:
+		btn.text = "구매 완료"
+		btn.disabled = true
 
 
 # ─────────────────────────────────────────────
@@ -544,10 +540,10 @@ func _build_toast() -> void:
 	_toast_label = Label.new()
 	_toast_label.name = "Toast"
 	_toast_label.set_anchors_preset(Control.PRESET_CENTER)
-	_toast_label.offset_left = -220.0
-	_toast_label.offset_top = -24.0
-	_toast_label.offset_right = 220.0
-	_toast_label.offset_bottom = 24.0
+	_toast_label.offset_left = -230.0
+	_toast_label.offset_top = -28.0
+	_toast_label.offset_right = 230.0
+	_toast_label.offset_bottom = 28.0
 	_toast_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_toast_label.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -586,6 +582,3 @@ func _comma(v: int) -> String:
 		if c % 3 == 0 and i != 0:
 			out = "," + out
 	return out
-
-
-var C_INK_DIM := ThemeFactory.C_INK_DIM
