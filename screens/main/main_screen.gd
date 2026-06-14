@@ -62,26 +62,51 @@ func _ready() -> void:
 	GameData.stamina_changed.connect(func(c, m): stamina_value.text = "%d / %d" % [c, m])
 
 	for child in bottom_nav.get_children():
-		if child is Button:
-			var b := child as Button
-			b.toggle_mode = true
-			b.button_group = _nav_group
-			b.add_theme_stylebox_override("pressed", ThemeFactory.accent_box(14))
-			b.pressed.connect(_on_nav_pressed.bind(b))
-			# 아이콘 크기·간격 코드로 강제 (에디터 tscn 덮어쓰기 방지)
-			var vbox := b.get_node_or_null("VBox") as VBoxContainer
-			if vbox != null:
-				vbox.add_theme_constant_override("separation", 2)
-				var icon_lbl := vbox.get_node_or_null("Icon") as Label
-				if icon_lbl != null:
-					icon_lbl.add_theme_font_size_override("font_size", 18)
-					icon_lbl.custom_minimum_size = Vector2(26, 26)
-				var name_lbl := vbox.get_node_or_null("Name") as Label
-				if name_lbl != null:
-					name_lbl.add_theme_font_size_override("font_size", 11)
+		if not (child is Button):
+			continue
+		var b := child as Button
+		b.toggle_mode = true
+		b.button_group = _nav_group
+		# 버튼 자체는 투명 배경 유지, 눌림 시 미세 하이라이트만
+		var pressed_sb := StyleBoxFlat.new()
+		pressed_sb.set_corner_radius_all(8)
+		pressed_sb.bg_color = Color(ThemeFactory.C_CYAN, 0.08)
+		b.add_theme_stylebox_override("pressed",  pressed_sb)
+		b.add_theme_stylebox_override("hover",    pressed_sb)
+		b.pressed.connect(_on_nav_pressed.bind(b))
+
+		var vbox := b.get_node_or_null("VBox") as VBoxContainer
+		if vbox == null:
+			continue
+		# 아이콘과 이름 사이 간격
+		vbox.add_theme_constant_override("separation", 5)
+
+		# ── 원형 배지 배경 ──
+		var icon_lbl := vbox.get_node_or_null("Icon") as Label
+		if icon_lbl != null:
+			icon_lbl.add_theme_font_size_override("font_size", 18)
+			icon_lbl.custom_minimum_size = Vector2(38, 38)
+			var badge_sb := StyleBoxFlat.new()
+			badge_sb.set_corner_radius_all(999)
+			badge_sb.bg_color = ThemeFactory.C_BG2
+			badge_sb.border_color = Color(ThemeFactory.C_LINE)
+			badge_sb.set_border_width_all(1)
+			badge_sb.set_content_margin_all(6)
+			icon_lbl.add_theme_stylebox_override("normal", badge_sb)
+
+		# ── 이름 텍스트 ──
+		var name_lbl := vbox.get_node_or_null("Name") as Label
+		if name_lbl != null:
+			name_lbl.add_theme_font_size_override("font_size", 10)
+			name_lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
+
+	# 선택된 버튼의 배지 색 강조 처리
+	_nav_group.pressed.connect(_on_nav_group_pressed)
+
 	var hunt := bottom_nav.get_node_or_null("Hunt") as Button
 	if hunt:
 		hunt.button_pressed = true
+		_highlight_nav_icon(hunt, true)
 
 	# top-bar system buttons
 	var mail_btn := %Mail as Button
@@ -103,10 +128,10 @@ func _ready() -> void:
 	conquest_button.pressed.connect(_on_conquest)
 	next_stage_label.text = "33-9"
 
-	# NavPanel 높이 축소 (작아진 아이콘에 맞춤)
+	# NavPanel 높이: 원형 배지(38) + 간격(5) + 이름(13) + 여백 = 76px
 	var nav_panel := get_node_or_null("NavPanel") as PanelContainer
 	if nav_panel != null:
-		nav_panel.offset_top = -72.0
+		nav_panel.offset_top = -76.0
 
 	toast_label.visible = false
 
@@ -154,6 +179,39 @@ func _bind_currencies() -> void:
 	gold_value.text = _comma(GameData.gold)
 	gem_value.text = _comma(GameData.gems)
 	token_value.text = _comma(GameData.faction_token)
+
+
+func _on_nav_group_pressed(btn: BaseButton) -> void:
+	for child in bottom_nav.get_children():
+		if child is Button:
+			_highlight_nav_icon(child as Button, child == btn)
+
+
+func _highlight_nav_icon(btn: Button, active: bool) -> void:
+	var vbox := btn.get_node_or_null("VBox") as VBoxContainer
+	if vbox == null:
+		return
+	var icon_lbl := vbox.get_node_or_null("Icon") as Label
+	if icon_lbl == null:
+		return
+	var badge_sb := StyleBoxFlat.new()
+	badge_sb.set_corner_radius_all(999)
+	badge_sb.set_content_margin_all(6)
+	if active:
+		badge_sb.bg_color = Color(ThemeFactory.C_CYAN, 0.22)
+		badge_sb.border_color = ThemeFactory.C_CYAN
+		badge_sb.set_border_width_all(2)
+		var name_lbl := vbox.get_node_or_null("Name") as Label
+		if name_lbl:
+			name_lbl.add_theme_color_override("font_color", ThemeFactory.C_CYAN)
+	else:
+		badge_sb.bg_color = ThemeFactory.C_BG2
+		badge_sb.border_color = Color(ThemeFactory.C_LINE)
+		badge_sb.set_border_width_all(1)
+		var name_lbl := vbox.get_node_or_null("Name") as Label
+		if name_lbl:
+			name_lbl.add_theme_color_override("font_color", ThemeFactory.C_INK_DIM)
+	icon_lbl.add_theme_stylebox_override("normal", badge_sb)
 
 
 func _on_nav_pressed(btn: Button) -> void:
