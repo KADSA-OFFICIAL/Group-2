@@ -23,9 +23,7 @@ func update_debug_info(_delta):
 	
 	var enemies = GameManager.get_all_enemies()
 	text += "Active Enemies: %d\n" % enemies.size()
-	
-	text += "Parry Active: %s\n" % ["Yes" if ParrySystem.is_parry_active() else "No"]
-	
+
 	debug_label.text = text
 
 func toggle_debug():
