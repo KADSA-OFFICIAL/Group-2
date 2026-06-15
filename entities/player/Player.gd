@@ -1,10 +1,13 @@
 extends CharacterBody2D
 class_name Player
 
-var hp: int = 100
-var max_hp: int = 100
+# 스텟 바탕: PlayerStats가 HP/공격력/방어력의 단일 출처다.
+# 씬에서 .tres로 교체 주입할 수 있도록 export 한다.
+@export var stats: PlayerStats = PlayerStats.new()
+
+var hp: int = 0
+var max_hp: int = 0
 var is_alive: bool = true
-var player_config: Dictionary = {}
 
 @onready var sprite = $Sprite2D
 @onready var collision_shape = $CollisionShape2D
@@ -12,16 +15,8 @@ var player_config: Dictionary = {}
 func _ready():
 	name = "Player"
 	add_to_group("player")
-	load_config()
-	hp = player_config.get("max_hp", 100)
-	max_hp = player_config.get("max_hp", 100)
-
-func load_config():
-	var config_file = FileAccess.open("res://config/player_config.json", FileAccess.READ)
-	if config_file:
-		var json = JSON.new()
-		json.parse(config_file.get_as_text())
-		player_config = json.data
+	max_hp = stats.get_max_hp()
+	hp = max_hp
 
 func _physics_process(_delta):
 	if not is_alive:
@@ -30,13 +25,15 @@ func _physics_process(_delta):
 func take_damage(amount: int, _source = null):
 	if not is_alive:
 		return
-	
-	hp -= amount
+
+	# 방어력 적용: 최소 1의 피해는 들어간다 (바탕 규칙, 수치는 추후 튜닝).
+	var dealt = max(amount - stats.get_physical_defense(), 1)
+	hp -= dealt
 	hp = max(hp, 0)
-	
+
 	if EventBus:
-		EventBus.damage_taken.emit(self, amount, global_position)
-	
+		EventBus.damage_taken.emit(self, dealt, global_position)
+
 	if hp <= 0:
 		die()
 
@@ -60,8 +57,4 @@ func get_health_percent() -> float:
 	if max_hp == 0:
 		return 0.0
 	return float(hp) / float(max_hp)
-
-func get_player_config() -> Dictionary:
-	return player_config
-
 
