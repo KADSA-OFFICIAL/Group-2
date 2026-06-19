@@ -44,20 +44,11 @@ func load_game() -> Dictionary:
 	return data
 
 func get_default_save() -> Dictionary:
+	# 재화 목록은 CurrencySystem(단일 출처)을 참조한다.
 	return {
-		"player_hp": 100,
-		"player_position": {"x": 0, "y": 0},
 		"stage": "Stage1_1",
 		"playtime": 0.0,
-		"currencies": {
-			"stone": 0,
-			"tin": 0,
-			"copper": 0,
-			"iron_ore": 0,
-			"coal": 0,
-			"gold": 0,
-			"faith_stone": 0
-		}
+		"currencies": CurrencySystem.DEFAULT_CURRENCIES.duplicate()
 	}
 
 func clear_save() -> bool:
