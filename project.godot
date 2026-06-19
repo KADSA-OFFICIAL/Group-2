@@ -23,9 +23,6 @@ EventBus="*res://autoload/EventBus.gd"
 GameManager="*res://autoload/GameManager.gd"
 SaveSystem="*res://autoload/SaveSystem.gd"
 CurrencySystem="*res://autoload/CurrencySystem.gd"
-StatusEffectSystem="*res://systems/StatusEffectSystem.gd"
-FeedbackSystem="*res://systems/FeedbackSystem.gd"
-TelegraphSystem="*res://systems/TelegraphSystem.gd"
 
 [display]
 
