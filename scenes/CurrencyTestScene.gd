@@ -37,16 +37,6 @@ func _ready():
 	gold_sub_btn.offset_top = 170
 	gold_sub_btn.custom_minimum_size = Vector2(150, 40)
 	
-	var diamond_add_btn = Button.new()
-	diamond_add_btn.text = "Add 10 Diamond"
-	diamond_add_btn.pressed.connect(func(): CurrencySystem.add_currency("diamond", 10))
-	hud.add_child(diamond_add_btn)
-	diamond_add_btn.anchor_left = 0.0
-	diamond_add_btn.anchor_top = 0.0
-	diamond_add_btn.offset_left = 180
-	diamond_add_btn.offset_top = 120
-	diamond_add_btn.custom_minimum_size = Vector2(150, 40)
-	
 	var save_btn = Button.new()
 	save_btn.text = "Save Game"
 	save_btn.pressed.connect(_on_save_game)

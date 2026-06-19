@@ -1,9 +1,20 @@
 extends Node
 
-# Dictionary to store currency amounts
+# 재화 정식 목록(단일 출처). 다른 시스템(SaveSystem 등)은 이 상수를 참조한다.
 # 장비 제작 재료: stone, tin, copper, iron_ore, coal
 # 통화: gold
 # 특수 재화: faith_stone
+const DEFAULT_CURRENCIES := {
+	"stone": 0,
+	"tin": 0,
+	"copper": 0,
+	"iron_ore": 0,
+	"coal": 0,
+	"gold": 0,
+	"faith_stone": 0
+}
+
+# Dictionary to store currency amounts
 var currencies: Dictionary = {}
 
 # Signal for currency changes
@@ -15,15 +26,7 @@ func _ready():
 	name = "CurrencySystem"
 	# Initialize default currencies
 	if currencies.is_empty():
-		currencies = {
-			"stone": 0,
-			"tin": 0,
-			"copper": 0,
-			"iron_ore": 0,
-			"coal": 0,
-			"gold": 0,
-			"faith_stone": 0
-		}
+		currencies = DEFAULT_CURRENCIES.duplicate()
 
 # Add currency amount
 func add_currency(currency_type: String, amount: int) -> bool:
@@ -88,15 +91,7 @@ func set_currency(currency_type: String, amount: int):
 
 # Clear all currencies
 func reset_currencies():
-	currencies = {
-		"stone": 0,
-		"tin": 0,
-		"copper": 0,
-		"iron_ore": 0,
-		"coal": 0,
-		"gold": 0,
-		"faith_stone": 0
-	}
+	currencies = DEFAULT_CURRENCIES.duplicate()
 
 # Check if has enough currency
 func has_enough(currency_type: String, amount: int) -> bool:
