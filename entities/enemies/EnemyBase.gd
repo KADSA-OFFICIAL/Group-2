@@ -1,4 +1,5 @@
 extends CharacterBody2D
+class_name EnemyBase
 
 # 스텟 바탕: PlayerStats를 적의 HP/방어력 출처로 재사용한다.
 # (faith/intelligence는 적에게 미사용, 기본값 유지)
