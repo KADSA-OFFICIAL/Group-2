@@ -11,7 +11,7 @@
 
 [node name="GameCamera" type="Camera2D" parent="."]
 script = ExtResource("2_cam")
-zoom = 1.5
+zoom = Vector2(1.5, 1.5)
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("3_hud")
