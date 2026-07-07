@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=3 format=3 uid="uid://b8shipduck0chr"]
+
+[ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+
+[sub_resource type="Resource" id="PlayerStats_shipduck"]
+script = ExtResource("2_stats")
+hp = 100
+strength = 10
+defense = 10
+intelligence = 10
+faith = 10
+equip_physical_defense = 0
+equip_magic_defense = 0
+
+[resource]
+script = ExtResource("1_chardata")
+character_id = &"shipduck"
+display_name = "Shipduck"
+description = "기본 플레이어 캐릭터."
+stats = SubResource("PlayerStats_shipduck")
+tint = Color(0, 0.5, 1, 1)
+sprite_scale = Vector2(2, 2)

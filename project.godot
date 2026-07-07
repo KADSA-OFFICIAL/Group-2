@@ -21,6 +21,7 @@ EventBus="*res://autoload/EventBus.gd"
 GameManager="*res://autoload/GameManager.gd"
 SaveSystem="*res://autoload/SaveSystem.gd"
 CurrencySystem="*res://autoload/CurrencySystem.gd"
+CharacterDatabase="*res://autoload/CharacterDatabase.gd"
 
 [display]
 
