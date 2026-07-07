@@ -51,6 +51,15 @@
 - 기존 프로젝트 패턴을 우선합니다.
 - 큰 구조 변경이나 폴더 정리는 해당 이슈가 직접 요구할 때만 합니다.
 
+## System Conventions
+
+시스템(재화, 스텟, 캐릭터, autoload 등)을 만들거나 수정하기 전에 [SYSTEM_CONVENTIONS.md](SYSTEM_CONVENTIONS.md)를 읽고 따릅니다.
+
+- 기존 코어 시스템(`CurrencySystem`, `PlayerStats`, `CharacterData`/`CharacterDatabase`, `SaveSystem`, `EventBus` 등)을 먼저 확인하고, 있으면 덮어쓰지 말고 재사용/참조합니다.
+- 단일 출처 원칙: 재화는 `CurrencySystem.DEFAULT_CURRENCIES`, 스텟은 `PlayerStats`, 캐릭터는 `CharacterData`/`CharacterDatabase`가 유일한 출처입니다. 같은 데이터를 복제·병렬 정의하지 않습니다.
+- `project.godot`의 `[autoload]`는 기존 항목을 삭제하지 않고 append만 합니다. 같은 이름/책임이 중복되면 §2에 따라 출처 하나로 수렴시킵니다.
+- 큰 통합/머지 전에는 핵심 파일 회귀 여부를 `git diff`로 확인합니다 (`-s ours`류 통합 지양). "MERGEABLE" 표시가 "회귀 없음"을 뜻하지 않습니다.
+
 ## Verification
 
 변경한 파일과 게임 엔진 상태에 맞춰 가장 작은 의미 있는 검증부터 실행합니다.
