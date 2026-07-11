@@ -5,6 +5,17 @@ class_name CharacterData
 # 이름/스텟/스킬/외형을 한 리소스로 묶는다.
 # 스텟은 기존 PlayerStats를 재사용하고, 캐릭터별 .tres로 교체 주입한다.
 
+# ===== 분류 (Role) =====
+# 캐릭터의 전투 역할 분류. 편성/밸런스/UI 표시 등에서 참고한다.
+enum Role {
+	MELEE_DEALER,   # 근접 딜러
+	RANGED_DEALER,  # 원거리 딜러
+	BUFFER,         # 버퍼
+}
+
+# 기본값 MELEE_DEALER: 기존/신규 .tres가 누락 시 안전하게 로드되도록 첫 값을 기본으로 둔다.
+@export var role: Role = Role.MELEE_DEALER
+
 # ===== 식별 (Identity) =====
 @export var character_id: StringName = &""   # 고유 식별자 (예: &"shipduck")
 @export var display_name: String = ""         # 화면 표시 이름
@@ -34,6 +45,18 @@ class_name CharacterData
 # 후속 이슈에서: equipment 타입을 Array[EquipmentData]로 좁히거나,
 # level/exp 등 성장 필드, voice/portrait 등 외형 필드를 같은 방식으로 추가한다.
 
+
+# 역할의 화면 표시용 한글 이름을 반환한다.
+func get_role_name() -> String:
+	match role:
+		Role.MELEE_DEALER:
+			return "근접 딜러"
+		Role.RANGED_DEALER:
+			return "원거리 딜러"
+		Role.BUFFER:
+			return "버퍼"
+		_:
+			return "알 수 없음"
 
 # 안전한 스텟 접근: stats가 비어 있으면 기본 PlayerStats를 반환한다.
 func get_stats() -> PlayerStats:
