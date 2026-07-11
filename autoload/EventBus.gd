@@ -27,3 +27,11 @@ signal currency_changed(currency_type: String, amount: int, new_balance: int)
 signal currency_added(currency_type: String, amount: int, new_balance: int)
 @warning_ignore("unused_signal")
 signal currency_subtracted(currency_type: String, amount: int, new_balance: int)
+
+# Equipment signals
+@warning_ignore("unused_signal")
+signal equipment_crafted(equipment_id: StringName)
+@warning_ignore("unused_signal")
+signal equipment_equipped(character_id: StringName, equipment_id: StringName, slot: int)
+@warning_ignore("unused_signal")
+signal equipment_unequipped(character_id: StringName, slot: int)

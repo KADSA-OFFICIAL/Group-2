@@ -22,6 +22,8 @@ GameManager="*res://autoload/GameManager.gd"
 SaveSystem="*res://autoload/SaveSystem.gd"
 CurrencySystem="*res://autoload/CurrencySystem.gd"
 CharacterDatabase="*res://autoload/CharacterDatabase.gd"
+EquipmentDatabase="*res://autoload/EquipmentDatabase.gd"
+EquipmentSystem="*res://autoload/EquipmentSystem.gd"
 
 [display]
 

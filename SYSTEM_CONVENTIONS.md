@@ -19,9 +19,12 @@
 | SaveSystem | `autoload/SaveSystem.gd` | 저장/불러오기 | 저장 스키마 |
 | CurrencySystem | `autoload/CurrencySystem.gd` | 재화 관리 | `DEFAULT_CURRENCIES` 상수 |
 | CharacterDatabase | `autoload/CharacterDatabase.gd` | 캐릭터 데이터 조회 레지스트리 | `data/characters/*.tres` |
+| EquipmentDatabase | `autoload/EquipmentDatabase.gd` | 장비 데이터 조회 레지스트리 | `data/equipment/*.tres` |
+| EquipmentSystem | `autoload/EquipmentSystem.gd` | 장비 제작(재화 차감)·보유·착탈 | 보유 인벤토리 |
 | PlayerStats | `entities/player/PlayerStats.gd` | 기초/파생 스텟 계산 (Resource) | 캐릭터/적 스텟 |
 | CharacterData | `entities/character/CharacterData.gd` | 캐릭터 정의(이름/스텟/스킬/외형/장비) (Resource) | 캐릭터 정의 |
 | SkillData | `entities/character/SkillData.gd` | 스킬 데이터 정의 (Resource) | 스킬 정의 |
+| EquipmentData | `entities/equipment/EquipmentData.gd` | 장비 정의(슬롯/스텟보너스/제작비용) (Resource) | 장비 정의 |
 
 > 새 autoload/시스템을 추가하면 **이 표에 한 줄 추가**한다.
 

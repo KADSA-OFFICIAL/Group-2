@@ -18,10 +18,14 @@ class_name PlayerStats
 @export var intelligence: int = 10   # 지능 (추후 설계)
 @export var faith: int = 10          # 신앙심
 
-# ===== 장비 방어 보너스 (Equipment Defense Bonuses) =====
-# 장비 시스템이 채워 넣는 입력값. 방어력 계산에 합산된다.
+# ===== 장비 보너스 (Equipment Bonuses) =====
+# 장비 시스템이 채워 넣는 입력값. 각 파생 스텟 계산에 합산된다.
+# 모두 기본 0이라 장비가 없으면 파생 계산에 영향을 주지 않는다(기존 .tres 호환).
 @export var equip_physical_defense: int = 0
 @export var equip_magic_defense: int = 0
+@export var equip_physical_attack: int = 0
+@export var equip_magic_attack: int = 0
+@export var equip_max_hp: int = 0
 
 # ===== 기여 계수 (Contribution Coefficients) =====
 const STRENGTH_TO_PHYS_ATK: float = 2.0    # 근력 1 -> 물리 공격력
@@ -35,17 +39,17 @@ const FAITH_TO_SKILL_BOOST: float = 0.05   # 신앙심 1 -> 여신 스킬 강화
 
 # ===== 세부 스텟 (Derived Stats) =====
 
-# 최대 HP
+# 최대 HP = 기초 HP + 장비 HP 보너스
 func get_max_hp() -> int:
-	return hp
+	return hp + equip_max_hp
 
-# 물리 공격력 = 근력 기여
+# 물리 공격력 = 근력 기여 + 장비 보너스
 func get_physical_attack() -> int:
-	return int(round(strength * STRENGTH_TO_PHYS_ATK))
+	return int(round(strength * STRENGTH_TO_PHYS_ATK)) + equip_physical_attack
 
-# 마법 공격력 = 신앙심 기여
+# 마법 공격력 = 신앙심 기여 + 장비 보너스
 func get_magic_attack() -> int:
-	return int(round(faith * FAITH_TO_MAGIC_ATK))
+	return int(round(faith * FAITH_TO_MAGIC_ATK)) + equip_magic_attack
 
 # 물리 방어력 = 근력 기여분 + 방어력 스텟 기여분 + 장비 (합산)
 func get_physical_defense() -> int:
@@ -76,6 +80,15 @@ func train_deltoid(amount: int = 1) -> void:
 func set_equipment_defense(physical: int, magic: int) -> void:
 	equip_physical_defense = max(physical, 0)
 	equip_magic_defense = max(magic, 0)
+
+# 장비 보너스 전체를 갱신한다 (CharacterData가 장착 상태를 합산해 호출).
+# 음수는 0으로 클램프한다.
+func set_equipment_bonuses(physical_attack: int, magic_attack: int, physical_defense: int, magic_defense: int, max_hp: int) -> void:
+	equip_physical_attack = max(physical_attack, 0)
+	equip_magic_attack = max(magic_attack, 0)
+	equip_physical_defense = max(physical_defense, 0)
+	equip_magic_defense = max(magic_defense, 0)
+	equip_max_hp = max(max_hp, 0)
 
 
 # ===== 디버그 (Debug) =====
