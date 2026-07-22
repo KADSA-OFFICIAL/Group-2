@@ -4,6 +4,7 @@ extends Node
 # 장비 제작 재료: stone, tin, copper, iron_ore, coal
 # 통화: gold
 # 특수 재화: faith_stone
+# 메타 UI 지갑 재화: gems, faction_token, sweep_tickets (reset_currencies 시 소실 방지 위해 등록)
 const DEFAULT_CURRENCIES := {
 	"stone": 0,
 	"tin": 0,
@@ -11,7 +12,10 @@ const DEFAULT_CURRENCIES := {
 	"iron_ore": 0,
 	"coal": 0,
 	"gold": 0,
-	"faith_stone": 0
+	"faith_stone": 0,
+	"gems": 0,
+	"faction_token": 0,
+	"sweep_tickets": 0
 }
 
 # Dictionary to store currency amounts
