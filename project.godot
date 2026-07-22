@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="stoneage shipduck game"
-run/main_scene="res://main.tscn"
+run/main_scene="res://Boot.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
@@ -24,6 +24,8 @@ CurrencySystem="*res://autoload/CurrencySystem.gd"
 CharacterDatabase="*res://autoload/CharacterDatabase.gd"
 EquipmentDatabase="*res://autoload/EquipmentDatabase.gd"
 EquipmentSystem="*res://autoload/EquipmentSystem.gd"
+GameData="*res://autoload/game_data.gd"
+ScreenManager="*res://autoload/screen_manager.gd"
 
 [display]
 
