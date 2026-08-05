@@ -24,6 +24,8 @@ CurrencySystem="*res://autoload/CurrencySystem.gd"
 CharacterDatabase="*res://autoload/CharacterDatabase.gd"
 EquipmentDatabase="*res://autoload/EquipmentDatabase.gd"
 EquipmentSystem="*res://autoload/EquipmentSystem.gd"
+CombatConfig="*res://autoload/CombatConfig.gd"
+StatusEffectDatabase="*res://autoload/StatusEffectDatabase.gd"
 EnemyDatabase="*res://autoload/EnemyDatabase.gd"
 
 [display]
