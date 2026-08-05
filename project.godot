@@ -25,6 +25,7 @@ CharacterDatabase="*res://autoload/CharacterDatabase.gd"
 EquipmentDatabase="*res://autoload/EquipmentDatabase.gd"
 EquipmentSystem="*res://autoload/EquipmentSystem.gd"
 CombatConfig="*res://autoload/CombatConfig.gd"
+StatusEffectDatabase="*res://autoload/StatusEffectDatabase.gd"
 
 [display]
 
