@@ -12,17 +12,18 @@ extends Node
 #   **시너지의 구체 효과는 아직 [미정]**이므로 효과 적용은 하지 않는다.
 #   효과가 정해지면 후속 이슈에서 StatusEffectData/PlayerStats 버프 채널로 연결한다.
 
-# ===== 활성화 임계치 =====
-# [확정] 1카운트에서 1단계, 3카운트에서 3단계가 켜진다.
-# 3단계는 1단계를 대체하지 않고 **추가 누적**된다.
-const TIER1_THRESHOLD: int = 1
-const TIER3_THRESHOLD: int = 3
+# ===== 활성화 카운트 =====
+# [확정] 시너지는 **정확히 1개** 또는 **3개**일 때만 활성화된다.
+# 2카운트는 "죽은 구간"으로 아무 효과도 켜지지 않는다(임계치 방식이 아니다).
+# 3카운트일 때 3단계는 1단계를 대체하지 않고 **추가 누적**된다.
+const TIER1_COUNT: int = 1
+const TIER3_COUNT: int = 3
 
-# 활성화 단계. 비트 조합이 아니라 "켜진 단계 목록"으로 다룬다.
+# 활성화 단계.
 enum Tier {
-	NONE,      # 0카운트 - 비활성
-	TIER1,     # 1~2카운트 - 1단계만
-	TIER1_3,   # 3카운트 이상 - 1단계 + 3단계 (추가 누적)
+	NONE,      # 0 또는 2카운트 - 비활성
+	TIER1,     # 정확히 1카운트 - 1단계만
+	TIER1_3,   # 3카운트 - 1단계 + 3단계 (추가 누적)
 }
 
 func _ready() -> void:
@@ -53,10 +54,13 @@ func get_role_counts(party: Array) -> Dictionary:
 # ===== 활성화 판정 (Activation) =====
 
 # 카운트 하나를 활성화 단계로 변환한다.
+# 주의: "이상(>=)"이 아니라 **정확히 1개 또는 3개**일 때만 활성화된다.
+#       2카운트는 비활성이다(반쯤 모으면 아무것도 얻지 못한다).
+# 3카운트 초과는 파티 3명 구조상 나올 수 없지만, 방어적으로 3단계로 취급한다.
 func get_tier_for_count(count: int) -> Tier:
-	if count >= TIER3_THRESHOLD:
+	if count >= TIER3_COUNT:
 		return Tier.TIER1_3
-	if count >= TIER1_THRESHOLD:
+	if count == TIER1_COUNT:
 		return Tier.TIER1
 	return Tier.NONE
 
@@ -69,7 +73,8 @@ func get_active_tiers(party: Array) -> Dictionary:
 		tiers[r] = get_tier_for_count(counts[r])
 	return tiers
 
-# 특정 역할의 1단계가 켜졌는지 (3카운트여도 1단계는 유지되므로 true).
+# 특정 역할의 1단계가 켜졌는지.
+# 3카운트면 1단계도 유지되므로 true, 2카운트면 false다.
 func is_tier1_active(party: Array, role: CharacterData.Role) -> bool:
 	return get_tier_for_count(get_role_counts(party).get(role, 0)) != Tier.NONE
 
@@ -100,7 +105,7 @@ func get_summary(party: Array) -> Array:
 func tier_to_name(tier: Tier) -> String:
 	match tier:
 		Tier.NONE:
-			return "비활성"
+			return "비활성"   # 0카운트 또는 2카운트
 		Tier.TIER1:
 			return "1단계"
 		Tier.TIER1_3:
