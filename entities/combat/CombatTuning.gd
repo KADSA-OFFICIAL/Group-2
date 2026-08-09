@@ -26,6 +26,39 @@ class_name CombatTuning
 ## 이동 기본 속도(px/s). 원거리 스택 이속이 여기에 곱해진다.
 @export var base_move_speed: float = 200.0
 
+# ===== 피해 공식 (Damage Formula) =====
+# 피해 = 공격력 x (damage_defense_constant / (damage_defense_constant + 방어력))
+#
+# 감산 공식(공격력 - 방어력)이 아니라 비율 공식을 쓰는 이유:
+#   감산은 방어가 공격을 넘으면 피해가 최소치로 눌리고, 경계 근처에서 스텟 1포인트가
+#   피해를 몇 배로 바꿔 밸런싱이 불가능해진다. 비율 공식은 방어가 피해를 완전히
+#   무효화하지 못하고, 방어를 올릴수록 수익이 매끄럽게 체감한다.
+@export_group("피해 공식")
+## 방어력 감쇠 상수 K. 클수록 방어력의 효과가 약해진다.
+## 방어력이 K와 같으면 피해가 절반이 된다(예: K=100, 방어력 100 -> 50%).
+@export var damage_defense_constant: float = 100.0
+## 최소 피해. 방어력이 아무리 높아도 이 값 아래로는 내려가지 않는다.
+@export var damage_min: int = 1
+
+# ===== 스텟 기여 계수 (Stat Contribution) =====
+# PlayerStats가 기초 스텟에서 파생 스텟을 계산할 때 쓰는 계수.
+# PlayerStats는 이 값을 소유하지 않고 여기서 읽는다(단일 출처).
+@export_group("스텟 계수")
+## 근력 1 -> 물리 공격력
+@export var strength_to_phys_atk: float = 2.0
+## 근력 1 -> 물리 방어력
+@export var strength_to_phys_def: float = 1.0
+## 근력 1 -> 마법 방어력
+@export var strength_to_magic_def: float = 0.5
+## 방어력 1 -> 물리 방어력
+@export var defense_to_phys_def: float = 1.5
+## 방어력 1 -> 마법 방어력
+@export var defense_to_magic_def: float = 1.5
+## 신앙심 1 -> 마법 공격력
+@export var faith_to_magic_atk: float = 2.0
+## 신앙심 1 -> 여신 스킬 강화 비율 (0.05 = +5%)
+@export var faith_to_skill_boost: float = 0.05
+
 # ===== 탱커 1단계 · 표식 → 기절 =====
 @export_group("탱커 1단계 (표식)")
 ## 표식이 터지는 데 필요한 평타 횟수. 파티 전체의 평타가 카운트된다.
@@ -90,6 +123,15 @@ func get_summary() -> Dictionary:
 	return {
 		"base_attack_cooldown": base_attack_cooldown,
 		"base_move_speed": base_move_speed,
+		"damage_defense_constant": damage_defense_constant,
+		"damage_min": damage_min,
+		"strength_to_phys_atk": strength_to_phys_atk,
+		"strength_to_phys_def": strength_to_phys_def,
+		"strength_to_magic_def": strength_to_magic_def,
+		"defense_to_phys_def": defense_to_phys_def,
+		"defense_to_magic_def": defense_to_magic_def,
+		"faith_to_magic_atk": faith_to_magic_atk,
+		"faith_to_skill_boost": faith_to_skill_boost,
 		"mark_threshold": mark_threshold,
 		"mark_gain_per_hit": mark_gain_per_hit,
 		"mark_stun_duration": mark_stun_duration,
@@ -128,6 +170,15 @@ func validate() -> Array[String]:
 		problems.append("base_move_speed는 0보다 커야 합니다.")
 	if capture_hold_seconds <= 0.0:
 		problems.append("capture_hold_seconds는 0보다 커야 합니다.")
+
+	# 0 이하면 0으로 나누거나 피해가 0이 된다.
+	if damage_defense_constant <= 0.0:
+		problems.append("damage_defense_constant는 0보다 커야 합니다.")
+	if damage_min < 0:
+		problems.append("damage_min은 0 이상이어야 합니다.")
+	# 공격 기여가 0이면 물리 공격력이 장비 보너스에만 의존하게 된다.
+	if strength_to_phys_atk <= 0.0:
+		problems.append("strength_to_phys_atk는 0보다 커야 합니다.")
 
 	# 비율 값은 음수를 허용하지 않는다.
 	var percents := {
