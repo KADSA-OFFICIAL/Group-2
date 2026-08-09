@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+
+[sub_resource type="Resource" id="PlayerStats_buffer_pure"]
+script = ExtResource("2_stats")
+hp = 100
+strength = 10
+defense = 10
+intelligence = 10
+faith = 10
+
+[resource]
+script = ExtResource("1_chardata")
+role = 2
+secondary_role = 0
+character_id = &"buffer_pure"
+display_name = "버퍼(순혈)"
+description = "로스터 플레이스홀더. 순혈 버퍼 슬롯. 이름/개성/고유 스킬 미정."
+stats = SubResource("PlayerStats_buffer_pure")
+tint = Color(0.3, 1, 0.3, 1)
+sprite_scale = Vector2(2, 2)
