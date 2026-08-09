@@ -6,15 +6,35 @@ class_name CharacterData
 # 스텟은 기존 PlayerStats를 재사용하고, 캐릭터별 .tres로 교체 주입한다.
 
 # ===== 분류 (Role) =====
-# 캐릭터의 전투 역할 분류. 편성/밸런스/UI 표시 등에서 참고한다.
+# 캐릭터의 전투 역할 분류. 편성/시너지/밸런스/UI 표시 등에서 참고한다.
+#
+# 역할 기본기(설계 정본: docs/combat-screen-design.md §2):
+#   TANK          - 표식 -> 기절
+#   RANGED_DEALER - 평타 스택(공속·이속)
+#   BUFFER        - 처형
 enum Role {
-	MELEE_DEALER,   # 근접 딜러
+	TANK,           # 탱커 (구 MELEE_DEALER. 값 0 유지로 기존 .tres 호환)
 	RANGED_DEALER,  # 원거리 딜러
 	BUFFER,         # 버퍼
 }
 
-# 기본값 MELEE_DEALER: 기존/신규 .tres가 누락 시 안전하게 로드되도록 첫 값을 기본으로 둔다.
-@export var role: Role = Role.MELEE_DEALER
+# 기본값 TANK: 기존/신규 .tres가 누락 시 안전하게 로드되도록 첫 값을 기본으로 둔다.
+@export var role: Role = Role.TANK
+
+# ===== 겸직 (Dual Role) =====
+# 로스터 6명 중 3명은 두 역할을 겸직한다(탱커/버퍼, 원거리/탱커, 버퍼/원거리).
+# 겸직자는 시너지 계산에서 **두 역할 카운트에 각각 +1** 기여한다.
+#
+# NONE이 기본값(0)이라 기존 .tres는 그대로 단일 역할로 로드된다(하위 호환).
+# Role과 별도 enum인 이유: Role에 NONE을 넣으면 역할 카운트 순회에 빈 값이 섞이기 때문이다.
+enum SecondaryRole {
+	NONE,           # 겸직 없음 (순혈)
+	TANK,
+	RANGED_DEALER,
+	BUFFER,
+}
+
+@export var secondary_role: SecondaryRole = SecondaryRole.NONE
 
 # ===== 식별 (Identity) =====
 @export var character_id: StringName = &""   # 고유 식별자 (예: &"shipduck")
@@ -46,11 +66,50 @@ enum Role {
 # 후속 이슈에서: level/exp 등 성장 필드, voice/portrait 등 외형 필드를 같은 방식으로 추가한다.
 
 
+# ===== 역할 조회 (Role Accessors) =====
+# 시너지 계산 등은 아래 헬퍼를 통해 역할을 읽는다.
+# role/secondary_role 필드를 각자 해석하면 겸직 처리가 흩어지므로, get_roles()를 단일 진입점으로 둔다.
+
+# 이 캐릭터가 가진 역할 전부를 반환한다. 순혈이면 1개, 겸직이면 2개.
+func get_roles() -> Array[Role]:
+	var result: Array[Role] = [role]
+	var second := get_secondary_role_as_role()
+	if second != -1 and second != role:
+		result.append(second)
+	return result
+
+# secondary_role을 Role로 변환한다. 겸직이 없으면 -1.
+# SecondaryRole은 NONE이 0이라 Role보다 1씩 밀려 있다.
+func get_secondary_role_as_role() -> int:
+	if secondary_role == SecondaryRole.NONE:
+		return -1
+	return (secondary_role - 1) as Role
+
+# 겸직 여부.
+func is_dual_role() -> bool:
+	return get_roles().size() >= 2
+
+# 특정 역할을 가지고 있는지 (주 역할이든 겸직이든).
+func has_role(r: Role) -> bool:
+	return get_roles().has(r)
+
+
 # 역할의 화면 표시용 한글 이름을 반환한다.
 func get_role_name() -> String:
-	match role:
-		Role.MELEE_DEALER:
-			return "근접 딜러"
+	return role_to_name(role)
+
+# 겸직까지 포함한 표시 이름. 순혈이면 "탱커", 겸직이면 "탱커/버퍼".
+func get_roles_display_name() -> String:
+	var names: Array[String] = []
+	for r in get_roles():
+		names.append(role_to_name(r))
+	return "/".join(names)
+
+# Role -> 한글 이름. 표시 이름의 단일 출처.
+static func role_to_name(r: Role) -> String:
+	match r:
+		Role.TANK:
+			return "탱커"
 		Role.RANGED_DEALER:
 			return "원거리 딜러"
 		Role.BUFFER:
@@ -143,4 +202,7 @@ func validate() -> Array[String]:
 		problems.append("character_id가 비어 있습니다.")
 	if display_name.is_empty():
 		problems.append("display_name이 비어 있습니다.")
+	# 겸직인데 주 역할과 같으면 카운트가 중복되므로 데이터 오류다.
+	if secondary_role != SecondaryRole.NONE and get_secondary_role_as_role() == role:
+		problems.append("secondary_role이 주 역할과 같습니다: " + get_role_name())
 	return problems
