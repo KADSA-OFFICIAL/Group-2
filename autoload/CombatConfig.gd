@@ -13,13 +13,12 @@ extends Node
 #
 # 참고: docs/combat-screen-design.md, SYSTEM_CONVENTIONS.md
 
-# ===== 브루저 · 패링 (Parry) =====
-# 적 공격을 막고 반격하는 타이밍 창.
-const PARRY_WINDOW: float = 0.45              # [확정] 패링 판정 시간(초)
-const PARRY_INVULN_DURATION: float = 0.30     # [임시값] 패링 성공 시 무적 지속(초)
-const PARRY_COUNTER_MULTIPLIER: float = 1.5   # [임시값] 반격 피해 배수(평타 대비)
+# [폐기] 브루저 · 패링(PARRY_*) 상수는 제거되었다.
+# 역할이 브루저 -> 탱커로 바뀌며 패링 기본기 자체가 폐기되었고, 표식이 버퍼에서 탱커로 이동했다.
+# 폐기된 메커니즘의 수치를 남겨두면 그것을 보고 구현할 위험이 있어 삭제한다.
+# (docs/combat-screen-design.md §2 참조)
 
-# ===== 원딜 · 스택 (Ranged Stack) =====
+# ===== 원거리딜러 · 스택 (Ranged Stack) =====
 # 평타를 칠수록 쌓여 공속·이속을 올리고, 놓으면 "서서히 감소"한다.
 const STACK_MAX: int = 10                              # [임시값] 최대 스택 수
 const STACK_GAIN_PER_HIT: int = 1                      # [임시값] 평타 1회당 스택 증가
@@ -29,11 +28,17 @@ const STACK_MOVE_SPEED_PER_STACK: float = 0.02        # [임시값] 스택 1당 
 const STACK_DECAY_PER_SEC_CONTROLLED: float = 1.0     # [임시값] 조종 중 초당 감소
 const STACK_DECAY_PER_SEC_UNCONTROLLED: float = 2.5   # [임시값] 미조종 중 초당 감소
 
-# ===== 버퍼 · 표식 (Mark) =====
-# 스킬로 표식 세팅 → 파티 누구든 평타로 채움 → 임계치 도달 시 기절(CC).
+# ===== 탱커 · 표식 (Mark) =====
+# 탱커의 스킬과 평타가 표식을 생성 → **파티 전체**의 평타가 채움 → 임계치 도달 시 기절(CC).
+# (표식은 버퍼에서 탱커로 이동했고, 스킬뿐 아니라 평타로도 생성된다.)
 const MARK_THRESHOLD: int = 5                 # [확정] 표식이 터지는 임계치
 const MARK_GAIN_PER_HIT: int = 1              # [임시값] 평타 1회당 표식 충전
 const MARK_STUN_DURATION: float = 2.0         # [임시값] 표식 폭발 시 기절 지속(초)
+
+# ===== 버퍼 · 처형 (Execute) =====
+# 디버프가 걸린 적을 **버퍼가 직접** 공격할 때, 적 체력이 임계치 이하면 처형한다.
+# 디버프 판정의 출처는 StatusEffectData.is_debuff이며 여기서 디버프를 재정의하지 않는다.
+const EXECUTE_HP_PERCENT: float = 0.2         # [임시값] 처형 가능한 체력 비율(최대 체력 대비)
 
 # ===== 승리 조건 · 점령 (Capture) =====
 # 스테이지 타입(전투/점령/점령+전투)에서 "점령" 프리미티브가 쓰는 값.
@@ -48,9 +53,6 @@ const BASE_MOVE_SPEED: float = 200.0          # [임시값] 이동 기본 속도
 # 디버그/검증용: 모든 상수를 Dictionary로 반환한다.
 func get_summary() -> Dictionary:
 	return {
-		"PARRY_WINDOW": PARRY_WINDOW,
-		"PARRY_INVULN_DURATION": PARRY_INVULN_DURATION,
-		"PARRY_COUNTER_MULTIPLIER": PARRY_COUNTER_MULTIPLIER,
 		"STACK_MAX": STACK_MAX,
 		"STACK_GAIN_PER_HIT": STACK_GAIN_PER_HIT,
 		"STACK_ATTACK_SPEED_PER_STACK": STACK_ATTACK_SPEED_PER_STACK,
@@ -60,6 +62,7 @@ func get_summary() -> Dictionary:
 		"MARK_THRESHOLD": MARK_THRESHOLD,
 		"MARK_GAIN_PER_HIT": MARK_GAIN_PER_HIT,
 		"MARK_STUN_DURATION": MARK_STUN_DURATION,
+		"EXECUTE_HP_PERCENT": EXECUTE_HP_PERCENT,
 		"CAPTURE_HOLD_SECONDS": CAPTURE_HOLD_SECONDS,
 		"BASE_ATTACK_COOLDOWN": BASE_ATTACK_COOLDOWN,
 		"BASE_MOVE_SPEED": BASE_MOVE_SPEED,
