@@ -9,8 +9,9 @@ class_name StatusEffectData
 #   Player.stats 와 EnemyBase.stats 가 둘 다 PlayerStats이므로, PlayerStats를 타겟 채널로 삼으면
 #   캐릭터·적 공통 적용이 성립한다. 적 전용 스텟을 따로 정의하지 않는다.
 #
-# 수치 출처: 확정 수치는 CombatConfig가 유일한 출처다.
-#   payload 값이 비어 있으면(0) CombatConfig 값으로 폴백해 수치를 중복 정의하지 않는다.
+# 수치 출처: 전투 튜닝 수치는 data/combat/combat_tuning.tres(CombatTuning)가 유일한 출처이며
+#   CombatConfig.tuning으로 접근한다.
+#   payload 값이 비어 있으면(0) 그 값으로 폴백해 수치를 중복 정의하지 않는다.
 #
 # 참고: docs/combat-screen-design.md, autoload/CombatConfig.gd, SYSTEM_CONVENTIONS.md
 
@@ -86,17 +87,17 @@ enum Stacking {
 # CombatConfig 폴백을 적용한 실제 값을 반환한다.
 # 후속 StatusEffectSystem은 아래 헬퍼를 통해 값을 읽는다(원시 필드 직접 사용 지양).
 
-# 게이지 임계치. 0이면 CombatConfig가 출처.
+# 게이지 임계치. 0이면 CombatConfig의 튜닝 값이 출처.
 func get_gauge_threshold() -> int:
 	if gauge_threshold > 0:
 		return gauge_threshold
-	return CombatConfig.MARK_THRESHOLD
+	return CombatConfig.tuning.mark_threshold
 
-# 평타 1회당 게이지 증가량. 0이면 CombatConfig가 출처.
+# 평타 1회당 게이지 증가량. 0이면 CombatConfig의 튜닝 값이 출처.
 func get_gauge_gain_per_hit() -> int:
 	if gauge_gain_per_hit > 0:
 		return gauge_gain_per_hit
-	return CombatConfig.MARK_GAIN_PER_HIT
+	return CombatConfig.tuning.mark_gain_per_hit
 
 # 유효 틱 간격. 0 이하는 1.0으로 보정한다.
 func get_tick_interval() -> float:
