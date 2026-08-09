@@ -55,8 +55,9 @@ func take_damage(amount: int, _source = null):
 	if not is_alive:
 		return
 
-	# 방어력 적용: 최소 1의 피해는 들어간다 (바탕 규칙, 수치는 추후 튜닝).
-	var dealt = max(amount - get_stats().get_physical_defense(), 1)
+	# 방어력 적용. 피해 공식은 PlayerStats.apply_defense()가 단일 출처다.
+	# (여기서 다시 계산하지 않는다 — 이전에는 Player와 중복 구현되어 있었다.)
+	var dealt = get_stats().apply_defense(amount)
 	hp -= dealt
 	hp = max(hp, 0)
 

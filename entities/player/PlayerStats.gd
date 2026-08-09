@@ -50,13 +50,28 @@ class_name PlayerStats
 @export var buff_move_speed_percent: float = 0.0
 
 # ===== 기여 계수 (Contribution Coefficients) =====
-const STRENGTH_TO_PHYS_ATK: float = 2.0    # 근력 1 -> 물리 공격력
-const STRENGTH_TO_PHYS_DEF: float = 1.0    # 근력 1 -> 물리 방어력
-const STRENGTH_TO_MAGIC_DEF: float = 0.5   # 근력 1 -> 마법 방어력
-const DEFENSE_TO_PHYS_DEF: float = 1.5     # 방어력 1 -> 물리 방어력
-const DEFENSE_TO_MAGIC_DEF: float = 1.5    # 방어력 1 -> 마법 방어력
-const FAITH_TO_MAGIC_ATK: float = 2.0      # 신앙심 1 -> 마법 공격력
-const FAITH_TO_SKILL_BOOST: float = 0.05   # 신앙심 1 -> 여신 스킬 강화 +5%
+# 계수의 출처는 CombatTuning(data/combat/combat_tuning.tres)이다.
+# PlayerStats는 값을 소유하지 않고 읽기만 하므로, 계수를 여기서 다시 정의하지 않는다.
+# 밸런싱은 .tres 인스펙터에서 한다.
+
+# 폴백용 기본 인스턴스.
+# autoload 순서상 CharacterDatabase(.tres 로드)가 CombatConfig보다 먼저 초기화되고,
+# 에디터 툴이나 단독 테스트에서는 autoload가 아예 없을 수도 있다.
+# 그 경우에도 CombatTuning.gd의 기본값으로 안전하게 동작하도록 한다.
+# (기본값의 정의처는 CombatTuning.gd 한 곳이며 여기에 복제하지 않는다.)
+static var _fallback_tuning: CombatTuning = null
+
+# 유효한 튜닝 리소스를 반환한다. CombatConfig를 쓸 수 없으면 기본값 인스턴스를 쓴다.
+static func get_tuning() -> CombatTuning:
+	var loop := Engine.get_main_loop()
+	if loop is SceneTree:
+		var cfg := (loop as SceneTree).root.get_node_or_null("CombatConfig")
+		if cfg != null and cfg.tuning != null:
+			return cfg.tuning
+
+	if _fallback_tuning == null:
+		_fallback_tuning = CombatTuning.new()
+	return _fallback_tuning
 
 
 # ===== 세부 스텟 (Derived Stats) =====
@@ -74,25 +89,29 @@ func get_max_hp() -> int:
 
 # 물리 공격력 = 근력 기여 + 장비 보너스 + 버프 (가산 후 배율)
 func get_physical_attack() -> int:
-	var total := float(int(round(strength * STRENGTH_TO_PHYS_ATK)) + equip_physical_attack + buff_physical_attack)
+	var t := get_tuning()
+	var total := float(int(round(strength * t.strength_to_phys_atk)) + equip_physical_attack + buff_physical_attack)
 	return int(round(total * _buff_multiplier(buff_physical_attack_percent)))
 
 # 마법 공격력 = 신앙심 기여 + 장비 보너스 + 버프 (가산 후 배율)
 func get_magic_attack() -> int:
-	var total := float(int(round(faith * FAITH_TO_MAGIC_ATK)) + equip_magic_attack + buff_magic_attack)
+	var t := get_tuning()
+	var total := float(int(round(faith * t.faith_to_magic_atk)) + equip_magic_attack + buff_magic_attack)
 	return int(round(total * _buff_multiplier(buff_magic_attack_percent)))
 
 # 물리 방어력 = 근력 기여분 + 방어력 스텟 기여분 + 장비 + 버프 (가산 후 배율)
 func get_physical_defense() -> int:
-	var from_strength := strength * STRENGTH_TO_PHYS_DEF
-	var from_defense := defense * DEFENSE_TO_PHYS_DEF
+	var t := get_tuning()
+	var from_strength := strength * t.strength_to_phys_def
+	var from_defense := defense * t.defense_to_phys_def
 	var total := float(int(round(from_strength + from_defense)) + equip_physical_defense + buff_physical_defense)
 	return int(round(total * _buff_multiplier(buff_physical_defense_percent)))
 
 # 마법 방어력 = 근력 기여분 + 방어력 스텟 기여분 + 장비 + 버프 (가산 후 배율)
 func get_magic_defense() -> int:
-	var from_strength := strength * STRENGTH_TO_MAGIC_DEF
-	var from_defense := defense * DEFENSE_TO_MAGIC_DEF
+	var t := get_tuning()
+	var from_strength := strength * t.strength_to_magic_def
+	var from_defense := defense * t.defense_to_magic_def
 	var total := float(int(round(from_strength + from_defense)) + equip_magic_defense + buff_magic_defense)
 	return int(round(total * _buff_multiplier(buff_magic_defense_percent)))
 
@@ -108,7 +127,31 @@ func get_move_speed_multiplier() -> float:
 
 # 여신의 스킬 강화 배수 (신앙심 기여). 1.0 = 강화 없음.
 func get_goddess_skill_boost() -> float:
-	return 1.0 + faith * FAITH_TO_SKILL_BOOST
+	return 1.0 + faith * get_tuning().faith_to_skill_boost
+
+
+# ===== 피해 계산 (Damage) =====
+
+# 들어온 피해에 이 대상의 물리 방어력을 적용해 실제 피해를 반환한다.
+#
+# 비율 공식: 피해 = 원피해 x (K / (K + 방어력))
+#   감산 공식(원피해 - 방어력)이 아니다. 감산은 방어가 공격을 넘으면 피해가 최소치로
+#   눌리고, 경계 근처에서 스텟 1포인트가 피해를 몇 배로 바꿔 밸런싱이 불가능했다.
+#   비율은 방어가 피해를 완전히 무효화하지 못하고 수익이 매끄럽게 체감한다.
+#
+# **피해 공식은 이 메서드에만 존재한다.** Player와 EnemyBase가 각자 계산하지 않고
+# 이 메서드를 호출한다(이전에는 양쪽에 중복 구현되어 있었다).
+func apply_defense(raw_damage: int) -> int:
+	var t := get_tuning()
+	var k := t.damage_defense_constant
+	var def := float(get_physical_defense())
+
+	# k가 0 이하면 0으로 나누게 되므로 방어를 적용하지 않는다(validate가 잡지만 방어적으로 처리).
+	if k <= 0.0:
+		return maxi(raw_damage, t.damage_min)
+
+	var reduced: float = float(raw_damage) * (k / (k + maxf(def, 0.0)))
+	return maxi(int(round(reduced)), t.damage_min)
 
 
 # ===== 성장 (Growth) =====
