@@ -57,6 +57,9 @@ func get_role_counts(party: Array) -> Dictionary:
 # 주의: "이상(>=)"이 아니라 **정확히 1개 또는 3개**일 때만 활성화된다.
 #       2카운트는 비활성이다(반쯤 모으면 아무것도 얻지 못한다).
 # 3카운트 초과는 파티 3명 구조상 나올 수 없지만, 방어적으로 3단계로 취급한다.
+#
+# 이 함수는 카운트만 보는 저수준 헬퍼로, **배타 규칙(3단계 시 나머지 비활성)을 모른다.**
+# 파티의 실제 활성 상태는 반드시 get_active_tiers()로 판단한다.
 func get_tier_for_count(count: int) -> Tier:
 	if count >= TIER3_COUNT:
 		return Tier.TIER1_3
@@ -66,21 +69,47 @@ func get_tier_for_count(count: int) -> Tier:
 
 # 파티의 역할별 활성화 단계를 반환한다.
 # 반환: CharacterData.Role -> Tier
+#
+# 배타 규칙: 어떤 역할이 3단계를 발동하면 **나머지 역할의 1단계는 켜지지 않는다.**
+# 3단계 역할 자신은 1단계 + 3단계를 그대로 유지한다.
+# 몰빵의 대가를 만들어 "하나를 깊게 vs 셋을 얕게"가 실제 선택이 되게 한다.
+#
+# 1단계가 곧 역할 메커니즘이므로(docs §2), 이 규칙은 단순한 버프 손실이 아니라
+# 다른 역할의 메커니즘(스택·처형 등)이 파티에서 사라진다는 뜻이다.
 func get_active_tiers(party: Array) -> Dictionary:
 	var counts := get_role_counts(party)
 	var tiers := {}
 	for r in counts:
 		tiers[r] = get_tier_for_count(counts[r])
+
+	# 3단계를 발동한 역할을 찾는다.
+	# 한 파티가 두 역할을 동시에 3카운트로 만들 수는 없으므로(docs §8.2 전수 검증)
+	# 이 역할은 있어도 하나뿐이다.
+	var tier3_role: int = -1
+	for r in tiers:
+		if tiers[r] == Tier.TIER1_3:
+			tier3_role = r
+			break
+
+	if tier3_role == -1:
+		return tiers
+
+	# 3단계 역할만 남기고 나머지는 비활성으로 만든다.
+	for r in tiers:
+		if r != tier3_role:
+			tiers[r] = Tier.NONE
 	return tiers
 
 # 특정 역할의 1단계가 켜졌는지.
 # 3카운트면 1단계도 유지되므로 true, 2카운트면 false다.
+# **다른 역할이 3단계를 발동했다면 배타 규칙에 따라 false다.**
+# (카운트에서 직접 계산하지 않고 get_active_tiers()를 거쳐 배타 규칙을 반영한다.)
 func is_tier1_active(party: Array, role: CharacterData.Role) -> bool:
-	return get_tier_for_count(get_role_counts(party).get(role, 0)) != Tier.NONE
+	return get_active_tiers(party).get(role, Tier.NONE) != Tier.NONE
 
 # 특정 역할의 3단계가 켜졌는지.
 func is_tier3_active(party: Array, role: CharacterData.Role) -> bool:
-	return get_tier_for_count(get_role_counts(party).get(role, 0)) == Tier.TIER1_3
+	return get_active_tiers(party).get(role, Tier.NONE) == Tier.TIER1_3
 
 # ===== 조회 편의 (UI/디버그) =====
 
@@ -88,10 +117,12 @@ func is_tier3_active(party: Array, role: CharacterData.Role) -> bool:
 # 반환: [{ "role": Role, "name": String, "count": int, "tier": Tier, "tier_name": String }, ...]
 func get_summary(party: Array) -> Array:
 	var counts := get_role_counts(party)
+	# 배타 규칙이 반영된 결과를 쓴다(카운트에서 직접 계산하지 않는다).
+	var tiers := get_active_tiers(party)
 	var result: Array = []
 	for r in counts:
 		var count: int = counts[r]
-		var tier := get_tier_for_count(count)
+		var tier: Tier = tiers.get(r, Tier.NONE)
 		result.append({
 			"role": r,
 			"name": CharacterData.role_to_name(r),
