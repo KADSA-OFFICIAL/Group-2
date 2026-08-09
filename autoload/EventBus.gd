@@ -28,6 +28,12 @@ signal currency_added(currency_type: String, amount: int, new_balance: int)
 @warning_ignore("unused_signal")
 signal currency_subtracted(currency_type: String, amount: int, new_balance: int)
 
+# Party signals
+@warning_ignore("unused_signal")
+signal party_changed(members)              # 파티 편성이 바뀜 (Array[CharacterData])
+@warning_ignore("unused_signal")
+signal party_control_changed(index: int)   # 조종 대상이 바뀜 (-1 = 없음)
+
 # Equipment signals
 @warning_ignore("unused_signal")
 signal equipment_crafted(equipment_id: StringName)
