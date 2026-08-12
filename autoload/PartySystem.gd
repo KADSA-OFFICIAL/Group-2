@@ -17,6 +17,16 @@ const PARTY_SIZE: int = 3
 # 조종 중인 멤버가 없음을 뜻하는 인덱스.
 const NO_CONTROL: int = -1
 
+# 파티 멤버 씬 노드가 등록되는 그룹 이름. **이 상수가 그룹 이름의 단일 출처다.**
+# Player가 이 그룹에 자신을 등록하고, 파티 멤버 노드를 찾아야 하는 쪽(적 AI 등)은
+# 문자열을 다시 적지 않고 이 상수로 조회한다.
+# 양쪽에 문자열을 따로 두면 한쪽만 바뀔 때 런타임 에러 없이 조용히 깨진다.
+#
+# 편성의 출처가 이 시스템이므로 그룹 이름도 여기에 둔다.
+# (PartySystem은 CharacterData 편성만 알고 씬 노드는 소유하지 않지만,
+#  "파티 멤버를 어떻게 식별하는가"는 파티 도메인의 지식이다.)
+const MEMBER_GROUP := &"party_member"
+
 # 파티 멤버 (CharacterData). 최대 PARTY_SIZE명.
 var _members: Array[CharacterData] = []
 
