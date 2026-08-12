@@ -59,8 +59,8 @@ func spawn_party():
 
 # 훈련용 고블린. data가 없어 AI가 꺼진 샌드백이다(피해 확인용).
 const TRAINING_GOBLIN_SCENE := "res://entities/enemies/TrainingGoblin.tscn"
-# 돌창병. EnemyData가 지정되어 있어 추적·공격 AI가 동작한다.
-const STONE_SPEARMAN_SCENE := "res://entities/enemies/StoneSpearman.tscn"
+# 서아. EnemyData가 지정되어 있어 추적·공격 AI가 동작한다.
+const SEOA_SCENE := "res://entities/enemies/Seoa.tscn"
 
 func spawn_enemies():
 	var goblin_scene = load(TRAINING_GOBLIN_SCENE)
@@ -73,14 +73,14 @@ func spawn_enemies():
 	# 추적·공격하는 적 1마리.
 	# 파티 스폰 지점(x=100)에서 탐지 범위(300) 밖에 두어, 플레이어가 전진했을 때
 	# "탐지 -> 접근 -> 공격" 과정이 눈에 보이게 한다.
-	var spearman_scene = load(STONE_SPEARMAN_SCENE)
-	if spearman_scene == null:
-		push_warning("Stage: StoneSpearman.tscn을 불러올 수 없습니다.")
+	var seoa_scene = load(SEOA_SCENE)
+	if seoa_scene == null:
+		push_warning("Stage: Seoa.tscn을 불러올 수 없습니다.")
 		return
 
-	var spearman = spearman_scene.instantiate()
-	current_room.add_child(spearman)
-	spearman.global_position = Vector2(600, 140)
+	var seoa = seoa_scene.instantiate()
+	current_room.add_child(seoa)
+	seoa.global_position = Vector2(600, 140)
 
 func complete_stage():
 	EventBus.stage_completed.emit(stage_name)

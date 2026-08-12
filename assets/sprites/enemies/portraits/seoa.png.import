@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bndkmd5k1ag5e"
-path="res://.godot/imported/stone_spearman.png-6f2b89c6510f1fbe3c432d7dd109d7af.ctex"
+path="res://.godot/imported/seoa.png-5702ae835a77fd50955364859c158f21.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/enemies/portraits/stone_spearman.png"
-dest_files=["res://.godot/imported/stone_spearman.png-6f2b89c6510f1fbe3c432d7dd109d7af.ctex"]
+source_file="res://assets/sprites/enemies/portraits/seoa.png"
+dest_files=["res://.godot/imported/seoa.png-5702ae835a77fd50955364859c158f21.ctex"]
 
 [params]
 
