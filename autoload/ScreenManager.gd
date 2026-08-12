@@ -31,8 +31,13 @@ signal screen_pushed(screen: Control)
 signal screen_popped(depth: int)
 
 # 메타 화면이 하나라도 떠 있는지 바뀔 때 (true = 화면 있음).
-# 게임플레이 쪽이 입력을 멈추거나 일시정지할지 판단하는 데 쓴다.
 signal screen_visibility_changed(has_screen: bool)
+
+# 메타 화면이 떠 있는 동안 게임플레이를 멈출지.
+# 정지 정책을 각 화면이 따로 구현하면 새 화면이 생길 때마다 빠뜨리기 쉬우므로
+# 스택을 소유한 이 시스템이 한 곳에서 처리한다.
+# (화면 노드는 자동으로 PROCESS_MODE_ALWAYS 가 되어 정지 중에도 동작한다.)
+var pause_gameplay_while_open: bool = true
 
 # 화면이 실제로 붙는 레이어. _ready()에서 만든다.
 var _layer: CanvasLayer = null
@@ -72,10 +77,13 @@ func push(scene: PackedScene) -> Control:
 	_layer.add_child(screen)
 	# 어떤 창 비율에서도 화면 전체를 덮게 한다.
 	screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# 게임플레이가 멈춰도 화면은 계속 동작해야 버튼을 누를 수 있다.
+	screen.process_mode = Node.PROCESS_MODE_ALWAYS
 	_stack.append(screen)
 
 	screen_pushed.emit(screen)
 	if was_empty:
+		_apply_pause(true)
 		screen_visibility_changed.emit(true)
 	return screen
 
@@ -94,6 +102,7 @@ func pop() -> void:
 
 	screen_popped.emit(_stack.size())
 	if _stack.is_empty():
+		_apply_pause(false)
 		screen_visibility_changed.emit(false)
 
 
@@ -110,8 +119,16 @@ func close_all() -> void:
 	for screen in _stack:
 		screen.queue_free()
 	_stack.clear()
+	_apply_pause(false)
 	screen_popped.emit(EMPTY_DEPTH)
 	screen_visibility_changed.emit(false)
+
+
+# 게임플레이 정지 상태를 적용한다. 정책이 꺼져 있으면 아무것도 하지 않는다.
+func _apply_pause(paused: bool) -> void:
+	if not pause_gameplay_while_open:
+		return
+	get_tree().paused = paused
 
 
 # ===== 조회 (Query) =====

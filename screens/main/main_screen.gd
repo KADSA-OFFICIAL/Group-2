@@ -34,21 +34,12 @@ var _currency_labels: Dictionary = {}
 
 
 func _ready() -> void:
-	# 메타 화면이 떠 있는 동안 게임플레이는 멈춘다. 이 화면만 계속 동작한다.
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	get_tree().paused = true
-
+	# 게임플레이 정지와 PROCESS_MODE_ALWAYS 는 ScreenManager 가 처리한다.
+	# 화면마다 따로 구현하면 새 화면에서 빠뜨리기 쉬우므로 여기서 다루지 않는다.
 	_build()
 
 	# 잔액 변경은 CurrencySystem이 알린다. 여기서 잔액을 보관하지 않는다.
 	CurrencySystem.currency_changed.connect(_on_currency_changed)
-
-
-func _exit_tree() -> void:
-	# 화면이 닫히면 게임플레이를 다시 돌린다.
-	# 다른 메타 화면이 남아 있으면 그 화면이 다시 멈춘다.
-	if not ScreenManager.has_screen():
-		get_tree().paused = false
 
 
 # ===== 화면 구성 =====
