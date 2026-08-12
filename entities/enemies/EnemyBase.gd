@@ -20,9 +20,6 @@ var is_alive: bool = true
 # data가 없으면 AI가 동작하지 않으므로, 씬에만 저작된 기존 적(TrainingGoblin)은
 # 지금까지와 똑같이 정지 상태를 유지한다(하위 호환).
 
-# 파티 멤버 노드가 등록되는 그룹. Player._ready()가 이 그룹에 자신을 넣는다.
-const PARTY_GROUP := &"party_member"
-
 # 평타 쿨다운 잔여 시간(초).
 var _attack_cooldown_left: float = 0.0
 
@@ -130,12 +127,12 @@ func _is_valid_target(node: Node) -> bool:
 #
 # 그룹으로 조회하는 이유: GameManager는 적 등록/조회만 담당하고 파티 멤버 노드
 # 레지스트리가 없다. (PartySystem은 CharacterData 편성만 알고 씬 노드는 모른다.)
-# 이 조회의 소비자가 늘어나면 공용 위치로 옮긴다 — 이슈 #75 residual risks 참고.
+# 그룹 이름은 PartySystem.MEMBER_GROUP이 단일 출처이며 여기서 문자열을 다시 적지 않는다.
 func _find_nearest_party_member() -> Node2D:
 	var nearest: Node2D = null
 	var nearest_distance := INF
 
-	for node in get_tree().get_nodes_in_group(PARTY_GROUP):
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
 		if not _is_valid_target(node):
 			continue
 		var member := node as Node2D

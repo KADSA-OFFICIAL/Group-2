@@ -45,7 +45,8 @@ func get_stats() -> PlayerStats:
 
 
 func _ready() -> void:
-	add_to_group("party_member")
+	# 그룹 이름의 단일 출처는 PartySystem.MEMBER_GROUP이다(문자열을 여기 다시 적지 않는다).
+	add_to_group(PartySystem.MEMBER_GROUP)
 	# 기존 코드/HUD가 "player" 그룹으로 플레이어를 찾으므로 유지한다.
 	add_to_group("player")
 
