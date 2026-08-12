@@ -15,6 +15,18 @@ var hp: int = 0
 var max_hp: int = 0
 var is_alive: bool = true
 
+# ===== AI 상태 (AI State) =====
+# 행동 파라미터의 출처는 EnemyData다("AI 행동" 그룹). 여기서 수치를 새로 만들지 않는다.
+# data가 없으면 AI가 동작하지 않으므로, 씬에만 저작된 기존 적(TrainingGoblin)은
+# 지금까지와 똑같이 정지 상태를 유지한다(하위 호환).
+
+# 평타 쿨다운 잔여 시간(초).
+var _attack_cooldown_left: float = 0.0
+
+# 현재 추적 대상. 죽거나 탐지 범위를 벗어나면 다시 고른다.
+# Node2D로 타입을 잡아 global_position 접근이 정적으로 안전하게 한다.
+var _target: Node2D = null
+
 # 유효한 스텟 출처를 반환한다.
 # data가 설정되어 있으면 그 정의의 스텟이 우선한다(적 정의가 단일 출처).
 # 스텟 계산은 언제나 PlayerStats가 소유하므로 여기서 수치를 다시 만들지 않는다.
@@ -50,6 +62,123 @@ func _apply_data() -> void:
 
 func _exit_tree():
 	GameManager.unregister_enemy(self)
+
+
+# ===== AI (추적 / 공격) =====
+
+# AI가 지금 동작해야 하는가.
+# data가 없는 적(씬에만 저작된 기존 적)과 ai_enabled=false인 적은 정지한다.
+func is_ai_active() -> bool:
+	return is_alive and data != null and data.ai_enabled
+
+
+func _physics_process(delta: float) -> void:
+	if _attack_cooldown_left > 0.0:
+		_attack_cooldown_left -= delta
+
+	if not is_ai_active():
+		return
+
+	_target = _resolve_target()
+	if _target == null:
+		velocity = Vector2.ZERO
+		return
+
+	# 사거리 안이면 멈춰서 때리고, 밖이면 직선으로 접근한다.
+	# 길찾기(장애물 회피)는 이 단계의 범위가 아니다.
+	if global_position.distance_to(_target.global_position) <= data.attack_range:
+		velocity = Vector2.ZERO
+		try_attack()
+	else:
+		velocity = global_position.direction_to(_target.global_position) * get_move_speed()
+
+	move_and_slide()
+
+
+# 추적 대상을 결정한다.
+# 지금 대상이 아직 유효하면 유지하고(대상이 매 프레임 바뀌어 떠는 것을 막는다),
+# 아니면 가장 가까운 파티 멤버를 새로 고른다.
+func _resolve_target() -> Node2D:
+	if _is_valid_target(_target):
+		return _target
+	return _find_nearest_party_member()
+
+
+# 추적 대상으로 쓸 수 있는 노드인가.
+# 살아 있고 탐지 범위 안에 있어야 한다. 범위를 벗어나면 놓으므로 무한 추격이 되지 않는다.
+func _is_valid_target(node: Node) -> bool:
+	# 탐지 범위의 출처가 data이므로 data가 없으면 대상 판정 자체가 성립하지 않는다.
+	if data == null:
+		return false
+	if node == null or not is_instance_valid(node):
+		return false
+	var target := node as Node2D
+	if target == null:
+		return false
+	# 파티 멤버는 is_alive를 가진다. 죽은 대상은 추적하지 않는다.
+	# get()으로 읽어 is_alive가 없는 노드도 안전하게 처리한다(없으면 null).
+	var alive = target.get("is_alive")
+	if alive != null and not bool(alive):
+		return false
+	return global_position.distance_to(target.global_position) <= data.detection_range
+
+
+# 탐지 범위 안에서 가장 가까운 살아 있는 파티 멤버를 반환한다. 없으면 null.
+#
+# 그룹으로 조회하는 이유: GameManager는 적 등록/조회만 담당하고 파티 멤버 노드
+# 레지스트리가 없다. (PartySystem은 CharacterData 편성만 알고 씬 노드는 모른다.)
+# 그룹 이름은 PartySystem.MEMBER_GROUP이 단일 출처이며 여기서 문자열을 다시 적지 않는다.
+func _find_nearest_party_member() -> Node2D:
+	var nearest: Node2D = null
+	var nearest_distance := INF
+
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if not _is_valid_target(node):
+			continue
+		var member := node as Node2D
+		var distance := global_position.distance_to(member.global_position)
+		if distance < nearest_distance:
+			nearest_distance = distance
+			nearest = member
+
+	return nearest
+
+
+# 실제 이동속도 = 기본 속도(CombatConfig) x 적 고유 배수(EnemyData) x 버프 이속 배수(PlayerStats).
+# 버프 채널을 곱에 포함해 두면 이후 이속 디버프가 적에게도 그대로 적용된다.
+func get_move_speed() -> float:
+	var unit: float = 1.0 if data == null else data.move_speed_multiplier
+	return CombatConfig.tuning.base_move_speed * unit * get_stats().get_move_speed_multiplier()
+
+
+# 실제 평타 쿨다운 = 기본 쿨다운(CombatConfig) / (적 고유 공속 배수 x 버프 공속 배수).
+func get_attack_cooldown() -> float:
+	var unit: float = 1.0 if data == null else data.attack_speed_multiplier
+	var multiplier := unit * get_stats().get_attack_speed_multiplier()
+	if multiplier <= 0.0:
+		return CombatConfig.tuning.base_attack_cooldown
+	return CombatConfig.tuning.base_attack_cooldown / multiplier
+
+
+func can_attack() -> bool:
+	return is_alive and _attack_cooldown_left <= 0.0
+
+
+# 현재 대상에게 평타를 넣는다. 쿨다운 중이면 아무것도 하지 않는다.
+# 피해량은 PlayerStats.get_physical_attack()이 출처이고,
+# 방어력 적용은 대상의 take_damage()(-> PlayerStats.apply_defense())가 한다.
+# 여기서 피해를 다시 계산하지 않는다.
+func try_attack() -> bool:
+	if not can_attack():
+		return false
+	if not _is_valid_target(_target):
+		return false
+	if not _target.has_method("take_damage"):
+		return false
+
+	_attack_cooldown_left = get_attack_cooldown()
+	_target.take_damage(get_stats().get_physical_attack(), self)
+	return true
 
 func take_damage(amount: int, _source = null):
 	if not is_alive:
