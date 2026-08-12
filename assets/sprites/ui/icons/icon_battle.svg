@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <title>출격</title>
+  <!-- Palette: outline #6E6558, cream #F7F3EA, accent-amber #D9B26A -->
+  <path d="M16.1 18.5L20.1 14.6L56.1 50.7L51.8 55Z" fill="#D9B26A" stroke="#6E6558" stroke-width="3"/>
+  <path d="M7.8 8.1L22.3 13.8L13.9 22.4Z" fill="#F7F3EA" stroke="#6E6558" stroke-width="3.2"/>
+  <path d="M9.2 51.7L24.9 36.1L29.1 40.2L14 56.2Z" fill="#D9B26A" stroke="#6E6558" stroke-width="3.2"/>
+  <path d="M24.9 36.1L47 12.6L55.5 7.4L50.5 16.1L29.1 40.2Z" fill="#F7F3EA" stroke="#6E6558" stroke-width="3.4"/>
+</svg>

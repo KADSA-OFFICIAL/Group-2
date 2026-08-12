@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <title>장신구</title>
+  <!-- Palette: outline #6E6558, outline-soft #7A7060, cream #F7F3EA, accent-amber #D9B26A, accent-lilac #A78BC8 -->
+  <path d="M14.2 38.7C14.4 27.4 21.2 20.7 31.8 20.9C42.5 21 49.8 27.7 49.7 38.6C49.5 49 42.8 55.4 31.8 55.2C20.7 55.1 14.1 48.9 14.2 38.7ZM23 38.6C22.9 44.5 26.2 47.8 32 47.9C37.7 48 41 44.5 41.1 38.6C41.2 32.8 37.8 29.1 31.9 29.1C26.1 29 23.1 32.7 23 38.6Z" fill="#D9B26A" fill-rule="evenodd" stroke="#6E6558" stroke-width="3.3"/>
+  <path d="M31.9 8L43 17.8L32 30L20.8 18.1Z" fill="#A78BC8" stroke="#6E6558" stroke-width="3.3"/>
+  <path d="M31.9 8L32 30M20.8 18.1L43 17.8" stroke="#7A7060" stroke-width="2.6"/>
+  <path d="M27.2 15.3L30.2 12.3" stroke="#F7F3EA" stroke-width="2.7"/>
+</svg>
