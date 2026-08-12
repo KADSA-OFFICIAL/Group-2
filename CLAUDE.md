@@ -56,9 +56,27 @@
 시스템(재화, 스텟, 캐릭터, autoload 등)을 만들거나 수정하기 전에 [SYSTEM_CONVENTIONS.md](SYSTEM_CONVENTIONS.md)를 읽고 따릅니다.
 
 - 기존 코어 시스템(`CurrencySystem`, `PlayerStats`, `CharacterData`/`CharacterDatabase`, `SaveSystem`, `EventBus` 등)을 먼저 확인하고, 있으면 덮어쓰지 말고 재사용/참조합니다.
-- 단일 출처 원칙: 재화는 `CurrencySystem.DEFAULT_CURRENCIES`, 스텟은 `PlayerStats`, 캐릭터는 `CharacterData`/`CharacterDatabase`가 유일한 출처입니다. 같은 데이터를 복제·병렬 정의하지 않습니다.
-- `project.godot`의 `[autoload]`는 기존 항목을 삭제하지 않고 append만 합니다. 같은 이름/책임이 중복되면 §2에 따라 출처 하나로 수렴시킵니다.
+- 단일 출처 원칙: 같은 데이터를 복제·병렬 정의하지 않습니다. 각 도메인의 출처는 아래 "기초 시스템" 표를 따릅니다.
+- `project.godot`의 `[autoload]`는 기존 항목을 삭제하지 않고 append만 합니다. 같은 이름/책임이 중복되면 `SYSTEM_CONVENTIONS.md` §2에 따라 출처 하나로 수렴시킵니다.
 - 큰 통합/머지 전에는 핵심 파일 회귀 여부를 `git diff`로 확인합니다 (`-s ours`류 통합 지양). "MERGEABLE" 표시가 "회귀 없음"을 뜻하지 않습니다.
+
+### 기초 시스템 (Foundational Systems) — 반드시 이 위에 얹어 만든다
+
+아래 네 시스템은 **게임의 기초**이며, 각 도메인 데이터의 **유일한 출처(single source of truth)**입니다.
+이를 **중복하거나 활용하는 모든 새 시스템·UI·화면·프로토타입은, 새로 병렬 구현하지 말고 반드시 아래 시스템을 바탕으로(참조/호출/확장) 만듭니다.**
+
+| 도메인 | 기초 시스템 | 유일한 출처 |
+|---|---|---|
+| 재화 | `CurrencySystem` (`autoload/CurrencySystem.gd`) | `DEFAULT_CURRENCIES` (재화 목록·기본값) |
+| 스텟 | `PlayerStats` (`entities/player/PlayerStats.gd`) | 기초/파생 스텟 |
+| 캐릭터 | `CharacterData` + `CharacterDatabase` | 캐릭터 정의/조회 |
+| 장비 | `EquipmentData` + `EquipmentDatabase` + `EquipmentSystem` | 장비 정의/조회, 제작·착탈 |
+
+- **금지**: 위 시스템과 같은 데이터를 별도 파일/딕셔너리로 재정의(예: 하드코딩 roster, 별도 재화 딕셔너리)하거나, 이를 우회하는 병렬 제작/착탈/재화/스텟 로직을 만드는 것.
+- **필수**: 새 재화는 `CurrencySystem.DEFAULT_CURRENCIES`에 추가한다. 캐릭터는 `CharacterDatabase`로 조회한다. 제작·착탈은 `EquipmentSystem`을 통한다. 스텟은 `PlayerStats`에서 파생한다.
+- **UI/화면 코드**도 위 시스템을 **데이터 출처로 삼아** 읽고 호출합니다. UI 편의를 위해 어댑터를 둘 수 있으나, 값의 소유·계산은 기초 시스템이 합니다.
+- **범위**: 위 표 4종은 게임의 기초 데이터 시스템입니다. `SaveSystem`·`EventBus` 등 다른 코어 시스템은 위 첫 불릿과 `SYSTEM_CONVENTIONS.md` §1 레지스트리가 계속 관리합니다. 시스템 목록·경로의 정본(canonical)은 `SYSTEM_CONVENTIONS.md`이며, 이 표는 리뷰 게이트용 요약입니다.
+- **리뷰 게이트**: PR 리뷰에서 기초 시스템을 **우회·중복**하는 구현이 발견되면 이는 **머지 차단(Request changes) 사유**입니다. 통합 전 새 코드가 기초 시스템을 실제로 참조하는지 확인합니다.
 
 ## Verification
 
