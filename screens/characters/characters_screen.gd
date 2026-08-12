@@ -79,6 +79,9 @@ func _build_header() -> Control:
 	var back := Button.new()
 	back.text = " 뒤로"
 	back.icon = _texture(BACK_ICON)
+	# Button.icon 은 텍스처를 원본 크기(64px)로 그려 버튼 높이를 넘으면 잘린다.
+	# expand_icon 을 켜면 버튼 크기에 맞춰 비율을 유지하며 줄어든다.
+	back.expand_icon = true
 	back.custom_minimum_size = Vector2(0, 40)
 	back.add_theme_stylebox_override("normal", UITheme.panel_box())
 	back.add_theme_stylebox_override("hover", UITheme.panel_box())

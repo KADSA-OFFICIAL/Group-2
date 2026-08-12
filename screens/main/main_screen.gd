@@ -316,21 +316,48 @@ func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 
 # 출격만 알약 배경을 가진다. 유일한 주요 동작이라 눈에 띄어야 하기 때문이다.
 # 나머지 메뉴 버튼에는 배경을 두지 않는다.
+#
+# 아이콘을 Button.icon 으로 넣지 않고 직접 조립한다.
+# Button.icon 은 텍스처를 원본 크기(SVG 임포트 기준 64px)로 그리기 때문에
+# 버튼이 그보다 낮으면 아이콘이 잘린다. TextureRect 로 크기를 지정해 얹는다.
 func _build_battle_button() -> Control:
 	var holder := Control.new()
 	holder.custom_minimum_size = Vector2(172, 62)
 
+	var plate := PanelContainer.new()
+	plate.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	plate.offset_top = -54
+	plate.offset_bottom = -4
+	plate.add_theme_stylebox_override("panel", UITheme.overlay_accent(26))
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(plate)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.add_child(row)
+
+	var icon := _make_icon(BATTLE_ICON, UITheme.ICON_CTA)
+	if icon != null:
+		row.add_child(icon)
+
+	var label := _text("출격", 19, UITheme.INK)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(label)
+
+	# 눌리는 영역만 담당하는 투명 버튼.
 	var button := Button.new()
+	button.flat = true
 	button.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	button.offset_top = -54
 	button.offset_bottom = -4
-	button.add_theme_stylebox_override("normal", UITheme.overlay_accent(26))
-	button.add_theme_stylebox_override("hover", UITheme.overlay_accent(26))
+	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	button.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
 	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
-	button.add_theme_color_override("font_color", UITheme.INK)
-	button.add_theme_font_size_override("font_size", 19)
-	button.text = " 출격"
-	button.icon = _load_texture(BATTLE_ICON)
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.text = ""
+	button.tooltip_text = "출격"
 	button.pressed.connect(_on_battle_pressed)
 	holder.add_child(button)
 	return holder
