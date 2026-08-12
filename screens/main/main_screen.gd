@@ -30,11 +30,15 @@ const BATTLE_ICON := "res://assets/sprites/ui/icons/icon_battle.svg"
 const SYNERGY_ICON := "res://assets/sprites/ui/icons/icon_synergy.svg"
 const FORMATION_ICON := "res://assets/sprites/ui/icons/icon_formation.svg"
 const CHARACTERS_ICON := "res://assets/sprites/ui/icons/icon_characters.svg"
+const EQUIPMENT_ICON := "res://assets/sprites/ui/icons/icon_equipment.svg"
+const CRAFT_ICON := "res://assets/sprites/ui/icons/icon_craft.svg"
 
 # 화면이 실제로 있는 메뉴만 둔다.
-# 장비/제조/설정은 화면이 아직 없어 버튼을 만들지 않는다(누를 곳 없는 버튼을 만들지 않는다).
+# 설정은 화면이 아직 없어 버튼을 만들지 않는다(누를 곳 없는 버튼을 만들지 않는다).
 const FORMATION_SCREEN := preload("res://screens/formation/FormationScreen.tscn")
 const CHARACTERS_SCREEN := preload("res://screens/characters/CharactersScreen.tscn")
+const EQUIPMENT_SCREEN := preload("res://screens/equipment/EquipmentScreen.tscn")
+const CRAFT_SCREEN := preload("res://screens/craft/CraftScreen.tscn")
 
 # 재화 칩 라벨. 재화 키 -> Label. 잔액이 바뀔 때 이 라벨만 갱신한다.
 var _currency_labels: Dictionary = {}
@@ -287,6 +291,8 @@ func _build_menu_row() -> Control:
 
 	row.add_child(_make_menu_button("편성", FORMATION_ICON, FORMATION_SCREEN))
 	row.add_child(_make_menu_button("캐릭터", CHARACTERS_ICON, CHARACTERS_SCREEN))
+	row.add_child(_make_menu_button("장비", EQUIPMENT_ICON, EQUIPMENT_SCREEN))
+	row.add_child(_make_menu_button("제조", CRAFT_ICON, CRAFT_SCREEN))
 
 	var tail := Control.new()
 	tail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
