@@ -28,9 +28,18 @@ const ROLE_ICON_PATH := {
 
 const BATTLE_ICON := "res://assets/sprites/ui/icons/icon_battle.svg"
 const SYNERGY_ICON := "res://assets/sprites/ui/icons/icon_synergy.svg"
+const FORMATION_ICON := "res://assets/sprites/ui/icons/icon_formation.svg"
+
+# 편성 화면. 다른 메뉴(캐릭터/장비/제조/설정)는 화면이 아직 없어 버튼을 두지 않는다.
+const FORMATION_SCREEN := preload("res://screens/formation/FormationScreen.tscn")
 
 # 재화 칩 라벨. 재화 키 -> Label. 잔액이 바뀔 때 이 라벨만 갱신한다.
 var _currency_labels: Dictionary = {}
+
+# 파티/시너지가 그려지는 자리. 편성이 바뀌면 이 두 곳만 다시 채운다.
+var _party_holder: VBoxContainer
+var _synergy_holder: HBoxContainer
+var _party_heading: Label
 
 
 func _ready() -> void:
@@ -40,6 +49,15 @@ func _ready() -> void:
 
 	# 잔액 변경은 CurrencySystem이 알린다. 여기서 잔액을 보관하지 않는다.
 	CurrencySystem.currency_changed.connect(_on_currency_changed)
+
+	# 편성 화면에서 파티를 바꾸고 돌아오면 이 화면도 최신 상태를 보여야 한다.
+	# 편성 결과의 출처는 PartySystem 이고, 변경 알림은 EventBus 가 한다.
+	EventBus.party_changed.connect(_on_party_changed)
+
+
+func _on_party_changed(_members) -> void:
+	_fill_party()
+	_fill_synergy()
 
 
 # ===== 화면 구성 =====
@@ -67,6 +85,7 @@ func _build() -> void:
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(spacer)
 
+	root.add_child(_build_menu_row())
 	root.add_child(_build_battle_button())
 
 
@@ -118,20 +137,36 @@ func _on_currency_changed(currency_type: String, _amount: int, new_balance: int)
 func _build_party_section() -> Control:
 	var section := VBoxContainer.new()
 	section.add_theme_constant_override("separation", 8)
-	section.add_child(_make_heading("파티 (%d / %d)" % [PartySystem.get_size(), PartySystem.PARTY_SIZE]))
+
+	_party_heading = _make_heading("")
+	section.add_child(_party_heading)
+
+	# 편성이 바뀌면 이 자리만 다시 채운다.
+	_party_holder = VBoxContainer.new()
+	_party_holder.add_theme_constant_override("separation", 8)
+	section.add_child(_party_holder)
+
+	_fill_party()
+	return section
+
+
+func _fill_party() -> void:
+	if not is_instance_valid(_party_holder):
+		return
+	_clear(_party_holder)
+	_party_heading.text = "파티 (%d / %d)" % [PartySystem.get_size(), PartySystem.PARTY_SIZE]
 
 	var members := PartySystem.get_members()
 	if members.is_empty():
-		section.add_child(_make_note("편성된 파티가 없습니다."))
-		return section
+		_party_holder.add_child(_make_note("편성된 파티가 없습니다."))
+		return
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
-	section.add_child(row)
+	_party_holder.add_child(row)
 
 	for i in members.size():
 		row.add_child(_make_member_card(members[i], i == PartySystem.get_controlled_index()))
-	return section
 
 
 func _make_member_card(character: CharacterData, is_controlled: bool) -> Control:
@@ -199,13 +234,21 @@ func _build_synergy_section() -> Control:
 	heading_row.add_child(_make_heading("시너지"))
 	section.add_child(heading_row)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	section.add_child(row)
+	_synergy_holder = HBoxContainer.new()
+	_synergy_holder.add_theme_constant_override("separation", 8)
+	section.add_child(_synergy_holder)
 
-	for entry in SynergySystem.get_summary(PartySystem.get_members()):
-		row.add_child(_make_synergy_chip(entry))
+	_fill_synergy()
 	return section
+
+
+func _fill_synergy() -> void:
+	if not is_instance_valid(_synergy_holder):
+		return
+	_clear(_synergy_holder)
+	# 카운트·단계는 SynergySystem 이 계산한다(배타 규칙 포함).
+	for entry in SynergySystem.get_summary(PartySystem.get_members()):
+		_synergy_holder.add_child(_make_synergy_chip(entry))
 
 
 func _make_synergy_chip(entry: Dictionary) -> Control:
@@ -231,6 +274,36 @@ func _make_synergy_chip(entry: Dictionary) -> Control:
 	box.add_child(tier)
 
 	return chip
+
+
+# ── 하단: 메뉴 진입 ──
+# 화면이 실제로 있는 메뉴만 버튼으로 둔다.
+# 누를 화면이 없는 버튼(캐릭터/장비/제조/설정)은 만들지 않는다.
+func _build_menu_row() -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+
+	var formation := Button.new()
+	formation.text = " 편성"
+	formation.icon = _load_texture(FORMATION_ICON)
+	formation.custom_minimum_size = Vector2(140, 48)
+	formation.add_theme_font_size_override("font_size", 16)
+	formation.add_theme_color_override("font_color", UITheme.INK)
+	formation.add_theme_stylebox_override("normal", UITheme.panel_box())
+	formation.add_theme_stylebox_override("hover", UITheme.panel_box())
+	formation.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
+	formation.pressed.connect(_on_formation_pressed)
+	row.add_child(formation)
+
+	var tail := Control.new()
+	tail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(tail)
+	return row
+
+
+# 편성 화면을 위에 쌓는다. 돌아오면 바뀐 편성이 보이도록 다시 그린다.
+func _on_formation_pressed() -> void:
+	ScreenManager.push(FORMATION_SCREEN)
 
 
 # ── 하단: 출격 ──
@@ -263,6 +336,12 @@ func _make_heading(text: String) -> Label:
 	label.add_theme_font_size_override("font_size", 18)
 	label.add_theme_color_override("font_color", UITheme.INK_ON_DARK)
 	return label
+
+
+func _clear(node: Node) -> void:
+	for child in node.get_children():
+		node.remove_child(child)
+		child.queue_free()
 
 
 func _make_note(text: String) -> Label:
