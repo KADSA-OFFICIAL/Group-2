@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <title>캐릭터</title>
+  <!-- Palette: outline #6E6558, tan #DCCDAF, tan-deep #C9B894, accent-amber #D9B26A -->
+  <path d="M25.2 8.1C33.8 7.5 43 8 51.7 9.3C54.1 20.8 54.7 37.4 53 50.5C44.3 52.3 35 52.4 26.2 51.1C23.7 38.9 23.3 21.3 25.2 8.1Z" fill="#C9B894" stroke="#6E6558" stroke-width="3.2"/>
+  <path d="M11.2 12.2C21.6 10.8 34.5 11 45.6 12.6C47.5 24.8 47.2 43.4 45.1 56C34.9 57.3 22 57.1 11.4 55.5C9.7 42.2 9.5 24.9 11.2 12.2Z" fill="#DCCDAF" stroke="#6E6558" stroke-width="3.4"/>
+  <path d="M21.8 29.2C21.9 22.8 25.8 19 31.8 19C37.8 19.1 41.7 22.9 41.5 29.4C41.4 35.4 37.7 38.8 31.7 38.7C25.8 38.6 21.7 35.2 21.8 29.2Z" fill="#D9B26A" stroke="#6E6558" stroke-width="3.2"/>
+  <path d="M17.3 54.9C18.1 44.4 23 38.7 31.6 38.6C40.3 38.6 44.8 44.6 45.2 55.4" fill="#D9B26A" stroke="#6E6558" stroke-width="3.3"/>
+</svg>

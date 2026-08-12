@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <title>설정</title>
+  <!-- Palette: outline #6E6558, tan #DCCDAF, cream #F7F3EA -->
+  <path d="M27 7.2L37.1 7.4L39.4 14.6C42.2 15.3 44.4 16.5 46.5 18.2L53.2 13.6L57 22.1L50.7 26.5C51.4 28.9 51.7 31.3 51.3 34L57.2 37.2L53.2 46.5L46.5 44.5C44.6 46.9 42.3 48.6 39.6 49.7L37 56.8L27.1 56.5L24.7 49.7C21.9 48.6 19.4 47 17.5 44.7L10.8 47L7 38.1L13.2 34.2C12.8 31.6 13 29 13.9 26.6L7.5 22.7L11.1 13.9L17.7 18.3C19.8 16.5 22.2 15.2 24.9 14.5ZM22.2 31.8C22.2 25.8 26 22 32.1 22.1C38.1 22.2 41.8 26 41.7 32C41.6 38 37.9 41.6 31.9 41.5C25.9 41.5 22.1 37.8 22.2 31.8Z" fill="#DCCDAF" fill-rule="evenodd" stroke="#6E6558" stroke-width="3.4"/>
+  <path d="M18.4 21.6C20.3 18.9 22.9 17.1 26.1 16.1" stroke="#F7F3EA" stroke-width="2.8"/>
+</svg>
