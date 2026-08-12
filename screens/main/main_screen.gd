@@ -2,25 +2,27 @@ extends Control
 
 # 메인화면 (메타 UI) — 대표 캐릭터 일러스트를 중앙에 크게 두는 배치.
 #
-# 배치 의도 (트릭컬류 메인화면):
-#   상단   재화 표시줄 (우측 정렬)
-#   좌측   파티 3명 미니 카드
+# 배치 의도 (트릭컬류 메인화면): 최대한 비워 두고 캐릭터를 보여준다.
+#   상단   주요 재화만 (우측 정렬)
 #   중앙   대표 캐릭터 전신 일러스트 (조종 중인 멤버)
-#   우측   시너지 현황
 #   하단   메뉴 버튼 + 출격 CTA
+#
+# 메인화면에 두지 않은 것과 그 이유:
+#   - 파티 목록 / 시너지: 편성 화면에서 짜고 그 자리에서 미리보기까지 하므로
+#     메인에 다시 두면 같은 정보가 두 곳에 생긴다.
+#   - 주요 재화 외 재화: 자리가 좁다. 전체는 창고 화면에서 본다.
 #
 # 책임: 지금 상태를 "보여주기"만 한다. 값의 소유·계산은 전부 기초 시스템이 한다.
 #
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
-#   재화   -> CurrencySystem (DEFAULT_CURRENCIES 키를 그대로 순회한다)
-#   파티   -> PartySystem (PARTY_SIZE, 조종 중 인덱스)
-#   캐릭터 -> CharacterData (표시 이름/역할/외형 tint/portrait)
-#   시너지 -> SynergySystem.get_summary()
-#   색     -> UITheme
+#   재화     -> CurrencySystem (주요 재화 목록도 CurrencySystem 이 정한다)
+#   대표 캐릭터 -> PartySystem (조종 중인 멤버)
+#   캐릭터   -> CharacterData (표시 이름/역할/외형 tint/portrait)
+#   색       -> UITheme
 #
 # 화면 전환은 ScreenManager가 한다. 이 화면은 자신을 pop 할 뿐 다음 화면을 모른다.
 #
-# 참고: docs/combat-screen-design.md §1(파티 3명), §8(시너지), SYSTEM_CONVENTIONS.md
+# 참고: docs/combat-screen-design.md §1(파티 3명), SYSTEM_CONVENTIONS.md
 
 # 재화 아이콘 경로. 파일명이 재화 키와 일치하도록 맞춰 두었으므로
 # 매핑 테이블 없이 키로 바로 조합한다(아이콘 목록을 여기서 다시 정의하지 않는다).
@@ -34,7 +36,6 @@ const ROLE_ICON_PATH := {
 }
 
 const BATTLE_ICON := "res://assets/sprites/ui/icons/icon_battle.svg"
-const SYNERGY_ICON := "res://assets/sprites/ui/icons/icon_synergy.svg"
 const FORMATION_ICON := "res://assets/sprites/ui/icons/icon_formation.svg"
 const CHARACTERS_ICON := "res://assets/sprites/ui/icons/icon_characters.svg"
 const EQUIPMENT_ICON := "res://assets/sprites/ui/icons/icon_equipment.svg"
@@ -46,13 +47,12 @@ const FORMATION_SCREEN := preload("res://screens/formation/FormationScreen.tscn"
 const CHARACTERS_SCREEN := preload("res://screens/characters/CharactersScreen.tscn")
 const EQUIPMENT_SCREEN := preload("res://screens/equipment/EquipmentScreen.tscn")
 const CRAFT_SCREEN := preload("res://screens/craft/CraftScreen.tscn")
+const STORAGE_SCREEN := preload("res://screens/storage/StorageScreen.tscn")
 
 # 재화 칩 라벨. 재화 키 -> Label. 잔액이 바뀔 때 이 라벨만 갱신한다.
 var _currency_labels: Dictionary = {}
 
-# 편성이 바뀌면 다시 채우는 자리들.
-var _party_holder: VBoxContainer
-var _synergy_holder: VBoxContainer
+# 대표 캐릭터가 바뀌면 다시 채우는 자리.
 var _portrait_holder: PanelContainer
 
 
@@ -71,13 +71,10 @@ func _ready() -> void:
 
 
 func _on_party_changed(_members) -> void:
-	_fill_party()
-	_fill_synergy()
 	_fill_portrait()
 
 
 func _on_control_changed(_index: int) -> void:
-	_fill_party()
 	_fill_portrait()
 
 
@@ -103,9 +100,9 @@ func _build() -> void:
 	root.add_child(_build_bottom_bar())
 
 
-# ── 상단: 재화 표시줄 (우측 정렬) ──
-# CurrencySystem.DEFAULT_CURRENCIES 를 그대로 순회한다.
-# 어떤 재화를 보여줄지 여기서 고르지 않으므로, 재화가 추가되면 자동으로 나타난다.
+# ── 상단: 주요 재화만 (우측 정렬) + 창고 진입 ──
+# 어떤 재화가 주요인지는 CurrencySystem 이 정한다(화면에서 고르지 않는다).
+# 나머지 재화는 창고 화면에서 전부 볼 수 있다.
 func _build_currency_bar() -> Control:
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 8)
@@ -114,8 +111,20 @@ func _build_currency_bar() -> Control:
 	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(head)
 
-	for currency_type in CurrencySystem.DEFAULT_CURRENCIES:
+	for currency_type in CurrencySystem.get_primary_currencies():
 		bar.add_child(_make_currency_chip(String(currency_type)))
+
+	# 창고: 주요 재화 옆에 두어 "나머지는 여기"가 바로 읽히게 한다.
+	var storage := Button.new()
+	storage.text = "창고"
+	storage.custom_minimum_size = Vector2(72, 36)
+	storage.add_theme_font_size_override("font_size", 14)
+	storage.add_theme_color_override("font_color", UITheme.INK)
+	storage.add_theme_stylebox_override("normal", UITheme.pill_box())
+	storage.add_theme_stylebox_override("hover", UITheme.pill_box())
+	storage.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
+	storage.pressed.connect(func(): ScreenManager.push(STORAGE_SCREEN))
+	bar.add_child(storage)
 	return bar
 
 
@@ -138,51 +147,16 @@ func _make_currency_chip(currency_type: String) -> Control:
 	return chip
 
 
-# ── 중앙 무대: 좌 파티 / 중앙 일러스트 / 우 시너지 ──
+# ── 중앙: 대표 캐릭터 일러스트만 ──
+# 좌우 레일(파티·시너지)을 두지 않는다. 둘 다 편성 화면에 있고,
+# 메인은 캐릭터를 보여주는 자리로 비워 둔다.
 func _build_stage() -> Control:
-	var stage := HBoxContainer.new()
-	stage.add_theme_constant_override("separation", 14)
-	stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
-
-	# 좌측 레일 — 파티 미니 카드
-	var left := VBoxContainer.new()
-	left.add_theme_constant_override("separation", 6)
-	left.custom_minimum_size = Vector2(190, 0)
-	stage.add_child(left)
-	left.add_child(_text("파티", 15, UITheme.INK_ON_DARK))
-	_party_holder = VBoxContainer.new()
-	_party_holder.add_theme_constant_override("separation", 6)
-	left.add_child(_party_holder)
-	_fill_party()
-
-	# 중앙 — 대표 캐릭터 일러스트
 	_portrait_holder = PanelContainer.new()
 	_portrait_holder.add_theme_stylebox_override("panel", UITheme.panel_box(22))
 	_portrait_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_portrait_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	stage.add_child(_portrait_holder)
 	_fill_portrait()
-
-	# 우측 레일 — 시너지
-	var right := VBoxContainer.new()
-	right.add_theme_constant_override("separation", 6)
-	right.custom_minimum_size = Vector2(170, 0)
-	stage.add_child(right)
-
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 5)
-	var sicon := _make_icon(SYNERGY_ICON, 20)
-	if sicon != null:
-		head.add_child(sicon)
-	head.add_child(_text("시너지", 15, UITheme.INK_ON_DARK))
-	right.add_child(head)
-
-	_synergy_holder = VBoxContainer.new()
-	_synergy_holder.add_theme_constant_override("separation", 6)
-	right.add_child(_synergy_holder)
-	_fill_synergy()
-
-	return stage
+	return _portrait_holder
 
 
 # 중앙 일러스트. portrait 가 있으면 그림을, 없으면 tint 색 플레이스홀더를 둔다.
@@ -236,84 +210,6 @@ func _featured_character() -> CharacterData:
 		return controlled
 	var members := PartySystem.get_members()
 	return members[0] if not members.is_empty() else null
-
-
-# ── 좌측: 파티 미니 카드 ──
-func _fill_party() -> void:
-	if not is_instance_valid(_party_holder):
-		return
-	_clear(_party_holder)
-
-	var members := PartySystem.get_members()
-	if members.is_empty():
-		_party_holder.add_child(_text("편성 없음", 13, UITheme.INK_ON_DARK))
-		return
-
-	for i in members.size():
-		_party_holder.add_child(_make_member_card(members[i], i == PartySystem.get_controlled_index()))
-
-
-func _make_member_card(character: CharacterData, is_controlled: bool) -> Control:
-	var card := PanelContainer.new()
-	# 조종 중인 멤버는 강조색 패널로 구분한다(조종 여부의 출처는 PartySystem).
-	card.add_theme_stylebox_override(
-		"panel", UITheme.accent_box() if is_controlled else UITheme.panel_box()
-	)
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	card.add_child(row)
-
-	# 초상화 자리: 작은 색 스와치로 대체한다.
-	var swatch := ColorRect.new()
-	swatch.color = character.tint
-	swatch.custom_minimum_size = Vector2(34, 42)
-	row.add_child(swatch)
-
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(box)
-
-	box.add_child(_text(character.display_name, 14, UITheme.INK))
-
-	# 역할: 겸직이면 get_roles()가 2개를 돌려주므로 아이콘도 2개가 붙는다.
-	var role_row := HBoxContainer.new()
-	role_row.add_theme_constant_override("separation", 3)
-	box.add_child(role_row)
-	for role in character.get_roles():
-		var icon := _make_icon(ROLE_ICON_PATH.get(role, ""), 16)
-		if icon != null:
-			role_row.add_child(icon)
-
-	if is_controlled:
-		box.add_child(_text("조종 중", 11, UITheme.INK))
-	return card
-
-
-# ── 우측: 시너지 ──
-# 카운트와 단계는 SynergySystem이 계산한다. 여기서 역할 수를 다시 세지 않는다.
-func _fill_synergy() -> void:
-	if not is_instance_valid(_synergy_holder):
-		return
-	_clear(_synergy_holder)
-
-	for entry in SynergySystem.get_summary(PartySystem.get_members()):
-		_synergy_holder.add_child(_make_synergy_chip(entry))
-
-
-func _make_synergy_chip(entry: Dictionary) -> Control:
-	var active: bool = entry.get("tier", SynergySystem.Tier.NONE) != SynergySystem.Tier.NONE
-
-	var chip := PanelContainer.new()
-	chip.add_theme_stylebox_override("panel", UITheme.panel_box() if active else UITheme.panel_box_deep())
-
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
-	chip.add_child(box)
-	box.add_child(_text("%s %d" % [entry.get("name", "?"), entry.get("count", 0)], 14, UITheme.INK))
-	box.add_child(_text(String(entry.get("tier_name", "")), 12, UITheme.INK if active else UITheme.INK_DIM))
-	return chip
 
 
 # ── 하단: 메뉴 + 출격 CTA ──
