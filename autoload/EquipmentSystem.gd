@@ -5,11 +5,16 @@ extends Node
 # 데이터 출처는 EquipmentDatabase, 재화 출처는 CurrencySystem, 스텟은 PlayerStats.
 # (단일 출처 원칙: 여기서 재화/스텟/장비를 다시 정의하지 않고 참조한다.)
 
+# 저장 스키마에서 장비(보유 + 착용)가 들어가는 키.
+const SAVE_KEY := "equipment"
+
 # 보유 인벤토리: equipment_id(StringName) -> 보유 수량(int)
 var _inventory: Dictionary = {}
 
 func _ready() -> void:
 	name = "EquipmentSystem"
+	# 저장 스키마의 장비 부분은 이 시스템이 소유한다(SaveSystem은 내부를 모른다).
+	SaveSystem.register_provider(SAVE_KEY, self)
 
 # ===== 제작 (Crafting) =====
 
@@ -82,3 +87,62 @@ func unequip(character: CharacterData, slot: EquipmentData.Slot) -> bool:
 	character.unequip(slot)
 	EventBus.equipment_unequipped.emit(character.character_id, slot)
 	return true
+
+# ===== 저장/복원 (Save / Load) =====
+# SaveSystem은 이 두 함수만 호출한다.
+#
+# 착용 상태를 여기서 다루는 이유: 값의 소유자는 CharacterData(착용의 출처)지만,
+# 착탈 오케스트레이션이 이 시스템의 책임이므로 직렬화도 여기서 CharacterDatabase를
+# 순회해 모은다. 슬롯은 EquipmentData.slot에서 알 수 있으므로 따로 저장하지 않는다(중복 방지).
+#
+# 저장 형태:
+#   {"inventory": {equipment_id: 수량}, "equipped": {character_id: [equipment_id, ...]}}
+
+func to_save_dict() -> Dictionary:
+	var inventory := {}
+	for id in _inventory:
+		inventory[String(id)] = get_owned_count(id)
+
+	var equipped := {}
+	for character_id in CharacterDatabase.get_all_ids():
+		var character := CharacterDatabase.get_character(character_id)
+		if character == null:
+			continue
+		var ids: Array[String] = []
+		for slot in EquipmentData.Slot.values():
+			var item := character.get_equipped(slot)
+			if item != null:
+				ids.append(String(item.equipment_id))
+		if not ids.is_empty():
+			equipped[String(character_id)] = ids
+
+	return {
+		"inventory": inventory,
+		"equipped": equipped,
+	}
+
+func from_save_dict(data: Dictionary) -> void:
+	# 보유 인벤토리를 먼저 복원한다. equip()이 보유를 요구하기 때문이다.
+	_inventory.clear()
+	var inventory: Dictionary = data.get("inventory", {})
+	for raw in inventory:
+		var equipment_id := StringName(raw)
+		# 장비 정의가 사라졌으면(데이터 변경) 건너뛴다. 정의의 출처는 EquipmentDatabase다.
+		if not EquipmentDatabase.has_equipment(equipment_id):
+			push_warning("EquipmentSystem: 세이브의 알 수 없는 equipment_id(건너뜀): " + String(equipment_id))
+			continue
+		var count := int(inventory[raw])
+		if count > 0:
+			_inventory[equipment_id] = count
+
+	# 착용 상태 복원: 모든 캐릭터의 슬롯을 비운 뒤 저장된 것만 다시 채운다.
+	# (CharacterData는 .tres 캐시로 공유되므로 이전 착용 상태가 남아 있을 수 있다.)
+	var equipped: Dictionary = data.get("equipped", {})
+	for character_id in CharacterDatabase.get_all_ids():
+		var character := CharacterDatabase.get_character(character_id)
+		if character == null:
+			continue
+		for slot in EquipmentData.Slot.values():
+			character.unequip(slot)
+		for raw in equipped.get(String(character_id), []):
+			equip(character, StringName(raw))
