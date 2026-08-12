@@ -29,6 +29,7 @@ StatusEffectDatabase="*res://autoload/StatusEffectDatabase.gd"
 EnemyDatabase="*res://autoload/EnemyDatabase.gd"
 SynergySystem="*res://autoload/SynergySystem.gd"
 PartySystem="*res://autoload/PartySystem.gd"
+ScreenManager="*res://autoload/ScreenManager.gd"
 
 [display]
 
