@@ -88,10 +88,11 @@ func _build() -> void:
 	var overlay := MarginContainer.new()
 	overlay.name = "Overlay"
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_constant_override("margin_left", 16)
-	overlay.add_theme_constant_override("margin_right", 16)
+	overlay.add_theme_constant_override("margin_left", 14)
+	overlay.add_theme_constant_override("margin_right", 14)
 	overlay.add_theme_constant_override("margin_top", 12)
-	overlay.add_theme_constant_override("margin_bottom", 12)
+	# 하단 버튼은 화면 맨 아래에 바짝 붙는다. 아래 여백을 두지 않는다.
+	overlay.add_theme_constant_override("margin_bottom", 0)
 	add_child(overlay)
 
 	var column := VBoxContainer.new()
@@ -104,6 +105,7 @@ func _build() -> void:
 	var middle := VBoxContainer.new()
 	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	middle.alignment = BoxContainer.ALIGNMENT_END
+	middle.add_theme_constant_override("separation", 8)
 	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(middle)
 
@@ -252,15 +254,13 @@ func _make_round_button(icon_path: String, tooltip: String, scene: PackedScene) 
 	return button
 
 
-# ── 하단: 메뉴 탭 + 출격 CTA ──
-# 탭은 작게, CTA만 크게 두어 위계를 만든다.
+# ── 하단: 메뉴 버튼 + 출격 CTA ──
+# 버튼을 하나의 바로 묶지 않는다. 각자 떨어진 아이콘으로 화면 아래에 바짝 붙인다.
+# 감싸는 패널이 없으므로 일러스트가 버튼 사이로 그대로 보인다.
 func _build_bottom_bar() -> Control:
-	var bar := PanelContainer.new()
-	bar.add_theme_stylebox_override("panel", UITheme.overlay_box())
-
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	bar.add_child(row)
+	row.add_theme_constant_override("separation", 10)
+	row.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 	row.add_child(_make_tab("편성", FORMATION_ICON, FORMATION_SCREEN))
 	row.add_child(_make_tab("캐릭터", CHARACTERS_ICON, CHARACTERS_SCREEN))
@@ -273,53 +273,67 @@ func _build_bottom_bar() -> Control:
 	row.add_child(gap)
 
 	row.add_child(_build_battle_button())
-	return bar
+	return row
 
 
-# 하단 탭: 아이콘 위 + 라벨 아래. 눌리는 영역 전체가 버튼이다.
+# 하단 메뉴 버튼: 아이콘 위 + 라벨 아래. 테두리·배경 패널을 두지 않는다.
+# 아이콘 자체에 이미 굵은 윤곽선이 있어 사각 프레임을 덧대면 답답해진다.
 func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
-	var holder := PanelContainer.new()
-	holder.custom_minimum_size = Vector2(66, 50)
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(58, 62)
 
 	var box := VBoxContainer.new()
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 1)
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.alignment = BoxContainer.ALIGNMENT_END
+	box.add_theme_constant_override("separation", 2)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(box)
 
-	var icon := _make_icon(icon_path, UITheme.ICON_NAV)
+	var icon := _make_icon(icon_path, 34)
 	if icon != null:
 		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		box.add_child(icon)
 
-	var text := _text(label, 11, UITheme.INK_ON_DARK)
+	# 라벨은 그림 위에 바로 얹히므로 외곽선을 넣어 어떤 배경에서도 읽히게 한다.
+	var text := _text(label, 12, UITheme.INK_ON_DARK)
 	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text.add_theme_color_override("font_outline_color", UITheme.OUTLINE)
+	text.add_theme_constant_override("outline_size", 4)
 	box.add_child(text)
 
+	# 눌리는 영역만 담당하는 투명 버튼. 배경·테두리 없음.
 	var button := Button.new()
 	button.flat = true
 	button.set_anchors_preset(Control.PRESET_FULL_RECT)
 	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("hover", UITheme.overlay_pill(UITheme.SURFACE))
-	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
+	button.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
+	button.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
 	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	button.pressed.connect(func(): ScreenManager.push(scene))
 	holder.add_child(button)
 	return holder
 
 
+# 출격만 알약 배경을 가진다. 유일한 주요 동작이라 눈에 띄어야 하기 때문이다.
+# 나머지 메뉴 버튼에는 배경을 두지 않는다.
 func _build_battle_button() -> Control:
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(172, 62)
+
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(168, 50)
-	button.add_theme_stylebox_override("normal", UITheme.overlay_accent())
-	button.add_theme_stylebox_override("hover", UITheme.overlay_accent())
+	button.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	button.offset_top = -54
+	button.offset_bottom = -4
+	button.add_theme_stylebox_override("normal", UITheme.overlay_accent(26))
+	button.add_theme_stylebox_override("hover", UITheme.overlay_accent(26))
 	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
 	button.add_theme_color_override("font_color", UITheme.INK)
-	button.add_theme_font_size_override("font_size", 18)
+	button.add_theme_font_size_override("font_size", 19)
 	button.text = " 출격"
 	button.icon = _load_texture(BATTLE_ICON)
 	button.pressed.connect(_on_battle_pressed)
-	return button
+	holder.add_child(button)
+	return holder
 
 
 # 출격 = 이 화면을 닫아 게임플레이를 드러낸다.
