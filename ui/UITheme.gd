@@ -44,6 +44,17 @@ const RADIUS_PILL: int = 22            # 재화 표시줄 등 알약 모양
 const BORDER_WIDTH: int = 3            # 아이콘 윤곽선 두께와 맞춘 값
 const PAD: int = 12
 
+# 아이콘 크기. 메타 화면이 제각각 정하면 화면마다 크기가 어긋나므로 여기서 고정한다.
+# 서브컬쳐 게임 메인화면 기준: 재화·작은 버튼은 18~20, 하단 탭은 24~28.
+const ICON_PILL: int = 18              # 재화 칩 안 아이콘
+const ICON_NAV: int = 24               # 하단 탭 아이콘
+const ICON_ROUND: int = 20             # 원형 아이콘 버튼 속 아이콘
+const ICON_CTA: int = 26               # 출격 등 주요 버튼
+
+# 캐릭터 일러스트 위에 UI를 얹을 때 쓰는 불투명도.
+# 완전히 불투명하면 그림을 가리고, 너무 옅으면 글자가 안 읽힌다.
+const OVERLAY_ALPHA: float = 0.62
+
 
 # ===== StyleBox 빌더 =====
 
@@ -70,6 +81,29 @@ static func accent_box(radius: int = RADIUS) -> StyleBoxFlat:
 # 배경처럼 테두리 없이 면만 필요한 경우.
 static func flat_box(fill: Color, radius: int = RADIUS) -> StyleBoxFlat:
 	return _box(fill, fill, radius, 0)
+
+
+# ===== 오버레이용 (캐릭터 일러스트 위에 얹는 UI) =====
+# 메인화면은 일러스트가 화면을 꽉 채우므로, 그 위의 UI는 그림이 비쳐 보여야 한다.
+# 불투명 패널을 쓰면 애써 넣은 그림을 가린다.
+
+# 반투명 패널. 상·하단 바처럼 넓은 면에 쓴다.
+static func overlay_box(radius: int = RADIUS) -> StyleBoxFlat:
+	return _box(_alpha(BG, OVERLAY_ALPHA), _alpha(LINE, 0.55), radius, 2)
+
+
+# 반투명 알약. 재화 칩·작은 버튼에 쓴다.
+static func overlay_pill(fill: Color = BG) -> StyleBoxFlat:
+	return _box(_alpha(fill, OVERLAY_ALPHA), _alpha(LINE, 0.55), RADIUS_PILL, 2)
+
+
+# 강조 알약(출격 CTA). 주요 동작이므로 오버레이 중 유일하게 불투명에 가깝다.
+static func overlay_accent(radius: int = RADIUS) -> StyleBoxFlat:
+	return _box(_alpha(ACCENT, 0.92), LINE, radius, BORDER_WIDTH)
+
+
+static func _alpha(color: Color, a: float) -> Color:
+	return Color(color.r, color.g, color.b, a)
 
 
 # 화면 전체를 덮는 배경 노드. 각 화면이 맨 아래에 깔아 쓴다.

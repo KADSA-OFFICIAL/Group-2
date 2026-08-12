@@ -1,34 +1,32 @@
 extends Control
 
-# 메인화면 (메타 UI) — 대표 캐릭터 일러스트를 중앙에 크게 두는 배치.
+# 메인화면 (메타 UI).
 #
-# 배치 의도 (트릭컬류 메인화면): 최대한 비워 두고 캐릭터를 보여준다.
-#   상단   주요 재화만 (우측 정렬)
-#   중앙   대표 캐릭터 전신 일러스트 (조종 중인 멤버)
-#   하단   메뉴 버튼 + 출격 CTA
+# 배치 원칙 — 서브컬쳐 게임 메인화면의 공통 구조를 따른다:
+#   1) 캐릭터 일러스트가 화면을 꽉 채우는 "배경"이다. 패널 안에 가두지 않는다.
+#   2) UI는 그 위에 반투명으로 얹는다. 불투명 패널로 그림을 가리지 않는다.
+#   3) 상·하단 바는 얇게, 아이콘은 작게(UITheme.ICON_*). 화면 가운데를 비워 둔다.
+#   4) 크기로 위계를 준다. 출격 CTA만 크고 밝게, 나머지 메뉴는 작고 차분하게.
+#
+#   상단   프로필 · 주요 재화 · 창고/상점 원형 버튼
+#   중앙   대표 캐릭터 전신 일러스트 (배경 레이어) + 좌하단 이름표
+#   하단   메뉴 탭 + 출격 CTA
 #
 # 메인화면에 두지 않은 것과 그 이유:
 #   - 파티 목록 / 시너지: 편성 화면에서 짜고 그 자리에서 미리보기까지 하므로
 #     메인에 다시 두면 같은 정보가 두 곳에 생긴다.
 #   - 주요 재화 외 재화: 자리가 좁다. 전체는 창고 화면에서 본다.
 #
-# 책임: 지금 상태를 "보여주기"만 한다. 값의 소유·계산은 전부 기초 시스템이 한다.
-#
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
-#   재화     -> CurrencySystem (주요 재화 목록도 CurrencySystem 이 정한다)
+#   재화        -> CurrencySystem (주요 재화 목록도 CurrencySystem 이 정한다)
 #   대표 캐릭터 -> PartySystem (조종 중인 멤버)
-#   캐릭터   -> CharacterData (표시 이름/역할/외형 tint/portrait)
-#   색       -> UITheme
+#   캐릭터      -> CharacterData (표시 이름/역할/외형 tint/portrait)
+#   색·치수     -> UITheme
 #
 # 화면 전환은 ScreenManager가 한다. 이 화면은 자신을 pop 할 뿐 다음 화면을 모른다.
-#
-# 참고: docs/combat-screen-design.md §1(파티 3명), SYSTEM_CONVENTIONS.md
 
-# 재화 아이콘 경로. 파일명이 재화 키와 일치하도록 맞춰 두었으므로
-# 매핑 테이블 없이 키로 바로 조합한다(아이콘 목록을 여기서 다시 정의하지 않는다).
 const CURRENCY_ICON_PATH := "res://assets/sprites/ui/icons/icon_%s.svg"
 
-# 역할 아이콘. CharacterData.Role 값에 대응한다.
 const ROLE_ICON_PATH := {
 	CharacterData.Role.TANK: "res://assets/sprites/ui/icons/icon_role_tank.svg",
 	CharacterData.Role.RANGED_DEALER: "res://assets/sprites/ui/icons/icon_role_ranged_dealer.svg",
@@ -40,220 +38,285 @@ const FORMATION_ICON := "res://assets/sprites/ui/icons/icon_formation.svg"
 const CHARACTERS_ICON := "res://assets/sprites/ui/icons/icon_characters.svg"
 const EQUIPMENT_ICON := "res://assets/sprites/ui/icons/icon_equipment.svg"
 const CRAFT_ICON := "res://assets/sprites/ui/icons/icon_craft.svg"
+const STORAGE_ICON := "res://assets/sprites/ui/icons/icon_storage.svg"
 
 # 화면이 실제로 있는 메뉴만 둔다.
-# 설정은 화면이 아직 없어 버튼을 만들지 않는다(누를 곳 없는 버튼을 만들지 않는다).
+# 상점·설정은 화면이 없어 버튼을 만들지 않는다(누를 곳 없는 버튼을 만들지 않는다).
+# 상점 아이콘(icon_shop.svg)은 화면이 생길 때 바로 쓸 수 있도록 준비만 되어 있다.
 const FORMATION_SCREEN := preload("res://screens/formation/FormationScreen.tscn")
 const CHARACTERS_SCREEN := preload("res://screens/characters/CharactersScreen.tscn")
 const EQUIPMENT_SCREEN := preload("res://screens/equipment/EquipmentScreen.tscn")
 const CRAFT_SCREEN := preload("res://screens/craft/CraftScreen.tscn")
 const STORAGE_SCREEN := preload("res://screens/storage/StorageScreen.tscn")
 
-# 재화 칩 라벨. 재화 키 -> Label. 잔액이 바뀔 때 이 라벨만 갱신한다.
 var _currency_labels: Dictionary = {}
 
-# 대표 캐릭터가 바뀌면 다시 채우는 자리.
-var _portrait_holder: PanelContainer
+# 대표 캐릭터가 바뀌면 다시 채우는 자리들.
+var _art_layer: Control      # 화면을 채우는 일러스트 레이어
+var _nameplate: Control      # 좌하단 이름표
 
 
 func _ready() -> void:
 	# 게임플레이 정지와 PROCESS_MODE_ALWAYS 는 ScreenManager 가 처리한다.
-	# 화면마다 따로 구현하면 새 화면에서 빠뜨리기 쉬우므로 여기서 다루지 않는다.
 	_build()
 
-	# 잔액 변경은 CurrencySystem이 알린다. 여기서 잔액을 보관하지 않는다.
 	CurrencySystem.currency_changed.connect(_on_currency_changed)
-
-	# 편성 화면에서 파티를 바꾸고 돌아오면 이 화면도 최신 상태를 보여야 한다.
-	EventBus.party_changed.connect(_on_party_changed)
-	# 조종 대상이 바뀌면 중앙 일러스트도 그 캐릭터로 바뀐다.
-	EventBus.party_control_changed.connect(_on_control_changed)
+	EventBus.party_changed.connect(func(_m): _refresh_featured())
+	EventBus.party_control_changed.connect(func(_i): _refresh_featured())
 
 
-func _on_party_changed(_members) -> void:
-	_fill_portrait()
-
-
-func _on_control_changed(_index: int) -> void:
-	_fill_portrait()
+func _refresh_featured() -> void:
+	_fill_art()
+	_fill_nameplate()
 
 
 # ===== 화면 구성 =====
+# 레이어 순서가 곧 배치다: 배경색 -> 일러스트 -> UI 오버레이.
 
 func _build() -> void:
 	add_child(UITheme.make_background())
 
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
-	add_child(margin)
+	# 1) 일러스트 레이어 — 화면 전체를 차지한다. 패널·테두리 없음.
+	_art_layer = Control.new()
+	_art_layer.name = "ArtLayer"
+	_art_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_art_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_art_layer)
+	_fill_art()
 
-	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 12)
-	margin.add_child(root)
+	# 2) UI 오버레이 — 일러스트 위에 얹힌다.
+	var overlay := MarginContainer.new()
+	overlay.name = "Overlay"
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_theme_constant_override("margin_left", 16)
+	overlay.add_theme_constant_override("margin_right", 16)
+	overlay.add_theme_constant_override("margin_top", 12)
+	overlay.add_theme_constant_override("margin_bottom", 12)
+	add_child(overlay)
 
-	root.add_child(_build_currency_bar())
-	root.add_child(_build_stage())
-	root.add_child(_build_bottom_bar())
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
+	overlay.add_child(column)
+
+	column.add_child(_build_top_bar())
+
+	# 가운데는 비워 둔다. 일러스트가 보이는 자리이며, 아래쪽에 이름표만 얹는다.
+	var middle := VBoxContainer.new()
+	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	middle.alignment = BoxContainer.ALIGNMENT_END
+	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(middle)
+
+	_nameplate = HBoxContainer.new()
+	_nameplate.add_theme_constant_override("separation", 6)
+	middle.add_child(_nameplate)
+	_fill_nameplate()
+
+	column.add_child(_build_bottom_bar())
 
 
-# ── 상단: 주요 재화만 (우측 정렬) + 창고 진입 ──
-# 어떤 재화가 주요인지는 CurrencySystem 이 정한다(화면에서 고르지 않는다).
-# 나머지 재화는 창고 화면에서 전부 볼 수 있다.
-func _build_currency_bar() -> Control:
+# ── 일러스트 레이어 ──
+# portrait 가 있으면 화면을 채우고, 없으면 tint 색으로 은은하게 깐다.
+# 아트 확정 전까지 도형 플레이스홀더를 쓰는 것은 docs §0 [확정] 사항이다.
+func _fill_art() -> void:
+	if not is_instance_valid(_art_layer):
+		return
+	_clear(_art_layer)
+
+	var character := _featured_character()
+	if character == null:
+		return
+
+	if character.portrait != null:
+		var art := TextureRect.new()
+		art.set_anchors_preset(Control.PRESET_FULL_RECT)
+		art.texture = character.portrait
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		# 화면을 꽉 채우되 비율은 유지한다(넘치는 부분은 잘린다).
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_art_layer.add_child(art)
+		return
+
+	# 일러스트 자리. 파일이 들어오면 위 분기로 그대로 대체된다.
+	var placeholder := ColorRect.new()
+	placeholder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	placeholder.color = Color(character.tint.r, character.tint.g, character.tint.b, 0.30)
+	placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_art_layer.add_child(placeholder)
+
+
+# ── 좌하단 이름표 ──
+# 그림 위에 직접 얹는다. 별도 칸을 만들지 않는다.
+func _fill_nameplate() -> void:
+	if not is_instance_valid(_nameplate):
+		return
+	_clear(_nameplate)
+
+	var character := _featured_character()
+	if character == null:
+		_nameplate.add_child(_chip_text("편성된 파티가 없습니다."))
+		return
+
+	var plate := PanelContainer.new()
+	plate.add_theme_stylebox_override("panel", UITheme.overlay_pill())
+	_nameplate.add_child(plate)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	plate.add_child(row)
+
+	for role in character.get_roles():
+		var icon := _make_icon(ROLE_ICON_PATH.get(role, ""), UITheme.ICON_ROUND)
+		if icon != null:
+			row.add_child(icon)
+	row.add_child(_text(character.display_name, 18, UITheme.INK_ON_DARK))
+
+	# 남는 가로 공간을 밀어내 이름표가 좌측에 붙게 한다.
+	var tail := Control.new()
+	tail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_nameplate.add_child(tail)
+
+
+# ── 상단: 프로필 · 주요 재화 · 원형 버튼 ──
+func _build_top_bar() -> Control:
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 8)
 
-	var head := Control.new()
-	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.add_child(head)
+	bar.add_child(_build_profile())
 
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.add_child(gap)
+
+	# 주요 재화. 어떤 재화가 주요인지는 CurrencySystem 이 정한다.
 	for currency_type in CurrencySystem.get_primary_currencies():
 		bar.add_child(_make_currency_chip(String(currency_type)))
 
-	# 창고: 주요 재화 옆에 두어 "나머지는 여기"가 바로 읽히게 한다.
-	var storage := Button.new()
-	storage.text = "창고"
-	storage.custom_minimum_size = Vector2(72, 36)
-	storage.add_theme_font_size_override("font_size", 14)
-	storage.add_theme_color_override("font_color", UITheme.INK)
-	storage.add_theme_stylebox_override("normal", UITheme.pill_box())
-	storage.add_theme_stylebox_override("hover", UITheme.pill_box())
-	storage.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
-	storage.pressed.connect(func(): ScreenManager.push(STORAGE_SCREEN))
-	bar.add_child(storage)
+	# 창고: 나머지 재화는 여기서 본다.
+	bar.add_child(_make_round_button(STORAGE_ICON, "창고", STORAGE_SCREEN))
 	return bar
+
+
+# 프로필 자리. 플레이어 이름/레벨 시스템이 아직 없어 파티 인원만 보여준다.
+# 시스템이 생기면 이 칩의 내용만 바뀐다.
+func _build_profile() -> Control:
+	var plate := PanelContainer.new()
+	plate.add_theme_stylebox_override("panel", UITheme.overlay_pill())
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	plate.add_child(row)
+
+	var avatar := ColorRect.new()
+	avatar.custom_minimum_size = Vector2(22, 22)
+	avatar.color = UITheme.AMBER
+	row.add_child(avatar)
+
+	row.add_child(_text("파티 %d/%d" % [PartySystem.get_size(), PartySystem.PARTY_SIZE], 13, UITheme.INK_ON_DARK))
+	return plate
 
 
 func _make_currency_chip(currency_type: String) -> Control:
 	var chip := PanelContainer.new()
-	chip.add_theme_stylebox_override("panel", UITheme.pill_box())
+	chip.add_theme_stylebox_override("panel", UITheme.overlay_pill())
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 5)
+	row.add_theme_constant_override("separation", 4)
 	chip.add_child(row)
 
-	var icon := _make_icon(CURRENCY_ICON_PATH % currency_type, 20)
+	var icon := _make_icon(CURRENCY_ICON_PATH % currency_type, UITheme.ICON_PILL)
 	if icon != null:
 		row.add_child(icon)
 
-	var label := _text(_comma(CurrencySystem.get_balance(currency_type)), 14, UITheme.INK)
+	var label := _text(_comma(CurrencySystem.get_balance(currency_type)), 13, UITheme.INK_ON_DARK)
 	row.add_child(label)
 
 	_currency_labels[currency_type] = label
 	return chip
 
 
-# ── 중앙: 대표 캐릭터 일러스트만 ──
-# 좌우 레일(파티·시너지)을 두지 않는다. 둘 다 편성 화면에 있고,
-# 메인은 캐릭터를 보여주는 자리로 비워 둔다.
-func _build_stage() -> Control:
-	_portrait_holder = PanelContainer.new()
-	_portrait_holder.add_theme_stylebox_override("panel", UITheme.panel_box(22))
-	_portrait_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_portrait_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_fill_portrait()
-	return _portrait_holder
-
-
-# 중앙 일러스트. portrait 가 있으면 그림을, 없으면 tint 색 플레이스홀더를 둔다.
-# 아트가 정해지기 전까지 도형 플레이스홀더를 쓰는 것은 docs §0 [확정] 사항이다.
-func _fill_portrait() -> void:
-	if not is_instance_valid(_portrait_holder):
-		return
-	_clear(_portrait_holder)
-
-	var character := _featured_character()
-	if character == null:
-		_portrait_holder.add_child(_center_note("편성된 파티가 없습니다."))
-		return
-
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 6)
-	_portrait_holder.add_child(box)
-
-	if character.portrait != null:
-		var art := TextureRect.new()
-		art.texture = character.portrait
-		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		# 세로 전신 일러스트를 비율 유지로 가운데 맞춘다.
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		art.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		box.add_child(art)
-	else:
-		# 일러스트 자리. 파일이 들어오면 위 분기로 그대로 대체된다.
-		var placeholder := ColorRect.new()
-		placeholder.color = character.tint
-		placeholder.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		box.add_child(placeholder)
-		box.add_child(_center_note("일러스트 자리 (portrait 미지정)"))
-
-	var name_row := HBoxContainer.new()
-	name_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	name_row.add_theme_constant_override("separation", 6)
-	box.add_child(name_row)
-	for role in character.get_roles():
-		var icon := _make_icon(ROLE_ICON_PATH.get(role, ""), 22)
-		if icon != null:
-			name_row.add_child(icon)
-	name_row.add_child(_text(character.display_name, 20, UITheme.INK))
-
-
-# 대표 캐릭터 = 지금 조종 중인 멤버. 없으면 첫 멤버.
-# 조종 대상의 출처는 PartySystem 이다.
-func _featured_character() -> CharacterData:
-	var controlled := PartySystem.get_controlled_member()
-	if controlled != null:
-		return controlled
-	var members := PartySystem.get_members()
-	return members[0] if not members.is_empty() else null
-
-
-# ── 하단: 메뉴 + 출격 CTA ──
-func _build_bottom_bar() -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-
-	row.add_child(_make_menu_button("편성", FORMATION_ICON, FORMATION_SCREEN))
-	row.add_child(_make_menu_button("캐릭터", CHARACTERS_ICON, CHARACTERS_SCREEN))
-	row.add_child(_make_menu_button("장비", EQUIPMENT_ICON, EQUIPMENT_SCREEN))
-	row.add_child(_make_menu_button("제조", CRAFT_ICON, CRAFT_SCREEN))
-
-	var gap := Control.new()
-	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(gap)
-
-	row.add_child(_build_battle_button())
-	return row
-
-
-func _make_menu_button(label: String, icon_path: String, scene: PackedScene) -> Button:
+# 작은 원형 아이콘 버튼. 라벨 없이 아이콘만 둔다.
+func _make_round_button(icon_path: String, tooltip: String, scene: PackedScene) -> Button:
 	var button := Button.new()
-	button.text = " " + label
+	button.tooltip_text = tooltip
 	button.icon = _load_texture(icon_path)
-	button.custom_minimum_size = Vector2(128, 56)
-	button.add_theme_font_size_override("font_size", 15)
-	button.add_theme_color_override("font_color", UITheme.INK)
-	button.add_theme_stylebox_override("normal", UITheme.panel_box())
-	button.add_theme_stylebox_override("hover", UITheme.panel_box())
-	button.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
-	# 화면을 위에 쌓는다. 돌아오면 이 화면이 다시 보인다(상태는 유지된다).
+	button.custom_minimum_size = Vector2(36, 36)
+	button.expand_icon = true
+	button.add_theme_stylebox_override("normal", UITheme.overlay_pill())
+	button.add_theme_stylebox_override("hover", UITheme.overlay_pill(UITheme.SURFACE))
+	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
 	button.pressed.connect(func(): ScreenManager.push(scene))
 	return button
 
 
+# ── 하단: 메뉴 탭 + 출격 CTA ──
+# 탭은 작게, CTA만 크게 두어 위계를 만든다.
+func _build_bottom_bar() -> Control:
+	var bar := PanelContainer.new()
+	bar.add_theme_stylebox_override("panel", UITheme.overlay_box())
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	bar.add_child(row)
+
+	row.add_child(_make_tab("편성", FORMATION_ICON, FORMATION_SCREEN))
+	row.add_child(_make_tab("캐릭터", CHARACTERS_ICON, CHARACTERS_SCREEN))
+	row.add_child(_make_tab("장비", EQUIPMENT_ICON, EQUIPMENT_SCREEN))
+	row.add_child(_make_tab("제조", CRAFT_ICON, CRAFT_SCREEN))
+
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(gap)
+
+	row.add_child(_build_battle_button())
+	return bar
+
+
+# 하단 탭: 아이콘 위 + 라벨 아래. 눌리는 영역 전체가 버튼이다.
+func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
+	var holder := PanelContainer.new()
+	holder.custom_minimum_size = Vector2(66, 50)
+
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 1)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(box)
+
+	var icon := _make_icon(icon_path, UITheme.ICON_NAV)
+	if icon != null:
+		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		box.add_child(icon)
+
+	var text := _text(label, 11, UITheme.INK_ON_DARK)
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(text)
+
+	var button := Button.new()
+	button.flat = true
+	button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	button.add_theme_stylebox_override("hover", UITheme.overlay_pill(UITheme.SURFACE))
+	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.pressed.connect(func(): ScreenManager.push(scene))
+	holder.add_child(button)
+	return holder
+
+
 func _build_battle_button() -> Control:
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(200, 56)
-	button.add_theme_stylebox_override("normal", UITheme.accent_box())
-	button.add_theme_stylebox_override("hover", UITheme.accent_box())
-	button.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
+	button.custom_minimum_size = Vector2(168, 50)
+	button.add_theme_stylebox_override("normal", UITheme.overlay_accent())
+	button.add_theme_stylebox_override("hover", UITheme.overlay_accent())
+	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
 	button.add_theme_color_override("font_color", UITheme.INK)
-	button.add_theme_font_size_override("font_size", 20)
-	button.text = "  출격"
+	button.add_theme_font_size_override("font_size", 18)
+	button.text = " 출격"
 	button.icon = _load_texture(BATTLE_ICON)
 	button.pressed.connect(_on_battle_pressed)
 	return button
@@ -269,6 +332,15 @@ func _on_currency_changed(currency_type: String, _amount: int, new_balance: int)
 	var label: Label = _currency_labels.get(currency_type)
 	if label != null and is_instance_valid(label):
 		label.text = _comma(new_balance)
+
+
+# 대표 캐릭터 = 지금 조종 중인 멤버. 없으면 첫 멤버.
+func _featured_character() -> CharacterData:
+	var controlled := PartySystem.get_controlled_member()
+	if controlled != null:
+		return controlled
+	var members := PartySystem.get_members()
+	return members[0] if not members.is_empty() else null
 
 
 # ===== 공용 조각 =====
@@ -287,13 +359,13 @@ func _text(value: String, size: int, color: Color) -> Label:
 	return label
 
 
-func _center_note(value: String) -> Label:
-	var label := _text(value, 14, UITheme.INK_DIM)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	return label
+func _chip_text(value: String) -> Control:
+	var plate := PanelContainer.new()
+	plate.add_theme_stylebox_override("panel", UITheme.overlay_pill())
+	plate.add_child(_text(value, 14, UITheme.INK_ON_DARK))
+	return plate
 
 
-# 아이콘 텍스처가 없으면 null을 반환한다(아이콘 누락이 화면 전체를 깨뜨리지 않게).
 func _make_icon(path: String, size: int) -> TextureRect:
 	var texture := _load_texture(path)
 	if texture == null:
