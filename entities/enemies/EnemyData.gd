@@ -36,6 +36,16 @@ class_name EnemyData
 @export var tint: Color = Color.WHITE
 @export var sprite_scale: Vector2 = Vector2(2, 2)
 
+## 프로필(초상) 이미지. 적 정보 UI·도감·조우 연출 등 **화면 밖 표시**에 쓴다.
+##
+## sprite_texture와 용도가 다르다:
+##   - sprite_texture: 전투 화면에 서 있는 인게임 스프라이트 (tint/sprite_scale이 함께 적용됨)
+##   - portrait:       초상. 인게임 스프라이트와 독립이며 tint/sprite_scale의 영향을 받지 않는다.
+##
+## 기본값 null이라 프로필이 없는 적도 그대로 로드된다(하위 호환).
+## 표시하는 쪽은 null을 확인하고 대체 표시를 준비한다.
+@export var portrait: Texture2D = null
+
 # ===== AI 행동 (AI Behavior) =====
 # 적의 행동 파라미터. EnemyBase의 추적/공격 AI가 이 값을 읽는다.
 # 모두 기본값이 있어 기존 .tres는 그대로 로드된다(하위 호환).

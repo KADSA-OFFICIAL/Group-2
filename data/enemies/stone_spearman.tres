@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 [ext_resource type="Texture2D" path="res://icon.svg" id="3_placeholder"]
+[ext_resource type="Texture2D" uid="uid://bndkmd5k1ag5e" path="res://assets/sprites/enemies/portraits/stone_spearman.png" id="4_portrait"]
 
 [sub_resource type="Resource" id="PlayerStats_stone_spearman"]
 script = ExtResource("2_stats")
@@ -21,6 +22,7 @@ stats = SubResource("PlayerStats_stone_spearman")
 sprite_texture = ExtResource("3_placeholder")
 tint = Color(0.85, 0.25, 0.25, 1)
 sprite_scale = Vector2(0.35, 0.35)
+portrait = ExtResource("4_portrait")
 ai_enabled = true
 detection_range = 300.0
 attack_range = 45.0
