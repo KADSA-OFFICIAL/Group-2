@@ -29,9 +29,12 @@ const ROLE_ICON_PATH := {
 const BATTLE_ICON := "res://assets/sprites/ui/icons/icon_battle.svg"
 const SYNERGY_ICON := "res://assets/sprites/ui/icons/icon_synergy.svg"
 const FORMATION_ICON := "res://assets/sprites/ui/icons/icon_formation.svg"
+const CHARACTERS_ICON := "res://assets/sprites/ui/icons/icon_characters.svg"
 
-# 편성 화면. 다른 메뉴(캐릭터/장비/제조/설정)는 화면이 아직 없어 버튼을 두지 않는다.
+# 화면이 실제로 있는 메뉴만 둔다.
+# 장비/제조/설정은 화면이 아직 없어 버튼을 만들지 않는다(누를 곳 없는 버튼을 만들지 않는다).
 const FORMATION_SCREEN := preload("res://screens/formation/FormationScreen.tscn")
+const CHARACTERS_SCREEN := preload("res://screens/characters/CharactersScreen.tscn")
 
 # 재화 칩 라벨. 재화 키 -> Label. 잔액이 바뀔 때 이 라벨만 갱신한다.
 var _currency_labels: Dictionary = {}
@@ -278,22 +281,12 @@ func _make_synergy_chip(entry: Dictionary) -> Control:
 
 # ── 하단: 메뉴 진입 ──
 # 화면이 실제로 있는 메뉴만 버튼으로 둔다.
-# 누를 화면이 없는 버튼(캐릭터/장비/제조/설정)은 만들지 않는다.
 func _build_menu_row() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 
-	var formation := Button.new()
-	formation.text = " 편성"
-	formation.icon = _load_texture(FORMATION_ICON)
-	formation.custom_minimum_size = Vector2(140, 48)
-	formation.add_theme_font_size_override("font_size", 16)
-	formation.add_theme_color_override("font_color", UITheme.INK)
-	formation.add_theme_stylebox_override("normal", UITheme.panel_box())
-	formation.add_theme_stylebox_override("hover", UITheme.panel_box())
-	formation.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
-	formation.pressed.connect(_on_formation_pressed)
-	row.add_child(formation)
+	row.add_child(_make_menu_button("편성", FORMATION_ICON, FORMATION_SCREEN))
+	row.add_child(_make_menu_button("캐릭터", CHARACTERS_ICON, CHARACTERS_SCREEN))
 
 	var tail := Control.new()
 	tail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -301,9 +294,19 @@ func _build_menu_row() -> Control:
 	return row
 
 
-# 편성 화면을 위에 쌓는다. 돌아오면 바뀐 편성이 보이도록 다시 그린다.
-func _on_formation_pressed() -> void:
-	ScreenManager.push(FORMATION_SCREEN)
+func _make_menu_button(label: String, icon_path: String, scene: PackedScene) -> Button:
+	var button := Button.new()
+	button.text = " " + label
+	button.icon = _load_texture(icon_path)
+	button.custom_minimum_size = Vector2(140, 48)
+	button.add_theme_font_size_override("font_size", 16)
+	button.add_theme_color_override("font_color", UITheme.INK)
+	button.add_theme_stylebox_override("normal", UITheme.panel_box())
+	button.add_theme_stylebox_override("hover", UITheme.panel_box())
+	button.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
+	# 화면을 위에 쌓는다. 돌아오면 이 화면이 다시 보인다(상태는 유지된다).
+	button.pressed.connect(func(): ScreenManager.push(scene))
+	return button
 
 
 # ── 하단: 출격 ──
