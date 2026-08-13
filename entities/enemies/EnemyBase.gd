@@ -30,8 +30,8 @@ var _target: Node2D = null
 # 이 개체가 소유하는 런타임 스텟. 정의(EnemyData)의 스텟 사본이다.
 #
 # 왜 사본인가: .tres는 경로 기준으로 캐시되므로, 같은 종류의 적을 여러 마리 스폰하면
-# EnemyData와 그 안의 PlayerStats가 **하나로 공유된다**(StoneSpearman.tscn이 data를
-# ExtResource로 참조하므로 인스턴스마다 같은 리소스를 가리킨다).
+# EnemyData와 그 안의 PlayerStats가 **하나로 공유된다**(적 씬이 data를 ExtResource로
+# 참조하므로 인스턴스마다 같은 리소스를 가리킨다).
 # 지금은 스텟을 읽기만 해서 무해하지만, StatusEffectData가 PlayerStats의 버프 채널을
 # 대상으로 삼기 때문에 한 마리에 건 디버프가 같은 종류 전체에 걸린다.
 # 정의(.tres)는 읽기 전용 데이터로 남기고, 전투 중 변하는 값은 개체가 소유한다.

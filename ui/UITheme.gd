@@ -47,7 +47,7 @@ const PAD: int = 12
 # 아이콘 크기. 메타 화면이 제각각 정하면 화면마다 크기가 어긋나므로 여기서 고정한다.
 # 서브컬쳐 게임 메인화면 기준: 재화·작은 버튼은 18~20, 하단 탭은 24~28.
 const ICON_PILL: int = 18              # 재화 칩 안 아이콘
-const ICON_NAV: int = 24               # 하단 탭 아이콘
+const ICON_NAV: int = 34               # 하단 탭 아이콘 (라벨이 아래 붙으므로 조금 크다)
 const ICON_ROUND: int = 20             # 원형 아이콘 버튼 속 아이콘
 const ICON_CTA: int = 26               # 출격 등 주요 버튼
 

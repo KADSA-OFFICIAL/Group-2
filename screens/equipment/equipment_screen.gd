@@ -167,7 +167,9 @@ func _refresh_slots() -> void:
 		return
 
 	# 슬롯 목록은 EquipmentData.Slot 이 출처다. 화면에서 정의하지 않는다.
-	for slot in SLOT_ICON_PATH:
+	# (아래 SLOT_ICON_PATH 는 아이콘 경로 대응표일 뿐 슬롯 목록이 아니다.
+	#  그걸 순회하면 새 슬롯이 추가돼도 조용히 빠진다.)
+	for slot in EquipmentData.Slot.values():
 		_slot_holder.add_child(_make_slot_panel(character, slot))
 
 
