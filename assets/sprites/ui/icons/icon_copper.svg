@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <title>구리</title>
+  <!-- Palette: outline #6E6558, outline-soft #7A7060, accent-amber #D9B26A, tan-deep #C9B894, cream #F7F3EA -->
+  <path d="M37.4 12.2L55 15.5L52.2 24.3L32.6 21.3Z" fill="#C9B894" stroke="#6E6558" stroke-width="3.1"/>
+  <path d="M39.6 14.9L51 17" stroke="#F7F3EA" stroke-width="2.6"/>
+  <path d="M15 24.1L46.4 23.7L54.4 39.3L47.4 49.9L13.4 50.5L7.9 42Z" fill="#D9B26A" stroke="#6E6558" stroke-width="3.4"/>
+  <path d="M15 24.1L46.4 23.7L40.2 31.8L10.6 32.3Z" fill="#C9B894" stroke="#7A7060" stroke-width="2.8"/>
+  <path d="M10.6 32.3L40.2 31.8L47.4 49.9L13.4 50.5L7.9 42Z" fill="#D9B26A" stroke="#6E6558" stroke-width="3.1"/>
+  <path d="M17.1 28.1L32.8 27.8" stroke="#F7F3EA" stroke-width="2.8"/>
+</svg>
