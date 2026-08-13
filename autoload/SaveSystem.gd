@@ -25,14 +25,14 @@ var _save_pending: bool = false
 # (이걸 안 하면 자동 저장이 남의 키를 기본값으로 덮어쓴다.)
 var _loaded_data: Dictionary = {}
 
+# 세이브 파일을 이미 읽었는지. 첫 제공자가 등록될 때 한 번만 읽는다.
+var _file_read: bool = false
+
 func _ready():
 	name = "SaveSystem"
 
-	# 게임 시작 시 한 번 불러온다.
-	# 제공자 등록은 각 시스템의 _ready()에서 일어나고, autoload 순서상 그 시점은
-	# 이 함수보다 뒤다(SaveSystem이 CurrencySystem/EquipmentSystem/PartySystem보다 앞).
-	# 그래서 모든 autoload가 준비된 다음으로 미룬다.
-	_startup_load.call_deferred()
+	# 불러오기는 제공자가 등록되는 시점에 각자 일어난다(register_provider 참고).
+	# 여기서 한꺼번에 하지 않는다.
 
 	# 자동 저장 시점: 편성 확정 / 장비 제작 / 장비 착탈.
 	# (재화는 이 시점들과 종료 시에 함께 기록된다. 전투 중 재화 변동마다 파일을 쓰지는 않는다.)
@@ -62,6 +62,20 @@ func register_provider(key: String, provider: Object) -> void:
 		push_warning("SaveSystem: 저장 키가 중복되었습니다(무시): " + key)
 		return
 	_providers[key] = provider
+
+	# 등록하는 즉시 그 시스템의 저장된 상태를 복원한다.
+	#
+	# 왜 등록 시점인가: 예전에는 모든 autoload 가 준비된 뒤(call_deferred) 한꺼번에
+	# 복원했다. 그런데 그 시점은 **초기 씬(main.tscn)의 _ready 보다 뒤**다.
+	# 그래서 Stage1_1.spawn_party() 가 복원 전의 빈 파티를 보고 기본 편성을 스폰한 다음
+	# 복원이 일어나, 월드의 캐릭터와 PartySystem 의 편성이 어긋났다.
+	# 등록은 각 시스템의 _ready() 안에서 일어나므로 초기 씬보다 확실히 앞이다.
+	#
+	# 전제: 제공자는 자기 복원에 필요한 시스템보다 **뒤에** 등록되어야 한다.
+	# project.godot 의 autoload 순서가 그 순서다
+	# (PartySystem 은 CharacterDatabase 뒤, EquipmentSystem 은 EquipmentDatabase 뒤).
+	_ensure_file_read()
+	_restore_one(key, provider)
 
 func has_provider(key: String) -> bool:
 	return _providers.has(key)
@@ -109,26 +123,35 @@ func save_game(data: Dictionary) -> bool:
 
 # ===== 불러오기 (Load) =====
 
-func _startup_load() -> void:
-	load_game()
-	print("Game loaded! Currencies: ", CurrencySystem.get_all_currencies())
+# 세이브 파일을 아직 읽지 않았으면 읽어 둔다. 파일 읽기는 실행당 한 번이면 된다.
+func _ensure_file_read() -> void:
+	if _file_read:
+		return
+	_file_read = true
+	_loaded_data = _read_save_file()
 
-# 파일을 읽어 각 제공자에 복원시키고, 읽은 원본 딕셔너리를 반환한다.
-func load_game() -> Dictionary:
-	var data := _read_save_file()
-	_loaded_data = data.duplicate(true)
-
+# 제공자 하나를 복원한다.
+# 세이브에 그 키가 없으면 아무것도 하지 않는다(해당 시스템은 자기 초기 상태를 유지한다).
+func _restore_one(key: String, provider: Object) -> void:
+	if not is_instance_valid(provider):
+		return
+	if not (_loaded_data.has(key) and _loaded_data[key] is Dictionary):
+		return
+	# 복원이 쏘는 시그널이 다시 저장을 유발하지 않게 막는다.
 	_loading = true
-	for key in _providers:
-		var provider = _providers[key]
-		if not is_instance_valid(provider):
-			continue
-		# 구 세이브에 없는 키는 건너뛴다. 해당 시스템은 자기 초기 상태를 유지한다.
-		if data.has(key) and data[key] is Dictionary:
-			provider.from_save_dict(data[key])
+	provider.from_save_dict(_loaded_data[key])
 	_loading = false
 
-	return data
+# 파일을 다시 읽어 등록된 모든 제공자에 복원시키고, 읽은 원본 딕셔너리를 반환한다.
+# 시작 시 복원은 register_provider() 가 하므로, 이 함수는 "다시 불러오기"용이다.
+func load_game() -> Dictionary:
+	_file_read = true
+	_loaded_data = _read_save_file()
+
+	for key in _providers:
+		_restore_one(key, _providers[key])
+
+	return _loaded_data.duplicate(true)
 
 func _read_save_file() -> Dictionary:
 	if not FileAccess.file_exists(SAVE_PATH):
