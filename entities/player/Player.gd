@@ -35,13 +35,29 @@ var _attack_cooldown_left: float = 0.0
 @onready var collision_shape = get_node_or_null("CollisionShape2D")
 
 
-# 유효한 스텟 출처를 반환한다. data가 있으면 그 정의의 스텟이 우선한다.
+# 이 노드가 소유하는 런타임 스텟. 정의(CharacterData)의 스텟 사본이다.
+#
+# 왜 사본인가: .tres는 경로 기준으로 캐시되므로 CharacterDatabase가 돌려주는 정의는
+# 로스터 전체가 공유하는 **하나의 인스턴스**다. StatusEffectData가 PlayerStats의 버프
+# 채널을 대상으로 삼기 때문에, 공유된 채로 두면 한 노드에 건 버프/디버프가 같은 정의를
+# 쓰는 쪽 전부에 걸리고, 스테이지를 다시 열어도 이전 판의 버프 잔재가 남는다.
+# 정의(.tres)는 읽기 전용 데이터로 남기고, 전투 중 변하는 값은 노드가 소유한다.
+var _runtime_stats: PlayerStats = null
+
+# 유효한 스텟 출처를 반환한다. data가 있으면 그 정의의 스텟이 사본의 바탕이 된다.
 func get_stats() -> PlayerStats:
-	if data != null:
-		return data.get_stats()
-	if stats == null:
-		stats = PlayerStats.new()
-	return stats
+	if _runtime_stats == null:
+		_runtime_stats = _make_runtime_stats()
+	return _runtime_stats
+
+# 정의(또는 씬에 주입된 stats)에서 이 노드만의 스텟 사본을 만든다.
+# 처음 get_stats()가 불릴 때 한 번만 만들어지므로, 씬이 export로 주입한 값이 반영된 뒤다.
+# duplicate(true): 이후 PlayerStats에 하위 리소스가 추가되어도 같이 복제되게 한다.
+func _make_runtime_stats() -> PlayerStats:
+	var source: PlayerStats = data.get_stats() if data != null else stats
+	if source == null:
+		return PlayerStats.new()
+	return source.duplicate(true)
 
 
 func _ready() -> void:
@@ -57,6 +73,11 @@ func _ready() -> void:
 
 	if EventBus:
 		EventBus.party_control_changed.connect(_on_control_changed)
+		# 스텟을 사본으로 떼어 놓으면 정의 쪽 장착 변경이 더 이상 자동으로 닿지 않는다.
+		# (전에는 정의의 PlayerStats를 그대로 써서 우연히 반영되고 있었다.)
+		# 그래서 자기 캐릭터의 착탈만 골라 장비 채널을 다시 밀어 넣는다.
+		EventBus.equipment_equipped.connect(func(character_id, _eid, _slot): _sync_equipment_bonuses(character_id))
+		EventBus.equipment_unequipped.connect(func(character_id, _slot): _sync_equipment_bonuses(character_id))
 	_refresh_control_visual()
 
 
@@ -84,6 +105,21 @@ func is_controlled() -> bool:
 
 func _on_control_changed(_index: int) -> void:
 	_refresh_control_visual()
+
+
+# ===== 장비 (Equipment) =====
+
+# 장비 보너스를 정의에서 다시 읽어 이 노드의 스텟 사본에 반영한다.
+# 보너스 합산의 출처는 CharacterData.get_equipment_bonuses()다(여기서 다시 세지 않는다).
+# 다른 캐릭터의 착탈이면 아무것도 하지 않는다.
+func _sync_equipment_bonuses(character_id: StringName) -> void:
+	if data == null or character_id != data.character_id:
+		return
+	var bonuses := data.get_equipment_bonuses()
+	get_stats().set_equipment_bonuses(
+		bonuses["physical_attack"], bonuses["magic_attack"],
+		bonuses["physical_defense"], bonuses["magic_defense"], bonuses["hp"]
+	)
 
 # 조종 중인 멤버를 시각적으로 구분한다.
 # 도형 플레이스홀더 단계이므로 밝기로만 표시한다(아트는 추후).
