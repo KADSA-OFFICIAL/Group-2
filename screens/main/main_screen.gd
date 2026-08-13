@@ -39,6 +39,9 @@ const CHARACTERS_ICON := "res://assets/sprites/ui/icons/icon_characters.svg"
 const EQUIPMENT_ICON := "res://assets/sprites/ui/icons/icon_equipment.svg"
 const CRAFT_ICON := "res://assets/sprites/ui/icons/icon_craft.svg"
 const STORAGE_ICON := "res://assets/sprites/ui/icons/icon_storage.svg"
+const QUEST_ICON := "res://assets/sprites/ui/icons/icon_quest.svg"
+const STORY_ICON := "res://assets/sprites/ui/icons/icon_story.svg"
+const ORDER_ICON := "res://assets/sprites/ui/icons/icon_order.svg"
 
 # 화면이 실제로 있는 메뉴만 둔다.
 # 상점·설정은 화면이 없어 버튼을 만들지 않는다(누를 곳 없는 버튼을 만들지 않는다).
@@ -49,12 +52,22 @@ const EQUIPMENT_SCREEN := preload("res://screens/equipment/EquipmentScreen.tscn"
 const CRAFT_SCREEN := preload("res://screens/craft/CraftScreen.tscn")
 const STORAGE_SCREEN := preload("res://screens/storage/StorageScreen.tscn")
 
+# 길라잡이 단계 -> 데려갈 화면.
+# GuideSystem 은 화면을 알지 않는다(인프라가 화면에 의존하면 안 된다). 그 대응을 여기서 한다.
+# Step.READY 는 여기 없다. 그때는 화면을 닫아 게임플레이를 드러낸다(= 출격).
+const GUIDE_TARGET := {
+	GuideSystem.Step.PARTY_INCOMPLETE: FORMATION_SCREEN,
+	GuideSystem.Step.NO_EQUIPMENT: CRAFT_SCREEN,
+	GuideSystem.Step.EQUIPMENT_IDLE: EQUIPMENT_SCREEN,
+}
+
 var _currency_labels: Dictionary = {}
 
 # 대표 캐릭터가 바뀌면 다시 채우는 자리들.
 var _art_layer: Control      # 화면을 채우는 일러스트 레이어
 var _nameplate: Control      # 좌하단 이름표
 var _profile_holder: Control # 상단 프로필 칩이 들어가는 자리
+var _guide_holder: Control   # 길라잡이 문구가 들어가는 자리 (퀘스트 아이콘 옆)
 
 
 func _ready() -> void:
@@ -64,6 +77,10 @@ func _ready() -> void:
 	CurrencySystem.currency_changed.connect(_on_currency_changed)
 	EventBus.party_changed.connect(func(_m): _refresh_featured())
 	EventBus.party_control_changed.connect(func(_i): _refresh_featured())
+	# 프로필(이름/레벨)의 출처는 PlayerProfile 이다. 그 신호로만 갱신한다.
+	PlayerProfile.profile_changed.connect(_fill_profile)
+	# 다음에 할 일의 출처는 GuideSystem 이다. 여기서 판정하지 않는다.
+	GuideSystem.step_changed.connect(func(_step): _fill_guide())
 
 
 func _refresh_featured() -> void:
@@ -72,6 +89,9 @@ func _refresh_featured() -> void:
 	# 프로필도 파티 인원을 보여주므로 같이 갱신한다.
 	# (전에는 _build() 에서 한 번만 만들어 편성이 바뀌어도 옛 인원이 남아 있었다.)
 	_fill_profile()
+	# 길라잡이 문구에 남은 인원 수가 들어가므로, 단계가 그대로여도 문구는 달라질 수 있다.
+	# (GuideSystem.step_changed 는 단계가 바뀔 때만 쏜다.)
+	_fill_guide()
 
 
 # ===== 화면 구성 =====
@@ -94,7 +114,8 @@ func _build() -> void:
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay.add_theme_constant_override("margin_left", 14)
 	overlay.add_theme_constant_override("margin_right", 14)
-	overlay.add_theme_constant_override("margin_top", 12)
+	# 프로필·재화 칩은 화면 맨 위에 붙는다. 위 여백을 최소로 둔다.
+	overlay.add_theme_constant_override("margin_top", 6)
 	# 하단 버튼은 화면 맨 아래에 바짝 붙는다. 아래 여백을 두지 않는다.
 	overlay.add_theme_constant_override("margin_bottom", 0)
 	add_child(overlay)
@@ -105,18 +126,27 @@ func _build() -> void:
 
 	column.add_child(_build_top_bar())
 
-	# 가운데는 비워 둔다. 일러스트가 보이는 자리이며, 아래쪽에 이름표만 얹는다.
-	var middle := VBoxContainer.new()
+	# 가운데는 비워 둔다. 일러스트가 보이는 자리다.
+	# 좌측 아래에 이름표, 우측에 세로 아이콘 열(퀘스트/스토리/교단)만 얹는다.
+	var middle := HBoxContainer.new()
 	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	middle.alignment = BoxContainer.ALIGNMENT_END
 	middle.add_theme_constant_override("separation", 8)
-	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(middle)
+
+	var left := VBoxContainer.new()
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left.alignment = BoxContainer.ALIGNMENT_END
+	left.add_theme_constant_override("separation", 8)
+	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	middle.add_child(left)
 
 	_nameplate = HBoxContainer.new()
 	_nameplate.add_theme_constant_override("separation", 6)
-	middle.add_child(_nameplate)
+	left.add_child(_nameplate)
 	_fill_nameplate()
+
+	middle.add_child(_build_side_column())
 
 	column.add_child(_build_bottom_bar())
 
@@ -209,8 +239,97 @@ func _build_top_bar() -> Control:
 	return bar
 
 
-# 프로필 자리. 플레이어 이름/레벨 시스템이 아직 없어 파티 인원만 보여준다.
-# 시스템이 생기면 이 칩의 내용만 바뀐다.
+# ── 우측 세로 아이콘 열 ──
+# 퀘스트 · 스토리 · 교단. 길라잡이 문구는 퀘스트 아이콘 **왼쪽**에 붙는다.
+#
+# 스토리·교단은 아직 시스템이 없어 누를 수 없게 둔다(disabled + 이유를 tooltip 에).
+# 누르면 아무 일도 없는 버튼을 두는 것보다, 자리와 이유를 함께 보여주는 편이 낫다.
+# 시스템이 생기면 disabled 를 풀고 화면 씬만 연결하면 된다.
+func _build_side_column() -> Control:
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 8)
+
+	# 퀘스트 줄: [길라잡이 문구][퀘스트 아이콘]
+	var quest_row := HBoxContainer.new()
+	quest_row.alignment = BoxContainer.ALIGNMENT_END
+	quest_row.add_theme_constant_override("separation", 6)
+	column.add_child(quest_row)
+
+	_guide_holder = HBoxContainer.new()
+	quest_row.add_child(_guide_holder)
+	_fill_guide()
+
+	# 퀘스트 버튼도 길라잡이와 같은 곳으로 데려간다.
+	# 지금 퀘스트의 내용이 곧 "다음에 할 일" 이므로 두 입구가 갈리면 안 된다.
+	var quest := _make_side_button(QUEST_ICON, "퀘스트 — 다음에 할 일")
+	quest.pressed.connect(_on_guide_pressed)
+	quest_row.add_child(quest)
+
+	var story := _make_side_button(STORY_ICON, "스토리 — 준비 중(시스템 없음)")
+	story.disabled = true
+	column.add_child(_align_right(story))
+
+	var order := _make_side_button(ORDER_ICON, "교단 — 준비 중(시스템 없음)")
+	order.disabled = true
+	column.add_child(_align_right(order))
+
+	return column
+
+
+# 버튼을 열의 오른쪽 끝에 붙인다(퀘스트 줄과 오른쪽 선을 맞추기 위함).
+func _align_right(button: Control) -> Control:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_END
+	row.add_child(button)
+	return row
+
+
+# 우측 열에 쓰는 원형 아이콘 버튼. 상단 창고 버튼과 같은 모양이다.
+func _make_side_button(icon_path: String, tooltip: String) -> Button:
+	var button := Button.new()
+	button.tooltip_text = tooltip
+	button.icon = _load_texture(icon_path)
+	button.custom_minimum_size = Vector2(44, 44)
+	button.expand_icon = true
+	button.add_theme_stylebox_override("normal", UITheme.overlay_pill())
+	button.add_theme_stylebox_override("hover", UITheme.overlay_pill(UITheme.SURFACE))
+	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
+	button.add_theme_stylebox_override("disabled", UITheme.overlay_pill())
+	return button
+
+
+# ── 길라잡이 ──
+# 문구와 판정은 GuideSystem 이 소유한다. 여기서 "다음에 할 일"을 다시 판단하지 않는다.
+func _fill_guide() -> void:
+	if not is_instance_valid(_guide_holder):
+		return
+	_clear(_guide_holder)
+
+	var plate := Button.new()
+	plate.text = GuideSystem.get_text()
+	plate.tooltip_text = "누르면 해당 화면으로 갑니다"
+	plate.custom_minimum_size = Vector2(0, 40)
+	plate.add_theme_font_size_override("font_size", 13)
+	plate.add_theme_color_override("font_color", UITheme.INK_ON_DARK)
+	plate.add_theme_stylebox_override("normal", UITheme.overlay_pill())
+	plate.add_theme_stylebox_override("hover", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
+	plate.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
+	plate.pressed.connect(_on_guide_pressed)
+	_guide_holder.add_child(plate)
+
+
+# 길라잡이를 누르면 그 단계의 화면으로 간다.
+# 남은 안내가 없으면(READY) 화면을 닫아 게임플레이를 드러낸다 — 출격과 같은 동작이다.
+func _on_guide_pressed() -> void:
+	var target = GUIDE_TARGET.get(GuideSystem.get_step())
+	if target == null:
+		ScreenManager.pop()
+		return
+	ScreenManager.push(target)
+
+
+# 프로필 자리. 이름·레벨의 출처는 PlayerProfile 이다.
 func _fill_profile() -> void:
 	if not is_instance_valid(_profile_holder):
 		return
@@ -218,6 +337,9 @@ func _fill_profile() -> void:
 	_profile_holder.add_child(_build_profile())
 
 
+# 아바타 + 레벨 + 이름 + 파티 인원.
+# 레벨·이름은 PlayerProfile 이, 파티 인원은 PartySystem 이 출처다.
+# 이름이 비어 있으면 PlayerProfile 이 기본 이름을 만들지 않으므로 여기서 대체 문구를 쓴다.
 func _build_profile() -> Control:
 	var plate := PanelContainer.new()
 	plate.add_theme_stylebox_override("panel", UITheme.overlay_pill())
@@ -227,11 +349,19 @@ func _build_profile() -> Control:
 	plate.add_child(row)
 
 	var avatar := ColorRect.new()
-	avatar.custom_minimum_size = Vector2(22, 22)
+	avatar.custom_minimum_size = Vector2(24, 24)
 	avatar.color = UITheme.AMBER
 	row.add_child(avatar)
 
-	row.add_child(_text("파티 %d/%d" % [PartySystem.get_size(), PartySystem.PARTY_SIZE], 13, UITheme.INK_ON_DARK))
+	row.add_child(_text("Lv.%d" % PlayerProfile.level, 14, UITheme.ACCENT))
+
+	var display_name := PlayerProfile.player_name
+	if display_name.is_empty():
+		display_name = "이름 없음"
+	row.add_child(_text(display_name, 14, UITheme.INK_ON_DARK))
+
+	# 어두운 오버레이 위이므로 흐린 글자에 INK_DIM(어두운 색)을 쓰면 안 읽힌다.
+	row.add_child(_text("파티 %d/%d" % [PartySystem.get_size(), PartySystem.PARTY_SIZE], 12, UITheme.TAN_DEEP))
 	return plate
 
 
