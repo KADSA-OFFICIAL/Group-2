@@ -54,6 +54,7 @@ var _currency_labels: Dictionary = {}
 # 대표 캐릭터가 바뀌면 다시 채우는 자리들.
 var _art_layer: Control      # 화면을 채우는 일러스트 레이어
 var _nameplate: Control      # 좌하단 이름표
+var _profile_holder: Control # 상단 프로필 칩이 들어가는 자리
 
 
 func _ready() -> void:
@@ -68,6 +69,9 @@ func _ready() -> void:
 func _refresh_featured() -> void:
 	_fill_art()
 	_fill_nameplate()
+	# 프로필도 파티 인원을 보여주므로 같이 갱신한다.
+	# (전에는 _build() 에서 한 번만 만들어 편성이 바뀌어도 옛 인원이 남아 있었다.)
+	_fill_profile()
 
 
 # ===== 화면 구성 =====
@@ -186,7 +190,10 @@ func _build_top_bar() -> Control:
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 8)
 
-	bar.add_child(_build_profile())
+	# 프로필은 파티 인원이 바뀌면 다시 채워야 하므로 자리를 잡아 두고 내용만 갈아 끼운다.
+	_profile_holder = HBoxContainer.new()
+	bar.add_child(_profile_holder)
+	_fill_profile()
 
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -204,6 +211,13 @@ func _build_top_bar() -> Control:
 
 # 프로필 자리. 플레이어 이름/레벨 시스템이 아직 없어 파티 인원만 보여준다.
 # 시스템이 생기면 이 칩의 내용만 바뀐다.
+func _fill_profile() -> void:
+	if not is_instance_valid(_profile_holder):
+		return
+	_clear(_profile_holder)
+	_profile_holder.add_child(_build_profile())
+
+
 func _build_profile() -> Control:
 	var plate := PanelContainer.new()
 	plate.add_theme_stylebox_override("panel", UITheme.overlay_pill())
@@ -289,7 +303,7 @@ func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(box)
 
-	var icon := _make_icon(icon_path, 34)
+	var icon := _make_icon(icon_path, UITheme.ICON_NAV)
 	if icon != null:
 		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		box.add_child(icon)

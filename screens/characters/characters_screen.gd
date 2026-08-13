@@ -21,7 +21,8 @@ const ROLE_ICON_PATH := {
 	CharacterData.Role.BUFFER: "res://assets/sprites/ui/icons/icon_role_buffer.svg",
 }
 
-# 장비 슬롯은 EquipmentData.Slot 을 그대로 순회한다(슬롯 목록을 여기서 정의하지 않는다).
+# 슬롯 -> 아이콘 경로 대응표. **슬롯 목록의 출처가 아니다**(출처는 EquipmentData.Slot).
+# 여기 없는 슬롯은 아이콘만 생략되고 행 자체는 그려진다.
 const SLOT_ICON_PATH := {
 	EquipmentData.Slot.WEAPON: "res://assets/sprites/ui/icons/icon_slot_weapon.svg",
 	EquipmentData.Slot.ARMOR: "res://assets/sprites/ui/icons/icon_slot_armor.svg",
@@ -230,8 +231,9 @@ func _refresh_detail() -> void:
 	_detail_holder.add_child(HSeparator.new())
 
 	# 장비: EquipmentData.Slot 을 순회한다. 슬롯 목록을 화면에서 정의하지 않는다.
+	# (SLOT_ICON_PATH 는 아이콘 경로 대응표일 뿐이다. 그걸 순회하면 새 슬롯이 조용히 빠진다.)
 	_detail_holder.add_child(_text("장비", 16, UITheme.INK))
-	for slot in SLOT_ICON_PATH:
+	for slot in EquipmentData.Slot.values():
 		_add_slot_row(character, slot)
 
 	# 스킬: 정의만 표시한다(발동은 후속 시스템의 몫).
