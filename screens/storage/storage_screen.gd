@@ -15,8 +15,7 @@ extends Control
 #
 # 어떤 재화가 주요인지 화면에서 고르지 않는다. 재화가 추가되면 자동으로 나타난다.
 
-const CURRENCY_ICON_PATH := "res://assets/sprites/ui/icons/icon_%s.svg"
-const BACK_ICON := "res://assets/sprites/ui/icons/icon_back.svg"
+const BACK_ICON := "icon_back"
 
 # 재화 키 -> 잔액 Label. 잔액이 바뀔 때 해당 라벨만 갱신한다.
 var _labels: Dictionary = {}
@@ -118,7 +117,7 @@ func _make_currency_card(currency_type: String) -> Control:
 	row.add_theme_constant_override("separation", 10)
 	card.add_child(row)
 
-	var icon := _icon(CURRENCY_ICON_PATH % currency_type, 34)
+	var icon := _icon(UITheme.currency_icon_name(currency_type), 34)
 	if icon != null:
 		row.add_child(icon)
 
@@ -153,8 +152,8 @@ func _text(value: String, size: int, color: Color) -> Label:
 	return label
 
 
-func _icon(path: String, size: int) -> TextureRect:
-	var texture := _texture(path)
+func _icon(icon_name: String, size: int) -> TextureRect:
+	var texture := _texture(icon_name)
 	if texture == null:
 		return null
 	var rect := TextureRect.new()
@@ -165,8 +164,10 @@ func _icon(path: String, size: int) -> TextureRect:
 	return rect
 
 
-func _texture(path: String) -> Texture2D:
-	if path.is_empty() or not ResourceLoader.exists(path):
+# 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.
+func _texture(icon_name: String) -> Texture2D:
+	var path := UITheme.icon_path(icon_name)
+	if path.is_empty():
 		return null
 	return load(path) as Texture2D
 

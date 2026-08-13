@@ -15,14 +15,13 @@ extends Control
 #
 # 참고: data/equipment/README.md, SYSTEM_CONVENTIONS.md
 
-const CURRENCY_ICON_PATH := "res://assets/sprites/ui/icons/icon_%s.svg"
-const BACK_ICON := "res://assets/sprites/ui/icons/icon_back.svg"
-const CRAFT_ICON := "res://assets/sprites/ui/icons/icon_craft.svg"
+const BACK_ICON := "icon_back"
+const CRAFT_ICON := "icon_craft"
 
-const SLOT_ICON_PATH := {
-	EquipmentData.Slot.WEAPON: "res://assets/sprites/ui/icons/icon_slot_weapon.svg",
-	EquipmentData.Slot.ARMOR: "res://assets/sprites/ui/icons/icon_slot_armor.svg",
-	EquipmentData.Slot.ACCESSORY: "res://assets/sprites/ui/icons/icon_slot_accessory.svg",
+const SLOT_ICON_NAME := {
+	EquipmentData.Slot.WEAPON: "icon_slot_weapon",
+	EquipmentData.Slot.ARMOR: "icon_slot_armor",
+	EquipmentData.Slot.ACCESSORY: "icon_slot_accessory",
 }
 
 var _currency_labels: Dictionary = {}
@@ -130,7 +129,7 @@ func _make_currency_chip(currency_type: String) -> Control:
 	row.add_theme_constant_override("separation", 5)
 	chip.add_child(row)
 
-	var icon := _icon(CURRENCY_ICON_PATH % currency_type, 20)
+	var icon := _icon(UITheme.currency_icon_name(currency_type), 20)
 	if icon != null:
 		row.add_child(icon)
 
@@ -169,7 +168,7 @@ func _make_recipe_card(id: StringName) -> Control:
 	row.add_theme_constant_override("separation", 12)
 	card.add_child(row)
 
-	var slot_icon := _icon(SLOT_ICON_PATH.get(data.slot, ""), 40)
+	var slot_icon := _icon(SLOT_ICON_NAME.get(data.slot, ""), 40)
 	if slot_icon != null:
 		row.add_child(slot_icon)
 
@@ -218,7 +217,7 @@ func _make_cost_chip(currency_type: String, need: int) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
 
-	var icon := _icon(CURRENCY_ICON_PATH % currency_type, 18)
+	var icon := _icon(UITheme.currency_icon_name(currency_type), 18)
 	if icon != null:
 		row.add_child(icon)
 
@@ -283,8 +282,8 @@ func _text(value: String, size: int, color: Color) -> Label:
 	return label
 
 
-func _icon(path: String, size: int) -> TextureRect:
-	var texture := _texture(path)
+func _icon(icon_name: String, size: int) -> TextureRect:
+	var texture := _texture(icon_name)
 	if texture == null:
 		return null
 	var rect := TextureRect.new()
@@ -295,7 +294,9 @@ func _icon(path: String, size: int) -> TextureRect:
 	return rect
 
 
-func _texture(path: String) -> Texture2D:
-	if path.is_empty() or not ResourceLoader.exists(path):
+# 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.
+func _texture(icon_name: String) -> Texture2D:
+	var path := UITheme.icon_path(icon_name)
+	if path.is_empty():
 		return null
 	return load(path) as Texture2D
