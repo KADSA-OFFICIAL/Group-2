@@ -126,27 +126,18 @@ func _build() -> void:
 
 	column.add_child(_build_top_bar())
 
-	# 가운데는 비워 둔다. 일러스트가 보이는 자리다.
-	# 좌측 아래에 이름표, 우측에 세로 아이콘 열(퀘스트/스토리/교단)만 얹는다.
-	var middle := HBoxContainer.new()
+	# 가운데는 비워 둔다. 일러스트가 보이는 자리이며, 아래쪽에 이름표만 얹는다.
+	var middle := VBoxContainer.new()
 	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	middle.alignment = BoxContainer.ALIGNMENT_END
 	middle.add_theme_constant_override("separation", 8)
+	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(middle)
-
-	var left := VBoxContainer.new()
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	left.alignment = BoxContainer.ALIGNMENT_END
-	left.add_theme_constant_override("separation", 8)
-	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	middle.add_child(left)
 
 	_nameplate = HBoxContainer.new()
 	_nameplate.add_theme_constant_override("separation", 6)
-	left.add_child(_nameplate)
+	middle.add_child(_nameplate)
 	_fill_nameplate()
-
-	middle.add_child(_build_side_column())
 
 	column.add_child(_build_bottom_bar())
 
@@ -195,7 +186,7 @@ func _fill_nameplate() -> void:
 		return
 
 	var plate := PanelContainer.new()
-	plate.add_theme_stylebox_override("panel", UITheme.overlay_pill())
+	plate.add_theme_stylebox_override("panel", UITheme.overlay_text_pill())
 	_nameplate.add_child(plate)
 
 	var row := HBoxContainer.new()
@@ -216,19 +207,24 @@ func _fill_nameplate() -> void:
 
 
 # ── 상단: 프로필 · 주요 재화 · 원형 버튼 ──
+# 두 줄이다.
+#   1줄: 프로필 | (빈칸) | 주요 재화 | 창고
+#   2줄:              (빈칸) | 길라잡이 문구 | 퀘스트
+# 퀘스트를 재화·창고 바로 아래에 두어 우측 상단을 하나의 묶음으로 읽히게 한다.
 func _build_top_bar() -> Control:
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 6)
+
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 8)
+	stack.add_child(bar)
 
 	# 프로필은 파티 인원이 바뀌면 다시 채워야 하므로 자리를 잡아 두고 내용만 갈아 끼운다.
 	_profile_holder = HBoxContainer.new()
 	bar.add_child(_profile_holder)
 	_fill_profile()
 
-	var gap := Control.new()
-	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar.add_child(gap)
+	bar.add_child(_expanding_gap())
 
 	# 주요 재화. 어떤 재화가 주요인지는 CurrencySystem 이 정한다.
 	for currency_type in CurrencySystem.get_primary_currencies():
@@ -236,25 +232,13 @@ func _build_top_bar() -> Control:
 
 	# 창고: 나머지 재화는 여기서 본다.
 	bar.add_child(_make_round_button(STORAGE_ICON, "창고", STORAGE_SCREEN))
-	return bar
 
-
-# ── 우측 세로 아이콘 열 ──
-# 퀘스트 · 스토리 · 교단. 길라잡이 문구는 퀘스트 아이콘 **왼쪽**에 붙는다.
-#
-# 스토리·교단은 아직 시스템이 없어 누를 수 없게 둔다(disabled + 이유를 tooltip 에).
-# 누르면 아무 일도 없는 버튼을 두는 것보다, 자리와 이유를 함께 보여주는 편이 낫다.
-# 시스템이 생기면 disabled 를 풀고 화면 씬만 연결하면 된다.
-func _build_side_column() -> Control:
-	var column := VBoxContainer.new()
-	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 8)
-
-	# 퀘스트 줄: [길라잡이 문구][퀘스트 아이콘]
+	# 퀘스트 줄: 길라잡이 문구가 퀘스트 아이콘 왼쪽에 붙는다.
 	var quest_row := HBoxContainer.new()
-	quest_row.alignment = BoxContainer.ALIGNMENT_END
 	quest_row.add_theme_constant_override("separation", 6)
-	column.add_child(quest_row)
+	stack.add_child(quest_row)
+
+	quest_row.add_child(_expanding_gap())
 
 	_guide_holder = HBoxContainer.new()
 	quest_row.add_child(_guide_holder)
@@ -262,41 +246,19 @@ func _build_side_column() -> Control:
 
 	# 퀘스트 버튼도 길라잡이와 같은 곳으로 데려간다.
 	# 지금 퀘스트의 내용이 곧 "다음에 할 일" 이므로 두 입구가 갈리면 안 된다.
-	var quest := _make_side_button(QUEST_ICON, "퀘스트 — 다음에 할 일")
+	var quest := _make_round_button(QUEST_ICON, "퀘스트 — 다음에 할 일", null)
 	quest.pressed.connect(_on_guide_pressed)
 	quest_row.add_child(quest)
 
-	var story := _make_side_button(STORY_ICON, "스토리 — 준비 중(시스템 없음)")
-	story.disabled = true
-	column.add_child(_align_right(story))
-
-	var order := _make_side_button(ORDER_ICON, "교단 — 준비 중(시스템 없음)")
-	order.disabled = true
-	column.add_child(_align_right(order))
-
-	return column
+	return stack
 
 
-# 버튼을 열의 오른쪽 끝에 붙인다(퀘스트 줄과 오른쪽 선을 맞추기 위함).
-func _align_right(button: Control) -> Control:
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_END
-	row.add_child(button)
-	return row
-
-
-# 우측 열에 쓰는 원형 아이콘 버튼. 상단 창고 버튼과 같은 모양이다.
-func _make_side_button(icon_path: String, tooltip: String) -> Button:
-	var button := Button.new()
-	button.tooltip_text = tooltip
-	button.icon = _load_texture(icon_path)
-	button.custom_minimum_size = Vector2(44, 44)
-	button.expand_icon = true
-	button.add_theme_stylebox_override("normal", UITheme.overlay_pill())
-	button.add_theme_stylebox_override("hover", UITheme.overlay_pill(UITheme.SURFACE))
-	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
-	button.add_theme_stylebox_override("disabled", UITheme.overlay_pill())
-	return button
+# 남는 가로 공간을 밀어내는 빈 칸. 클릭을 가로채지 않는다.
+func _expanding_gap() -> Control:
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return gap
 
 
 # ── 길라잡이 ──
@@ -312,9 +274,9 @@ func _fill_guide() -> void:
 	plate.custom_minimum_size = Vector2(0, 40)
 	plate.add_theme_font_size_override("font_size", 13)
 	plate.add_theme_color_override("font_color", UITheme.INK_ON_DARK)
-	plate.add_theme_stylebox_override("normal", UITheme.overlay_pill())
-	plate.add_theme_stylebox_override("hover", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
-	plate.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
+	plate.add_theme_stylebox_override("normal", UITheme.overlay_text_pill())
+	plate.add_theme_stylebox_override("hover", UITheme.overlay_text_pill(UITheme.SURFACE_DEEP))
+	plate.add_theme_stylebox_override("pressed", UITheme.overlay_text_pill(UITheme.SURFACE_DEEP))
 	plate.pressed.connect(_on_guide_pressed)
 	_guide_holder.add_child(plate)
 
@@ -342,7 +304,7 @@ func _fill_profile() -> void:
 # 이름이 비어 있으면 PlayerProfile 이 기본 이름을 만들지 않으므로 여기서 대체 문구를 쓴다.
 func _build_profile() -> Control:
 	var plate := PanelContainer.new()
-	plate.add_theme_stylebox_override("panel", UITheme.overlay_pill())
+	plate.add_theme_stylebox_override("panel", UITheme.overlay_text_pill())
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
@@ -367,7 +329,7 @@ func _build_profile() -> Control:
 
 func _make_currency_chip(currency_type: String) -> Control:
 	var chip := PanelContainer.new()
-	chip.add_theme_stylebox_override("panel", UITheme.overlay_pill())
+	chip.add_theme_stylebox_override("panel", UITheme.overlay_text_pill())
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
@@ -385,16 +347,18 @@ func _make_currency_chip(currency_type: String) -> Control:
 
 
 # 작은 원형 아이콘 버튼. 라벨 없이 아이콘만 둔다.
+# scene 이 null 이면 아무 연결도 하지 않는다(호출부가 직접 pressed 를 잇는다).
 func _make_round_button(icon_path: String, tooltip: String, scene: PackedScene) -> Button:
 	var button := Button.new()
 	button.tooltip_text = tooltip
 	button.icon = _load_texture(icon_path)
-	button.custom_minimum_size = Vector2(36, 36)
+	button.custom_minimum_size = Vector2(32, 32)
 	button.expand_icon = true
 	button.add_theme_stylebox_override("normal", UITheme.overlay_pill())
 	button.add_theme_stylebox_override("hover", UITheme.overlay_pill(UITheme.SURFACE))
 	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
-	button.pressed.connect(func(): ScreenManager.push(scene))
+	if scene != null:
+		button.pressed.connect(func(): ScreenManager.push(scene))
 	return button
 
 
@@ -410,11 +374,12 @@ func _build_bottom_bar() -> Control:
 	row.add_child(_make_tab("캐릭터", CHARACTERS_ICON, CHARACTERS_SCREEN))
 	row.add_child(_make_tab("장비", EQUIPMENT_ICON, EQUIPMENT_SCREEN))
 	row.add_child(_make_tab("제조", CRAFT_ICON, CRAFT_SCREEN))
+	# 스토리·교단은 아직 시스템이 없어 누를 수 없다. 자리는 나머지 메뉴와 같은 줄에 둔다.
+	# (누르면 아무 일도 없는 버튼을 두지 않는다. 시스템이 생기면 화면만 연결하면 된다.)
+	row.add_child(_make_tab("스토리", STORY_ICON, null))
+	row.add_child(_make_tab("교단", ORDER_ICON, null))
 
-	var gap := Control.new()
-	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(gap)
+	row.add_child(_expanding_gap())
 
 	row.add_child(_build_battle_button())
 	return row
@@ -422,7 +387,10 @@ func _build_bottom_bar() -> Control:
 
 # 하단 메뉴 버튼: 아이콘 위 + 라벨 아래. 테두리·배경 패널을 두지 않는다.
 # 아이콘 자체에 이미 굵은 윤곽선이 있어 사각 프레임을 덧대면 답답해진다.
+# scene 이 null 이면 화면이 없는 메뉴다. 흐리게 그리고 누를 수 없게 둔다.
 func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
+	var ready_to_open := scene != null
+
 	var holder := Control.new()
 	holder.custom_minimum_size = Vector2(58, 62)
 
@@ -436,6 +404,9 @@ func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 	var icon := _make_icon(icon_path, UITheme.ICON_NAV)
 	if icon != null:
 		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		# 화면이 없는 메뉴는 반투명하게 그려 "지금은 못 들어간다"를 알린다.
+		if not ready_to_open:
+			icon.modulate = Color(1, 1, 1, 0.4)
 		box.add_child(icon)
 
 	# 라벨은 그림 위에 바로 얹히므로 외곽선을 넣어 어떤 배경에서도 읽히게 한다.
@@ -443,6 +414,8 @@ func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	text.add_theme_color_override("font_outline_color", UITheme.OUTLINE)
 	text.add_theme_constant_override("outline_size", 4)
+	if not ready_to_open:
+		text.modulate = Color(1, 1, 1, 0.45)
 	box.add_child(text)
 
 	# 눌리는 영역만 담당하는 투명 버튼. 배경·테두리 없음.
@@ -453,7 +426,11 @@ func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 	button.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
 	button.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
 	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	button.pressed.connect(func(): ScreenManager.push(scene))
+	if ready_to_open:
+		button.pressed.connect(func(): ScreenManager.push(scene))
+	else:
+		button.disabled = true
+		button.tooltip_text = "%s — 준비 중(시스템 없음)" % label
 	holder.add_child(button)
 	return holder
 
@@ -546,7 +523,7 @@ func _text(value: String, size: int, color: Color) -> Label:
 
 func _chip_text(value: String) -> Control:
 	var plate := PanelContainer.new()
-	plate.add_theme_stylebox_override("panel", UITheme.overlay_pill())
+	plate.add_theme_stylebox_override("panel", UITheme.overlay_text_pill())
 	plate.add_child(_text(value, 14, UITheme.INK_ON_DARK))
 	return plate
 

@@ -52,8 +52,13 @@ const ICON_ROUND: int = 20             # 원형 아이콘 버튼 속 아이콘
 const ICON_CTA: int = 26               # 출격 등 주요 버튼
 
 # 캐릭터 일러스트 위에 UI를 얹을 때 쓰는 불투명도.
-# 완전히 불투명하면 그림을 가리고, 너무 옅으면 글자가 안 읽힌다.
-const OVERLAY_ALPHA: float = 0.62
+# 아이콘을 둘러싼 판이 진하면 아이콘보다 판이 먼저 보인다. 형태만 잡히는 정도로 옅게 둔다.
+const OVERLAY_ALPHA: float = 0.34
+
+# 오버레이 안쪽 여백. 아래 패널의 PAD(12)보다 훨씬 좁다.
+# 여백이 넓으면 아이콘 20px 짜리 버튼도 판이 44px 로 부풀어 커 보인다.
+# 아이콘에 바짝 붙여 판을 작게 만든다.
+const OVERLAY_PAD: int = 4
 
 # 오버레이 테두리. 상단 칩·원형 버튼처럼 일러스트 위에 얹히는 것들에 쓴다.
 #
@@ -97,18 +102,24 @@ static func flat_box(fill: Color, radius: int = RADIUS) -> StyleBoxFlat:
 
 # 반투명 패널. 상·하단 바처럼 넓은 면에 쓴다.
 static func overlay_box(radius: int = RADIUS) -> StyleBoxFlat:
-	return _box(_alpha(BG, OVERLAY_ALPHA), _overlay_line(), radius, OVERLAY_BORDER_WIDTH)
+	return _box(_alpha(BG, OVERLAY_ALPHA), _overlay_line(), radius, OVERLAY_BORDER_WIDTH, OVERLAY_PAD)
 
 
 # 반투명 알약. 재화 칩·작은 버튼에 쓴다.
 static func overlay_pill(fill: Color = BG) -> StyleBoxFlat:
-	return _box(_alpha(fill, OVERLAY_ALPHA), _overlay_line(), RADIUS_PILL, OVERLAY_BORDER_WIDTH)
+	return _box(_alpha(fill, OVERLAY_ALPHA), _overlay_line(), RADIUS_PILL, OVERLAY_BORDER_WIDTH, OVERLAY_PAD)
+
+
+# 글자가 들어가는 반투명 알약(프로필·재화·길라잡이).
+# 아이콘 버튼보다 여백이 조금 넓어야 글자가 테두리에 붙지 않는다.
+static func overlay_text_pill(fill: Color = BG) -> StyleBoxFlat:
+	return _box(_alpha(fill, OVERLAY_ALPHA), _overlay_line(), RADIUS_PILL, OVERLAY_BORDER_WIDTH, OVERLAY_PAD + 4)
 
 
 # 강조 알약(출격 CTA). 주요 동작이므로 오버레이 중 유일하게 불투명에 가깝다.
 # 테두리는 다른 오버레이와 같은 두께로 얇게 둔다. 굵으면 아이콘 윤곽선과 겹쳐 뭉개진다.
 static func overlay_accent(radius: int = RADIUS) -> StyleBoxFlat:
-	return _box(_alpha(ACCENT, 0.92), _alpha(LINE, 0.45), radius, OVERLAY_BORDER_WIDTH)
+	return _box(_alpha(ACCENT, 0.92), _alpha(LINE, 0.45), radius, OVERLAY_BORDER_WIDTH, OVERLAY_PAD + 4)
 
 
 # 오버레이용 테두리색. 얇게 + 옅게가 이 한 곳에서 정해진다.
@@ -132,11 +143,11 @@ static func make_background() -> ColorRect:
 	return rect
 
 
-static func _box(fill: Color, border: Color, radius: int, border_width: int) -> StyleBoxFlat:
+static func _box(fill: Color, border: Color, radius: int, border_width: int, pad: int = PAD) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.bg_color = fill
 	box.set_corner_radius_all(radius)
 	box.set_border_width_all(border_width)
 	box.border_color = border
-	box.set_content_margin_all(PAD)
+	box.set_content_margin_all(pad)
 	return box
