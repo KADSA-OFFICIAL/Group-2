@@ -17,14 +17,14 @@ extends Control
 #
 # 참고: docs/combat-screen-design.md §1(파티 3명), §8(시너지)
 
-const ROLE_ICON_PATH := {
-	CharacterData.Role.TANK: "res://assets/sprites/ui/icons/icon_role_tank.svg",
-	CharacterData.Role.RANGED_DEALER: "res://assets/sprites/ui/icons/icon_role_ranged_dealer.svg",
-	CharacterData.Role.BUFFER: "res://assets/sprites/ui/icons/icon_role_buffer.svg",
+const ROLE_ICON_NAME := {
+	CharacterData.Role.TANK: "icon_role_tank",
+	CharacterData.Role.RANGED_DEALER: "icon_role_ranged_dealer",
+	CharacterData.Role.BUFFER: "icon_role_buffer",
 }
 
-const SYNERGY_ICON := "res://assets/sprites/ui/icons/icon_synergy.svg"
-const BACK_ICON := "res://assets/sprites/ui/icons/icon_back.svg"
+const SYNERGY_ICON := "icon_synergy"
+const BACK_ICON := "icon_back"
 
 # 확정 전 임시 선택 (character_id). 순서가 곧 파티 순서다.
 var _selected: Array[StringName] = []
@@ -251,7 +251,7 @@ func _make_roster_card(id: StringName) -> Control:
 		role_row.add_theme_constant_override("separation", 3)
 		box.add_child(role_row)
 		for role in character.get_roles():
-			var icon := _icon(ROLE_ICON_PATH.get(role, ""), 18)
+			var icon := _icon(ROLE_ICON_NAME.get(role, ""), 18)
 			if icon != null:
 				role_row.add_child(icon)
 		role_row.add_child(_text(character.get_roles_display_name(), 11, UITheme.INK_DIM))
@@ -329,8 +329,8 @@ func _text(value: String, size: int, color: Color) -> Label:
 	return label
 
 
-func _icon(path: String, size: int) -> TextureRect:
-	var texture := _texture(path)
+func _icon(icon_name: String, size: int) -> TextureRect:
+	var texture := _texture(icon_name)
 	if texture == null:
 		return null
 	var rect := TextureRect.new()
@@ -341,7 +341,9 @@ func _icon(path: String, size: int) -> TextureRect:
 	return rect
 
 
-func _texture(path: String) -> Texture2D:
-	if path.is_empty() or not ResourceLoader.exists(path):
+# 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.
+func _texture(icon_name: String) -> Texture2D:
+	var path := UITheme.icon_path(icon_name)
+	if path.is_empty():
 		return null
 	return load(path) as Texture2D

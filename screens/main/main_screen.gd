@@ -25,23 +25,22 @@ extends Control
 #
 # 화면 전환은 ScreenManager가 한다. 이 화면은 자신을 pop 할 뿐 다음 화면을 모른다.
 
-const CURRENCY_ICON_PATH := "res://assets/sprites/ui/icons/icon_%s.svg"
 
-const ROLE_ICON_PATH := {
-	CharacterData.Role.TANK: "res://assets/sprites/ui/icons/icon_role_tank.svg",
-	CharacterData.Role.RANGED_DEALER: "res://assets/sprites/ui/icons/icon_role_ranged_dealer.svg",
-	CharacterData.Role.BUFFER: "res://assets/sprites/ui/icons/icon_role_buffer.svg",
+const ROLE_ICON_NAME := {
+	CharacterData.Role.TANK: "icon_role_tank",
+	CharacterData.Role.RANGED_DEALER: "icon_role_ranged_dealer",
+	CharacterData.Role.BUFFER: "icon_role_buffer",
 }
 
-const BATTLE_ICON := "res://assets/sprites/ui/icons/icon_battle.svg"
-const FORMATION_ICON := "res://assets/sprites/ui/icons/icon_formation.svg"
-const CHARACTERS_ICON := "res://assets/sprites/ui/icons/icon_characters.svg"
-const EQUIPMENT_ICON := "res://assets/sprites/ui/icons/icon_equipment.svg"
-const CRAFT_ICON := "res://assets/sprites/ui/icons/icon_craft.svg"
-const STORAGE_ICON := "res://assets/sprites/ui/icons/icon_storage.svg"
-const QUEST_ICON := "res://assets/sprites/ui/icons/icon_quest.svg"
-const STORY_ICON := "res://assets/sprites/ui/icons/icon_story.svg"
-const ORDER_ICON := "res://assets/sprites/ui/icons/icon_order.svg"
+const BATTLE_ICON := "icon_battle"
+const FORMATION_ICON := "icon_formation"
+const CHARACTERS_ICON := "icon_characters"
+const EQUIPMENT_ICON := "icon_equipment"
+const CRAFT_ICON := "icon_craft"
+const STORAGE_ICON := "icon_storage"
+const QUEST_ICON := "icon_quest"
+const STORY_ICON := "icon_story"
+const ORDER_ICON := "icon_order"
 
 # 화면이 실제로 있는 메뉴만 둔다.
 # 상점·설정은 화면이 없어 버튼을 만들지 않는다(누를 곳 없는 버튼을 만들지 않는다).
@@ -194,7 +193,7 @@ func _fill_nameplate() -> void:
 	plate.add_child(row)
 
 	for role in character.get_roles():
-		var icon := _make_icon(ROLE_ICON_PATH.get(role, ""), UITheme.ICON_ROUND)
+		var icon := _make_icon(ROLE_ICON_NAME.get(role, ""), UITheme.ICON_ROUND)
 		if icon != null:
 			row.add_child(icon)
 	row.add_child(_text(character.display_name, 18, UITheme.INK_ON_DARK))
@@ -335,7 +334,7 @@ func _make_currency_chip(currency_type: String) -> Control:
 	row.add_theme_constant_override("separation", 4)
 	chip.add_child(row)
 
-	var icon := _make_icon(CURRENCY_ICON_PATH % currency_type, UITheme.ICON_PILL)
+	var icon := _make_icon(UITheme.currency_icon_name(currency_type), UITheme.ICON_PILL)
 	if icon != null:
 		row.add_child(icon)
 
@@ -528,8 +527,8 @@ func _chip_text(value: String) -> Control:
 	return plate
 
 
-func _make_icon(path: String, size: int) -> TextureRect:
-	var texture := _load_texture(path)
+func _make_icon(icon_name: String, size: int) -> TextureRect:
+	var texture := _load_texture(icon_name)
 	if texture == null:
 		return null
 	var rect := TextureRect.new()
@@ -540,8 +539,10 @@ func _make_icon(path: String, size: int) -> TextureRect:
 	return rect
 
 
-func _load_texture(path: String) -> Texture2D:
-	if path.is_empty() or not ResourceLoader.exists(path):
+# 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.
+func _load_texture(icon_name: String) -> Texture2D:
+	var path := UITheme.icon_path(icon_name)
+	if path.is_empty():
 		return null
 	return load(path) as Texture2D
 

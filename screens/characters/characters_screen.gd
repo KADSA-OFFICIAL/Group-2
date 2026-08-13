@@ -15,21 +15,21 @@ extends Control
 #
 # 참고: docs/combat-screen-design.md §1, SYSTEM_CONVENTIONS.md
 
-const ROLE_ICON_PATH := {
-	CharacterData.Role.TANK: "res://assets/sprites/ui/icons/icon_role_tank.svg",
-	CharacterData.Role.RANGED_DEALER: "res://assets/sprites/ui/icons/icon_role_ranged_dealer.svg",
-	CharacterData.Role.BUFFER: "res://assets/sprites/ui/icons/icon_role_buffer.svg",
+const ROLE_ICON_NAME := {
+	CharacterData.Role.TANK: "icon_role_tank",
+	CharacterData.Role.RANGED_DEALER: "icon_role_ranged_dealer",
+	CharacterData.Role.BUFFER: "icon_role_buffer",
 }
 
 # 슬롯 -> 아이콘 경로 대응표. **슬롯 목록의 출처가 아니다**(출처는 EquipmentData.Slot).
 # 여기 없는 슬롯은 아이콘만 생략되고 행 자체는 그려진다.
-const SLOT_ICON_PATH := {
-	EquipmentData.Slot.WEAPON: "res://assets/sprites/ui/icons/icon_slot_weapon.svg",
-	EquipmentData.Slot.ARMOR: "res://assets/sprites/ui/icons/icon_slot_armor.svg",
-	EquipmentData.Slot.ACCESSORY: "res://assets/sprites/ui/icons/icon_slot_accessory.svg",
+const SLOT_ICON_NAME := {
+	EquipmentData.Slot.WEAPON: "icon_slot_weapon",
+	EquipmentData.Slot.ARMOR: "icon_slot_armor",
+	EquipmentData.Slot.ACCESSORY: "icon_slot_accessory",
 }
 
-const BACK_ICON := "res://assets/sprites/ui/icons/icon_back.svg"
+const BACK_ICON := "icon_back"
 
 var _selected_id: StringName = &""
 var _roster_grid: GridContainer
@@ -170,7 +170,7 @@ func _make_roster_card(id: StringName) -> Control:
 		box.add_child(role_row)
 		# 겸직이면 get_roles() 가 2개를 돌려주므로 아이콘도 2개가 붙는다.
 		for role in character.get_roles():
-			var icon := _icon(ROLE_ICON_PATH.get(role, ""), 18)
+			var icon := _icon(ROLE_ICON_NAME.get(role, ""), 18)
 			if icon != null:
 				role_row.add_child(icon)
 
@@ -205,7 +205,7 @@ func _refresh_detail() -> void:
 	role_row.add_theme_constant_override("separation", 4)
 	_detail_holder.add_child(role_row)
 	for role in character.get_roles():
-		var icon := _icon(ROLE_ICON_PATH.get(role, ""), 20)
+		var icon := _icon(ROLE_ICON_NAME.get(role, ""), 20)
 		if icon != null:
 			role_row.add_child(icon)
 	role_row.add_child(_text(character.get_roles_display_name(), 14, UITheme.INK_DIM))
@@ -231,7 +231,7 @@ func _refresh_detail() -> void:
 	_detail_holder.add_child(HSeparator.new())
 
 	# 장비: EquipmentData.Slot 을 순회한다. 슬롯 목록을 화면에서 정의하지 않는다.
-	# (SLOT_ICON_PATH 는 아이콘 경로 대응표일 뿐이다. 그걸 순회하면 새 슬롯이 조용히 빠진다.)
+	# (SLOT_ICON_NAME 는 아이콘 경로 대응표일 뿐이다. 그걸 순회하면 새 슬롯이 조용히 빠진다.)
 	_detail_holder.add_child(_text("장비", 16, UITheme.INK))
 	for slot in EquipmentData.Slot.values():
 		_add_slot_row(character, slot)
@@ -263,7 +263,7 @@ func _add_slot_row(character: CharacterData, slot: int) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 
-	var icon := _icon(SLOT_ICON_PATH.get(slot, ""), 20)
+	var icon := _icon(SLOT_ICON_NAME.get(slot, ""), 20)
 	if icon != null:
 		row.add_child(icon)
 
@@ -301,8 +301,8 @@ func _text(value: String, size: int, color: Color) -> Label:
 	return label
 
 
-func _icon(path: String, size: int) -> TextureRect:
-	var texture := _texture(path)
+func _icon(icon_name: String, size: int) -> TextureRect:
+	var texture := _texture(icon_name)
 	if texture == null:
 		return null
 	var rect := TextureRect.new()
@@ -313,7 +313,9 @@ func _icon(path: String, size: int) -> TextureRect:
 	return rect
 
 
-func _texture(path: String) -> Texture2D:
-	if path.is_empty() or not ResourceLoader.exists(path):
+# 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.
+func _texture(icon_name: String) -> Texture2D:
+	var path := UITheme.icon_path(icon_name)
+	if path.is_empty():
 		return null
 	return load(path) as Texture2D

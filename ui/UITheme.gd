@@ -14,6 +14,43 @@ extends RefCounted
 #
 # 참고: SYSTEM_CONVENTIONS.md (단일 출처), assets/sprites/ui/icons/
 
+# ===== 아이콘 경로 (Icon paths) =====
+# 아이콘이 어디 있고 확장자가 무엇인지는 **여기만 안다.**
+#
+# 왜 모았는가: 화면 6개에 "res://assets/.../icon_xxx.svg" 가 39곳 흩어져 있었다.
+# 아트를 PNG 로 교체할 때마다 그 39곳을 다 고쳐야 했고, 한 곳만 놓치면
+# 아이콘이 조용히 사라졌다(_texture() 가 없는 파일에 null 을 돌려준다).
+#
+# 확장자를 화면이 알 필요가 없다. 새 아트는 PNG 로 들어오고 아직 교체되지 않은 것은
+# SVG 이므로, 있는 쪽을 골라 준다. PNG 를 먼저 찾아 교체본이 우선하게 한다.
+const ICON_DIR := "res://assets/sprites/ui/icons"
+const ICON_EXTENSIONS := [".png", ".svg"]
+
+# 아이콘 이름 -> 실제 경로 캐시. 같은 아이콘을 매 프레임 조회해도 파일을 다시 찾지 않는다.
+static var _icon_paths: Dictionary = {}
+
+# 아이콘 이름("icon_story")으로 실제 경로를 얻는다. 없으면 빈 문자열.
+# 호출부는 확장자를 적지 않는다.
+static func icon_path(icon_name: String) -> String:
+	if _icon_paths.has(icon_name):
+		return _icon_paths[icon_name]
+
+	var found := ""
+	for extension in ICON_EXTENSIONS:
+		var candidate: String = ICON_DIR.path_join(icon_name + extension)
+		if ResourceLoader.exists(candidate):
+			found = candidate
+			break
+
+	_icon_paths[icon_name] = found
+	return found
+
+
+# 재화 아이콘 이름. "재화 id 로 아이콘 이름을 만든다"는 규칙이 이 한 곳에만 있다.
+static func currency_icon_name(currency_type: String) -> String:
+	return "icon_" + currency_type
+
+
 # ===== 팔레트 (아이콘과 동일한 값) =====
 # 아이콘 SVG의 색과 1:1로 대응한다. 값을 바꾸면 아이콘도 함께 바꿔야 한다.
 const OUTLINE := Color("6E6558")       # 진회갈 윤곽선

@@ -17,13 +17,13 @@ extends Control
 #
 # 참고: docs/combat-screen-design.md §10, SYSTEM_CONVENTIONS.md
 
-const BACK_ICON := "res://assets/sprites/ui/icons/icon_back.svg"
-const EQUIPMENT_ICON := "res://assets/sprites/ui/icons/icon_equipment.svg"
+const BACK_ICON := "icon_back"
+const EQUIPMENT_ICON := "icon_equipment"
 
-const SLOT_ICON_PATH := {
-	EquipmentData.Slot.WEAPON: "res://assets/sprites/ui/icons/icon_slot_weapon.svg",
-	EquipmentData.Slot.ARMOR: "res://assets/sprites/ui/icons/icon_slot_armor.svg",
-	EquipmentData.Slot.ACCESSORY: "res://assets/sprites/ui/icons/icon_slot_accessory.svg",
+const SLOT_ICON_NAME := {
+	EquipmentData.Slot.WEAPON: "icon_slot_weapon",
+	EquipmentData.Slot.ARMOR: "icon_slot_armor",
+	EquipmentData.Slot.ACCESSORY: "icon_slot_accessory",
 }
 
 var _selected_id: StringName = &""
@@ -167,7 +167,7 @@ func _refresh_slots() -> void:
 		return
 
 	# 슬롯 목록은 EquipmentData.Slot 이 출처다. 화면에서 정의하지 않는다.
-	# (아래 SLOT_ICON_PATH 는 아이콘 경로 대응표일 뿐 슬롯 목록이 아니다.
+	# (아래 SLOT_ICON_NAME 는 아이콘 경로 대응표일 뿐 슬롯 목록이 아니다.
 	#  그걸 순회하면 새 슬롯이 추가돼도 조용히 빠진다.)
 	for slot in EquipmentData.Slot.values():
 		_slot_holder.add_child(_make_slot_panel(character, slot))
@@ -187,7 +187,7 @@ func _make_slot_panel(character: CharacterData, slot: int) -> Control:
 	head.add_theme_constant_override("separation", 8)
 	box.add_child(head)
 
-	var icon := _icon(SLOT_ICON_PATH.get(slot, ""), 28)
+	var icon := _icon(SLOT_ICON_NAME.get(slot, ""), 28)
 	if icon != null:
 		head.add_child(icon)
 
@@ -334,8 +334,8 @@ func _text(value: String, size: int, color: Color) -> Label:
 	return label
 
 
-func _icon(path: String, size: int) -> TextureRect:
-	var texture := _texture(path)
+func _icon(icon_name: String, size: int) -> TextureRect:
+	var texture := _texture(icon_name)
 	if texture == null:
 		return null
 	var rect := TextureRect.new()
@@ -346,7 +346,9 @@ func _icon(path: String, size: int) -> TextureRect:
 	return rect
 
 
-func _texture(path: String) -> Texture2D:
-	if path.is_empty() or not ResourceLoader.exists(path):
+# 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.
+func _texture(icon_name: String) -> Texture2D:
+	var path := UITheme.icon_path(icon_name)
+	if path.is_empty():
 		return null
 	return load(path) as Texture2D
