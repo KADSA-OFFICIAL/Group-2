@@ -34,8 +34,14 @@ var _members: Array[CharacterData] = []
 var _controlled_index: int = NO_CONTROL
 
 
+# 저장 스키마에서 편성이 들어가는 키.
+const SAVE_KEY := "party"
+
+
 func _ready() -> void:
 	name = "PartySystem"
+	# 저장 스키마의 편성 부분은 이 시스템이 소유한다(SaveSystem은 내부를 모른다).
+	SaveSystem.register_provider(SAVE_KEY, self)
 
 
 # ===== 편성 (Composition) =====
@@ -138,6 +144,40 @@ func switch_next() -> bool:
 	if _members.is_empty():
 		return false
 	return switch_to((_controlled_index + 1) % _members.size())
+
+
+# ===== 저장/복원 (Save / Load) =====
+# SaveSystem은 이 두 함수만 호출한다.
+# 캐릭터 정의는 저장하지 않고 character_id만 남긴다(정의의 출처는 CharacterDatabase다).
+
+func to_save_dict() -> Dictionary:
+	var ids: Array[String] = []
+	for m in _members:
+		if m != null:
+			ids.append(String(m.character_id))
+	return {
+		"members": ids,
+		"controlled": _controlled_index,
+	}
+
+func from_save_dict(data: Dictionary) -> void:
+	var ids: Array = []
+	for raw in data.get("members", []):
+		var key := StringName(raw)
+		# 로스터가 바뀌어 사라진 캐릭터는 편성에서 빼고 나머지를 복원한다.
+		# (set_party는 하나라도 문제가 있으면 전부 거부하므로 여기서 걸러 준다.)
+		if CharacterDatabase.has_character(key):
+			ids.append(key)
+		else:
+			push_warning("PartySystem: 세이브의 알 수 없는 character_id(건너뜀): " + String(key))
+
+	if not set_party(ids):
+		return
+
+	# 조종 대상 복원. 범위를 벗어나면 set_party가 잡아 둔 기본값(0번)을 유지한다.
+	var controlled := int(data.get("controlled", 0))
+	if controlled >= 0 and controlled < _members.size():
+		switch_to(controlled)
 
 
 func _unhandled_input(event: InputEvent) -> void:
