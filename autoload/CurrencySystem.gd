@@ -17,6 +17,37 @@ const DEFAULT_CURRENCIES := {
 # 저장 스키마에서 재화가 들어가는 키. 기존 세이브 파일과 같은 키를 유지한다.
 const SAVE_KEY := "currencies"
 
+
+# 메인화면처럼 좁은 자리에 상시 노출할 "주요 재화".
+# 어떤 재화가 중요한지는 재화 도메인의 지식이므로 화면이 아니라 여기서 정한다.
+# (화면마다 각자 고르면 화면끼리 목록이 어긋난다.)
+#
+# 위 주석의 분류를 그대로 따랐다: 통화(gold) + 특수 재화(faith_stone).
+# 나머지(제작 재료)는 창고 화면에서 전부 볼 수 있다.
+# 자리 제약상 최대 MAX_PRIMARY 개까지만 둔다.
+const MAX_PRIMARY: int = 3
+const PRIMARY_CURRENCIES := ["gold", "faith_stone"]
+
+
+# 주요 재화 목록. 상한을 넘게 저작되어도 화면이 깨지지 않도록 잘라서 돌려준다.
+func get_primary_currencies() -> Array:
+	var out: Array = []
+	for currency_type in PRIMARY_CURRENCIES:
+		if DEFAULT_CURRENCIES.has(currency_type) and out.size() < MAX_PRIMARY:
+			out.append(currency_type)
+	return out
+
+
+# 주요 재화를 뺀 나머지(창고에서 보여줄 재화).
+func get_secondary_currencies() -> Array:
+	var primary := get_primary_currencies()
+	var out: Array = []
+	for currency_type in DEFAULT_CURRENCIES:
+		if not primary.has(currency_type):
+			out.append(currency_type)
+	return out
+
+
 # Dictionary to store currency amounts
 var currencies: Dictionary = {}
 

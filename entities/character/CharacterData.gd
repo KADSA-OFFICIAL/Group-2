@@ -53,6 +53,12 @@ enum SecondaryRole {
 @export var tint: Color = Color.WHITE
 @export var sprite_scale: Vector2 = Vector2(2, 2)
 
+# 메타 화면(메인화면 등)에서 크게 보여주는 전신 일러스트.
+# 전투용 sprite_texture 와 용도가 다르므로 필드를 나눈다.
+# 기본값 null 이며, 비어 있으면 화면이 tint 색 플레이스홀더로 대체한다.
+# (docs §0: 아트 확정 전까지는 도형 플레이스홀더를 쓴다.)
+@export var portrait: Texture2D = null
+
 # ===== 장비 (Equipment) =====
 # 슬롯당 1개 장착. 장착/해제 시 스텟에 보너스를 합산/원복한다.
 # 착탈 오케스트레이션·제작·인벤토리는 EquipmentSystem(autoload)이 담당한다.
