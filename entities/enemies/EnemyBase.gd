@@ -27,15 +27,32 @@ var _attack_cooldown_left: float = 0.0
 # Node2D로 타입을 잡아 global_position 접근이 정적으로 안전하게 한다.
 var _target: Node2D = null
 
+# 이 개체가 소유하는 런타임 스텟. 정의(EnemyData)의 스텟 사본이다.
+#
+# 왜 사본인가: .tres는 경로 기준으로 캐시되므로, 같은 종류의 적을 여러 마리 스폰하면
+# EnemyData와 그 안의 PlayerStats가 **하나로 공유된다**(StoneSpearman.tscn이 data를
+# ExtResource로 참조하므로 인스턴스마다 같은 리소스를 가리킨다).
+# 지금은 스텟을 읽기만 해서 무해하지만, StatusEffectData가 PlayerStats의 버프 채널을
+# 대상으로 삼기 때문에 한 마리에 건 디버프가 같은 종류 전체에 걸린다.
+# 정의(.tres)는 읽기 전용 데이터로 남기고, 전투 중 변하는 값은 개체가 소유한다.
+var _runtime_stats: PlayerStats = null
+
 # 유효한 스텟 출처를 반환한다.
-# data가 설정되어 있으면 그 정의의 스텟이 우선한다(적 정의가 단일 출처).
+# data가 설정되어 있으면 그 정의의 스텟이 사본의 바탕이 된다(적 정의가 단일 출처).
 # 스텟 계산은 언제나 PlayerStats가 소유하므로 여기서 수치를 다시 만들지 않는다.
 func get_stats() -> PlayerStats:
-	if data != null:
-		return data.get_stats()
-	if stats == null:
-		stats = PlayerStats.new()
-	return stats
+	if _runtime_stats == null:
+		_runtime_stats = _make_runtime_stats()
+	return _runtime_stats
+
+# 정의(또는 씬에 주입된 stats)에서 이 개체만의 스텟 사본을 만든다.
+# 처음 get_stats()가 불릴 때 한 번만 만들어지므로, 씬이 export로 주입한 값이 반영된 뒤다.
+# duplicate(true): 이후 PlayerStats에 하위 리소스가 추가되어도 같이 복제되게 한다.
+func _make_runtime_stats() -> PlayerStats:
+	var source: PlayerStats = data.get_stats() if data != null else stats
+	if source == null:
+		return PlayerStats.new()
+	return source.duplicate(true)
 
 func _ready():
 	GameManager.register_enemy(self)
