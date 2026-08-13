@@ -55,6 +55,14 @@ const ICON_CTA: int = 26               # 출격 등 주요 버튼
 # 완전히 불투명하면 그림을 가리고, 너무 옅으면 글자가 안 읽힌다.
 const OVERLAY_ALPHA: float = 0.62
 
+# 오버레이 테두리. 상단 칩·원형 버튼처럼 일러스트 위에 얹히는 것들에 쓴다.
+#
+# 아래 패널(panel_box 등)의 BORDER_WIDTH(3)보다 얇고 옅다.
+# 굵은 테두리는 아이콘 자체의 윤곽선과 겹쳐 답답해 보이고, 작은 칩에서는
+# 테두리가 내용보다 눈에 띈다. 형태만 겨우 잡히는 정도로 둔다.
+const OVERLAY_BORDER_WIDTH: int = 1
+const OVERLAY_LINE_ALPHA: float = 0.28
+
 
 # ===== StyleBox 빌더 =====
 
@@ -89,17 +97,23 @@ static func flat_box(fill: Color, radius: int = RADIUS) -> StyleBoxFlat:
 
 # 반투명 패널. 상·하단 바처럼 넓은 면에 쓴다.
 static func overlay_box(radius: int = RADIUS) -> StyleBoxFlat:
-	return _box(_alpha(BG, OVERLAY_ALPHA), _alpha(LINE, 0.55), radius, 2)
+	return _box(_alpha(BG, OVERLAY_ALPHA), _overlay_line(), radius, OVERLAY_BORDER_WIDTH)
 
 
 # 반투명 알약. 재화 칩·작은 버튼에 쓴다.
 static func overlay_pill(fill: Color = BG) -> StyleBoxFlat:
-	return _box(_alpha(fill, OVERLAY_ALPHA), _alpha(LINE, 0.55), RADIUS_PILL, 2)
+	return _box(_alpha(fill, OVERLAY_ALPHA), _overlay_line(), RADIUS_PILL, OVERLAY_BORDER_WIDTH)
 
 
 # 강조 알약(출격 CTA). 주요 동작이므로 오버레이 중 유일하게 불투명에 가깝다.
+# 테두리는 다른 오버레이와 같은 두께로 얇게 둔다. 굵으면 아이콘 윤곽선과 겹쳐 뭉개진다.
 static func overlay_accent(radius: int = RADIUS) -> StyleBoxFlat:
-	return _box(_alpha(ACCENT, 0.92), LINE, radius, BORDER_WIDTH)
+	return _box(_alpha(ACCENT, 0.92), _alpha(LINE, 0.45), radius, OVERLAY_BORDER_WIDTH)
+
+
+# 오버레이용 테두리색. 얇게 + 옅게가 이 한 곳에서 정해진다.
+static func _overlay_line() -> Color:
+	return _alpha(LINE, OVERLAY_LINE_ALPHA)
 
 
 static func _alpha(color: Color, a: float) -> Color:
