@@ -8,9 +8,14 @@ extends Control
 #   3) 상·하단 바는 얇게, 아이콘은 작게(UITheme.ICON_*). 화면 가운데를 비워 둔다.
 #   4) 크기로 위계를 준다. 출격 CTA만 크고 밝게, 나머지 메뉴는 작고 차분하게.
 #
-#   상단   프로필 · 주요 재화 · 창고/상점 원형 버튼
+#   상단   프로필 · 주요 재화 · 창고/설정 원형 버튼 · 길라잡이 + 퀘스트
 #   중앙   대표 캐릭터 전신 일러스트 (배경 레이어) + 좌하단 이름표
 #   하단   메뉴 탭 + 출격 CTA
+#
+# 상단과 하단의 성격을 갈라 둔다:
+#   하단 = 게임을 하는 메뉴(편성/캐릭터/장비/제조)
+#   상단 = 게임을 둘러싼 기능(재화 확인, 설정)
+# 한국 게임 메인화면의 관례이며, 섞으면 줄이 길어지고 무엇이 중요한지 흐려진다.
 #
 # 메인화면에 두지 않은 것과 그 이유:
 #   - 파티 목록 / 시너지: 편성 화면에서 짜고 그 자리에서 미리보기까지 하므로
@@ -39,18 +44,23 @@ const EQUIPMENT_ICON := "icon_equipment"
 const CRAFT_ICON := "icon_craft"
 const STORAGE_ICON := "icon_storage"
 const QUEST_ICON := "icon_quest"
-const STORY_ICON := "icon_story"
-const ORDER_ICON := "icon_order"
+const SETTINGS_ICON := "icon_settings"
 
-# 화면이 실제로 있는 메뉴만 둔다.
-# 상점·설정은 화면이 없어 버튼을 만들지 않는다(누를 곳 없는 버튼을 만들지 않는다).
-# 상점 아이콘(icon_shop.svg)은 화면이 생길 때 바로 쓸 수 있도록 준비만 되어 있다.
+# 아직 화면이 없는 메뉴의 아이콘은 여기 상수로 두지 않는다.
+# 상수만 남으면 "곧 붙는다"처럼 보이지만 실제로는 아무 데도 쓰이지 않는다.
+# 아트는 assets/sprites/ui/icons 에 준비되어 있다:
+#   icon_story(스토리) / icon_order(교단) / icon_mail(우편) / icon_shop(상점)
+# 화면이 생기면 그때 상수를 만들고 하단 줄이나 상단 묶음에 넣는다.
+
+# 화면이 실제로 있는 메뉴만 버튼으로 만든다.
+# 눌러도 아무 일이 없는 버튼은 기능을 더하지 않고 화면만 난잡하게 만든다.
 const FORMATION_SCREEN := preload("res://screens/formation/FormationScreen.tscn")
 const CHARACTERS_SCREEN := preload("res://screens/characters/CharactersScreen.tscn")
 const EQUIPMENT_SCREEN := preload("res://screens/equipment/EquipmentScreen.tscn")
 const CRAFT_SCREEN := preload("res://screens/craft/CraftScreen.tscn")
 const STORAGE_SCREEN := preload("res://screens/storage/StorageScreen.tscn")
 const STAGE_SELECT_SCREEN := preload("res://screens/stage/StageSelectScreen.tscn")
+const SETTINGS_SCREEN := preload("res://screens/settings/SettingsScreen.tscn")
 
 # 길라잡이 단계 -> 데려갈 화면.
 # GuideSystem 은 화면을 알지 않는다(인프라가 화면에 의존하면 안 된다). 그 대응을 여기서 한다.
@@ -208,7 +218,7 @@ func _fill_nameplate() -> void:
 
 # ── 상단: 프로필 · 주요 재화 · 원형 버튼 ──
 # 두 줄이다.
-#   1줄: 프로필 | (빈칸) | 주요 재화 | 창고
+#   1줄: 프로필 | (빈칸) | 주요 재화 | 창고 | 설정
 #   2줄:              (빈칸) | 길라잡이 문구 | 퀘스트
 # 퀘스트를 재화·창고 바로 아래에 두어 우측 상단을 하나의 묶음으로 읽히게 한다.
 func _build_top_bar() -> Control:
@@ -230,8 +240,11 @@ func _build_top_bar() -> Control:
 	for currency_type in CurrencySystem.get_primary_currencies():
 		bar.add_child(_make_currency_chip(String(currency_type)))
 
-	# 창고: 나머지 재화는 여기서 본다.
+	# 우측 끝 작은 아이콘 묶음. 재화를 보는 창고와 설정.
+	# 한국 게임 메인화면의 관례대로 "게임을 하는 메뉴"(하단)와
+	# "게임을 둘러싼 기능"(상단 우측)을 갈라 둔다.
 	bar.add_child(_make_round_button(STORAGE_ICON, "창고", STORAGE_SCREEN))
+	bar.add_child(_make_round_button(SETTINGS_ICON, "설정", SETTINGS_SCREEN))
 
 	# 퀘스트 줄: 길라잡이 문구가 퀘스트 아이콘 왼쪽에 붙는다.
 	var quest_row := HBoxContainer.new()
@@ -375,10 +388,6 @@ func _build_bottom_bar() -> Control:
 	row.add_child(_make_tab("캐릭터", CHARACTERS_ICON, CHARACTERS_SCREEN))
 	row.add_child(_make_tab("장비", EQUIPMENT_ICON, EQUIPMENT_SCREEN))
 	row.add_child(_make_tab("제조", CRAFT_ICON, CRAFT_SCREEN))
-	# 스토리·교단은 아직 시스템이 없어 누를 수 없다. 자리는 나머지 메뉴와 같은 줄에 둔다.
-	# (누르면 아무 일도 없는 버튼을 두지 않는다. 시스템이 생기면 화면만 연결하면 된다.)
-	row.add_child(_make_tab("스토리", STORY_ICON, null))
-	row.add_child(_make_tab("교단", ORDER_ICON, null))
 
 	row.add_child(_expanding_gap())
 
@@ -388,10 +397,9 @@ func _build_bottom_bar() -> Control:
 
 # 하단 메뉴 버튼: 아이콘 위 + 라벨 아래. 테두리·배경 패널을 두지 않는다.
 # 아이콘 자체에 이미 굵은 윤곽선이 있어 사각 프레임을 덧대면 답답해진다.
-# scene 이 null 이면 화면이 없는 메뉴다. 흐리게 그리고 누를 수 없게 둔다.
+# 하단 줄에는 **화면이 있는 메뉴만** 둔다.
+# 눌러도 아무 일이 없는 버튼은 화면을 난잡하게만 만든다.
 func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
-	var ready_to_open := scene != null
-
 	var holder := Control.new()
 	holder.custom_minimum_size = Vector2(58, 62)
 
@@ -405,9 +413,6 @@ func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 	var icon := _make_icon(icon_path, UITheme.ICON_NAV)
 	if icon != null:
 		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		# 화면이 없는 메뉴는 반투명하게 그려 "지금은 못 들어간다"를 알린다.
-		if not ready_to_open:
-			icon.modulate = Color(1, 1, 1, 0.4)
 		box.add_child(icon)
 
 	# 라벨은 그림 위에 바로 얹히므로 외곽선을 넣어 어떤 배경에서도 읽히게 한다.
@@ -415,8 +420,6 @@ func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	text.add_theme_color_override("font_outline_color", UITheme.OUTLINE)
 	text.add_theme_constant_override("outline_size", 4)
-	if not ready_to_open:
-		text.modulate = Color(1, 1, 1, 0.45)
 	box.add_child(text)
 
 	# 눌리는 영역만 담당하는 투명 버튼. 배경·테두리 없음.
@@ -427,11 +430,8 @@ func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 	button.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
 	button.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
 	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	if ready_to_open:
-		button.pressed.connect(func(): ScreenManager.push(scene))
-	else:
-		button.disabled = true
-		button.tooltip_text = "%s — 준비 중(시스템 없음)" % label
+	button.tooltip_text = label
+	button.pressed.connect(func(): ScreenManager.push(scene))
 	holder.add_child(button)
 	return holder
 
