@@ -50,6 +50,7 @@ const CHARACTERS_SCREEN := preload("res://screens/characters/CharactersScreen.ts
 const EQUIPMENT_SCREEN := preload("res://screens/equipment/EquipmentScreen.tscn")
 const CRAFT_SCREEN := preload("res://screens/craft/CraftScreen.tscn")
 const STORAGE_SCREEN := preload("res://screens/storage/StorageScreen.tscn")
+const STAGE_SELECT_SCREEN := preload("res://screens/stage/StageSelectScreen.tscn")
 
 # 길라잡이 단계 -> 데려갈 화면.
 # GuideSystem 은 화면을 알지 않는다(인프라가 화면에 의존하면 안 된다). 그 대응을 여기서 한다.
@@ -281,11 +282,12 @@ func _fill_guide() -> void:
 
 
 # 길라잡이를 누르면 그 단계의 화면으로 간다.
-# 남은 안내가 없으면(READY) 화면을 닫아 게임플레이를 드러낸다 — 출격과 같은 동작이다.
+# 남은 안내가 없으면(READY) 출격 버튼과 **똑같이** 스테이지 선택으로 보낸다.
+# 같은 뜻의 두 입구가 서로 다른 곳으로 가면 안 된다.
 func _on_guide_pressed() -> void:
 	var target = GUIDE_TARGET.get(GuideSystem.get_step())
 	if target == null:
-		ScreenManager.pop()
+		_on_battle_pressed()
 		return
 	ScreenManager.push(target)
 
@@ -483,10 +485,11 @@ func _build_battle_button() -> Control:
 	return holder
 
 
-# 출격 = 이 화면을 닫아 게임플레이를 드러낸다.
-# 어떤 스테이지로 갈지 고르는 것은 이 화면의 책임이 아니다(스테이지 선택은 후속).
+# 출격 = 스테이지 선택 화면을 연다.
+# 어떤 스테이지가 있는지는 StageDatabase 가 안다. 이 화면은 목록을 모른다.
+# (스테이지가 저작되지 않았으면 선택 화면이 그 사실을 알리고 바로 출격할 길을 준다.)
 func _on_battle_pressed() -> void:
-	ScreenManager.pop()
+	ScreenManager.push(STAGE_SELECT_SCREEN)
 
 
 func _on_currency_changed(currency_type: String, _amount: int, new_balance: int) -> void:
