@@ -50,6 +50,24 @@ func craft(equipment_id: StringName) -> bool:
 
 # ===== 보유 인벤토리 (Inventory) =====
 
+# 제작이 아닌 경로로 장비를 지급한다 (상점 구매, 우편 수령 등).
+#
+# 인벤토리의 소유자가 이 시스템이므로 지급도 여기서 한다.
+# 상점/우편이 _inventory 를 직접 만지면 보유 수량의 출처가 흩어진다.
+#
+# 재화 차감은 하지 않는다. 대가를 받는 쪽(상점)이 자기 책임으로 처리한다.
+func grant(equipment_id: StringName, count: int = 1) -> bool:
+	if count <= 0:
+		return false
+	if not EquipmentDatabase.has_equipment(equipment_id):
+		push_warning("EquipmentSystem: 알 수 없는 equipment_id 지급 시도: " + String(equipment_id))
+		return false
+
+	_inventory[equipment_id] = get_owned_count(equipment_id) + count
+	EventBus.equipment_granted.emit(equipment_id, count)
+	return true
+
+
 func get_owned_count(equipment_id: StringName) -> int:
 	return int(_inventory.get(equipment_id, 0))
 

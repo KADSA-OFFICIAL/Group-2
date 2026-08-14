@@ -41,3 +41,11 @@ signal equipment_crafted(equipment_id: StringName)
 signal equipment_equipped(character_id: StringName, equipment_id: StringName, slot: int)
 @warning_ignore("unused_signal")
 signal equipment_unequipped(character_id: StringName, slot: int)
+
+# 장비가 인벤토리에 들어옴 (제작 외의 경로 — 상점 구매, 우편 수령 등).
+# 제작은 equipment_crafted 를 따로 쏘므로 둘을 구분해 들을 수 있다.
+signal equipment_granted(equipment_id: StringName, count: int)
+
+# ===== 우편 (Mail) =====
+signal mail_added(mail_id: int)
+signal mail_claimed(mail_id: int)

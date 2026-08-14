@@ -45,11 +45,12 @@ const CRAFT_ICON := "icon_craft"
 const STORAGE_ICON := "icon_storage"
 const QUEST_ICON := "icon_quest"
 const SETTINGS_ICON := "icon_settings"
+const SHOP_ICON := "icon_shop"
+const MAIL_ICON := "icon_mail"
 
 # 아직 화면이 없는 메뉴의 아이콘은 여기 상수로 두지 않는다.
 # 상수만 남으면 "곧 붙는다"처럼 보이지만 실제로는 아무 데도 쓰이지 않는다.
-# 아트는 assets/sprites/ui/icons 에 준비되어 있다:
-#   icon_story(스토리) / icon_order(교단) / icon_mail(우편) / icon_shop(상점)
+# 아트는 assets/sprites/ui/icons 에 준비되어 있다: icon_story(스토리) / icon_order(교단).
 # 화면이 생기면 그때 상수를 만들고 하단 줄이나 상단 묶음에 넣는다.
 
 # 화면이 실제로 있는 메뉴만 버튼으로 만든다.
@@ -61,6 +62,8 @@ const CRAFT_SCREEN := preload("res://screens/craft/CraftScreen.tscn")
 const STORAGE_SCREEN := preload("res://screens/storage/StorageScreen.tscn")
 const STAGE_SELECT_SCREEN := preload("res://screens/stage/StageSelectScreen.tscn")
 const SETTINGS_SCREEN := preload("res://screens/settings/SettingsScreen.tscn")
+const SHOP_SCREEN := preload("res://screens/shop/ShopScreen.tscn")
+const MAIL_SCREEN := preload("res://screens/mail/MailScreen.tscn")
 
 # 길라잡이 단계 -> 데려갈 화면.
 # GuideSystem 은 화면을 알지 않는다(인프라가 화면에 의존하면 안 된다). 그 대응을 여기서 한다.
@@ -78,6 +81,7 @@ var _art_layer: Control      # 화면을 채우는 일러스트 레이어
 var _nameplate: Control      # 좌하단 이름표
 var _profile_holder: Control # 상단 프로필 칩이 들어가는 자리
 var _guide_holder: Control   # 길라잡이 문구가 들어가는 자리 (퀘스트 아이콘 옆)
+var _mail_holder: Control    # 우편 버튼 자리 (미수령 배지 때문에 다시 채운다)
 
 
 func _ready() -> void:
@@ -91,6 +95,9 @@ func _ready() -> void:
 	PlayerProfile.profile_changed.connect(_fill_profile)
 	# 다음에 할 일의 출처는 GuideSystem 이다. 여기서 판정하지 않는다.
 	GuideSystem.step_changed.connect(func(_step): _fill_guide())
+	# 우편 미수령 개수의 출처는 MailSystem 이다. 여기서 세지 않는다.
+	EventBus.mail_added.connect(func(_id): _fill_mail_button())
+	EventBus.mail_claimed.connect(func(_id): _fill_mail_button())
 
 
 func _refresh_featured() -> void:
@@ -243,6 +250,11 @@ func _build_top_bar() -> Control:
 	# 우측 끝 작은 아이콘 묶음. 재화를 보는 창고와 설정.
 	# 한국 게임 메인화면의 관례대로 "게임을 하는 메뉴"(하단)와
 	# "게임을 둘러싼 기능"(상단 우측)을 갈라 둔다.
+	bar.add_child(_make_round_button(SHOP_ICON, "상점", SHOP_SCREEN))
+	# 우편은 받지 않은 개수를 배지로 알린다. 자리를 잡아 두고 개수만 갈아 끼운다.
+	_mail_holder = HBoxContainer.new()
+	bar.add_child(_mail_holder)
+	_fill_mail_button()
 	bar.add_child(_make_round_button(STORAGE_ICON, "창고", STORAGE_SCREEN))
 	bar.add_child(_make_round_button(SETTINGS_ICON, "설정", SETTINGS_SCREEN))
 
@@ -355,6 +367,21 @@ func _make_currency_chip(currency_type: String) -> Control:
 
 	var label := _text(_comma(CurrencySystem.get_balance(currency_type)), 13, UITheme.INK_ON_DARK)
 	row.add_child(label)
+
+	# 재화를 늘리러 가는 곳 = 상점. 상점 화면이 생겨서 이제 갈 곳이 있다.
+	# (작업 목록 4번이 "상점 화면이 생긴 뒤에 붙인다"고 남겨 둔 항목이다.)
+	var plus := Button.new()
+	plus.text = "+"
+	plus.tooltip_text = "상점"
+	plus.custom_minimum_size = Vector2(18, 18)
+	plus.add_theme_font_size_override("font_size", 13)
+	plus.add_theme_color_override("font_color", UITheme.ACCENT)
+	plus.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	plus.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
+	plus.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
+	plus.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	plus.pressed.connect(func(): ScreenManager.push(SHOP_SCREEN))
+	row.add_child(plus)
 
 	_currency_labels[currency_type] = label
 	return chip
@@ -560,3 +587,28 @@ func _comma(value: int) -> String:
 		if count % 3 == 0 and i != 0:
 			out = "," + out
 	return out
+
+
+# ── 우편 버튼 ──
+# 미수령 개수를 배지로 겹쳐 표시한다. 개수의 출처는 MailSystem 이다.
+func _fill_mail_button() -> void:
+	if not is_instance_valid(_mail_holder):
+		return
+	_clear(_mail_holder)
+
+	var button := _make_round_button(MAIL_ICON, "우편", MAIL_SCREEN)
+	_mail_holder.add_child(button)
+
+	var unclaimed := MailSystem.get_unclaimed_count()
+	if unclaimed <= 0:
+		return
+
+	# 배지는 버튼 위에 겹친다. 별도 칸을 만들면 줄이 길어진다.
+	var badge := PanelContainer.new()
+	badge.add_theme_stylebox_override("panel", UITheme.pill_box(UITheme.ACCENT))
+	badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	badge.offset_left = -10
+	badge.offset_top = -6
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.add_child(_text(str(unclaimed), 10, UITheme.INK))
+	button.add_child(badge)
