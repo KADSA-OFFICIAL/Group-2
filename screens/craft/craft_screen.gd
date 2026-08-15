@@ -18,6 +18,10 @@ extends Control
 const BACK_ICON := "icon_back"
 const CRAFT_ICON := "icon_craft"
 
+# 장비 화면 경로. preload 가 아니라 **경로만** 둔다(순환 참조 방지).
+# 자세한 이유는 equipment_screen.gd 의 같은 상수 주석 참고.
+const EQUIPMENT_SCREEN_PATH := "res://screens/equipment/EquipmentScreen.tscn"
+
 const SLOT_ICON_NAME := {
 	EquipmentData.Slot.WEAPON: "icon_slot_weapon",
 	EquipmentData.Slot.ARMOR: "icon_slot_armor",
@@ -104,6 +108,18 @@ func _build_header() -> Control:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(title)
+
+	# 만든 장비는 장비 화면에서 착용한다. 그 다음 걸음을 여기서 바로 잇는다.
+	var go_equip := Button.new()
+	go_equip.text = "장비"
+	go_equip.custom_minimum_size = Vector2(96, 40)
+	go_equip.add_theme_font_size_override("font_size", 14)
+	go_equip.add_theme_color_override("font_color", UITheme.INK)
+	go_equip.add_theme_stylebox_override("normal", UITheme.panel_box())
+	go_equip.add_theme_stylebox_override("hover", UITheme.panel_box())
+	go_equip.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
+	go_equip.pressed.connect(func(): ScreenManager.swap(load(EQUIPMENT_SCREEN_PATH)))
+	row.add_child(go_equip)
 	return row
 
 

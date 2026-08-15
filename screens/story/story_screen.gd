@@ -6,12 +6,12 @@ extends Control
 #
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
 #   챕터 목록·대본 -> StoryDatabase / StoryChapterData / StoryLineData
+#   읽음 여부      -> StoryProgress (화면이 따로 세지 않는다)
 #   색            -> UITheme
 #
 # 대본을 화면에 적어 두지 않는다. 전부 .tres 에서 읽는다.
 #
-# 지금은 "읽기"만 한다. 진행도 저장(어디까지 봤는가)과 전투 연결은 넣지 않았다.
-# 아래 주석 참고.
+# 전투 연결은 아직 없다(저작된 StageData 가 없다). 아래 _make_battle() 주석 참고.
 
 const BACK_ICON := "icon_back"
 const STORY_ICON := "icon_story"
@@ -28,6 +28,11 @@ var _open_id: StringName = &""
 func _ready() -> void:
 	_build()
 	_show_list()
+	# 읽음 표시가 바뀌면 목록도 따라간다(본문을 보고 있을 때는 건드리지 않는다).
+	StoryProgress.progress_changed.connect(func():
+		if String(_open_id).is_empty():
+			_show_list()
+	)
 
 
 # ===== 화면 구성 =====
@@ -94,7 +99,12 @@ func _build_header() -> Control:
 
 func _show_list() -> void:
 	_open_id = &""
-	_title_label.text = "스토리"
+	# 진행도의 출처는 StoryProgress 다. 여기서 세지 않는다.
+	var total := StoryDatabase.get_count()
+	if total > 0:
+		_title_label.text = "스토리  %d / %d" % [StoryProgress.get_read_count(), total]
+	else:
+		_title_label.text = "스토리"
 	_clear(_body)
 
 	var ids := StoryDatabase.get_all_ids()
@@ -121,8 +131,11 @@ func _empty_notice() -> Control:
 func _make_chapter_card(id: StringName) -> Control:
 	var chapter := StoryDatabase.get_chapter(id)
 
+	var is_read := StoryProgress.is_read(id)
+
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", UITheme.panel_box())
+	# 읽지 않은 챕터를 강조한다. 할 일이 먼저 보이는 편이 낫다.
+	card.add_theme_stylebox_override("panel", UITheme.panel_box() if is_read else UITheme.accent_box())
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var row := HBoxContainer.new()
@@ -143,6 +156,7 @@ func _make_chapter_card(id: StringName) -> Control:
 	info.add_child(title_row)
 	title_row.add_child(_text("Chapter %d" % chapter.number, 13, UITheme.INK_DIM))
 	title_row.add_child(_text(chapter.title, 16, UITheme.INK))
+	title_row.add_child(_text("읽음" if is_read else "새 이야기", 12, UITheme.INK_DIM if is_read else UITheme.INK))
 
 	if not chapter.summary.is_empty():
 		var summary := _text(chapter.summary, 13, UITheme.INK_DIM)
@@ -159,7 +173,7 @@ func _make_chapter_card(id: StringName) -> Control:
 		meta.add_child(_text("전투 %d회" % battles, 12, UITheme.INK_DIM))
 
 	var button := Button.new()
-	button.text = "읽기"
+	button.text = "다시 읽기" if is_read else "읽기"
 	button.custom_minimum_size = Vector2(96, 44)
 	button.add_theme_font_size_override("font_size", 15)
 	button.add_theme_color_override("font_color", UITheme.INK)
@@ -179,6 +193,9 @@ func _show_chapter(id: StringName) -> void:
 		return
 
 	_open_id = id
+	# 연 시점에 읽음으로 기록한다. 끝까지 읽었는지는 알 수 없고(스크롤 추적을 하지 않는다),
+	# "열어 봤다"를 기준으로 삼는 편이 단순하고 예측 가능하다.
+	StoryProgress.mark_read(id)
 	_title_label.text = "Chapter %d  %s" % [chapter.number, chapter.title]
 	_clear(_body)
 

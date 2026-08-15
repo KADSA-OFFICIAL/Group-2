@@ -23,6 +23,8 @@ const ROLE_ICON_NAME := {
 	CharacterData.Role.BUFFER: "icon_role_buffer",
 }
 
+const CHARACTERS_SCREEN := preload("res://screens/characters/CharactersScreen.tscn")
+
 const SYNERGY_ICON := "icon_synergy"
 const BACK_ICON := "icon_back"
 
@@ -98,6 +100,19 @@ func _build_header() -> Control:
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(_title_label)
+
+	# 누구를 넣을지 고르려면 스텟·스킬을 봐야 한다. 상세는 캐릭터 화면의 책임이므로
+	# 여기서 다시 펼치지 않고 길만 낸다(교단 화면과 같은 방식).
+	var detail := Button.new()
+	detail.text = "인물 상세"
+	detail.custom_minimum_size = Vector2(110, 40)
+	detail.add_theme_font_size_override("font_size", 13)
+	detail.add_theme_color_override("font_color", UITheme.INK)
+	detail.add_theme_stylebox_override("normal", UITheme.panel_box())
+	detail.add_theme_stylebox_override("hover", UITheme.panel_box())
+	detail.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
+	detail.pressed.connect(func(): ScreenManager.push(CHARACTERS_SCREEN))
+	row.add_child(detail)
 	return row
 
 
