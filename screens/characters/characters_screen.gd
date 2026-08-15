@@ -2,18 +2,22 @@ extends Control
 
 # 캐릭터 화면 (메타 UI).
 #
-# 책임: 로스터를 훑어보고 한 명의 정의를 자세히 본다. 값을 바꾸지 않는 읽기 전용 화면이다.
+# 구조는 서브컬쳐 수집형 RPG 문법을 따른다: **좌 리스트 / 중앙 프리뷰 / 우 상세**.
+# 공용 조각은 HUDKit 이 소유한다(헤더·패널·스탯 행·브래킷·CTA).
 #
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
-#   로스터   -> CharacterDatabase
-#   캐릭터   -> CharacterData (이름/설명/역할/외형 tint/스킬/장비)
-#   스텟     -> PlayerStats 의 파생 getter (여기서 계산식을 다시 쓰지 않는다)
+#   로스터    -> CharacterDatabase
+#   캐릭터    -> CharacterData (이름/설명/역할/외형/스킬/장비)
+#   스텟      -> PlayerStats 파생 getter (계산식을 여기서 다시 쓰지 않는다)
+#   장비 보정 -> CharacterData.get_equipment_bonuses()
 #   파티 여부 -> PartySystem.has_character()
-#   색       -> UITheme
+#   색·조각   -> UITheme / HUDKit
 #
-# 편성 변경은 편성 화면의 책임이라 여기서는 하지 않는다(읽기 전용).
-#
-# 참고: docs/combat-screen-design.md §1, SYSTEM_CONVENTIONS.md
+# 이 게임에 없는 것은 만들지 않았다:
+#   레어도 등급, 전투력, 캐릭터 레벨·EXP·돌파, 스킨 — 전부 시스템이 없다.
+#   장르 문법대로면 들어갈 자리이지만, 없는 수치를 지어내면 그게 설정이 된다.
+
+const EQUIPMENT_SCREEN_PATH := "res://screens/equipment/EquipmentScreen.tscn"
 
 const ROLE_ICON_NAME := {
 	CharacterData.Role.TANK: "icon_role_tank",
@@ -21,19 +25,29 @@ const ROLE_ICON_NAME := {
 	CharacterData.Role.BUFFER: "icon_role_buffer",
 }
 
-# 슬롯 -> 아이콘 경로 대응표. **슬롯 목록의 출처가 아니다**(출처는 EquipmentData.Slot).
-# 여기 없는 슬롯은 아이콘만 생략되고 행 자체는 그려진다.
 const SLOT_ICON_NAME := {
 	EquipmentData.Slot.WEAPON: "icon_slot_weapon",
 	EquipmentData.Slot.ARMOR: "icon_slot_armor",
 	EquipmentData.Slot.ACCESSORY: "icon_slot_accessory",
 }
 
-const BACK_ICON := "icon_back"
+# 좌측 세로 서브탭. 지금 내용이 있는 것만 둔다.
+enum Tab { STATS, SKILLS, GEAR }
+
+const TAB_LABELS := {
+	Tab.STATS: ["스탯", "STATS"],
+	Tab.SKILLS: ["스킬", "SKILLS"],
+	Tab.GEAR: ["장비", "GEAR"],
+}
 
 var _selected_id: StringName = &""
+var _tab: Tab = Tab.STATS
+
 var _roster_grid: GridContainer
-var _detail_holder: VBoxContainer
+var _detail_body: VBoxContainer
+var _tab_rail: VBoxContainer
+var _preview_holder: Control
+var _count_label: Label
 
 
 func _ready() -> void:
@@ -46,234 +60,399 @@ func _ready() -> void:
 
 
 # ===== 화면 구성 =====
+# 가장자리로 밀어낸 ㄷ자 프레임: 좌 리스트 / 중앙 프리뷰 / 우 상세 + 우하단 CTA.
 
 func _build() -> void:
-	add_child(UITheme.make_background())
+	add_child(HUDKit.make_backdrop())
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_bottom", 20)
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 16)
 	add_child(margin)
 
 	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 14)
+	root.add_theme_constant_override("separation", 12)
 	margin.add_child(root)
 
-	root.add_child(_build_header())
+	root.add_child(HUDKit.make_header("캐릭터", "character", "icon_characters"))
 
 	var body := HBoxContainer.new()
-	body.add_theme_constant_override("separation", 16)
+	body.add_theme_constant_override("separation", 12)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(body)
 
+	body.add_child(_build_tab_rail())
 	body.add_child(_build_roster_panel())
+	body.add_child(_build_center())
 	body.add_child(_build_detail_panel())
 
 
-func _build_header() -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-
-	var back := Button.new()
-	back.text = " 뒤로"
-	back.icon = _texture(BACK_ICON)
-	# Button.icon 은 텍스처를 원본 크기(64px)로 그려 버튼 높이를 넘으면 잘린다.
-	# expand_icon 을 켜면 버튼 크기에 맞춰 비율을 유지하며 줄어든다.
-	back.expand_icon = true
-	back.custom_minimum_size = Vector2(0, 40)
-	back.add_theme_stylebox_override("normal", UITheme.panel_box())
-	back.add_theme_stylebox_override("hover", UITheme.panel_box())
-	back.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
-	back.add_theme_color_override("font_color", UITheme.INK)
-	back.pressed.connect(func(): ScreenManager.pop())
-	row.add_child(back)
-
-	var title := Label.new()
-	title.text = "캐릭터 (%d명)" % CharacterDatabase.get_count()
-	title.add_theme_font_size_override("font_size", 20)
-	title.add_theme_color_override("font_color", UITheme.INK_ON_DARK)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(title)
-	return row
+# ── 좌측 끝: 세로 서브탭 레일 ──
+func _build_tab_rail() -> Control:
+	_tab_rail = VBoxContainer.new()
+	_tab_rail.add_theme_constant_override("separation", 6)
+	return _tab_rail
 
 
+func _fill_tab_rail() -> void:
+	for child in _tab_rail.get_children():
+		_tab_rail.remove_child(child)
+		child.queue_free()
+
+	for tab in [Tab.STATS, Tab.SKILLS, Tab.GEAR]:
+		var names: Array = TAB_LABELS[tab]
+		var active: bool = tab == _tab
+
+		var holder := PanelContainer.new()
+		holder.custom_minimum_size = Vector2(64, 58)
+		holder.add_theme_stylebox_override("panel", HUDKit.card(active))
+
+		var box := VBoxContainer.new()
+		box.alignment = BoxContainer.ALIGNMENT_CENTER
+		box.add_theme_constant_override("separation", 0)
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		holder.add_child(box)
+
+		var ko := HUDKit.label(names[0], 12, HUDKit.text_1() if active else HUDKit.text_2(), 600)
+		ko.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(ko)
+		var en := HUDKit.caption(names[1])
+		en.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(en)
+
+		var button := Button.new()
+		button.flat = true
+		button.set_anchors_preset(Control.PRESET_FULL_RECT)
+		for state in ["normal", "hover", "pressed", "focus"]:
+			button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+		button.pressed.connect(_on_tab_pressed.bind(tab))
+		holder.add_child(button)
+
+		if active:
+			holder.add_child(HUDKit.make_brackets())
+
+		_tab_rail.add_child(holder)
+
+	_tab_rail.add_child(HUDKit.make_serial("SYS.03\nROSTER"))
+
+
+# ── 좌측: 로스터 리스트 ──
 func _build_roster_panel() -> Control:
+	var panel := HUDKit.make_panel("보유 인원", "owned units")
+	panel.custom_minimum_size = Vector2(HUDKit.RAIL_WIDTH, 0)
+	var body := HUDKit.body_of(panel)
+
+	_count_label = HUDKit.label("", 12, HUDKit.text_2())
+	body.add_child(_count_label)
+
 	var scroll := ScrollContainer.new()
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_stretch_ratio = 0.55
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_child(scroll)
 
 	_roster_grid = GridContainer.new()
-	_roster_grid.columns = 3
-	_roster_grid.add_theme_constant_override("h_separation", 10)
-	_roster_grid.add_theme_constant_override("v_separation", 10)
+	_roster_grid.columns = 2
+	_roster_grid.add_theme_constant_override("h_separation", 8)
+	_roster_grid.add_theme_constant_override("v_separation", 8)
 	_roster_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_roster_grid)
-	return scroll
-
-
-func _build_detail_panel() -> Control:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", UITheme.panel_box())
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_stretch_ratio = 0.45
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-
-	var scroll := ScrollContainer.new()
-	panel.add_child(scroll)
-
-	_detail_holder = VBoxContainer.new()
-	_detail_holder.add_theme_constant_override("separation", 8)
-	_detail_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_detail_holder)
 	return panel
+
+
+# ── 중앙: 프리뷰. 비워 두는 자리다 ──
+func _build_center() -> Control:
+	var center := VBoxContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	center.add_theme_constant_override("separation", 8)
+
+	_preview_holder = Control.new()
+	_preview_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_preview_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_preview_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(_preview_holder)
+
+	var serial := HUDKit.make_serial("PREVIEW / NO PORTRAIT ASSET")
+	serial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(serial)
+	return center
+
+
+# ── 우측: 상세 + 우하단 CTA ──
+func _build_detail_panel() -> Control:
+	var column := VBoxContainer.new()
+	column.custom_minimum_size = Vector2(HUDKit.DETAIL_WIDTH, 0)
+	column.add_theme_constant_override("separation", 10)
+
+	var panel := HUDKit.make_panel("", "")
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(panel)
+
+	# 상세 내용은 스크롤 안에 넣는다. 안 그러면 행이 많을 때 패널이 세로로 부풀어
+	# 아래 CTA 를 화면 밖으로 밀어낸다(실제로 그렇게 잘렸다).
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	HUDKit.body_of(panel).add_child(scroll)
+
+	_detail_body = VBoxContainer.new()
+	_detail_body.add_theme_constant_override("separation", 6)
+	_detail_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_detail_body)
+
+	# 주 CTA 는 우하단 하나. 보조는 그 왼쪽에 아웃라인.
+	var actions := HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_END
+	actions.add_theme_constant_override("separation", 8)
+	column.add_child(actions)
+
+	var to_gear := HUDKit.make_ghost("장비 관리", 120)
+	to_gear.pressed.connect(func(): ScreenManager.swap(load(EQUIPMENT_SCREEN_PATH)))
+	actions.add_child(to_gear)
+
+	var cta := HUDKit.make_cta("편성으로", "formation")
+	cta.pressed.connect(func(): ScreenManager.swap(load("res://screens/formation/FormationScreen.tscn")))
+	actions.add_child(cta)
+	return column
 
 
 # ===== 갱신 =====
 
 func _refresh() -> void:
+	_fill_tab_rail()
 	_refresh_roster()
+	_refresh_preview()
 	_refresh_detail()
 
 
 func _refresh_roster() -> void:
 	_clear(_roster_grid)
+	var total := CharacterDatabase.get_count()
+	_count_label.text = "보유 %d / %d" % [total, total]
+
 	for id in CharacterDatabase.get_all_ids():
 		_roster_grid.add_child(_make_roster_card(id))
 
 
+# 카드 비율은 장르 관례대로 세로로 길게(3:4).
 func _make_roster_card(id: StringName) -> Control:
 	var character := CharacterDatabase.get_character(id)
-	var selected := (id == _selected_id)
+	var selected: bool = id == _selected_id
 
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(0, 116)
-	card.add_theme_stylebox_override("panel", UITheme.accent_box() if selected else UITheme.panel_box())
+	card.custom_minimum_size = Vector2(0, 124)
+	card.add_theme_stylebox_override("panel", HUDKit.card(selected))
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(box)
 
 	if character != null:
+		# 초상이 없으므로 tint 색면이 캐릭터 자리를 대신한다(docs §0 플레이스홀더 규칙).
 		var swatch := ColorRect.new()
-		swatch.color = character.tint
-		swatch.custom_minimum_size = Vector2(0, 38)
+		swatch.color = Color(character.tint.r, character.tint.g, character.tint.b, 0.55)
+		swatch.custom_minimum_size = Vector2(0, 52)
+		swatch.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		box.add_child(swatch)
-		box.add_child(_text(character.display_name, 14, UITheme.INK))
 
 		var role_row := HBoxContainer.new()
-		role_row.add_theme_constant_override("separation", 3)
+		role_row.add_theme_constant_override("separation", 2)
 		box.add_child(role_row)
-		# 겸직이면 get_roles() 가 2개를 돌려주므로 아이콘도 2개가 붙는다.
 		for role in character.get_roles():
-			var icon := _icon(ROLE_ICON_NAME.get(role, ""), 18)
+			var icon := HUDKit.make_icon(ROLE_ICON_NAME.get(role, ""), 16)
 			if icon != null:
 				role_row.add_child(icon)
-
-		# 파티 편성 여부는 PartySystem 이 판단한다.
 		if PartySystem.has_character(id):
-			box.add_child(_text("편성 중", 11, UITheme.INK))
+			role_row.add_child(HUDKit.label("편성", 10, UITheme.ACCENT, 700))
+
+		var name_label := HUDKit.label(character.display_name, 12, HUDKit.text_1(), 600)
+		name_label.clip_text = true
+		box.add_child(name_label)
+	else:
+		box.add_child(HUDKit.label(String(id), 12, HUDKit.text_2()))
 
 	var button := Button.new()
 	button.flat = true
 	button.set_anchors_preset(Control.PRESET_FULL_RECT)
-	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	for state in ["normal", "hover", "pressed", "focus"]:
+		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	button.pressed.connect(_on_card_pressed.bind(id))
 	card.add_child(button)
+
+	if selected:
+		card.add_child(HUDKit.make_brackets())
 	return card
 
 
-func _refresh_detail() -> void:
-	_clear(_detail_holder)
-
-	var character := CharacterDatabase.get_character(_selected_id) if _selected_id != &"" else null
+# 중앙 프리뷰. portrait 가 있으면 그것을, 없으면 tint 실루엣을 깐다.
+func _refresh_preview() -> void:
+	_clear(_preview_holder)
+	var character := _current()
 	if character == null:
-		_detail_holder.add_child(_text("캐릭터가 없습니다.", 14, UITheme.INK_DIM))
 		return
 
-	# 이름 + 역할
-	_detail_holder.add_child(_text(character.display_name, 20, UITheme.INK))
+	if character.portrait != null:
+		var art := TextureRect.new()
+		art.set_anchors_preset(Control.PRESET_FULL_RECT)
+		art.texture = character.portrait
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_preview_holder.add_child(art)
+		return
 
-	var role_row := HBoxContainer.new()
-	role_row.add_theme_constant_override("separation", 4)
-	_detail_holder.add_child(role_row)
+	var silhouette := ColorRect.new()
+	silhouette.set_anchors_preset(Control.PRESET_CENTER)
+	silhouette.color = Color(character.tint.r, character.tint.g, character.tint.b, 0.22)
+	silhouette.custom_minimum_size = Vector2(220, 380)
+	silhouette.size = silhouette.custom_minimum_size
+	silhouette.position = Vector2(-110, -190)
+	silhouette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_preview_holder.add_child(silhouette)
+
+
+func _refresh_detail() -> void:
+	_clear(_detail_body)
+	var character := _current()
+	if character == null:
+		_detail_body.add_child(HUDKit.label("캐릭터가 없습니다.", 13, HUDKit.text_2()))
+		return
+
+	# 1) 이름 블록 — 한글 이름 + 영문 코드네임 + 역할 뱃지
+	_detail_body.add_child(HUDKit.label(character.display_name, 22, HUDKit.text_1(), 700))
+	_detail_body.add_child(HUDKit.caption(String(character.character_id)))
+
+	var badge_row := HBoxContainer.new()
+	badge_row.add_theme_constant_override("separation", 6)
+	_detail_body.add_child(badge_row)
 	for role in character.get_roles():
-		var icon := _icon(ROLE_ICON_NAME.get(role, ""), 20)
-		if icon != null:
-			role_row.add_child(icon)
-	role_row.add_child(_text(character.get_roles_display_name(), 14, UITheme.INK_DIM))
+		badge_row.add_child(_role_badge(role))
+	if PartySystem.has_character(character.character_id):
+		badge_row.add_child(HUDKit.label("· 편성 중", 12, UITheme.ACCENT, 700))
 
-	if not character.description.is_empty():
-		var desc := _text(character.description, 13, UITheme.INK_DIM)
-		desc.clip_text = false
-		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_detail_holder.add_child(desc)
+	_detail_body.add_child(_rule())
 
-	_detail_holder.add_child(HSeparator.new())
+	match _tab:
+		Tab.SKILLS:
+			_fill_skills(character)
+		Tab.GEAR:
+			_fill_gear(character)
+		_:
+			_fill_stats(character)
 
-	# 스텟: 파생값은 PlayerStats 가 계산한다. 여기서 공식을 다시 쓰지 않는다.
+
+# 스탯 탭 — 파생값은 PlayerStats 가 계산한다. 장비 보정분을 액센트로 병기한다.
+func _fill_stats(character: CharacterData) -> void:
 	var stats := character.get_stats()
-	_detail_holder.add_child(_text("스텟", 16, UITheme.INK))
-	_add_stat_row("최대 HP", str(stats.get_max_hp()))
-	_add_stat_row("물리 공격", str(stats.get_physical_attack()))
-	_add_stat_row("마법 공격", str(stats.get_magic_attack()))
-	_add_stat_row("물리 방어", str(stats.get_physical_defense()))
-	_add_stat_row("마법 방어", str(stats.get_magic_defense()))
-	_add_stat_row("근력 / 신앙", "%d / %d" % [stats.strength, stats.faith])
+	var bonuses := character.get_equipment_bonuses()
 
-	_detail_holder.add_child(HSeparator.new())
+	_detail_body.add_child(HUDKit.section("전투 스탯", "combat stats"))
+	_detail_body.add_child(HUDKit.stat_row("최대 HP", "hp", str(stats.get_max_hp()), _bonus(bonuses["hp"])))
+	_detail_body.add_child(HUDKit.stat_row("물리 공격", "p.atk", str(stats.get_physical_attack()), _bonus(bonuses["physical_attack"])))
+	_detail_body.add_child(HUDKit.stat_row("마법 공격", "m.atk", str(stats.get_magic_attack()), _bonus(bonuses["magic_attack"])))
+	_detail_body.add_child(HUDKit.stat_row("물리 방어", "p.def", str(stats.get_physical_defense()), _bonus(bonuses["physical_defense"])))
+	_detail_body.add_child(HUDKit.stat_row("마법 방어", "m.def", str(stats.get_magic_defense()), _bonus(bonuses["magic_defense"])))
 
-	# 장비: EquipmentData.Slot 을 순회한다. 슬롯 목록을 화면에서 정의하지 않는다.
-	# (SLOT_ICON_NAME 는 아이콘 경로 대응표일 뿐이다. 그걸 순회하면 새 슬롯이 조용히 빠진다.)
-	_detail_holder.add_child(_text("장비", 16, UITheme.INK))
-	for slot in EquipmentData.Slot.values():
-		_add_slot_row(character, slot)
+	_detail_body.add_child(_rule())
+	_detail_body.add_child(HUDKit.section("기초 스탯", "base"))
+	_detail_body.add_child(HUDKit.stat_row("근력", "str", str(stats.strength)))
+	_detail_body.add_child(HUDKit.stat_row("방어력", "def", str(stats.defense)))
+	_detail_body.add_child(HUDKit.stat_row("신앙심", "faith", str(stats.faith)))
+	_detail_body.add_child(HUDKit.stat_row("지능", "int", str(stats.intelligence)))
 
-	# 스킬: 정의만 표시한다(발동은 후속 시스템의 몫).
-	_detail_holder.add_child(HSeparator.new())
-	_detail_holder.add_child(_text("스킬", 16, UITheme.INK))
+	_detail_body.add_child(_rule())
+	_detail_body.add_child(HUDKit.section("배수", "multipliers"))
+	_detail_body.add_child(HUDKit.stat_row("공격 속도", "atk spd", "%.2f×" % stats.get_attack_speed_multiplier()))
+	_detail_body.add_child(HUDKit.stat_row("이동 속도", "move spd", "%.2f×" % stats.get_move_speed_multiplier()))
+	_detail_body.add_child(HUDKit.stat_row("여신 강화", "goddess", "%.2f×" % stats.get_goddess_skill_boost()))
+
+
+func _fill_skills(character: CharacterData) -> void:
+	_detail_body.add_child(HUDKit.section("스킬", "skills"))
 	if character.skills.is_empty():
-		_detail_holder.add_child(_text("등록된 스킬이 없습니다.", 13, UITheme.INK_DIM))
-	else:
-		for skill in character.skills:
-			if skill != null:
-				_add_stat_row(skill.display_name, "위력 %d" % skill.base_power)
+		_detail_body.add_child(HUDKit.label("등록된 스킬이 없습니다.", 13, HUDKit.text_2()))
+		_detail_body.add_child(HUDKit.make_serial("SKILL SLOTS UNASSIGNED"))
+		return
+	for skill in character.skills:
+		if skill == null:
+			continue
+		_detail_body.add_child(HUDKit.stat_row(skill.display_name, "power", str(skill.base_power)))
 
 
-func _add_stat_row(label_text: String, value_text: String) -> void:
+func _fill_gear(character: CharacterData) -> void:
+	_detail_body.add_child(HUDKit.section("장착", "equipped"))
+	# 슬롯 목록의 출처는 EquipmentData.Slot 이다.
+	for slot in EquipmentData.Slot.values():
+		var item := character.get_equipped(slot)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		row.custom_minimum_size = Vector2(0, 30)
+
+		var icon := HUDKit.make_icon(SLOT_ICON_NAME.get(slot, ""), 20)
+		if icon != null:
+			row.add_child(icon)
+
+		var name_label := HUDKit.label(
+			item.display_name if item != null else "비어 있음",
+			13, HUDKit.text_1() if item != null else HUDKit.text_3())
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_label)
+		_detail_body.add_child(row)
+
+	var bonuses := character.get_equipment_bonuses()
+	_detail_body.add_child(_rule())
+	_detail_body.add_child(HUDKit.section("장비 보정 합계", "gear bonus"))
+	for pair in [["물리 공격", "p.atk", "physical_attack"], ["마법 공격", "m.atk", "magic_attack"],
+			["물리 방어", "p.def", "physical_defense"], ["마법 방어", "m.def", "magic_defense"], ["최대 HP", "hp", "hp"]]:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		var left := HBoxContainer.new()
+		left.add_theme_constant_override("separation", 6)
+		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		left.add_child(HUDKit.label(pair[0], 12, HUDKit.text_2()))
+		left.add_child(HUDKit.caption(pair[1]))
+		row.add_child(left)
+		row.add_child(HUDKit.delta(int(bonuses[pair[2]])))
+		_detail_body.add_child(row)
+
+
+# ===== 조각 =====
+
+func _role_badge(role: int) -> Control:
+	var badge := PanelContainer.new()
+	badge.add_theme_stylebox_override("panel", HUDKit.inset(4))
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-
-	var label := _text(label_text, 13, UITheme.INK_DIM)
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(label)
-	row.add_child(_text(value_text, 13, UITheme.INK))
-
-	_detail_holder.add_child(row)
-
-
-func _add_slot_row(character: CharacterData, slot: int) -> void:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-
-	var icon := _icon(SLOT_ICON_NAME.get(slot, ""), 20)
+	row.add_theme_constant_override("separation", 4)
+	badge.add_child(row)
+	var icon := HUDKit.make_icon(ROLE_ICON_NAME.get(role, ""), 16)
 	if icon != null:
 		row.add_child(icon)
+	row.add_child(HUDKit.label(CharacterData.role_to_name(role), 11, HUDKit.text_2(), 600))
+	return badge
 
-	var equipped := character.get_equipped(slot)
-	var name_label := _text(equipped.display_name if equipped != null else "비어 있음", 13,
-		UITheme.INK if equipped != null else UITheme.INK_DIM)
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(name_label)
 
-	_detail_holder.add_child(row)
+func _bonus(amount: int) -> String:
+	return "(+%d)" % amount if amount > 0 else ""
+
+
+func _rule() -> Control:
+	var rule := ColorRect.new()
+	rule.color = HUDKit.line()
+	rule.custom_minimum_size = Vector2(0, HUDKit.HAIRLINE)
+	return rule
+
+
+func _current() -> CharacterData:
+	return CharacterDatabase.get_character(_selected_id) if _selected_id != &"" else null
+
+
+func _clear(node: Node) -> void:
+	for child in node.get_children():
+		node.remove_child(child)
+		child.queue_free()
 
 
 # ===== 조작 =====
@@ -282,40 +461,14 @@ func _on_card_pressed(id: StringName) -> void:
 	if id == _selected_id:
 		return
 	_selected_id = id
-	_refresh()
+	_refresh_roster()
+	_refresh_preview()
+	_refresh_detail()
 
 
-# ===== 공용 조각 =====
-
-func _clear(node: Node) -> void:
-	for child in node.get_children():
-		node.remove_child(child)
-		child.queue_free()
-
-
-func _text(value: String, size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = value
-	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", color)
-	return label
-
-
-func _icon(icon_name: String, size: int) -> TextureRect:
-	var texture := _texture(icon_name)
-	if texture == null:
-		return null
-	var rect := TextureRect.new()
-	rect.texture = texture
-	rect.custom_minimum_size = Vector2(size, size)
-	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	return rect
-
-
-# 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.
-func _texture(icon_name: String) -> Texture2D:
-	var path := UITheme.icon_path(icon_name)
-	if path.is_empty():
-		return null
-	return load(path) as Texture2D
+func _on_tab_pressed(tab: Tab) -> void:
+	if tab == _tab:
+		return
+	_tab = tab
+	_fill_tab_rail()
+	_refresh_detail()
