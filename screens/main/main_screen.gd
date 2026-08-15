@@ -222,18 +222,18 @@ func _fill_nameplate() -> void:
 	_nameplate.add_child(tail)
 
 
-# ── 상단: 프로필 · 주요 재화 · 원형 버튼 ──
-# 두 줄이다.
-#   1줄: 프로필 | (빈칸) | 주요 재화 | 창고 | 설정
-#   2줄:              (빈칸) | 길라잡이 문구 | 퀘스트
-# 퀘스트를 재화·창고 바로 아래에 두어 우측 상단을 하나의 묶음으로 읽히게 한다.
+# ── 상단: 한 줄 ──
+#   프로필 | (빈칸) | 주요 재화 + 상점(+) | 우편 | 설정
+#
+# 요즘 서브컬쳐 메인화면의 공통 규칙을 따랐다: **상단은 한 줄이다.**
+# 전에는 여기가 두 줄이었고 우측에 칩·버튼이 6개 몰려 있었다. 줄인 방법:
+#   창고 버튼 제거   -> 재화 칩 자체를 누르면 창고로 간다(재화를 보러 가는 곳이다)
+#   상점 버튼 제거   -> 재화 뒤 + 하나로 합쳤다(칩마다 붙던 +도 없앴다)
+#   퀘스트 버튼 제거 -> 길라잡이가 곧 퀘스트다. 둘을 하나로 합쳐 하단으로 내렸다
+# 결과적으로 상단 요소가 8개에서 5개로 줄고, 공중에 떠 있던 둘째 줄이 사라졌다.
 func _build_top_bar() -> Control:
-	var stack := VBoxContainer.new()
-	stack.add_theme_constant_override("separation", 6)
-
 	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 8)
-	stack.add_child(bar)
+	bar.add_theme_constant_override("separation", 6)
 
 	# 프로필은 파티 인원이 바뀌면 다시 채워야 하므로 자리를 잡아 두고 내용만 갈아 끼운다.
 	_profile_holder = HBoxContainer.new()
@@ -246,35 +246,16 @@ func _build_top_bar() -> Control:
 	for currency_type in CurrencySystem.get_primary_currencies():
 		bar.add_child(_make_currency_chip(String(currency_type)))
 
-	# 우측 끝 작은 아이콘 묶음. 재화를 보는 창고와 설정.
-	# 한국 게임 메인화면의 관례대로 "게임을 하는 메뉴"(하단)와
-	# "게임을 둘러싼 기능"(상단 우측)을 갈라 둔다.
+	# 재화를 늘리러 가는 곳 = 상점. 칩마다 붙이지 않고 재화 묶음 끝에 하나만 둔다.
 	bar.add_child(_make_round_button(SHOP_ICON, "상점", SHOP_SCREEN))
+
 	# 우편은 받지 않은 개수를 배지로 알린다. 자리를 잡아 두고 개수만 갈아 끼운다.
 	_mail_holder = HBoxContainer.new()
 	bar.add_child(_mail_holder)
 	_fill_mail_button()
-	bar.add_child(_make_round_button(STORAGE_ICON, "창고", STORAGE_SCREEN))
+
 	bar.add_child(_make_round_button(SETTINGS_ICON, "설정", SETTINGS_SCREEN))
-
-	# 퀘스트 줄: 길라잡이 문구가 퀘스트 아이콘 왼쪽에 붙는다.
-	var quest_row := HBoxContainer.new()
-	quest_row.add_theme_constant_override("separation", 6)
-	stack.add_child(quest_row)
-
-	quest_row.add_child(_expanding_gap())
-
-	_guide_holder = HBoxContainer.new()
-	quest_row.add_child(_guide_holder)
-	_fill_guide()
-
-	# 퀘스트 버튼도 길라잡이와 같은 곳으로 데려간다.
-	# 지금 퀘스트의 내용이 곧 "다음에 할 일" 이므로 두 입구가 갈리면 안 된다.
-	var quest := _make_round_button(QUEST_ICON, "퀘스트 — 다음에 할 일", null)
-	quest.pressed.connect(_on_guide_pressed)
-	quest_row.add_child(quest)
-
-	return stack
+	return bar
 
 
 # 남는 가로 공간을 밀어내는 빈 칸. 클릭을 가로채지 않는다.
@@ -342,16 +323,20 @@ func _build_profile() -> Control:
 
 	row.add_child(_text("Lv.%d" % PlayerProfile.level, 14, UITheme.ACCENT))
 
-	var display_name := PlayerProfile.player_name
-	if display_name.is_empty():
-		display_name = "이름 없음"
+	# 이름이 비었을 때의 문구는 OrderSystem 이 정한다(화면마다 다르게 적지 않는다).
+	var display_name := OrderSystem.get_leader_display_name()
 	row.add_child(_text(display_name, 14, UITheme.INK_ON_DARK))
-
-	# 어두운 오버레이 위이므로 흐린 글자에 INK_DIM(어두운 색)을 쓰면 안 읽힌다.
-	row.add_child(_text("파티 %d/%d" % [PartySystem.get_size(), PartySystem.PARTY_SIZE], 12, UITheme.TAN_DEEP))
+	# 파티 인원은 넣지 않는다. 편성 화면이 그 정보를 이미 보여주고,
+	# 상단 칩에 정보가 셋이 되면 무엇이 중요한지 흐려진다.
 	return plate
 
 
+# 재화 칩. 누르면 창고로 간다(모든 재화를 보는 곳이다).
+# 전에는 칩마다 + 버튼이 붙어 잔글자가 늘었다. + 는 재화 묶음 끝에 하나만 둔다.
+#
+# Button 안에 직접 내용을 넣지 않는다. Button 은 컨테이너가 아니라 자식 크기를
+# 잡아 주지 않아 아이콘과 숫자가 겹친다(실제로 그렇게 깨졌다).
+# 패널로 크기를 잡고 그 위에 투명 버튼을 덮는다(로스터 카드·하단 탭과 같은 방식).
 func _make_currency_chip(currency_type: String) -> Control:
 	var chip := PanelContainer.new()
 	chip.add_theme_stylebox_override("panel", UITheme.overlay_text_pill())
@@ -366,23 +351,18 @@ func _make_currency_chip(currency_type: String) -> Control:
 
 	var label := _text(_comma(CurrencySystem.get_balance(currency_type)), 13, UITheme.INK_ON_DARK)
 	row.add_child(label)
-
-	# 재화를 늘리러 가는 곳 = 상점. 상점 화면이 생겨서 이제 갈 곳이 있다.
-	# (작업 목록 4번이 "상점 화면이 생긴 뒤에 붙인다"고 남겨 둔 항목이다.)
-	var plus := Button.new()
-	plus.text = "+"
-	plus.tooltip_text = "상점"
-	plus.custom_minimum_size = Vector2(18, 18)
-	plus.add_theme_font_size_override("font_size", 13)
-	plus.add_theme_color_override("font_color", UITheme.ACCENT)
-	plus.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	plus.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
-	plus.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
-	plus.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	plus.pressed.connect(func(): ScreenManager.push(SHOP_SCREEN))
-	row.add_child(plus)
-
 	_currency_labels[currency_type] = label
+
+	var button := Button.new()
+	button.flat = true
+	button.tooltip_text = "창고"
+	button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	button.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
+	button.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.pressed.connect(func(): ScreenManager.push(STORAGE_SCREEN))
+	chip.add_child(button)
 	return chip
 
 
@@ -405,10 +385,30 @@ func _make_round_button(icon_path: String, tooltip: String, scene: PackedScene) 
 # ── 하단: 메뉴 버튼 + 출격 CTA ──
 # 버튼을 하나의 바로 묶지 않는다. 각자 떨어진 아이콘으로 화면 아래에 바짝 붙인다.
 # 감싸는 패널이 없으므로 일러스트가 버튼 사이로 그대로 보인다.
+# ── 하단 ──
+#   윗줄: (빈칸) | 길라잡이 한 줄
+#   아랫줄: 메뉴 탭들 | (빈칸) | 출격 CTA
+#
+# 길라잡이를 출격 **바로 위**에 붙인 이유: 출격 직전에 보는 정보이고,
+# 전처럼 상단에 두면 어디에도 붙지 않은 채 공중에 떠 있어 가장 난잡했다.
+# 퀘스트 아이콘은 따로 두지 않는다. 길라잡이가 곧 "지금 할 일"이라 입구가 둘일 이유가 없다.
 func _build_bottom_bar() -> Control:
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+
+	var guide_row := HBoxContainer.new()
+	guide_row.add_theme_constant_override("separation", 6)
+	column.add_child(guide_row)
+	guide_row.add_child(_expanding_gap())
+
+	_guide_holder = HBoxContainer.new()
+	guide_row.add_child(_guide_holder)
+	_fill_guide()
+
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	row.alignment = BoxContainer.ALIGNMENT_BEGIN
+	column.add_child(row)
 
 	row.add_child(_make_tab("편성", FORMATION_ICON, FORMATION_SCREEN))
 	row.add_child(_make_tab("캐릭터", CHARACTERS_ICON, CHARACTERS_SCREEN))
@@ -418,13 +418,10 @@ func _build_bottom_bar() -> Control:
 	row.add_child(_make_tab("교단", ORDER_ICON, ORDER_SCREEN))
 
 	row.add_child(_expanding_gap())
-
 	row.add_child(_build_battle_button())
-	return row
+	return column
 
 
-# 하단 메뉴 버튼: 아이콘 위 + 라벨 아래. 테두리·배경 패널을 두지 않는다.
-# 아이콘 자체에 이미 굵은 윤곽선이 있어 사각 프레임을 덧대면 답답해진다.
 # 하단 줄에는 **화면이 있는 메뉴만** 둔다.
 # 눌러도 아무 일이 없는 버튼은 화면을 난잡하게만 만든다.
 func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
