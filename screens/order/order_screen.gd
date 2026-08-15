@@ -12,6 +12,7 @@ extends Control
 #   그래서 명부를 여기서 다시 상세히 펼치지 않는다. 상세는 캐릭터 화면으로 보낸다.
 #
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
+#   교단 이름·직함        -> OrderSystem (문자열을 화면에 박지 않는다)
 #   교주 이름·레벨·경험치 -> PlayerProfile
 #   신도 명부            -> CharacterDatabase
 #   편성 여부            -> PartySystem.has_character()
@@ -27,15 +28,12 @@ const ROLE_ICON_NAME := {
 	CharacterData.Role.BUFFER: "icon_role_buffer",
 }
 
-# 교주 이름을 비워 두면 화면이 쓰는 대체 문구.
-# PlayerProfile 은 기본 이름을 만들지 않는다(이름은 플레이어가 정한다).
-const NAMELESS := "이름 없는 교주"
-
 const CHARACTERS_SCREEN := preload("res://screens/characters/CharactersScreen.tscn")
 
 var _name_edit: LineEdit
 var _profile_holder: VBoxContainer
 var _roster_grid: GridContainer
+var _leader_line: Label   # 배너의 "OOO · 트리아교의 교주" 줄
 
 
 func _ready() -> void:
@@ -64,8 +62,39 @@ func _build() -> void:
 	margin.add_child(root)
 
 	root.add_child(_build_header())
+	root.add_child(_build_banner())
 	root.add_child(_build_profile_panel())
 	root.add_child(_build_roster_panel())
+
+
+# ── 교단 배너 ──
+# 화면 맨 위에서 "여기가 어디인가"를 한눈에 알린다.
+# 교단 상징(아이콘) + 이름 + 교주 소개 한 줄.
+func _build_banner() -> Control:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UITheme.panel_box_deep())
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	panel.add_child(row)
+
+	var emblem := _icon(ORDER_ICON, 56)
+	if emblem != null:
+		row.add_child(emblem)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(box)
+
+	box.add_child(_text(OrderSystem.ORDER_NAME, 22, UITheme.INK))
+	# "트리아교의 교주" — 문구 조립도 OrderSystem 이 한다.
+	_leader_line = _text("", 14, UITheme.INK_DIM)
+	box.add_child(_leader_line)
+
+	return panel
 
 
 func _build_header() -> Control:
@@ -89,7 +118,8 @@ func _build_header() -> Control:
 		row.add_child(icon)
 
 	var title := Label.new()
-	title.text = "교단"
+	# 교단 이름의 출처는 OrderSystem 이다.
+	title.text = OrderSystem.ORDER_NAME
 	title.add_theme_font_size_override("font_size", 20)
 	title.add_theme_color_override("font_color", UITheme.INK_ON_DARK)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -114,11 +144,12 @@ func _build_profile_panel() -> Control:
 	name_row.add_theme_constant_override("separation", 10)
 	_profile_holder.add_child(name_row)
 
-	name_row.add_child(_text("교주 이름", 15, UITheme.INK))
+	name_row.add_child(_text("%s 이름" % OrderSystem.LEADER_TITLE, 15, UITheme.INK))
 
 	_name_edit = LineEdit.new()
 	_name_edit.text = PlayerProfile.player_name
-	_name_edit.placeholder_text = NAMELESS
+	# 비어 있을 때 무엇으로 보일지는 교단 도메인의 지식이다(OrderSystem 이 정한다).
+	_name_edit.placeholder_text = OrderSystem.get_leader_display_name()
 	_name_edit.max_length = 16
 	_name_edit.custom_minimum_size = Vector2(0, 40)
 	_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -191,13 +222,21 @@ func _refresh_profile() -> void:
 	if is_instance_valid(_name_edit) and not _name_edit.has_focus():
 		_name_edit.text = PlayerProfile.player_name
 
+	# 배너의 교주 줄도 이름을 따라간다.
+	if is_instance_valid(_leader_line):
+		_leader_line.text = "%s · %s" % [
+			OrderSystem.get_leader_display_name(),
+			OrderSystem.get_leader_title_line(),
+		]
+
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	_profile_holder.add_child(row)
 
 	row.add_child(_stat("레벨", "Lv.%d" % PlayerProfile.level))
 	row.add_child(_stat("누적 경험치", str(PlayerProfile.exp_total)))
-	row.add_child(_stat("모인 인원", "%d명" % CharacterDatabase.get_count()))
+	# 교단 인원 수의 출처는 OrderSystem 이다(명부는 CharacterDatabase 가 소유한다).
+	row.add_child(_stat("모인 인원", "%d명" % OrderSystem.get_member_count()))
 	row.add_child(_stat("편성", "%d/%d" % [PartySystem.get_size(), PartySystem.PARTY_SIZE]))
 
 
