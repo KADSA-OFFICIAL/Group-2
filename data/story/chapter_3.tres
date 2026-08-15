@@ -1,0 +1,194 @@
+[gd_resource type="Resource" script_class="StoryChapterData" load_steps=29 format=3]
+
+[ext_resource type="Script" path="res://entities/story/StoryChapterData.gd" id="1"]
+[ext_resource type="Script" path="res://entities/story/StoryLineData.gd" id="2"]
+
+[sub_resource type="Resource" id="L0"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "다들 거처 위치는 어디로 할지 정했어요?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L1"]
+script = ExtResource("2")
+kind = 1
+speaker = "마을사람들&소꿉친구"
+text = "여기를 바로 재건하는 거 아니야?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L2"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "그렇다기엔 여기는 물가가 없어서 요절하기 딱 좋은 위치에요. 다들 죽고 싶으신건 아니잖아요? 절 따라오시죠."
+stage_id = &""
+
+[sub_resource type="Resource" id="L3"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "세계지리와 시민 1등급이었던 주인공의 실력으로 마을 사람들과 함께 물가로 이동한다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L4"]
+script = ExtResource("2")
+kind = 2
+speaker = ""
+text = "이동하는 동안 여러 스테이지의 전투 발생"
+stage_id = &""
+
+[sub_resource type="Resource" id="L5"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "물가에 도착한 사람들, 하지만 그곳에는 이미 건축물이 있었다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L6"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "(아니 나의 지식을 이미 구석기 시대에 깨우친 사람이 있었다고?)"
+stage_id = &""
+
+[sub_resource type="Resource" id="L7"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "앙? 너희는 뭐야!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L8"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "여기는 우리의 거처다! 당장 꺼져!!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L9"]
+script = ExtResource("2")
+kind = 1
+speaker = "마을사람들"
+text = "주인공! 쟤네 좀 어떻게 해줘!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L10"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "왜 다 나한테 짬처리 시키는거지?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L11"]
+script = ExtResource("2")
+kind = 2
+speaker = ""
+text = "전투 시작, 주인공 승리"
+stage_id = &""
+
+[sub_resource type="Resource" id="L12"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "너흰 뭐냐?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L13"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "ㅇ..우린 수룡이다.."
+stage_id = &""
+
+[sub_resource type="Resource" id="L14"]
+script = ExtResource("2")
+kind = 1
+speaker = "티라노 수인"
+text = "죽일까?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L15"]
+script = ExtResource("2")
+kind = 1
+speaker = "수룡 수인들"
+text = "히이익..!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L16"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "너 제발 가만히 있어..! 그 너희 거처를 뺏기만 할건데 협조만 해주면 아무 짓도 안할게."
+stage_id = &""
+
+[sub_resource type="Resource" id="L17"]
+script = ExtResource("2")
+kind = 1
+speaker = "수룡 수인들"
+text = "아니, 우리는 멀쩡히 살고 있었는데 우리 집을 왜 뺏어!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L18"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "그럼 같이 살자. 마을 주민들, 얘네도 같이 살아도 되죠?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L19"]
+script = ExtResource("2")
+kind = 1
+speaker = "마을 사람들"
+text = "일만 한다면..상관없어."
+stage_id = &""
+
+[sub_resource type="Resource" id="L20"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "너희도 이제 이 마을 주민이야. 마을을 우리가 더 살기 좋게 만들어줄게"
+stage_id = &""
+
+[sub_resource type="Resource" id="L21"]
+script = ExtResource("2")
+kind = 1
+speaker = "수룡 수인"
+text = "(심쿵)그래. 고마워."
+stage_id = &""
+
+[sub_resource type="Resource" id="L22"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "마을 재건 시작. 그 과정에서 주인공은 여러 히로인과 대화를 한다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L23"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "넌 왜 일 안하고 먹기만 하고 있어?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L24"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "히이익! 죄송해요! 전 항상 배가 고파서..뭔가를 먹지 않으면 안돼요..하나 드릴까요..?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L25"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "응? 어..고마워..잘먹을게"
+stage_id = &""
+
+[resource]
+script = ExtResource("1")
+chapter_id = &"chapter_3"
+number = 3
+title = "물가로"
+summary = "물가를 찾아 마을을 옮기고, 이미 그곳에 살던 수룡 수인들과 한 마을이 된다."
+lines = [SubResource("L0"), SubResource("L1"), SubResource("L2"), SubResource("L3"), SubResource("L4"), SubResource("L5"), SubResource("L6"), SubResource("L7"), SubResource("L8"), SubResource("L9"), SubResource("L10"), SubResource("L11"), SubResource("L12"), SubResource("L13"), SubResource("L14"), SubResource("L15"), SubResource("L16"), SubResource("L17"), SubResource("L18"), SubResource("L19"), SubResource("L20"), SubResource("L21"), SubResource("L22"), SubResource("L23"), SubResource("L24"), SubResource("L25")]

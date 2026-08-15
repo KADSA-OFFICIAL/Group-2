@@ -47,10 +47,11 @@ const QUEST_ICON := "icon_quest"
 const SETTINGS_ICON := "icon_settings"
 const SHOP_ICON := "icon_shop"
 const MAIL_ICON := "icon_mail"
+const STORY_ICON := "icon_story"
 
 # 아직 화면이 없는 메뉴의 아이콘은 여기 상수로 두지 않는다.
 # 상수만 남으면 "곧 붙는다"처럼 보이지만 실제로는 아무 데도 쓰이지 않는다.
-# 아트는 assets/sprites/ui/icons 에 준비되어 있다: icon_story(스토리) / icon_order(교단).
+# 아트는 assets/sprites/ui/icons 에 준비되어 있다: icon_order(교단).
 # 화면이 생기면 그때 상수를 만들고 하단 줄이나 상단 묶음에 넣는다.
 
 # 화면이 실제로 있는 메뉴만 버튼으로 만든다.
@@ -64,6 +65,7 @@ const STAGE_SELECT_SCREEN := preload("res://screens/stage/StageSelectScreen.tscn
 const SETTINGS_SCREEN := preload("res://screens/settings/SettingsScreen.tscn")
 const SHOP_SCREEN := preload("res://screens/shop/ShopScreen.tscn")
 const MAIL_SCREEN := preload("res://screens/mail/MailScreen.tscn")
+const STORY_SCREEN := preload("res://screens/story/StoryScreen.tscn")
 
 # 길라잡이 단계 -> 데려갈 화면.
 # GuideSystem 은 화면을 알지 않는다(인프라가 화면에 의존하면 안 된다). 그 대응을 여기서 한다.
@@ -415,6 +417,7 @@ func _build_bottom_bar() -> Control:
 	row.add_child(_make_tab("캐릭터", CHARACTERS_ICON, CHARACTERS_SCREEN))
 	row.add_child(_make_tab("장비", EQUIPMENT_ICON, EQUIPMENT_SCREEN))
 	row.add_child(_make_tab("제조", CRAFT_ICON, CRAFT_SCREEN))
+	row.add_child(_make_tab("스토리", STORY_ICON, STORY_SCREEN))
 
 	row.add_child(_expanding_gap())
 
