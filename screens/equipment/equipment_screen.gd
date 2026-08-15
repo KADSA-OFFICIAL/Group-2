@@ -20,6 +20,11 @@ extends Control
 const BACK_ICON := "icon_back"
 const EQUIPMENT_ICON := "icon_equipment"
 
+# 제조 화면 경로. preload 가 아니라 **경로만** 둔다.
+# 제조 화면도 이 화면을 참조하므로 서로 preload 하면 순환 참조가 되고,
+# 그때 한쪽 PackedScene 이 null 이 되어 화면이 열리지 않는다(실제로 그렇게 깨졌다).
+const CRAFT_SCREEN_PATH := "res://screens/craft/CraftScreen.tscn"
+
 const SLOT_ICON_NAME := {
 	EquipmentData.Slot.WEAPON: "icon_slot_weapon",
 	EquipmentData.Slot.ARMOR: "icon_slot_armor",
@@ -213,7 +218,22 @@ func _make_slot_panel(character: CharacterData, slot: int) -> Control:
 	# 이 슬롯에 넣을 수 있는 보유 장비 목록.
 	var owned := _owned_ids_for_slot(slot)
 	if owned.is_empty():
-		box.add_child(_text("보유한 장비가 없습니다. 제조에서 만들 수 있습니다.", 12, UITheme.INK_DIM))
+		# 문구로만 알리면 사용자가 뒤로 나갔다 제조로 다시 들어가야 한다.
+		# 갈 곳을 아는 문구는 버튼이어야 한다.
+		var empty_row := HBoxContainer.new()
+		empty_row.add_theme_constant_override("separation", 8)
+		box.add_child(empty_row)
+		empty_row.add_child(_text("보유한 장비가 없습니다.", 12, UITheme.INK_DIM))
+
+		var go_craft := Button.new()
+		go_craft.text = "제조하러 가기"
+		go_craft.custom_minimum_size = Vector2(120, 30)
+		go_craft.add_theme_font_size_override("font_size", 12)
+		go_craft.add_theme_color_override("font_color", UITheme.INK)
+		go_craft.add_theme_stylebox_override("normal", UITheme.panel_box_deep())
+		go_craft.add_theme_stylebox_override("hover", UITheme.panel_box_deep())
+		go_craft.pressed.connect(func(): ScreenManager.swap(load(CRAFT_SCREEN_PATH)))
+		empty_row.add_child(go_craft)
 		return panel
 
 	var list := HBoxContainer.new()

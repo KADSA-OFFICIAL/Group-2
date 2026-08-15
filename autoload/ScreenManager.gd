@@ -64,6 +64,13 @@ func push(scene: PackedScene) -> Control:
 		return null
 
 	var instance := scene.instantiate()
+	# 씬이 깨져 있으면 instantiate() 가 null 을 돌려준다(순환 참조 등).
+	# 이때 아래에서 instance.queue_free() 를 부르면 그 자체가 에러가 되어
+	# 진짜 원인이 가려진다. 먼저 걸러 낸다.
+	if instance == null:
+		push_warning("ScreenManager.push: 씬을 만들 수 없습니다: " + scene.resource_path)
+		return null
+
 	var screen := instance as Control
 	if screen == null:
 		push_warning("ScreenManager.push: 루트가 Control이 아닙니다: " + scene.resource_path)
@@ -109,6 +116,20 @@ func pop() -> void:
 # 스택을 모두 비우고 새 화면 하나만 남긴다.
 func replace(scene: PackedScene) -> Control:
 	close_all()
+	return push(scene)
+
+
+# 맨 위 화면을 다른 화면으로 **갈아 끼운다**. 스택 깊이가 늘지 않는다.
+#
+# 옆으로 이동할 때 쓴다(장비 <-> 제조처럼 서로를 오가는 화면).
+# 그런 이동에 push 를 쓰면 오갈수록 스택이 깊어져서
+# 뒤로가기를 여러 번 눌러야 원래 자리로 돌아온다.
+#
+# 파고드는 이동(편성 -> 인물 상세)은 돌아올 자리가 있어야 하므로 push 를 쓴다.
+func swap(scene: PackedScene) -> Control:
+	if _stack.is_empty():
+		return push(scene)
+	pop()
 	return push(scene)
 
 
