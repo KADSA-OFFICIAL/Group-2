@@ -65,8 +65,9 @@ class_name CombatTuning
 @export var mark_threshold: int = 5
 ## 평타 1회당 표식 충전량.
 @export var mark_gain_per_hit: int = 1
-## 표식 폭발 시 기절 지속(초).
-@export var mark_stun_duration: float = 2.0
+# [이전됨] 표식 폭발 시 기절 지속시간은 data/status_effects/stun.tres 가 소유한다.
+# 효과의 지속시간·차단 대상 같은 "효과 자신의 성질"은 효과 리소스에 두고,
+# 여기에는 메커니즘 밸런스 수치(임계치·비율·계수)만 남긴다. 두 곳에 같은 값을 두지 않는다.
 ## 표식 폭발 시 추가 피해 = 표식을 부여한 탱커의 물리 공격력 x 이 배수.
 ## 비율이라 공격력 스케일이 바뀌어도 유지된다.
 @export var mark_burst_damage_multiplier: float = 2.0
@@ -134,7 +135,6 @@ func get_summary() -> Dictionary:
 		"faith_to_skill_boost": faith_to_skill_boost,
 		"mark_threshold": mark_threshold,
 		"mark_gain_per_hit": mark_gain_per_hit,
-		"mark_stun_duration": mark_stun_duration,
 		"mark_burst_damage_multiplier": mark_burst_damage_multiplier,
 		"reflect_damage_percent": reflect_damage_percent,
 		"stun_heal_percent": stun_heal_percent,
