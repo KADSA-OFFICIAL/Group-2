@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <title>표식</title>
-  <!-- Palette: outline #6E6558, cream #F7F3EA, tan-deep #C9B894 -->
-  <path d="M32.3 7.8C39.4 15.2 46.6 22.7 55.4 31.9C47.3 40.4 39.7 48.1 31.6 56.2C24.2 48.3 16.9 40.6 8.7 32.1C16.4 24.1 24 16.2 32.3 7.8Z" fill="#F7F3EA" stroke="#6E6558" stroke-width="3.3"/>
-  <path d="M32.2 21.6C35.9 25.3 39.4 28.9 43.6 32.1C39.5 36.1 35.7 39.9 31.7 43.9C27.9 39.8 24.1 35.9 20.3 32C24.3 28.5 28.2 25.1 32.2 21.6Z" fill="#C9B894" stroke="#6E6558" stroke-width="2.7"/>
-</svg>
