@@ -20,6 +20,16 @@ var _active: Dictionary = {}
 # tree_exiting을 연결해 둔 대상. 중복 연결을 막는다.
 var _watched: Dictionary = {}
 
+# 상태 효과가 아닌 곳에서 들어오는 스텟 기여분.
+#   target(Node) -> { source_key(StringName) -> { "flat": Dictionary, "percent": Dictionary } }
+#
+# 왜 필요한가: PlayerStats.set_buff_bonuses()는 "최종값"을 받으므로 여러 곳에서 호출하면
+# 서로 덮어쓴다. 그래서 버프 채널에 쓰는 주체는 이 시스템 하나로 유지한다.
+# 그런데 원거리 스택처럼 **정수 단위로 서서히 감소하는** 값은 상태 효과의 만료 모델로
+# 표현할 수 없다(만료는 전체가 한 번에 사라진다). 값은 소유자(Player)가 굴리고,
+# 채널에 쓰는 일만 여기로 모은다.
+var _external: Dictionary = {}
+
 
 # 한 대상에 걸린 효과 하나의 런타임 상태.
 class _Instance:
@@ -91,6 +101,7 @@ func _watch_target(target: Node) -> void:
 
 func _on_target_exiting(target: Node) -> void:
 	_watched.erase(target)
+	_external.erase(target)
 	clear(target)
 
 
@@ -131,6 +142,14 @@ func get_stacks(target, effect_id: StringName) -> int:
 func get_gauge(target, effect_id: StringName) -> int:
 	var inst := _find(target, effect_id)
 	return 0 if inst == null else inst.gauge
+
+# 이 효과를 건 주체. 없으면 null.
+# 표식 폭발의 추가 피해를 "표식을 건 탱커"의 공격력으로 계산하는 데 쓴다.
+func get_source(target, effect_id: StringName) -> Node:
+	var inst := _find(target, effect_id)
+	if inst == null or not is_instance_valid(inst.source):
+		return null
+	return inst.source
 
 # 대상에 걸린 효과 id 목록.
 func get_effect_ids(target) -> Array:
@@ -250,6 +269,30 @@ func _apply_periodic(target: Node, inst: _Instance) -> void:
 		target.heal(amount_heal)
 
 
+# ===== 외부 기여분 (External Contributions) =====
+# 상태 효과가 아닌 메커니즘(원거리 스택 등)이 스텟 버프에 기여할 때 쓴다.
+# 키(source_key)별로 덮어쓰므로, 소유자는 값이 바뀔 때마다 그냥 다시 넣으면 된다.
+
+func set_external_bonus(target, source_key: StringName, flat: Dictionary = {}, percent: Dictionary = {}) -> void:
+	if not _is_valid_target(target):
+		return
+	if not _external.has(target):
+		_external[target] = {}
+	_external[target][source_key] = {"flat": flat, "percent": percent}
+	if target is Node:
+		_watch_target(target)
+	_sync_stat_mods(target)
+
+
+func clear_external_bonus(target, source_key: StringName) -> void:
+	if not _external.has(target):
+		return
+	_external[target].erase(source_key)
+	if _external[target].is_empty():
+		_external.erase(target)
+	_sync_stat_mods(target)
+
+
 # ===== 스텟 변경 반영 (Stat Mods) =====
 
 # 대상에 걸린 모든 STAT_MOD를 합산해 PlayerStats의 버프 채널에 한 번에 밀어 넣는다.
@@ -275,6 +318,15 @@ func _sync_stat_mods(target) -> void:
 			for key in inst.data.stat_percent:
 				percent[key] = float(percent.get(key, 0.0)) + float(inst.data.stat_percent[key]) * inst.stacks
 
+
+	# 외부 기여분(원거리 스택 등)도 같은 합에 넣는다.
+	if _external.has(target):
+		for source_key in _external[target]:
+			var entry: Dictionary = _external[target][source_key]
+			for key in entry["flat"]:
+				flat[key] = int(flat.get(key, 0)) + int(entry["flat"][key])
+			for key in entry["percent"]:
+				percent[key] = float(percent.get(key, 0.0)) + float(entry["percent"][key])
 	stats.set_buff_bonuses(flat, percent)
 
 

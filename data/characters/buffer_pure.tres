@@ -6,10 +6,10 @@
 [sub_resource type="Resource" id="PlayerStats_buffer_pure"]
 script = ExtResource("2_stats")
 hp = 100
-strength = 10
+strength = 8
 defense = 10
 intelligence = 10
-faith = 10
+faith = 16
 
 [resource]
 script = ExtResource("1_chardata")
