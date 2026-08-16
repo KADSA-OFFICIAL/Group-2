@@ -127,7 +127,7 @@ func _build_center() -> Control:
 	# 슬롯에서 캐릭터로 이어지는 연결선(장르 문법). 장식이며 정보가 아니다.
 	var connector := ColorRect.new()
 	connector.color = HUDKit.line()
-	connector.custom_minimum_size = Vector2(28, HUDKit.HAIRLINE)
+	connector.custom_minimum_size = Vector2(28, HUDKit.DIVIDER)
 	connector.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	center.add_child(connector)
 

@@ -266,7 +266,7 @@ func _make_roster_card(id: StringName) -> Control:
 			if icon != null:
 				role_row.add_child(icon)
 		if PartySystem.has_character(id):
-			role_row.add_child(HUDKit.label("편성", 10, UITheme.ACCENT, 700))
+			role_row.add_child(HUDKit.label("편성", 10, HUDKit.accent_text(), 700))
 
 		var name_label := HUDKit.label(character.display_name, 12, HUDKit.text_1(), 600)
 		name_label.clip_text = true
@@ -331,7 +331,7 @@ func _refresh_detail() -> void:
 	for role in character.get_roles():
 		badge_row.add_child(_role_badge(role))
 	if PartySystem.has_character(character.character_id):
-		badge_row.add_child(HUDKit.label("· 편성 중", 12, UITheme.ACCENT, 700))
+		badge_row.add_child(HUDKit.label("· 편성 중", 12, HUDKit.accent_text(), 700))
 
 	_detail_body.add_child(_rule())
 
@@ -441,7 +441,7 @@ func _bonus(amount: int) -> String:
 func _rule() -> Control:
 	var rule := ColorRect.new()
 	rule.color = HUDKit.line()
-	rule.custom_minimum_size = Vector2(0, HUDKit.HAIRLINE)
+	rule.custom_minimum_size = Vector2(0, HUDKit.DIVIDER)
 	return rule
 
 

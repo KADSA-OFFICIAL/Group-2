@@ -17,59 +17,85 @@ extends RefCounted
 #   6) 주 CTA 는 우하단에 하나. 보조는 그 왼쪽에 아웃라인
 #   7) 정보 밀도를 높게. 라벨은 작고 흐리고 자간 넓게, 수치는 크고 굵게
 #
-# 아트 디렉션은 킷의 A(테크니컬 HUD)를 따르되 **액센트는 이 게임의 앰버 1색**이다.
-# 킷이 제시한 형광 라임으로 바꾸면 이미 저작된 아이콘(베이지/스톤)과 전부 어긋난다.
-# "액센트는 정확히 1개" 라는 규칙 자체는 그대로 지킨다.
+# 아트 디렉션(#118 에서 전환):
+#   킷의 A(테크니컬 다크 HUD)를 따르던 것을 **밝고 아기자기한 톤**으로 되돌렸다.
+#   메인화면이 UITheme 의 밝은 베이지 문법을 쓰는데 서브 화면만 다크라서 톤이 갈렸고,
+#   이미 저작된 아이콘 26종도 베이지/스톤 톤이라 밝은 쪽이 원래 이 게임의 색이다.
+#
+#   바뀐 것 = 색(밝은 면 + 잉크 글자)과 형태(둥근 모서리, 두꺼운 두들 테두리, 스캔라인 제거).
+#   유지한 것 = 위 1~7번 레이아웃 문법 전부. 톤만 갈아끼운 것이지 구조는 #104 그대로다.
+#
+#   액센트는 여전히 앰버 1색이다. "액센트는 정확히 1개" 규칙은 그대로 지킨다.
+#
+# 색은 전부 UITheme 상수에서 파생한다. 이 파일에 리터럴 색을 만들지 않는다.
 
 # ===== 치수 =====
-const CHAMFER: int = 12          # 코너 컷 크기
-const HAIRLINE: int = 1          # 헤어라인 두께
-const BRACKET_LEN: int = 10      # 선택 표시 L자 브래킷 길이
-const BRACKET_WIDTH: int = 2
+# 모서리·테두리는 UITheme 을 따른다. 여기서 따로 정하면 메인화면과 또 어긋난다.
+const RADIUS: int = UITheme.RADIUS          # 패널 모서리 (둥글게)
+const RADIUS_SMALL: int = 10                # 카드·버튼처럼 작은 요소
+const BORDER: int = UITheme.BORDER_WIDTH    # 두들 아이콘 윤곽선과 같은 두께
+const DIVIDER: int = 2                      # 패널 안 구분선 두께
+const BRACKET_LEN: int = 10                 # 선택 표시 L자 브래킷 길이
+const BRACKET_WIDTH: int = 3
 
 const RAIL_WIDTH: int = 300      # 좌측 리스트 폭
 const DETAIL_WIDTH: int = 380    # 우측 상세 폭
 
 # ===== 색 (UITheme 팔레트를 이 문법에 매핑) =====
 # 값의 출처는 UITheme 이다. 여기서 새 색을 만들지 않는다.
-static func void_bg() -> Color:
-	return Color(0.055, 0.049, 0.039, 1.0)   # UITheme.BG 보다 한 단계 깊은 바닥
+#
+# 밝은 톤에서는 명도 순서가 다크와 반대다.
+#   바닥(진한 베이지) < 카드(기본 베이지) < 패널(크림)
+# 패널이 바닥보다 밝아야 위로 떠 보인다. 다크에서 하던 대로 패널을 어둡게 하면
+# 밝은 바닥에 구멍이 뚫린 것처럼 보인다.
+
+# 화면 바닥. 패널보다 한 단계 진해야 패널이 떠 보인다.
+static func ground_bg() -> Color:
+	return UITheme.TAN_DEEP
 
 
 static func panel_fill() -> Color:
-	return _alpha(UITheme.BG, 0.86)
-
-
-static func card_fill() -> Color:
-	return _alpha(UITheme.STONE_DARK, 0.34)
-
-
-static func line() -> Color:
-	return _alpha(UITheme.CREAM, 0.12)
-
-
-static func line_hi() -> Color:
-	return _alpha(UITheme.CREAM, 0.26)
-
-
-static func text_1() -> Color:
 	return UITheme.CREAM
 
 
+static func card_fill() -> Color:
+	return UITheme.TAN
+
+
+static func line() -> Color:
+	return _alpha(UITheme.LINE, 0.55)
+
+
+static func line_hi() -> Color:
+	return UITheme.LINE
+
+
+# 밝은 면 위 글자. UITheme.INK 계열이며 CREAM 이 아니다.
+static func text_1() -> Color:
+	return UITheme.INK
+
+
 static func text_2() -> Color:
-	return _alpha(UITheme.CREAM, 0.62)
+	return UITheme.INK_DIM
 
 
 static func text_3() -> Color:
-	return _alpha(UITheme.CREAM, 0.34)
+	return _alpha(UITheme.INK_DIM, 0.70)
+
+
+# 밝은 면 위 액센트 **글자**.
+# ACCENT 원본(앰버)은 크림/베이지 위에서 거의 안 읽힌다. 면을 칠할 때는 ACCENT 를
+# 그대로 쓰되, 글자에는 이 값을 쓴다. 다크에서는 이 구분이 필요 없었다.
+static func accent_text() -> Color:
+	return UITheme.ACCENT.darkened(0.45)
 
 
 static func up_color() -> Color:
-	return UITheme.SAGE
+	return UITheme.POSITIVE
 
 
 static func down_color() -> Color:
-	return Color("D9736A")
+	return UITheme.NEGATIVE
 
 
 static func _alpha(c: Color, a: float) -> Color:
@@ -77,42 +103,44 @@ static func _alpha(c: Color, a: float) -> Color:
 
 
 # ===== StyleBox =====
-# 모서리를 둥글리지 않는다. Godot 의 StyleBoxFlat 은 챔퍼를 직접 못 그리므로
-# corner_radius 0 + 헤어라인으로 각진 느낌을 만들고, 챔퍼가 필요한 곳은
-# chamfer_overlay() 로 모서리에 삼각형을 덧그린다.
+# 모서리를 둥글리고 테두리를 두들 아이콘과 같은 두께로 굵게 그린다.
+# 다크 시절의 각진 모서리 + 1px 헤어라인은 밝은 면 위에서 차갑게 읽힌다.
 
 static func panel(pad: int = 12) -> StyleBoxFlat:
-	return _box(panel_fill(), line(), HAIRLINE, pad)
+	return _box(panel_fill(), line_hi(), BORDER, pad, RADIUS)
 
 
 static func card(selected: bool = false) -> StyleBoxFlat:
+	# 선택 카드는 앰버로 면을 채운다. 밝은 면 위에서는 다크 때처럼 알파 0.16 으로
+	# 깔면 배경과 구분이 안 된다. 테두리도 옅게 두지 않고 윤곽선 색을 그대로 쓴다.
 	if selected:
-		return _box(_alpha(UITheme.ACCENT, 0.16), UITheme.ACCENT, HAIRLINE, 8)
-	return _box(card_fill(), line(), HAIRLINE, 8)
+		return _box(_alpha(UITheme.ACCENT, 0.75), line_hi(), BORDER, 8, RADIUS_SMALL)
+	return _box(card_fill(), line(), BORDER, 8, RADIUS_SMALL)
 
 
+# 패널 안에 파인 칸. 패널(크림)보다 한 단계 진하게 해서 눌려 보이게 한다.
 static func inset(pad: int = 8) -> StyleBoxFlat:
-	return _box(_alpha(UITheme.BG, 0.55), line(), HAIRLINE, pad)
+	return _box(UITheme.SURFACE_DEEP, line(), BORDER, pad, RADIUS_SMALL)
 
 
 # 주 CTA. 액센트로 꽉 채운다. 화면당 하나만 쓴다.
 static func cta() -> StyleBoxFlat:
-	return _box(UITheme.ACCENT, _alpha(UITheme.CREAM, 0.35), HAIRLINE, 12)
+	return _box(UITheme.ACCENT, line_hi(), BORDER, 12, RADIUS)
 
 
-# 보조 버튼. 아웃라인만.
+# 보조 버튼. 밝은 면 + 윤곽선.
 static func ghost() -> StyleBoxFlat:
-	return _box(_alpha(UITheme.CREAM, 0.04), line_hi(), HAIRLINE, 10)
+	return _box(UITheme.SURFACE, line_hi(), BORDER, 10, RADIUS_SMALL)
 
 
 static func ghost_hover() -> StyleBoxFlat:
-	return _box(_alpha(UITheme.CREAM, 0.10), UITheme.ACCENT, HAIRLINE, 10)
+	return _box(_alpha(UITheme.ACCENT, 0.45), line_hi(), BORDER, 10, RADIUS_SMALL)
 
 
-static func _box(fill: Color, border: Color, width: int, pad: int) -> StyleBoxFlat:
+static func _box(fill: Color, border: Color, width: int, pad: int, radius: int = RADIUS) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.bg_color = fill
-	box.set_corner_radius_all(0)
+	box.set_corner_radius_all(radius)
 	box.set_border_width_all(width)
 	box.border_color = border
 	box.set_content_margin_all(pad)
@@ -121,7 +149,10 @@ static func _box(fill: Color, border: Color, width: int, pad: int) -> StyleBoxFl
 
 # ===== 화면 뼈대 =====
 
-# 화면 바닥. 스캔라인을 아주 옅게 깐다(장르 시그니처, opacity 0.03 수준).
+# 화면 바닥.
+#
+# 다크 시절에는 여기에 4px 간격 스캔라인 셰이더를 깔았다. 밝은 베이지 바닥에서는
+# 같은 줄무늬가 질감이 아니라 얼룩으로 읽혀서 걷어냈다. 단색 한 장이면 충분하다.
 static func make_backdrop() -> Control:
 	var root := Control.new()
 	root.name = "Backdrop"
@@ -129,31 +160,10 @@ static func make_backdrop() -> Control:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var base := ColorRect.new()
-	base.color = void_bg()
+	base.color = ground_bg()
 	base.set_anchors_preset(Control.PRESET_FULL_RECT)
 	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(base)
-
-	var scan := ColorRect.new()
-	scan.name = "Scanlines"
-	scan.set_anchors_preset(Control.PRESET_FULL_RECT)
-	scan.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	scan.color = _alpha(UITheme.CREAM, 0.022)
-	# 셰이더 없이 4px 간격 줄무늬를 만든다.
-	var shader := Shader.new()
-	shader.code = """
-shader_type canvas_item;
-uniform vec4 line_color : source_color = vec4(1.0);
-void fragment() {
-	float y = mod(FRAGCOORD.y, 4.0);
-	COLOR = vec4(line_color.rgb, y < 1.0 ? line_color.a : 0.0);
-}
-"""
-	var mat := ShaderMaterial.new()
-	mat.shader = shader
-	mat.set_shader_parameter("line_color", _alpha(UITheme.CREAM, 0.03))
-	scan.material = mat
-	root.add_child(scan)
 	return root
 
 
@@ -244,7 +254,7 @@ static func stat_row(label_ko: String, label_en: String, value_text: String, bon
 	row.add_child(label(value_text, 14, text_1(), 700))
 	# 장비 보정분은 액센트로. (+320) 형태.
 	if not bonus_text.is_empty():
-		row.add_child(label(bonus_text, 12, UITheme.ACCENT, 700))
+		row.add_child(label(bonus_text, 12, accent_text(), 700))
 	return row
 
 
@@ -265,7 +275,8 @@ static func make_brackets() -> Control:
 	for corner in 4:
 		for axis in 2:
 			var bar := ColorRect.new()
-			bar.color = UITheme.ACCENT
+			# 밝은 면 위에서는 앰버 브래킷이 배경에 묻는다. 윤곽선 색으로 그린다.
+			bar.color = UITheme.LINE
 			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			var horizontal := axis == 0
 			bar.custom_minimum_size = Vector2(
@@ -282,7 +293,7 @@ static func make_brackets() -> Control:
 # 분위기용 더미 텍스트. 데이터가 없는 여백에 좌표·시리얼을 아주 흐리게 깐다.
 # 장르 문법이며 정보가 아니다(읽으라고 두는 것이 아니다).
 static func make_serial(text: String) -> Label:
-	var l := label(text, 10, _alpha(UITheme.CREAM, 0.20))
+	var l := label(text, 10, _alpha(UITheme.INK_DIM, 0.35))
 	return l
 
 
@@ -309,6 +320,9 @@ static func make_cta(text_ko: String, text_en: String) -> Button:
 	b.add_theme_font_size_override("font_size", 16)
 	b.add_theme_color_override("font_color", UITheme.INK)
 	b.add_theme_color_override("font_hover_color", UITheme.INK)
+	# 비활성일 때 면이 밝은 베이지로 바뀐다. Godot 기본 disabled 글자색은 그 위에서
+	# 거의 안 보이므로 명시한다("재료 부족" 같은 안내가 CTA 안에 들어간다).
+	b.add_theme_color_override("font_disabled_color", text_2())
 	b.add_theme_stylebox_override("normal", cta())
 	b.add_theme_stylebox_override("hover", cta())
 	b.add_theme_stylebox_override("pressed", ghost())
@@ -324,7 +338,9 @@ static func make_ghost(text_ko: String, min_width: int = 110) -> Button:
 	b.custom_minimum_size = Vector2(min_width, 40)
 	b.add_theme_font_size_override("font_size", 13)
 	b.add_theme_color_override("font_color", text_1())
-	b.add_theme_color_override("font_hover_color", UITheme.ACCENT)
+	# hover 면이 앰버로 차므로 글자를 앰버로 두면 겹쳐서 안 읽힌다. 잉크로 유지한다.
+	b.add_theme_color_override("font_hover_color", text_1())
+	b.add_theme_color_override("font_disabled_color", text_3())
 	b.add_theme_stylebox_override("normal", ghost())
 	b.add_theme_stylebox_override("hover", ghost_hover())
 	b.add_theme_stylebox_override("pressed", ghost())
@@ -347,7 +363,7 @@ static func make_panel(title_ko: String, title_en: String, pad: int = 12) -> Pan
 		box.add_child(section(title_ko, title_en))
 		var rule := ColorRect.new()
 		rule.color = line()
-		rule.custom_minimum_size = Vector2(0, HAIRLINE)
+		rule.custom_minimum_size = Vector2(0, DIVIDER)
 		box.add_child(rule)
 
 	var body := VBoxContainer.new()

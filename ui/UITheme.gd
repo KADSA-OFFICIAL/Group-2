@@ -75,6 +75,12 @@ const INK_ON_DARK := CREAM             # 어두운 배경 위 글자
 const ACCENT := AMBER                  # 주 강조 (출격 버튼 등)
 const LINE := OUTLINE                  # 테두리
 
+# 증감 표시용. 아이콘에는 쓰이지 않는 의미 전용 색이다.
+# SAGE 원본은 밝은 베이지 면 위에서 너무 옅어 글자로 안 읽히므로 한 단계 낮춘다.
+# 하락색은 팔레트에 대응하는 원본이 없어 여기서 정의한다(테라코타 계열, 베이지와 같은 흙 톤).
+const POSITIVE := Color("6F8A46")      # 상승 ▲
+const NEGATIVE := Color("B35C4C")      # 하락 ▼
+
 # ===== 치수 (Metrics) =====
 const RADIUS: int = 14                 # 패널 모서리
 const RADIUS_PILL: int = 22            # 재화 표시줄 등 알약 모양

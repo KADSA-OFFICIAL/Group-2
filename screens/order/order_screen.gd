@@ -220,7 +220,7 @@ func _make_member_card(id: StringName) -> Control:
 			if icon != null:
 				role_row.add_child(icon)
 		if in_party:
-			role_row.add_child(HUDKit.label("편성", 10, UITheme.ACCENT, 700))
+			role_row.add_child(HUDKit.label("편성", 10, HUDKit.accent_text(), 700))
 	else:
 		box.add_child(HUDKit.label(String(id), 11, HUDKit.text_2()))
 
