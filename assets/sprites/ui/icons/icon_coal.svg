@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <title>석탄</title>
-  <!-- Palette: outline #6E6558, outline-soft #7A7060, charcoal #4A453E, stone-dark #6E6A64, cream #F7F3EA -->
-  <path d="M34.5 33L45.2 25.1L57 30.6L58.1 43.8L48.8 51.5L36.4 47.6Z" fill="#6E6A64" stroke="#6E6558" stroke-width="3.2"/>
-  <path d="M5.8 35.8L12 20.2L25.8 12.6L40 20.6L45.7 36.5L36.8 50.8L20.2 54.8L8.1 47.2Z" fill="#4A453E" stroke="#6E6558" stroke-width="3.4"/>
-  <path d="M12 20.2L24 25.4L25.8 12.6M24 25.4L40 20.6M24 25.4L20.2 54.8M24 25.4L45.7 36.5" stroke="#6E6A64" stroke-width="2.7"/>
-  <path d="M14.9 30.4C18.8 24.7 24.2 22.7 29.8 23.3" stroke="#F7F3EA" stroke-width="3"/>
-</svg>

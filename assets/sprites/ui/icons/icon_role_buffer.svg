@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <title>버퍼</title>
-  <!-- Palette: outline #6E6558, cream #F7F3EA, accent-lilac #A78BC8 -->
-  <path d="M27.4 7.1C29.6 17.3 31.8 23.4 38 27C44 30.5 49.7 31.9 57.2 33.1C48.8 35.7 43.1 38 38.7 42.6C34.1 47.3 31.8 52.1 29.4 58C26.9 50.8 24.1 45.5 19.7 41.7C15.2 37.9 11.4 36.2 5.7 34.2C13.7 31.8 18.1 29.6 21.6 25C25.1 20.3 26.2 14.5 27.4 7.1Z" fill="#A78BC8" stroke="#6E6558" stroke-width="3.4"/>
-  <path d="M23.2 27.5C25.4 23.7 27 20.8 27.8 17.6" stroke="#F7F3EA" stroke-width="3.1"/>
-  <path d="M50.3 6L51.9 11L56.8 12.8L52 14.7L50.1 20L48.5 14.8L43.8 12.9L48.6 11.2Z" fill="#A78BC8" stroke="#6E6558" stroke-width="2.7"/>
-</svg>
