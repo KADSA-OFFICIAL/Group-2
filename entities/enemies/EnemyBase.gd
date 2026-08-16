@@ -96,6 +96,12 @@ func _physics_process(delta: float) -> void:
 	if not is_ai_active():
 		return
 
+	# 기절 등 CONTROL 효과가 이동을 막으면 추적하지 않는다.
+	# (탱커 표식이 터져 기절시켰을 때 적이 실제로 멈춰야 한다.)
+	if StatusEffectSystem.blocks_movement(self):
+		velocity = Vector2.ZERO
+		return
+
 	_target = _resolve_target()
 	if _target == null:
 		velocity = Vector2.ZERO
@@ -178,7 +184,8 @@ func get_attack_cooldown() -> float:
 
 
 func can_attack() -> bool:
-	return is_alive and _attack_cooldown_left <= 0.0
+	# 기절 등 CONTROL 효과가 평타를 막으면 공격할 수 없다.
+	return is_alive and _attack_cooldown_left <= 0.0 and not StatusEffectSystem.blocks_attack(self)
 
 
 # 현재 대상에게 평타를 넣는다. 쿨다운 중이면 아무것도 하지 않는다.
