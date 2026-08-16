@@ -529,6 +529,33 @@ static func empty_notice(title: String, hint: String) -> PanelContainer:
 	return p
 
 
+# 알림 점. "새 게 있다"만 알리는 가장 작은 표시다.
+#
+# 개수를 적지 않는 이유: 개수는 열어 보면 알 수 있는 정보이고, 목록 밖에서 필요한 것은
+# 볼 것이 있는지 여부뿐이다. 숫자 배지는 앰버(주 액센트)를 써서 주 CTA 와 시선을
+# 다투기도 했다. 점은 하락색(붉은 흙빛)이라 액센트와 겹치지 않는다.
+static func new_dot(size: int = 10) -> Control:
+	var dot := PanelContainer.new()
+	dot.custom_minimum_size = Vector2(size, size)
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	# 테두리를 패널 면 색으로 둘러 어떤 배경 위에서도 점의 윤곽이 살아 있게 한다.
+	dot.add_theme_stylebox_override("panel",
+		_box(UITheme.NEGATIVE, panel_fill(), 2, 0, RADIUS_CHIP))
+	return dot
+
+
+# 버튼·아이콘 위에 겹쳐 놓는 알림 점. 우상단에 붙는다.
+static func overlay_new_dot(size: int = 12) -> Control:
+	var dot := new_dot(size)
+	dot.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	dot.offset_left = -float(size) - 1.0
+	dot.offset_top = -1.0
+	dot.offset_right = -1.0
+	dot.offset_bottom = float(size) - 1.0
+	return dot
+
+
 # 일반 태그 칩. 등급·상태 등 역할이 아닌 분류에 쓴다.
 static func tag_chip(text: String, color: Color) -> Control:
 	var p := PanelContainer.new()
