@@ -6,11 +6,11 @@
 
 [sub_resource type="Resource" id="PlayerStats_stone_spearman"]
 script = ExtResource("2_stats")
-hp = 140
-strength = 9
-defense = 12
-intelligence = 10
-faith = 10
+hp = 1200
+strength = 65
+defense = 120
+intelligence = 100
+faith = 100
 
 [resource]
 script = ExtResource("1_enemydata")

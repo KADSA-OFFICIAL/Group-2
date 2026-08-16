@@ -5,11 +5,11 @@
 
 [sub_resource type="Resource" id="PlayerStats_shipduck"]
 script = ExtResource("2_stats")
-hp = 140
-strength = 8
-defense = 16
+hp = 1400
+strength = 80
+defense = 160
 intelligence = 10
-faith = 10
+faith = 100
 equip_physical_defense = 0
 equip_magic_defense = 0
 

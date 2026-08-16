@@ -5,11 +5,11 @@
 
 [sub_resource type="Resource" id="PlayerStats_ranged_tank"]
 script = ExtResource("2_stats")
-hp = 110
-strength = 11
-defense = 11
+hp = 1100
+strength = 110
+defense = 110
 intelligence = 10
-faith = 10
+faith = 100
 
 [resource]
 script = ExtResource("1_chardata")
