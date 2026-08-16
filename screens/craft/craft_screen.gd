@@ -2,24 +2,23 @@ extends Control
 
 # 제조 화면 (메타 UI).
 #
-# 책임: 제작 가능한 장비를 나열하고, 제작을 EquipmentSystem 에 위임한다.
+# 구조는 서브컬쳐 수집형 RPG 문법을 따른다: **좌 레시피 / 중앙 결과물 / 우 재료**.
 #
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
 #   장비 정의   -> EquipmentDatabase (목록·이름·보너스·제작 비용)
 #   제작/보유   -> EquipmentSystem (can_craft / craft / get_owned_count)
-#   재화        -> CurrencySystem (잔액, 차감은 EquipmentSystem 이 한다)
-#   색          -> UITheme
+#   재화        -> CurrencySystem (차감은 EquipmentSystem 이 한다)
+#   색·조각     -> UITheme / HUDKit
 #
 # 제작 가능 여부와 재화 차감을 화면에서 계산하지 않는다.
 # can_craft() 로 묻고 craft() 로 시킬 뿐이다.
 #
+# 이 게임에 없는 것은 만들지 않았다:
+#   등급 확률표, 제작 큐·소요 시간·즉시 완료, 카테고리 탭 — 전부 시스템이 없다.
+#
 # 참고: data/equipment/README.md, SYSTEM_CONVENTIONS.md
 
-const BACK_ICON := "icon_back"
-const CRAFT_ICON := "icon_craft"
-
-# 장비 화면 경로. preload 가 아니라 **경로만** 둔다(순환 참조 방지).
-# 자세한 이유는 equipment_screen.gd 의 같은 상수 주석 참고.
+# 장비 화면은 경로만 둔다(서로 참조하므로 preload 하면 순환이 된다).
 const EQUIPMENT_SCREEN_PATH := "res://screens/equipment/EquipmentScreen.tscn"
 
 const SLOT_ICON_NAME := {
@@ -28,291 +27,331 @@ const SLOT_ICON_NAME := {
 	EquipmentData.Slot.ACCESSORY: "icon_slot_accessory",
 }
 
-var _currency_labels: Dictionary = {}
-var _list_holder: VBoxContainer
-var _toast: Label
+var _selected: StringName = &""
+
+var _currency_row: HBoxContainer
+var _recipe_list: VBoxContainer
+var _preview_body: VBoxContainer
+var _material_body: VBoxContainer
+var _craft_button: Button
+var _notice: Label
 
 
 func _ready() -> void:
-	_build()
-	_refresh_list()
+	var ids := EquipmentDatabase.get_all_ids()
+	if not ids.is_empty():
+		_selected = ids[0]
 
-	CurrencySystem.currency_changed.connect(_on_currency_changed)
-	# 제작 성공은 EquipmentSystem 이 EventBus 로 알린다. 화면은 그 신호로만 갱신한다.
-	EventBus.equipment_crafted.connect(_on_equipment_crafted)
+	_build()
+	_refresh()
+
+	CurrencySystem.currency_changed.connect(func(_t, _a, _b): _refresh())
+	EventBus.equipment_crafted.connect(func(_id): _refresh())
 
 
 # ===== 화면 구성 =====
 
 func _build() -> void:
-	add_child(UITheme.make_background())
+	add_child(HUDKit.make_backdrop())
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_bottom", 20)
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 16)
 	add_child(margin)
 
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 12)
 	margin.add_child(root)
 
-	root.add_child(_build_header())
-	root.add_child(_build_currency_bar())
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 16)
+	root.add_child(head)
+	head.add_child(HUDKit.make_header("제조", "craft", "icon_craft"))
+	head.add_child(_expanding_gap())
+
+	# 재화 바는 우상단(장르 문법).
+	_currency_row = HBoxContainer.new()
+	_currency_row.add_theme_constant_override("separation", 6)
+	_currency_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(_currency_row)
+
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 12)
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(body)
+
+	body.add_child(_build_recipe_panel())
+	body.add_child(_build_center())
+	body.add_child(_build_right())
+
+
+func _build_recipe_panel() -> Control:
+	var panel := HUDKit.make_panel("레시피", "recipes")
+	panel.custom_minimum_size = Vector2(HUDKit.RAIL_WIDTH, 0)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root.add_child(scroll)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	HUDKit.body_of(panel).add_child(scroll)
 
-	_list_holder = VBoxContainer.new()
-	_list_holder.add_theme_constant_override("separation", 10)
-	_list_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_list_holder)
-
-	_toast = Label.new()
-	_toast.add_theme_font_size_override("font_size", 14)
-	_toast.add_theme_color_override("font_color", UITheme.INK_ON_DARK)
-	_toast.visible = false
-	root.add_child(_toast)
+	_recipe_list = VBoxContainer.new()
+	_recipe_list.add_theme_constant_override("separation", 6)
+	_recipe_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_recipe_list)
+	return panel
 
 
-func _build_header() -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+func _build_center() -> Control:
+	var center := VBoxContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	center.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.add_theme_constant_override("separation", 10)
 
-	var back := Button.new()
-	back.text = " 뒤로"
-	back.icon = _texture(BACK_ICON)
-	# Button.icon 은 텍스처를 원본 크기(64px)로 그려 버튼 높이를 넘으면 잘린다.
-	# expand_icon 을 켜면 버튼 크기에 맞춰 비율을 유지하며 줄어든다.
-	back.expand_icon = true
-	back.custom_minimum_size = Vector2(0, 40)
-	back.add_theme_stylebox_override("normal", UITheme.panel_box())
-	back.add_theme_stylebox_override("hover", UITheme.panel_box())
-	back.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
-	back.add_theme_color_override("font_color", UITheme.INK)
-	back.pressed.connect(func(): ScreenManager.pop())
-	row.add_child(back)
+	_preview_body = VBoxContainer.new()
+	_preview_body.alignment = BoxContainer.ALIGNMENT_CENTER
+	_preview_body.add_theme_constant_override("separation", 8)
+	center.add_child(_preview_body)
 
-	var icon := _icon(CRAFT_ICON, 24)
-	if icon != null:
-		row.add_child(icon)
-
-	var title := Label.new()
-	title.text = "제조"
-	title.add_theme_font_size_override("font_size", 20)
-	title.add_theme_color_override("font_color", UITheme.INK_ON_DARK)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(title)
-
-	# 만든 장비는 장비 화면에서 착용한다. 그 다음 걸음을 여기서 바로 잇는다.
-	var go_equip := Button.new()
-	go_equip.text = "장비"
-	go_equip.custom_minimum_size = Vector2(96, 40)
-	go_equip.add_theme_font_size_override("font_size", 14)
-	go_equip.add_theme_color_override("font_color", UITheme.INK)
-	go_equip.add_theme_stylebox_override("normal", UITheme.panel_box())
-	go_equip.add_theme_stylebox_override("hover", UITheme.panel_box())
-	go_equip.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
-	go_equip.pressed.connect(func(): ScreenManager.swap(load(EQUIPMENT_SCREEN_PATH)))
-	row.add_child(go_equip)
-	return row
+	var serial := HUDKit.make_serial("FORGE.01 / STONE AGE")
+	serial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(serial)
+	return center
 
 
-# 재화 표시줄. 어떤 재화를 보여줄지 고르지 않고 DEFAULT_CURRENCIES 를 그대로 순회한다.
-func _build_currency_bar() -> Control:
-	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 8)
+func _build_right() -> Control:
+	var column := VBoxContainer.new()
+	column.custom_minimum_size = Vector2(HUDKit.DETAIL_WIDTH, 0)
+	column.add_theme_constant_override("separation", 10)
 
+	var panel := HUDKit.make_panel("필요 재료", "materials")
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(panel)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	HUDKit.body_of(panel).add_child(scroll)
+
+	_material_body = VBoxContainer.new()
+	_material_body.add_theme_constant_override("separation", 6)
+	_material_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_material_body)
+
+	_notice = HUDKit.label("", 12, UITheme.ACCENT)
+	column.add_child(_notice)
+
+	var actions := HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_END
+	actions.add_theme_constant_override("separation", 8)
+	column.add_child(actions)
+
+	var to_gear := HUDKit.make_ghost("장비 관리", 110)
+	to_gear.pressed.connect(func(): ScreenManager.swap(load(EQUIPMENT_SCREEN_PATH)))
+	actions.add_child(to_gear)
+
+	_craft_button = HUDKit.make_cta("제조", "craft")
+	_craft_button.pressed.connect(_on_craft_pressed)
+	actions.add_child(_craft_button)
+	return column
+
+
+# ===== 갱신 =====
+
+func _refresh() -> void:
+	_refresh_currency()
+	_refresh_recipes()
+	_refresh_preview()
+	_refresh_materials()
+
+
+func _refresh_currency() -> void:
+	_clear(_currency_row)
+	# 어떤 재화를 보여줄지 고르지 않고 DEFAULT_CURRENCIES 를 그대로 순회한다.
 	for currency_type in CurrencySystem.DEFAULT_CURRENCIES:
-		bar.add_child(_make_currency_chip(String(currency_type)))
-
-	var tail := Control.new()
-	tail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.add_child(tail)
-	return bar
-
-
-func _make_currency_chip(currency_type: String) -> Control:
-	var chip := PanelContainer.new()
-	chip.add_theme_stylebox_override("panel", UITheme.pill_box())
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 5)
-	chip.add_child(row)
-
-	var icon := _icon(UITheme.currency_icon_name(currency_type), 20)
-	if icon != null:
-		row.add_child(icon)
-
-	var label := _text(str(CurrencySystem.get_balance(currency_type)), 14, UITheme.INK)
-	row.add_child(label)
-	_currency_labels[currency_type] = label
-	return chip
+		var chip := PanelContainer.new()
+		chip.add_theme_stylebox_override("panel", HUDKit.inset(4))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 4)
+		chip.add_child(row)
+		var icon := HUDKit.make_icon(UITheme.currency_icon_name(String(currency_type)), 16)
+		if icon != null:
+			row.add_child(icon)
+		row.add_child(HUDKit.label(str(CurrencySystem.get_balance(String(currency_type))), 12, HUDKit.text_1(), 700))
+		_currency_row.add_child(chip)
 
 
-# ===== 목록 =====
-
-func _refresh_list() -> void:
-	if not is_instance_valid(_list_holder):
-		return
-	_clear(_list_holder)
-
+func _refresh_recipes() -> void:
+	_clear(_recipe_list)
 	var ids := EquipmentDatabase.get_all_ids()
 	if ids.is_empty():
-		_list_holder.add_child(_text("제작할 수 있는 장비가 없습니다.", 14, UITheme.INK_ON_DARK))
+		_recipe_list.add_child(HUDKit.label("제작할 수 있는 장비가 없습니다.", 12, HUDKit.text_2()))
 		return
-
 	for id in ids:
-		_list_holder.add_child(_make_recipe_card(id))
+		_recipe_list.add_child(_make_recipe_row(id))
 
 
-func _make_recipe_card(id: StringName) -> Control:
-	var data: EquipmentData = EquipmentDatabase.get_equipment(id)
+func _make_recipe_row(id: StringName) -> Control:
+	var item := EquipmentDatabase.get_equipment(id)
+	var selected: bool = id == _selected
 	# 제작 가능 여부는 EquipmentSystem 이 판단한다(재화 비교를 여기서 하지 않는다).
 	var craftable := EquipmentSystem.can_craft(id)
 
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", UITheme.panel_box())
+	card.add_theme_stylebox_override("panel", HUDKit.card(selected))
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(row)
 
-	var slot_icon := _icon(SLOT_ICON_NAME.get(data.slot, ""), 40)
-	if slot_icon != null:
-		row.add_child(slot_icon)
+	if item != null:
+		var icon := HUDKit.make_icon(SLOT_ICON_NAME.get(item.slot, ""), 28)
+		if icon != null:
+			row.add_child(icon)
 
-	var info := VBoxContainer.new()
-	info.add_theme_constant_override("separation", 3)
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(info)
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 1)
+		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(box)
+		box.add_child(HUDKit.label(item.display_name, 13, HUDKit.text_1(), 600))
+		box.add_child(HUDKit.caption("%s / owned %d" % [item.get_slot_name(), EquipmentSystem.get_owned_count(id)]))
 
-	var title_row := HBoxContainer.new()
-	title_row.add_theme_constant_override("separation", 8)
-	info.add_child(title_row)
-	title_row.add_child(_text(data.display_name, 16, UITheme.INK))
-	title_row.add_child(_text("(%s)" % data.get_slot_name(), 13, UITheme.INK_DIM))
-	title_row.add_child(_text("보유 %d" % EquipmentSystem.get_owned_count(id), 13, UITheme.INK_DIM))
-
-	info.add_child(_text(_bonus_text(data), 13, UITheme.INK_DIM))
-
-	# 비용: 보유/필요를 함께 보여주고, 모자란 재료만 눈에 띄게 한다.
-	var cost_row := HBoxContainer.new()
-	cost_row.add_theme_constant_override("separation", 8)
-	info.add_child(cost_row)
-	if data.craft_cost.is_empty():
-		cost_row.add_child(_text("재료 없음", 13, UITheme.INK_DIM))
-	else:
-		for currency_type in data.craft_cost:
-			cost_row.add_child(_make_cost_chip(String(currency_type), int(data.craft_cost[currency_type])))
+		# 제작 불가는 흐리게(장르 문법).
+		if not craftable:
+			row.modulate = Color(1, 1, 1, 0.45)
 
 	var button := Button.new()
-	button.text = "제조"
-	button.custom_minimum_size = Vector2(96, 44)
-	button.add_theme_font_size_override("font_size", 15)
-	button.add_theme_color_override("font_color", UITheme.INK)
-	button.add_theme_stylebox_override("normal", UITheme.accent_box() if craftable else UITheme.panel_box_deep())
-	button.add_theme_stylebox_override("hover", UITheme.accent_box() if craftable else UITheme.panel_box_deep())
-	button.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
-	button.disabled = not craftable
-	button.pressed.connect(_on_craft_pressed.bind(id))
-	row.add_child(button)
+	button.flat = true
+	button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	for state in ["normal", "hover", "pressed", "focus"]:
+		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	button.pressed.connect(_on_recipe_pressed.bind(id))
+	card.add_child(button)
+
+	if selected:
+		card.add_child(HUDKit.make_brackets())
 	return card
 
 
-func _make_cost_chip(currency_type: String, need: int) -> Control:
-	var have := CurrencySystem.get_balance(currency_type)
-	var enough := have >= need
+func _refresh_preview() -> void:
+	_clear(_preview_body)
+	var item := _current()
+	if item == null:
+		_preview_body.add_child(HUDKit.label("레시피를 고르세요", 13, HUDKit.text_2()))
+		return
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 4)
-
-	var icon := _icon(UITheme.currency_icon_name(currency_type), 18)
+	var icon := HUDKit.make_icon(SLOT_ICON_NAME.get(item.slot, ""), 120)
 	if icon != null:
-		row.add_child(icon)
+		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		_preview_body.add_child(icon)
 
-	# 모자란 재료는 진하게(INK) 두어 눈에 띄게 하고, 충족한 재료는 흐리게 둔다.
-	row.add_child(_text("%d/%d" % [have, need], 13, UITheme.INK_DIM if enough else UITheme.INK))
-	return row
+	var name_label := HUDKit.label(item.display_name, 22, HUDKit.text_1(), 700)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_preview_body.add_child(name_label)
+
+	var cap := HUDKit.caption(String(item.equipment_id))
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_preview_body.add_child(cap)
+
+	var bonus := PanelContainer.new()
+	bonus.add_theme_stylebox_override("panel", HUDKit.inset(8))
+	_preview_body.add_child(bonus)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	bonus.add_child(box)
+	var any := false
+	for pair in [["물리 공격", "p.atk", item.physical_attack_bonus], ["마법 공격", "m.atk", item.magic_attack_bonus],
+			["물리 방어", "p.def", item.physical_defense_bonus], ["마법 방어", "m.def", item.magic_defense_bonus],
+			["최대 HP", "hp", item.hp_bonus]]:
+		if int(pair[2]) != 0:
+			box.add_child(HUDKit.stat_row(pair[0], pair[1], "+%d" % int(pair[2])))
+			any = true
+	if not any:
+		box.add_child(HUDKit.label("보너스 없음", 12, HUDKit.text_3()))
+
+
+func _refresh_materials() -> void:
+	_clear(_material_body)
+	var item := _current()
+	if item == null:
+		_craft_button.disabled = true
+		return
+
+	if item.craft_cost.is_empty():
+		_material_body.add_child(HUDKit.label("재료 없음", 12, HUDKit.text_3()))
+	for currency_type in item.craft_cost:
+		var need := int(item.craft_cost[currency_type])
+		var have := CurrencySystem.get_balance(String(currency_type))
+		var enough := have >= need
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		row.custom_minimum_size = Vector2(0, 30)
+
+		var icon := HUDKit.make_icon(UITheme.currency_icon_name(String(currency_type)), 20)
+		if icon != null:
+			row.add_child(icon)
+
+		var name_label := HUDKit.label(String(currency_type), 12, HUDKit.text_2())
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_label)
+
+		# 부족분은 적색(장르 문법: 미충족 재화는 적색).
+		row.add_child(HUDKit.label("%d / %d" % [have, need], 13,
+			HUDKit.text_1() if enough else HUDKit.down_color(), 700))
+		_material_body.add_child(row)
+
+	var craftable := EquipmentSystem.can_craft(item.equipment_id)
+	_craft_button.disabled = not craftable
+	_craft_button.text = "제조  CRAFT" if craftable else "재료 부족"
 
 
 # ===== 조작 =====
 
-func _on_craft_pressed(id: StringName) -> void:
-	var data: EquipmentData = EquipmentDatabase.get_equipment(id)
-	# 재화 차감과 보유 추가는 EquipmentSystem 이 한다. 실패해도 화면이 상태를 바꾸지 않는다.
-	if EquipmentSystem.craft(id):
-		_show_toast("%s 제조 완료" % (data.display_name if data else String(id)))
-	else:
-		_show_toast("재료가 부족합니다")
-
-
-func _on_equipment_crafted(_id: StringName) -> void:
-	_refresh_list()
-
-
-func _on_currency_changed(currency_type: String, _amount: int, new_balance: int) -> void:
-	var label: Label = _currency_labels.get(currency_type)
-	if label != null and is_instance_valid(label):
-		label.text = str(new_balance)
-	# 잔액이 바뀌면 제작 가능 여부도 바뀌므로 목록을 다시 그린다.
-	_refresh_list()
-
-
-func _show_toast(message: String) -> void:
-	if not is_instance_valid(_toast):
+func _on_recipe_pressed(id: StringName) -> void:
+	if id == _selected:
 		return
-	_toast.text = message
-	_toast.visible = true
+	_selected = id
+	_refresh_recipes()
+	_refresh_preview()
+	_refresh_materials()
 
 
-# ===== 공용 조각 =====
+func _on_craft_pressed() -> void:
+	var item := _current()
+	if item == null:
+		return
+	# 재화 차감과 보유 추가는 EquipmentSystem 이 한다.
+	if EquipmentSystem.craft(item.equipment_id):
+		_show_notice("%s 제조 완료" % item.display_name)
+	else:
+		_show_notice("재료가 부족합니다")
 
-func _bonus_text(data: EquipmentData) -> String:
-	var parts: Array[String] = []
-	if data.physical_attack_bonus != 0: parts.append("물공 +%d" % data.physical_attack_bonus)
-	if data.magic_attack_bonus != 0: parts.append("마공 +%d" % data.magic_attack_bonus)
-	if data.physical_defense_bonus != 0: parts.append("물방 +%d" % data.physical_defense_bonus)
-	if data.magic_defense_bonus != 0: parts.append("마방 +%d" % data.magic_defense_bonus)
-	if data.hp_bonus != 0: parts.append("HP +%d" % data.hp_bonus)
-	return "  ".join(parts) if not parts.is_empty() else "보너스 없음"
+
+func _show_notice(message: String) -> void:
+	if is_instance_valid(_notice):
+		_notice.text = message
+
+
+# ===== 조각 =====
+
+func _current() -> EquipmentData:
+	return EquipmentDatabase.get_equipment(_selected) if _selected != &"" else null
+
+
+func _expanding_gap() -> Control:
+	var c := Control.new()
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return c
 
 
 func _clear(node: Node) -> void:
 	for child in node.get_children():
 		node.remove_child(child)
 		child.queue_free()
-
-
-func _text(value: String, size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = value
-	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", color)
-	return label
-
-
-func _icon(icon_name: String, size: int) -> TextureRect:
-	var texture := _texture(icon_name)
-	if texture == null:
-		return null
-	var rect := TextureRect.new()
-	rect.texture = texture
-	rect.custom_minimum_size = Vector2(size, size)
-	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	return rect
-
-
-# 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.
-func _texture(icon_name: String) -> Texture2D:
-	var path := UITheme.icon_path(icon_name)
-	if path.is_empty():
-		return null
-	return load(path) as Texture2D
