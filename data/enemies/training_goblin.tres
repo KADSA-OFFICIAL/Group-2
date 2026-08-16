@@ -1,7 +1,9 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+
+[ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
 
 [sub_resource type="Resource" id="PlayerStats_training_goblin"]
 script = ExtResource("2_stats")
@@ -17,6 +19,7 @@ enemy_id = &"training_goblin"
 display_name = "훈련용 고블린"
 description = "피해 확인용 샌드백. AI가 꺼져 있어 추적하거나 반격하지 않는다. 스텟은 기본 적 기준이며, 전투 길이 목표(원거리딜러 평타 약 6대에 처치)의 기준점이다."
 stats = SubResource("PlayerStats_training_goblin")
+sprite_texture = ExtResource("9_shape")
 tint = Color(1, 0.5, 0, 1)
 sprite_scale = Vector2(1.5, 1.5)
 ai_enabled = false
