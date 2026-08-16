@@ -21,3 +21,9 @@
 - **겸직 캐릭터는 주 역할(`role`)의 도형**을 쓴다. 두 역할을 한 도형으로 표현할 방법이 없어서다.
 
 실제 아트가 정해지면 이 폴더를 통째로 대체하고 `sprite_texture`만 바꿔 끼우면 된다.
+
+## 이미 실제 아트로 넘어간 것
+
+- **적**: `stone_spearman`은 [`assets/sprites/enemies`](../enemies/README.md)의 4방향 워크 시트를 쓴다.
+  `EnemyData.walk_frames`가 채워져 있으면 `Sprite2D`(도형)는 숨고 `AnimatedSprite2D`가 그린다.
+  실제 아트에는 `tint`를 입히지 않는다 — 자기 색이 있어서 곱하면 색이 죽는다.
