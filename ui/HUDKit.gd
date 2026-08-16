@@ -224,6 +224,19 @@ static func ghost_pressed() -> StyleBoxFlat:
 	return _box(UITheme.SURFACE_DEEP, line_hi(), BORDER, 12, RADIUS_CARD)
 
 
+# 슬라이더. 기본 테마의 슬라이더는 어두운 회색이라 밝은 패널 위에서 이물감이 있다.
+# 채워진 구간을 액센트로 칠해 지금 값이 어디인지 한눈에 보이게 한다.
+static func style_slider(s: Range) -> void:
+	var track := _box(inset_fill(), line(), 2, 0, RADIUS_CHIP)
+	track.content_margin_top = 5
+	track.content_margin_bottom = 5
+	s.add_theme_stylebox_override("slider", track)
+
+	var filled := _box(UITheme.ACCENT, line_hi(), 2, 0, RADIUS_CHIP)
+	s.add_theme_stylebox_override("grabber_area", filled)
+	s.add_theme_stylebox_override("grabber_area_highlight", filled)
+
+
 # 칩(역할·태그). 완전한 알약. 테두리는 면색을 어둡게 해서 만든다.
 static func chip(fill: Color) -> StyleBoxFlat:
 	var box := _box(fill, fill.darkened(0.25), 2, 6, RADIUS_CHIP)
@@ -460,6 +473,60 @@ static func role_chip_row(character: CharacterData, icon_names: Dictionary = {})
 	for role in character.get_roles():
 		row.add_child(role_chip(role, icon_names.get(role, "")))
 	return row
+
+
+# 재화 칩. 아이콘 + 수량.
+#
+# 상점·창고·우편·제조가 각자 같은 칩을 만들고 있었다(아이콘 크기와 여백이 화면마다
+# 조금씩 달랐다). 아이콘 **이름** 규칙의 출처는 UITheme.currency_icon_name() 이다.
+static func currency_chip(currency_type: String, amount_text: String, icon_size: int = 18) -> Control:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", chip(inset_fill()))
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 5)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(row)
+
+	var icon := make_icon(UITheme.currency_icon_name(currency_type), icon_size)
+	if icon != null:
+		row.add_child(icon)
+
+	row.add_child(label(amount_text, 13, text_1(), 700))
+	return p
+
+
+# 천 단위 구분. 창고에만 있던 것을 올려서 상점·우편도 같은 형식을 쓰게 한다.
+static func comma(value: int) -> String:
+	var digits := str(absi(value))
+	var out := ""
+	var count := 0
+	for i in range(digits.length() - 1, -1, -1):
+		out = digits[i] + out
+		count += 1
+		if count % 3 == 0 and i != 0:
+			out = "," + out
+	return ("-" + out) if value < 0 else out
+
+
+# 목록이 비었을 때의 안내 패널. 오류가 아니라 정상 상태를 알리는 자리다.
+# 다섯 화면이 같은 모양으로 만들던 것을 모은다.
+static func empty_notice(title: String, hint: String) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", panel(16))
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	p.add_child(box)
+	box.add_child(label(title, 16, text_1(), 700))
+	if not hint.is_empty():
+		var l := label(hint, 13, text_2())
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(l)
+	p.set_meta("body", box)
+	return p
 
 
 # 일반 태그 칩. 등급·상태 등 역할이 아닌 분류에 쓴다.
