@@ -84,6 +84,10 @@ func _build_leader_panel() -> Control:
 	_name_edit.add_theme_stylebox_override("normal", HUDKit.inset(8))
 	_name_edit.add_theme_stylebox_override("focus", HUDKit.ghost_hover())
 	_name_edit.add_theme_color_override("font_color", HUDKit.text_1())
+	# 기본 placeholder 색은 이 밝은 면에서 거의 안 보인다. 이름을 아직 안 정한
+	# 플레이어에게는 이 자리가 유일한 안내라서 명시한다.
+	_name_edit.add_theme_color_override("font_placeholder_color", HUDKit.text_3())
+	_name_edit.add_theme_font_size_override("font_size", 15)
 	# 이름의 소유자는 PlayerProfile 이다. 화면은 값을 넘길 뿐이다.
 	_name_edit.text_submitted.connect(func(v: String): PlayerProfile.set_player_name(v.strip_edges()))
 	_name_edit.focus_exited.connect(func(): PlayerProfile.set_player_name(_name_edit.text.strip_edges()))
@@ -137,7 +141,7 @@ func _build_roster_panel() -> Control:
 	HUDKit.body_of(panel).add_child(scroll)
 
 	_roster_grid = GridContainer.new()
-	_roster_grid.columns = 3
+	_roster_grid.columns = 1
 	_roster_grid.add_theme_constant_override("h_separation", 8)
 	_roster_grid.add_theme_constant_override("v_separation", 8)
 	_roster_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -192,40 +196,40 @@ func _make_member_card(id: StringName) -> Control:
 	var character := CharacterDatabase.get_character(id)
 	var in_party: bool = PartySystem.has_character(id)
 
+	# 3열 그리드였는데 명부 폭이 340 이라 카드가 100px 밖에 안 나와서 이름이 전부
+	# 잘렸다. 여기는 "누가 모여 있나"를 읽는 곳이므로 이름이 잘리면 목적을 잃는다.
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(0, 104)
+	card.custom_minimum_size = Vector2(0, 68)
 	card.add_theme_stylebox_override("panel", HUDKit.card(in_party))
 
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 4)
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.add_child(box)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(row)
 
 	if character != null:
-		var swatch := ColorRect.new()
-		swatch.color = Color(character.tint.r, character.tint.g, character.tint.b, 0.5)
-		swatch.custom_minimum_size = Vector2(0, 40)
-		swatch.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		box.add_child(swatch)
+		row.add_child(HUDKit.portrait_block(character, Vector2(40, 48)))
 
-		var name_label := HUDKit.label(character.display_name, 11, HUDKit.text_1(), 600)
-		name_label.clip_text = true
-		box.add_child(name_label)
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 4)
+		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(box)
 
-		var role_row := HBoxContainer.new()
-		role_row.add_theme_constant_override("separation", 2)
-		box.add_child(role_row)
-		for role in character.get_roles():
-			var icon := HUDKit.make_icon(ROLE_ICON_NAME.get(role, ""), 14)
-			if icon != null:
-				role_row.add_child(icon)
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 6)
+		head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(head)
+		head.add_child(HUDKit.label(character.display_name, 14, HUDKit.text_1(), 700))
 		if in_party:
-			role_row.add_child(HUDKit.label("편성", 10, HUDKit.accent_text(), 700))
-	else:
-		box.add_child(HUDKit.label(String(id), 11, HUDKit.text_2()))
+			# 칩으로 둔다. 글자색만으로 표시하면 편성된(액센트로 찬) 카드에서 묻힌다.
+			head.add_child(HUDKit.tag_chip("편성", UITheme.ACCENT.darkened(0.4)))
 
-	if in_party:
-		card.add_child(HUDKit.make_brackets())
+		box.add_child(HUDKit.role_chip_row(character, ROLE_ICON_NAME))
+	else:
+		row.add_child(HUDKit.label(String(id), 13, HUDKit.text_2()))
+
 	return card
 
 

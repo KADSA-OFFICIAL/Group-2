@@ -81,6 +81,23 @@ const LINE := OUTLINE                  # 테두리
 const POSITIVE := Color("6F8A46")      # 상승 ▲
 const NEGATIVE := Color("B35C4C")      # 하락 ▼
 
+# ===== 분류색 (Category) =====
+# 역할·태그·등급처럼 **서로 구분되어야 하는** 항목에 쓴다.
+#
+# 왜 필요한가: 액센트가 앰버 하나뿐이면 탱커·딜러·버퍼가 전부 같은 색이 되어
+# 목록에서 역할이 구분되지 않는다. 참고한 서브컬쳐 게임들은 액센트(주 동작)와
+# 분류색(정보 구분)을 분리해서 쓴다. ACCENT 는 여전히 "주 동작 1개" 용이다.
+#
+# 흙 톤 팔레트에서 벗어나지 않도록 채도를 낮춰 둔다. 형광색을 넣으면 아이콘과 어긋난다.
+const SKY := Color("6B8FA8")           # 탱커
+const CORAL := Color("C4705C")         # 원거리 딜러
+const LEAF := Color("7B9455")          # 버퍼
+
+# ===== 그림자 =====
+# 카드를 패널 위로 띄우는 데 쓴다. 검정이 아니라 잉크색이어야 흙 톤에서 탁해지지 않는다.
+const SHADOW := Color(0.18, 0.16, 0.14, 0.22)
+const SHADOW_STRONG := Color(0.18, 0.16, 0.14, 0.34)
+
 # ===== 치수 (Metrics) =====
 const RADIUS: int = 14                 # 패널 모서리
 const RADIUS_PILL: int = 22            # 재화 표시줄 등 알약 모양
