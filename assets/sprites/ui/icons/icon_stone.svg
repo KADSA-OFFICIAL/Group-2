@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <title>돌</title>
-  <!-- Palette: outline #6E6558, outline-soft #7A7060, stone-gray #9A9691, stone-dark #6E6A64 -->
-  <path d="M7.1 43.2C7.5 36.7 12.3 31.7 19.2 31.6C25.8 31.5 30.7 36.1 30.9 42.3C31.1 48.5 26.9 52.2 19.1 52.5C11.4 52.7 6.8 49.6 7.1 43.2Z" fill="#9A9691" stroke="#6E6558" stroke-width="3.2"/>
-  <path d="M35.5 42.4C35.7 36.7 40.2 32.5 46.1 32.7C52 32.9 56.4 37.1 56.2 42.7C56 48.2 52.2 51.6 45.7 51.8C39.4 52 35.3 48 35.5 42.4Z" fill="#6E6A64" stroke="#6E6558" stroke-width="3.2"/>
-  <path d="M16.5 35.2C16.8 25.6 23.9 18.5 33.2 18.4C42.6 18.3 49.2 25 48.8 34.4C48.4 43.5 42.9 48.4 32.6 48.5C22.3 48.6 16.2 44.5 16.5 35.2Z" fill="#9A9691" stroke="#6E6558" stroke-width="3.4"/>
-  <path d="M23 29.4C24.9 25.8 29 23.8 33.5 24" stroke="#6E6A64" stroke-width="2.8"/>
-</svg>

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <title>시너지</title>
-  <!-- Palette: outline #6E6558, cream #F7F3EA, accent-amber #D9B26A, accent-lilac #A78BC8, accent-sage #A8C07A -->
-  <path d="M8.1 36.7C8.3 24.2 15.5 16.5 26.1 16.6C36.9 16.7 43.6 24.6 43.4 36.8C43.3 48.6 36.3 55.6 25.6 55.4C15.1 55.3 8 48.3 8.1 36.7Z" fill="#D9B26A" stroke="#6E6558" stroke-width="3.3"/>
-  <path d="M20.7 36.7C20.9 24.3 28.5 16.7 39.1 16.8C49.6 16.9 56.1 24.7 55.9 36.9C55.8 48.7 49.1 55.7 38.8 55.5C28 55.4 20.6 48.4 20.7 36.7Z" fill="#A78BC8" stroke="#6E6558" stroke-width="3.3"/>
-  <path d="M32.2 19C39.5 22.7 43.5 28.9 43.4 36.8C43.3 44.5 39.3 50.4 32 53.5C24.6 50.1 20.6 44.4 20.7 36.7C20.8 28.8 24.9 22.8 32.2 19Z" fill="#F7F3EA" stroke="#6E6558" stroke-width="2.7"/>
-  <path d="M32.1 8L33.6 11.2L37.2 12.6L33.6 14L32 17.8L30.5 14L26.9 12.5L30.6 11.2Z" fill="#A8C07A" stroke="#6E6558" stroke-width="2.5"/>
-</svg>
