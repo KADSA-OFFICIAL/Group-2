@@ -4,7 +4,8 @@ extends Control
 #
 # 블루 아카이브 / 니케 계열의 대화 화면 문법을 따른다:
 #   배경 위에 인물이 서 있고, 하단 대사 상자에 화자 이름표와 본문이 한 글자씩 찍힌다.
-#   말하는 인물만 밝고 나머지는 어둡다. 화면 아무 곳이나 누르면 다음 줄로 간다.
+#   말하는 인물은 앞으로 나오고, 듣는 인물은 물러나 어두워진다.
+#   화면 아무 곳이나 누르면 다음 줄로 간다.
 #
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
 #   챕터·대본 -> StoryDatabase / StoryChapterData / StoryLineData
@@ -13,9 +14,25 @@ extends Control
 #
 # 대본을 화면에 적어 두지 않는다. 전부 .tres 에서 읽는다.
 #
+# ===== 연출 (#133) =====
+#
+# 인물은 늘 움직인다. 등장할 때 떠오르고, 말할 때 앞으로 나오고, 대사에 반응하고,
+# 무대에서 내려갈 때 아래로 빠진다. 이 연출은 **아트가 없어도 성립한다** —
+# 인물이 도형이어도 움직임만으로 누가 말하는지가 훨씬 잘 읽힌다.
+#
+# 그래서 무대를 **컨테이너가 아니라 수동 배치**로 둔다.
+# HBoxContainer 에 넣으면 컨테이너가 위치를 정해 버려서 인물을 움직일 수 없다.
+#
+# 인물 노드는 화자가 바뀌어도 **유지한다.** 예전에는 매 줄 전부 지웠다 다시 만들어서
+# 등장/퇴장을 구분할 수 없었고 애니메이션도 매번 초기화됐다.
+#
+# 노드 구조가 두 겹인 이유:
+#   바깥(Control)  = 무대가 정하는 자리·크기.   position/scale 을 무대가 쓴다.
+#   안쪽(VBox)     = 연기.                      숨쉬기·반응이 y/rotation 을 쓴다.
+#   한 노드에 둘을 같이 걸면 자리 이동 트윈과 반응 트윈이 서로를 덮어쓴다.
+#
 # 아트가 없다:
-#   배경도 캐릭터 스프라이트도 아직 없다. 그래서 배경은 챕터별 그라데이션,
-#   인물은 화자 이름에서 색을 뽑은 실루엣으로 대신한다.
+#   배경은 챕터별 그라데이션, 인물은 화자 이름에서 색을 뽑은 실루엣이다.
 #   **일부러 도형처럼 보이게** 두었다. 어설픈 그림을 흉내 내면 아트가 들어올 때
 #   무엇이 임시인지 알 수 없다. StoryLineData.speaker 가 로스터 id 와 이어지면
 #   그때 _make_figure() 안만 바꾸면 된다.
@@ -41,6 +58,33 @@ const FIGURE_COLORS := [
 # 무대에 동시에 세우는 인물 수. 셋 이상이면 화면이 인물로 가득 찬다.
 const STAGE_CAPACITY := 2
 
+# ===== 연출 수치 =====
+# 전부 짧다. 건너뛰기·AUTO 로 빠르게 넘길 때 연출이 밀리면 안 된다.
+const FIGURE_SIZE := Vector2(200, 380)
+const STAGE_BOTTOM_MARGIN := 190.0   # 대사 상자에 발이 가리지 않을 만큼 띄운다
+
+const MOVE_TIME := 0.30              # 자리 이동
+const ENTER_TIME := 0.34             # 등장
+const EXIT_TIME := 0.24              # 퇴장
+const FOCUS_TIME := 0.24             # 앞으로 나오기 / 물러나기
+const ENTER_RISE := 60.0             # 등장할 때 아래에서 올라오는 거리
+
+const FOCUS_SCALE := 1.0
+const BLUR_SCALE := 0.92             # 듣는 인물은 조금 작게 = 뒤에 있는 느낌
+const FOCUS_LIFT := 14.0             # 말하는 인물이 앞으로(위로) 나오는 거리
+const BLUR_TINT := Color(0.55, 0.53, 0.58, 1.0)
+
+const IDLE_BOB := 5.0                # 숨쉬기 폭
+const IDLE_PERIOD := 2.2
+
+const SHAKE_TIME := 0.34
+const SHAKE_STRENGTH := 14.0
+const BLACKOUT_TIME := 0.45
+
+# 지문이 이 말을 담고 있으면 화면을 실제로 어둡게 한다.
+# 대본에 이미 쓰이는 표현이라 새 필드를 만들지 않고 여기서 읽어낸다.
+const BLACKOUT_WORDS := ["암전", "정신을 잃", "눈을 감"]
+
 var _chapter: StoryChapterData
 var _index: int = 0
 
@@ -51,9 +95,19 @@ var _auto_hold: float = 0.0
 
 # 무대에 서 있는 화자 이름(들). 넣은 순서를 유지해서 인물이 좌우로 튀지 않게 한다.
 var _stage_speakers: Array[String] = []
+# 화자 이름 -> 인물 노드(바깥 Control).
+var _figures: Dictionary = {}
+var _active_speaker: String = ""
 
+# 연기용 트윈. 새 줄이 오면 정리해야 해서 들고 있는다.
+var _idle_tween: Tween
+var _emote_tween: Tween
+var _shake_tween: Tween
+
+var _shake_layer: Control
 var _background: TextureRect
-var _stage_row: HBoxContainer
+var _stage: Control
+var _blackout: ColorRect
 var _dialogue_box: PanelContainer
 var _name_plate: Control
 var _name_label: Label
@@ -111,14 +165,32 @@ func open_chapter(chapter_id: StringName) -> void:
 func _build() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
+	# 흔들리는 것은 배경과 인물뿐이다. 대사 상자까지 흔들면 글자를 읽을 수 없다.
+	_shake_layer = Control.new()
+	_shake_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_shake_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_shake_layer)
+
 	_background = TextureRect.new()
 	_background.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_background.stretch_mode = TextureRect.STRETCH_SCALE
 	_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_background)
+	_shake_layer.add_child(_background)
 
-	_build_stage()
+	# 인물이 서는 자리. 컨테이너가 아니라 맨 Control 이라 자식 위치를 우리가 정한다.
+	_stage = Control.new()
+	_stage.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_shake_layer.add_child(_stage)
+
+	# 암전용 검은 판. 인물 위, 대사 상자 아래에 둔다(어두워져도 대사는 읽혀야 한다).
+	_blackout = ColorRect.new()
+	_blackout.color = Color(0, 0, 0, 0)
+	_blackout.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_blackout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_blackout)
+
 	_build_dialogue()
 
 	# 화면 아무 곳이나 눌러 진행. 위 조작 버튼들보다 **먼저** 넣어야
@@ -134,24 +206,6 @@ func _build() -> void:
 	_build_battle_card()
 	_build_end_card()
 	_build_top_bar()
-
-
-# ── 인물이 서는 자리 ──
-func _build_stage() -> void:
-	var holder := Control.new()
-	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(holder)
-
-	_stage_row = HBoxContainer.new()
-	# 인물은 바닥에 발을 붙이고 서야 한다. 대사 상자 높이만큼 띄운다.
-	_stage_row.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_stage_row.offset_top = -640.0
-	_stage_row.offset_bottom = -196.0
-	_stage_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_stage_row.add_theme_constant_override("separation", 80)
-	_stage_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.add_child(_stage_row)
 
 
 # ── 하단 대사 상자 ──
@@ -343,14 +397,28 @@ func _speaker_color(speaker: String) -> Color:
 
 # 임시 인물. 머리(원) + 몸(둥근 사각형) + 이름.
 # 도형인 것이 드러나야 아트가 들어올 때 무엇이 임시였는지 알 수 있다.
+#
+# 바깥 Control 은 무대가 자리를 잡는 데 쓰고, 안쪽 VBox 는 연기(숨쉬기·반응)에 쓴다.
+# 안쪽 노드를 meta "inner" 로 꺼내 쓴다.
 func _make_figure(speaker: String) -> Control:
 	var color := _speaker_color(speaker)
 
-	var column := VBoxContainer.new()
-	column.alignment = BoxContainer.ALIGNMENT_END
-	column.add_theme_constant_override("separation", 0)
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.set_meta("speaker", speaker)
+	var outer := Control.new()
+	outer.custom_minimum_size = FIGURE_SIZE
+	outer.size = FIGURE_SIZE
+	outer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 확대는 발밑을 기준으로 커져야 한다. 가운데 기준이면 발이 땅에서 뜬다.
+	outer.pivot_offset = Vector2(FIGURE_SIZE.x * 0.5, FIGURE_SIZE.y)
+	outer.set_meta("speaker", speaker)
+
+	var inner := VBoxContainer.new()
+	inner.set_anchors_preset(Control.PRESET_FULL_RECT)
+	inner.alignment = BoxContainer.ALIGNMENT_END
+	inner.add_theme_constant_override("separation", 0)
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.pivot_offset = Vector2(FIGURE_SIZE.x * 0.5, FIGURE_SIZE.y * 0.5)
+	outer.add_child(inner)
+	outer.set_meta("inner", inner)
 
 	var head := PanelContainer.new()
 	head.custom_minimum_size = Vector2(96, 96)
@@ -362,7 +430,7 @@ func _make_figure(speaker: String) -> Control:
 	head_box.set_border_width_all(3)
 	head_box.border_color = color.darkened(0.35)
 	head.add_theme_stylebox_override("panel", head_box)
-	column.add_child(head)
+	inner.add_child(head)
 
 	var body := PanelContainer.new()
 	body.custom_minimum_size = Vector2(168, 250)
@@ -377,44 +445,211 @@ func _make_figure(speaker: String) -> Control:
 	body_box.set_border_width_all(3)
 	body_box.border_color = color.darkened(0.35)
 	body.add_theme_stylebox_override("panel", body_box)
-	column.add_child(body)
+	inner.add_child(body)
 
 	var name_label := HUDKit.label(speaker, 13, UITheme.CREAM, 700)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(name_label)
-	return column
+	inner.add_child(name_label)
+	return outer
 
 
-# 지금 화자를 무대에 올리고 나머지는 어둡게 한다.
+func _inner_of(figure: Control) -> Control:
+	return figure.get_meta("inner") as Control
+
+
+# 무대에서 i번째 인물이 설 자리. 인원 수에 따라 고르게 편다.
+func _slot_position(index: int, count: int) -> Vector2:
+	var view := get_viewport_rect().size
+	var center_x: float = view.x * float(index + 1) / float(count + 1)
+	return Vector2(center_x - FIGURE_SIZE.x * 0.5, view.y - STAGE_BOTTOM_MARGIN - FIGURE_SIZE.y)
+
+
+# 지금 화자를 무대에 올리고 나머지는 물러나게 한다.
 #
 # 무대 인원을 STAGE_CAPACITY 로 제한한다: 챕터에 화자가 여섯이면 여섯을 다 세울 수 없다.
 # 가장 오래 말하지 않은 인물부터 내린다.
 func _update_stage(speaker: String) -> void:
-	if not speaker.is_empty():
-		if not _stage_speakers.has(speaker):
-			if _stage_speakers.size() >= STAGE_CAPACITY:
-				_stage_speakers.remove_at(0)
-			_stage_speakers.append(speaker)
-			_rebuild_figures()
-	_apply_focus(speaker)
+	if not speaker.is_empty() and not _stage_speakers.has(speaker):
+		if _stage_speakers.size() >= STAGE_CAPACITY:
+			_exit_figure(_stage_speakers[0])
+		_stage_speakers.append(speaker)
+
+		var figure := _make_figure(speaker)
+		_figures[speaker] = figure
+		_stage.add_child(figure)
+
+		# 등장: 제자리 아래에서 떠오르며 나타난다.
+		#
+		# 여기서 페이드인 트윈을 따로 걸지 않는다. 바로 뒤에 _layout_figures() 가
+		# 같은 modulate 를 트윈하는데, 두 트윈이 같은 속성을 물면 늦게 끝나는 쪽이
+		# 새 값을 덮어써서 인물이 반투명하게 남는다(실제로 alpha 0.76 으로 굳었다).
+		# 시작값만 잡아 두고 나머지는 _layout_figures() 하나가 맡는다.
+		var slot := _slot_position(_stage_speakers.size() - 1, _stage_speakers.size())
+		figure.position = slot + Vector2(0, ENTER_RISE)
+		figure.modulate.a = 0.0
+		figure.scale = Vector2(BLUR_SCALE, BLUR_SCALE)
+
+	_active_speaker = speaker
+	_layout_figures()
 
 
-func _rebuild_figures() -> void:
-	for child in _stage_row.get_children():
-		_stage_row.remove_child(child)
-		child.queue_free()
-	for name in _stage_speakers:
-		_stage_row.add_child(_make_figure(name))
+# 무대에서 내린다. 노드를 바로 지우지 않고 아래로 빠지는 걸 보여준 뒤 지운다.
+func _exit_figure(speaker: String) -> void:
+	_stage_speakers.erase(speaker)
+	var figure: Control = _figures.get(speaker)
+	_figures.erase(speaker)
+	if figure == null or not is_instance_valid(figure):
+		return
+	# 자리 이동 트윈이 아직 돌고 있으면 내려가는 중에 다시 끌어올린다.
+	_kill_figure_tween(figure)
+	var tween := figure.create_tween()
+	figure.set_meta("tween", tween)
+	tween.set_parallel(true)
+	tween.tween_property(figure, "position:y", figure.position.y + ENTER_RISE, EXIT_TIME)
+	tween.tween_property(figure, "modulate:a", 0.0, EXIT_TIME)
+	tween.chain().tween_callback(figure.queue_free)
 
 
-# 말하는 인물만 밝게. 지문일 때는 전부 어둡게 해서 "지금은 아무도 말하지 않는다"를 보인다.
-func _apply_focus(speaker: String) -> void:
-	for child in _stage_row.get_children():
-		var control := child as Control
-		if control == null:
+# 모든 인물을 제자리로 보내고, 말하는 인물만 앞으로 낸다.
+#
+# 자리 이동과 포커스를 한 함수에서 처리하는 이유: 둘 다 바깥 Control 의 position 을
+# 건드리기 때문이다. 따로 두면 두 트윈이 서로를 덮어써서 인물이 어긋난 자리에 남는다.
+func _layout_figures() -> void:
+	var count := _stage_speakers.size()
+	for i in range(count):
+		var speaker: String = _stage_speakers[i]
+		var figure: Control = _figures.get(speaker)
+		if figure == null or not is_instance_valid(figure):
 			continue
-		var active: bool = String(control.get_meta("speaker", "")) == speaker
-		control.modulate = Color(1, 1, 1, 1) if active else Color(0.55, 0.53, 0.58, 1)
+
+		var active: bool = speaker == _active_speaker
+		var target := _slot_position(i, count)
+		# 말하는 인물은 앞으로(위로) 나온다.
+		if active:
+			target.y -= FOCUS_LIFT
+
+		var scale_to: float = FOCUS_SCALE if active else BLUR_SCALE
+		var tint: Color = Color(1, 1, 1, 1) if active else BLUR_TINT
+
+		# 줄을 빠르게 넘기면 이 함수가 연달아 불린다. 앞 트윈을 죽이지 않으면
+		# 아직 돌던 트윈이 새 트윈의 결과를 덮어써서 인물이 어긋난 자리·반투명으로 굳는다.
+		_kill_figure_tween(figure)
+		var tween := figure.create_tween()
+		figure.set_meta("tween", tween)
+		tween.set_parallel(true)
+		tween.set_trans(Tween.TRANS_CUBIC)
+		tween.set_ease(Tween.EASE_OUT)
+		tween.tween_property(figure, "position", target, MOVE_TIME)
+		tween.tween_property(figure, "scale", Vector2(scale_to, scale_to), FOCUS_TIME)
+		tween.tween_property(figure, "modulate", tint, FOCUS_TIME)
+
+		# 말하지 않는 인물은 연기를 초기화한다. 반응 중에 화자가 바뀌면
+		# 기울어지거나 뜬 채로 굳는다.
+		if not active:
+			var inner := _inner_of(figure)
+			if inner != null:
+				inner.rotation = 0.0
+				inner.position.y = 0.0
+
+	_start_idle()
+
+
+func _kill_figure_tween(figure: Control) -> void:
+	if not figure.has_meta("tween"):
+		return
+	var previous = figure.get_meta("tween")
+	if previous is Tween and previous.is_valid():
+		previous.kill()
+
+
+# 말하는 인물만 아주 느리게 위아래로 흔든다. 정지 화면처럼 보이지 않게 하는 최소한이다.
+func _start_idle() -> void:
+	if _idle_tween != null and _idle_tween.is_valid():
+		_idle_tween.kill()
+	var figure: Control = _figures.get(_active_speaker)
+	if figure == null or not is_instance_valid(figure):
+		return
+	var inner := _inner_of(figure)
+	if inner == null:
+		return
+	inner.position.y = 0.0
+	_idle_tween = inner.create_tween()
+	_idle_tween.set_loops()
+	_idle_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_idle_tween.tween_property(inner, "position:y", -IDLE_BOB, IDLE_PERIOD * 0.5)
+	_idle_tween.tween_property(inner, "position:y", 0.0, IDLE_PERIOD * 0.5)
+
+
+# 대사 내용에 대한 반응.
+#
+# 대본에 연출 지시가 없으므로 문장부호에서 읽어낸다. 새 필드를 만들면 대본 저작 규약이
+# 바뀌는 일이라 이번 범위 밖이다(#133 non-goals).
+func _emote(speaker: String, text: String) -> void:
+	if _emote_tween != null and _emote_tween.is_valid():
+		_emote_tween.kill()
+	var figure: Control = _figures.get(speaker)
+	if figure == null or not is_instance_valid(figure):
+		return
+	var inner := _inner_of(figure)
+	if inner == null:
+		return
+
+	inner.rotation = 0.0
+	_emote_tween = inner.create_tween()
+	_emote_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+	if text.contains("!"):
+		# 놀람·강조: 튀어오른다.
+		_emote_tween.tween_property(inner, "position:y", -22.0, 0.12)
+		_emote_tween.tween_property(inner, "position:y", 0.0, 0.18)
+	elif text.contains("?"):
+		# 의문: 고개를 갸웃한다.
+		_emote_tween.tween_property(inner, "rotation", 0.05, 0.14)
+		_emote_tween.tween_property(inner, "rotation", 0.0, 0.20)
+	elif text.contains("..") or text.contains("…"):
+		# 머뭇거림: 처진다.
+		_emote_tween.tween_property(inner, "position:y", 7.0, 0.20)
+		_emote_tween.tween_property(inner, "position:y", 0.0, 0.26)
+	else:
+		# 평범한 대사: 가볍게 끄덕인다.
+		_emote_tween.tween_property(inner, "position:y", -8.0, 0.10)
+		_emote_tween.tween_property(inner, "position:y", 0.0, 0.16)
+
+	# 반응이 끝나면 숨쉬기를 다시 건다(반응 트윈이 idle 을 덮어썼으므로).
+	_emote_tween.tween_callback(_start_idle)
+
+
+# ===== 화면 연출 =====
+
+# 배경과 인물만 흔든다. 대사 상자까지 흔들면 글자를 읽을 수 없다.
+func _shake() -> void:
+	if _shake_tween != null and _shake_tween.is_valid():
+		_shake_tween.kill()
+	_shake_layer.position = Vector2.ZERO
+	_shake_tween = _shake_layer.create_tween()
+	var steps := 6
+	for i in range(steps):
+		# 점점 잦아든다. 일정한 진폭으로 흔들면 기계처럼 보인다.
+		var decay := 1.0 - float(i) / float(steps)
+		var offset := Vector2(
+			randf_range(-SHAKE_STRENGTH, SHAKE_STRENGTH) * decay,
+			randf_range(-SHAKE_STRENGTH, SHAKE_STRENGTH) * decay * 0.6)
+		_shake_tween.tween_property(_shake_layer, "position", offset, SHAKE_TIME / float(steps))
+	_shake_tween.tween_property(_shake_layer, "position", Vector2.ZERO, SHAKE_TIME / float(steps))
+
+
+# 암전. 어두워졌다 돌아온다. 대사 상자는 위에 있어 계속 읽힌다.
+func _blackout_flash() -> void:
+	var tween := _blackout.create_tween()
+	tween.tween_property(_blackout, "color:a", 0.85, BLACKOUT_TIME * 0.45)
+	tween.tween_property(_blackout, "color:a", 0.0, BLACKOUT_TIME * 0.55).set_delay(0.15)
+
+
+func _is_blackout_line(text: String) -> bool:
+	for word in BLACKOUT_WORDS:
+		if text.contains(word):
+			return true
+	return false
 
 
 # ===== 재생 =====
@@ -436,6 +671,8 @@ func _show_line() -> void:
 	_end_card.visible = false
 	_battle_card.visible = line.kind == StoryLineData.Kind.BATTLE
 
+	var text := _line_text(line)
+
 	match line.kind:
 		StoryLineData.Kind.DIALOGUE:
 			_name_plate.visible = true
@@ -445,12 +682,14 @@ func _show_line() -> void:
 			_text_label.add_theme_color_override("font_color", UITheme.CREAM)
 			_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 			_update_stage(line.speaker)
+			_emote(line.speaker, text)
 		StoryLineData.Kind.BATTLE:
 			_name_plate.visible = false
 			# 전투 줄은 text 가 비어 있을 수 있다. 그때도 무엇이 일어나는지는 알려야 한다.
 			_text_label.add_theme_color_override("font_color", UITheme.CREAM)
 			_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			_update_stage("")
+			_shake()
 		_:
 			# 지문은 이름표 없이, 흐리고 가운데로. 대사와 한눈에 구분되어야 한다.
 			_name_plate.visible = false
@@ -458,8 +697,10 @@ func _show_line() -> void:
 				Color(UITheme.CREAM.r, UITheme.CREAM.g, UITheme.CREAM.b, 0.78))
 			_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			_update_stage("")
+			if _is_blackout_line(text):
+				_blackout_flash()
 
-	_text_label.text = _line_text(line)
+	_text_label.text = text
 	_text_label.visible_characters = 0
 
 
@@ -530,10 +771,17 @@ func _toggle_auto() -> void:
 
 
 func _restart() -> void:
+	# 무대를 비우고 처음부터. 다시 보기이므로 등장 연출도 다시 나와야 한다.
+	for speaker in _figures.keys():
+		var figure: Control = _figures[speaker]
+		if is_instance_valid(figure):
+			figure.queue_free()
+	_figures.clear()
 	_stage_speakers.clear()
-	_rebuild_figures()
+	_active_speaker = ""
 	_index = 0
 	_end_card.visible = false
+	_blackout.color.a = 0.0
 	_show_line()
 
 
