@@ -66,8 +66,6 @@ func _build() -> void:
 	var _col1 := _build_detail()
 	body.add_child(_col1)
 
-	# 좌에서 우로 차례로 나타난다. 화면 구조를 눈이 따라가게 하는 순서다.
-	HUDKit.play_enter([_col0, _col1])
 
 
 # ── 좌: 챕터 타임라인 ──

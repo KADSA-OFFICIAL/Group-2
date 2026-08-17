@@ -71,7 +71,6 @@ func _build() -> void:
 	tail.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(tail)
 
-	HUDKit.play_enter([panel])
 
 
 # ===== 갱신 =====

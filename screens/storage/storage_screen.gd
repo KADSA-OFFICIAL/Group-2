@@ -57,8 +57,6 @@ func _build() -> void:
 	body.add_child(primary)
 	body.add_child(stored)
 
-	# 위에서 아래로 차례로 나타난다.
-	HUDKit.play_enter([primary, stored])
 
 
 func _build_section(title_ko: String, title_en: String, currency_types: Array) -> Control:
@@ -108,16 +106,13 @@ func _make_currency_card(currency_type: String) -> Control:
 	# (이름이 정해지면 CurrencySystem 쪽에 표시 이름을 두고 여기서 읽는다.)
 	box.add_child(HUDKit.caption(currency_type))
 
-	# 화면을 열 때 0에서 올라간다. 창고는 "얼마나 모았나"를 보는 곳이라 수치가 주인공이다.
-	var value := HUDKit.value("", 22)
+	var value := HUDKit.value(HUDKit.comma(CurrencySystem.get_balance(currency_type)), 22)
 	box.add_child(value)
-	HUDKit.count_up(value, CurrencySystem.get_balance(currency_type))
 	_labels[currency_type] = value
 	return card
 
 
-func _on_currency_changed(currency_type: String, amount: int, new_balance: int) -> void:
+func _on_currency_changed(currency_type: String, _amount: int, new_balance: int) -> void:
 	var label: Label = _labels.get(currency_type)
 	if label != null and is_instance_valid(label):
-		# 바뀐 양만큼 올라간다(0부터 다시 세면 잔액이 준 것처럼 보인다).
-		HUDKit.count_up(label, new_balance, new_balance - amount)
+		label.text = HUDKit.comma(new_balance)

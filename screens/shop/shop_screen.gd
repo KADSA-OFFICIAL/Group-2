@@ -78,7 +78,6 @@ func _build() -> void:
 	_toast.visible = false
 	root.add_child(_toast)
 
-	HUDKit.play_enter([head, scroll])
 
 
 # 재화 표시줄. 어떤 재화를 보여줄지 고르지 않고 DEFAULT_CURRENCIES 를 순회한다.
@@ -88,11 +87,9 @@ func _build_currency_bar() -> Control:
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	for currency_type in CurrencySystem.DEFAULT_CURRENCIES:
 		var key := String(currency_type)
-		var chip := HUDKit.currency_chip(key, "")
+		var chip := HUDKit.currency_chip(key, HUDKit.comma(CurrencySystem.get_balance(key)))
 		# 잔액만 갱신하려고 칩 안의 라벨을 기억해 둔다.
-		var label := _find_label(chip)
-		_currency_labels[key] = label
-		HUDKit.count_up(label, CurrencySystem.get_balance(key))
+		_currency_labels[key] = _find_label(chip)
 		bar.add_child(chip)
 	return bar
 
