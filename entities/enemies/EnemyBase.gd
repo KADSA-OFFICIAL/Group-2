@@ -37,6 +37,18 @@ var _target: Node2D = null
 # 정의(.tres)는 읽기 전용 데이터로 남기고, 전투 중 변하는 값은 개체가 소유한다.
 var _runtime_stats: PlayerStats = null
 
+# ===== 외형 (Appearance) =====
+
+# 워크 애니메이션을 그리는 노드. 씬에 AnimatedSprite2D가 있고 data.walk_frames가
+# 채워져 있을 때만 잡힌다. null이면 이 스크립트는 외형에 전혀 손대지 않으므로
+# 시트가 없는 적(TrainingGoblin 등)은 지금까지와 똑같이 Sprite2D 정지 이미지로 남는다.
+var _anim_sprite: AnimatedSprite2D = null
+
+# 이 값보다 느리면 "멈춤"으로 본다.
+# move_and_slide()가 벽에 붙었을 때 아주 작은 잔여 속도를 남기는데,
+# 0과 정확히 비교하면 제자리에서 발만 구르게 된다.
+const WALK_STOP_SPEED := 1.0
+
 # 유효한 스텟 출처를 반환한다.
 # data가 설정되어 있으면 그 정의의 스텟이 사본의 바탕이 된다(적 정의가 단일 출처).
 # 스텟 계산은 언제나 PlayerStats가 소유하므로 여기서 수치를 다시 만들지 않는다.
@@ -77,6 +89,25 @@ func _apply_data() -> void:
 		sprite.self_modulate = data.tint
 		sprite.scale = data.sprite_scale
 
+	# 워크 시트가 있으면 AnimatedSprite2D가 외형을 맡고 도형 플레이스홀더는 숨는다.
+	# 둘 중 하나만 보이게 해서 실제 아트 위에 도형이 겹쳐 보이지 않게 한다.
+	#
+	# tint를 입히지 않는 이유: tint는 흰색 도형을 칠하려고 둔 값이라
+	# 색이 있는 실제 아트에 곱하면 색이 죽는다(EnemyData.tint 주석 참고).
+	var anim := get_node_or_null("AnimatedSprite2D")
+	if anim is AnimatedSprite2D and data.walk_frames != null:
+		_anim_sprite = anim
+		_anim_sprite.sprite_frames = data.walk_frames
+		_anim_sprite.scale = data.walk_sprite_scale
+		_anim_sprite.offset = data.walk_sprite_offset
+		# 첫 프레임은 정면 정지 포즈로 둔다. animation을 지정하지 않으면 기본값 &"default"를
+		# 찾다가 없어서 경고가 난다.
+		_anim_sprite.animation = EnemyData.WALK_ANIMATIONS[0]
+		_anim_sprite.frame = 0
+		_anim_sprite.visible = true
+		if sprite is Sprite2D:
+			sprite.visible = false
+
 func _exit_tree():
 	GameManager.unregister_enemy(self)
 
@@ -93,7 +124,23 @@ func _physics_process(delta: float) -> void:
 	if _attack_cooldown_left > 0.0:
 		_attack_cooldown_left -= delta
 
+	_process_ai()
+
+	# AI가 꺼져 있어도(velocity가 계속 0) 호출한다. 그래야 정지 포즈로 고정된다.
+	_update_walk_animation()
+
+
+# 추적/공격 AI 한 틱. velocity를 정하고 필요하면 실제로 이동시킨다.
+# 외형 갱신과 분리해 둔 이유: 아래 조기 반환들이 애니메이션 갱신까지 건너뛰면
+# 적이 멈춘 뒤에도 걷는 모션이 남기 때문이다.
+func _process_ai() -> void:
 	if not is_ai_active():
+		return
+
+	# 기절 등 CONTROL 효과가 이동을 막으면 추적하지 않는다.
+	# (탱커 표식이 터져 기절시켰을 때 적이 실제로 멈춰야 한다.)
+	if StatusEffectSystem.blocks_movement(self):
+		velocity = Vector2.ZERO
 		return
 
 	_target = _resolve_target()
@@ -110,6 +157,38 @@ func _physics_process(delta: float) -> void:
 		velocity = global_position.direction_to(_target.global_position) * get_move_speed()
 
 	move_and_slide()
+
+
+# ===== 워크 애니메이션 (Walk animation) =====
+
+# 지금 속도에 맞는 방향 애니메이션을 재생한다. 멈춰 있으면 정지 포즈로 고정한다.
+# 시트가 없는 적은 _anim_sprite가 null이라 아무 일도 하지 않는다.
+func _update_walk_animation() -> void:
+	if _anim_sprite == null:
+		return
+
+	if velocity.length() < WALK_STOP_SPEED:
+		# 멈추면 재생을 세우고 정지 포즈(0번 프레임)로 고정한다.
+		# animation은 그대로 두어 마지막으로 향했던 방향을 유지한다
+		# — 멈출 때마다 정면으로 홱 돌아보면 어색하기 때문이다.
+		if _anim_sprite.is_playing():
+			_anim_sprite.stop()
+			_anim_sprite.frame = 0
+		return
+
+	var anim := walk_animation_for(velocity)
+	if _anim_sprite.animation != anim or not _anim_sprite.is_playing():
+		_anim_sprite.play(anim)
+
+
+# 이동 방향 -> 재생할 애니메이션 이름. 4방향 시트이므로 성분이 큰 축을 주 방향으로 삼는다.
+# 대각선(|x| == |y|)에서는 좌우를 택한다: 쿼터뷰에서 옆모습이 더 잘 읽히고,
+# 경계에서 상하/좌우가 번갈아 튀는 것도 막는다.
+# 이름 목록의 출처는 EnemyData.WALK_ANIMATIONS다(여기서 문자열을 다시 적지 않는다).
+func walk_animation_for(direction: Vector2) -> StringName:
+	if absf(direction.x) >= absf(direction.y):
+		return EnemyData.WALK_ANIMATIONS[3] if direction.x > 0.0 else EnemyData.WALK_ANIMATIONS[1]
+	return EnemyData.WALK_ANIMATIONS[0] if direction.y > 0.0 else EnemyData.WALK_ANIMATIONS[2]
 
 
 # 추적 대상을 결정한다.
@@ -178,7 +257,8 @@ func get_attack_cooldown() -> float:
 
 
 func can_attack() -> bool:
-	return is_alive and _attack_cooldown_left <= 0.0
+	# 기절 등 CONTROL 효과가 평타를 막으면 공격할 수 없다.
+	return is_alive and _attack_cooldown_left <= 0.0 and not StatusEffectSystem.blocks_attack(self)
 
 
 # 현재 대상에게 평타를 넣는다. 쿨다운 중이면 아무것도 하지 않는다.

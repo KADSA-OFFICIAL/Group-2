@@ -27,16 +27,13 @@ class_name CombatTuning
 @export var base_move_speed: float = 200.0
 
 # ===== 피해 공식 (Damage Formula) =====
-# 피해 = 공격력 x (damage_defense_constant / (damage_defense_constant + 방어력))
+# 피해 = 공격력² / (공격력 + 방어력)   -- 구현은 PlayerStats.apply_defense()
 #
-# 감산 공식(공격력 - 방어력)이 아니라 비율 공식을 쓰는 이유:
-#   감산은 방어가 공격을 넘으면 피해가 최소치로 눌리고, 경계 근처에서 스텟 1포인트가
-#   피해를 몇 배로 바꿔 밸런싱이 불가능해진다. 비율 공식은 방어가 피해를 완전히
-#   무효화하지 못하고, 방어를 올릴수록 수익이 매끄럽게 체감한다.
+# **조정할 상수가 없다.** 이 공식은 스케일 불변이라, 공격력과 방어력을 함께 k배 하면
+# 피해도 정확히 k배가 된다. 그래서 스탯 스케일을 바꿔도 여기서 손볼 것이 없다.
+# (이전에는 damage_defense_constant(K)가 방어력의 절대 스케일에 묶여 있어,
+#  스탯을 10배 하면 피해가 뭉개져 K를 매번 다시 조정해야 했다. 그래서 제거했다.)
 @export_group("피해 공식")
-## 방어력 감쇠 상수 K. 클수록 방어력의 효과가 약해진다.
-## 방어력이 K와 같으면 피해가 절반이 된다(예: K=100, 방어력 100 -> 50%).
-@export var damage_defense_constant: float = 100.0
 ## 최소 피해. 방어력이 아무리 높아도 이 값 아래로는 내려가지 않는다.
 @export var damage_min: int = 1
 
@@ -56,8 +53,8 @@ class_name CombatTuning
 @export var defense_to_magic_def: float = 1.5
 ## 신앙심 1 -> 마법 공격력
 @export var faith_to_magic_atk: float = 2.0
-## 신앙심 1 -> 여신 스킬 강화 비율 (0.05 = +5%)
-@export var faith_to_skill_boost: float = 0.05
+## 신앙심 1 -> 여신 스킬 강화 비율. 신앙심 100 기준 최종 배수 1.5.
+@export var faith_to_skill_boost: float = 0.005
 
 # ===== 탱커 1단계 · 표식 → 기절 =====
 @export_group("탱커 1단계 (표식)")
@@ -65,8 +62,9 @@ class_name CombatTuning
 @export var mark_threshold: int = 5
 ## 평타 1회당 표식 충전량.
 @export var mark_gain_per_hit: int = 1
-## 표식 폭발 시 기절 지속(초).
-@export var mark_stun_duration: float = 2.0
+# [이전됨] 표식 폭발 시 기절 지속시간은 data/status_effects/stun.tres 가 소유한다.
+# 효과의 지속시간·차단 대상 같은 "효과 자신의 성질"은 효과 리소스에 두고,
+# 여기에는 메커니즘 밸런스 수치(임계치·비율·계수)만 남긴다. 두 곳에 같은 값을 두지 않는다.
 ## 표식 폭발 시 추가 피해 = 표식을 부여한 탱커의 물리 공격력 x 이 배수.
 ## 비율이라 공격력 스케일이 바뀌어도 유지된다.
 @export var mark_burst_damage_multiplier: float = 2.0
@@ -123,7 +121,6 @@ func get_summary() -> Dictionary:
 	return {
 		"base_attack_cooldown": base_attack_cooldown,
 		"base_move_speed": base_move_speed,
-		"damage_defense_constant": damage_defense_constant,
 		"damage_min": damage_min,
 		"strength_to_phys_atk": strength_to_phys_atk,
 		"strength_to_phys_def": strength_to_phys_def,
@@ -134,7 +131,6 @@ func get_summary() -> Dictionary:
 		"faith_to_skill_boost": faith_to_skill_boost,
 		"mark_threshold": mark_threshold,
 		"mark_gain_per_hit": mark_gain_per_hit,
-		"mark_stun_duration": mark_stun_duration,
 		"mark_burst_damage_multiplier": mark_burst_damage_multiplier,
 		"reflect_damage_percent": reflect_damage_percent,
 		"stun_heal_percent": stun_heal_percent,
@@ -171,9 +167,6 @@ func validate() -> Array[String]:
 	if capture_hold_seconds <= 0.0:
 		problems.append("capture_hold_seconds는 0보다 커야 합니다.")
 
-	# 0 이하면 0으로 나누거나 피해가 0이 된다.
-	if damage_defense_constant <= 0.0:
-		problems.append("damage_defense_constant는 0보다 커야 합니다.")
 	if damage_min < 0:
 		problems.append("damage_min은 0 이상이어야 합니다.")
 	# 공격 기여가 0이면 물리 공격력이 장비 보너스에만 의존하게 된다.

@@ -28,6 +28,14 @@ signal currency_added(currency_type: String, amount: int, new_balance: int)
 @warning_ignore("unused_signal")
 signal currency_subtracted(currency_type: String, amount: int, new_balance: int)
 
+# Status effect signals
+@warning_ignore("unused_signal")
+signal status_effect_applied(target, effect_id: StringName)
+@warning_ignore("unused_signal")
+signal status_effect_removed(target, effect_id: StringName)
+@warning_ignore("unused_signal")
+signal status_effect_burst(target, effect_id: StringName)   # GAUGE가 임계치에서 터짐
+
 # Party signals
 @warning_ignore("unused_signal")
 signal party_changed(members)              # 파티 편성이 바뀜 (Array[CharacterData])

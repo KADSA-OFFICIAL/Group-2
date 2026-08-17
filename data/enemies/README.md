@@ -27,4 +27,17 @@
 `EnemyBase`의 `data` 필드에 `.tres`를 지정하면 그 정의의 스텟/외형이 적용된다.
 비워 두면 씬에 저작된 기존 값을 그대로 쓴다(하위 호환).
 
+## 외형: 도형 플레이스홀더 vs 워크 시트
+
+적 하나의 외형 경로는 둘 중 하나다. `EnemyBase._apply_data()`가 데이터만 보고 고른다.
+
+| 경로 | 조건 | 그리는 노드 |
+|---|---|---|
+| 도형 플레이스홀더(정지) | `walk_frames`가 비어 있음 | `Sprite2D` |
+| 4방향 워크 애니메이션 | `walk_frames` 지정 + 씬에 `AnimatedSprite2D` 있음 | `AnimatedSprite2D` |
+
+워크 시트를 쓰면 `Sprite2D`(도형)는 숨겨지고, 이동 방향에 맞는 워크 사이클이 재생된다.
+멈추면 그 방향의 정지 포즈로 고정된다. 시트 규약과 `walk_sprite_scale` / `walk_sprite_offset`
+맞추는 법은 [`assets/sprites/enemies/README.md`](../../assets/sprites/enemies/README.md)에 있다.
+
 실제 적 수치/밸런스는 팀이 저작한다.

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 3
+stacking = 0
+max_stacks = 1
+effect_id = &"mark"
+display_name = "표식"
+description = "탱커의 스킬과 평타가 적에게 부여한다. 파티 전체의 평타가 게이지를 채우며, 임계치에 도달하면 터지면서 기절을 건다. 임계치와 충전량은 비워 두어 CombatConfig 값을 따른다."
+is_debuff = true
+duration = 0.0
+gauge_threshold = 0
+gauge_gain_per_hit = 0
+on_threshold_effect_id = &"stun"
