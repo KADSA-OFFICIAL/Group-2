@@ -143,11 +143,16 @@ func _make_chapter_row(id: StringName) -> Control:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(row)
 
+	# 펼친 카드는 액센트로 꽉 차 있다. 그 위에서는 액센트 글자가 안 보이므로 잉크로 쓴다.
+	var head_color: Color = HUDKit.text_on_accent() if open else HUDKit.text_1()
+
 	if chapter != null:
 		# 초대형 넘버(장르 문법). 읽은 챕터는 흐리게.
-		var number := HUDKit.label("%02d" % chapter.number, 38,
-			UITheme.ACCENT if not is_read else HUDKit.text_3(), 700)
-		number.custom_minimum_size = Vector2(58, 0)
+		var number_color: Color = head_color if (open or not is_read) else HUDKit.text_3()
+		if not open and not is_read:
+			number_color = HUDKit.accent_text()
+		var number := HUDKit.label("%02d" % chapter.number, 44, number_color, 700)
+		number.custom_minimum_size = Vector2(64, 0)
 		number.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(number)
 
@@ -157,20 +162,24 @@ func _make_chapter_row(id: StringName) -> Control:
 		box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(box)
 
-		var title := HUDKit.label(chapter.title, 14, HUDKit.text_1(), 600)
-		title.clip_text = true
+		var title := HUDKit.label(chapter.title, 16, head_color, 700)
+		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(title)
 		box.add_child(HUDKit.caption("chapter %d" % chapter.number))
 
 		var meta := HBoxContainer.new()
 		meta.add_theme_constant_override("separation", 8)
 		box.add_child(meta)
-		meta.add_child(HUDKit.label("%d줄" % chapter.lines.size(), 11, HUDKit.text_3()))
+		var meta_color: Color = HUDKit.text_on_accent() if open else HUDKit.text_3()
+		meta.add_child(HUDKit.label("%d줄" % chapter.lines.size(), 12, meta_color))
 		var battles := chapter.get_battle_count()
 		if battles > 0:
-			meta.add_child(HUDKit.label("전투 %d" % battles, 11, HUDKit.text_3()))
-		meta.add_child(HUDKit.label("읽음" if is_read else "NEW", 11,
-			HUDKit.text_3() if is_read else UITheme.ACCENT, 700))
+			meta.add_child(HUDKit.label("전투 %d" % battles, 12, meta_color))
+		# 미열람 표시는 칩으로. 글자색만 바꾸면 카드가 액센트로 찼을 때 묻힌다.
+		if is_read:
+			meta.add_child(HUDKit.label("읽음", 12, meta_color, 700))
+		else:
+			meta.add_child(HUDKit.tag_chip("NEW", UITheme.NEGATIVE))
 
 	var button := Button.new()
 	button.flat = true
@@ -180,8 +189,6 @@ func _make_chapter_row(id: StringName) -> Control:
 	button.pressed.connect(_on_chapter_pressed.bind(id))
 	card.add_child(button)
 
-	if open:
-		card.add_child(HUDKit.make_brackets())
 	return card
 
 

@@ -1,91 +1,145 @@
 class_name HUDKit
 extends RefCounted
 
-# 서브컬쳐 수집형 RPG UI 문법을 이 프로젝트에 적용하는 공용 조각 모음.
+# 서브컬쳐 수집형 RPG 메타 UI 문법을 이 프로젝트에 적용하는 공용 조각 모음.
 #
 # 왜 UITheme 과 나누는가:
-#   UITheme = **색·치수·StyleBox** 의 단일 출처(팔레트 도메인).
-#   HUDKit  = 그 위에서 **화면 구조와 상투구**(헤더/패널/브래킷/델타/스테퍼)를 만든다.
+#   UITheme = **색·치수** 의 단일 출처(팔레트 도메인).
+#   HUDKit  = 그 위에서 **화면 구조와 상투구**(헤더/패널/카드/칩/스테퍼)를 만든다.
 #   여섯 화면이 같은 조각을 각자 만들면 화면마다 미묘하게 어긋난다.
 #
-# 적용한 장르 문법(참고: 팀이 정리한 서브컬쳐 UI 킷):
-#   1) UI 를 가장자리로 밀고 가운데는 프리뷰용으로 비운다 (좌 리스트 / 중앙 / 우 상세)
-#   2) 한글 라벨 옆·아래에 작은 영문 라벨을 병기한다  <- 이 장르의 가장 강한 시그니처
-#   3) 모서리는 둥글리지 않는다. 45도 챔퍼(코너 컷)를 쓴다
-#   4) 선택 표시 = 액센트 아웃라인 + 네 모서리 L자 브래킷
-#   5) 증감은 색 + 삼각형 (상승 초록 ▲ / 하락 빨강 ▼)
-#   6) 주 CTA 는 우하단에 하나. 보조는 그 왼쪽에 아웃라인
-#   7) 정보 밀도를 높게. 라벨은 작고 흐리고 자간 넓게, 수치는 크고 굵게
+# ===== 이 킷이 따르는 규칙 (#120) =====
 #
-# 아트 디렉션(#118 에서 전환):
-#   킷의 A(테크니컬 다크 HUD)를 따르던 것을 **밝고 아기자기한 톤**으로 되돌렸다.
-#   메인화면이 UITheme 의 밝은 베이지 문법을 쓰는데 서브 화면만 다크라서 톤이 갈렸고,
-#   이미 저작된 아이콘 26종도 베이지/스톤 톤이라 밝은 쪽이 원래 이 게임의 색이다.
+# 참고한 것: 블루 아카이브 / 트릭컬 계열의 메타 화면 문법.
+# #118 에서 톤만 밝게 바꿨더니 베이지 한 톤의 표처럼 읽혔다. 원인이 넷이었고
+# 아래 넷이 그 대응이다.
 #
-#   바뀐 것 = 색(밝은 면 + 잉크 글자)과 형태(둥근 모서리, 두꺼운 두들 테두리, 스캔라인 제거).
-#   유지한 것 = 위 1~7번 레이아웃 문법 전부. 톤만 갈아끼운 것이지 구조는 #104 그대로다.
+#   1) **대비는 면이 아니라 글자가 만든다.**
+#      바닥·패널·카드를 전부 밝게 두는 대신 글자를 거의 검정으로 쓴다.
+#      #118 은 반대로 했다 — 면끼리 명도를 비슷하게 두고 글자까지 흐리게 둬서
+#      화면 전체가 같은 회색조로 뭉갰다.
 #
-#   액센트는 여전히 앰버 1색이다. "액센트는 정확히 1개" 규칙은 그대로 지킨다.
+#   2) **깊이는 그림자가 만든다.**
+#      카드는 윤곽선 + 어긋난 그림자로 패널 위에 얹힌 스티커처럼 띄운다.
+#      면 색을 바꿔서 띄우려 하면 밝은 톤에서는 쓸 수 있는 명도 폭이 금방 바닥난다.
 #
-# 색은 전부 UITheme 상수에서 파생한다. 이 파일에 리터럴 색을 만들지 않는다.
+#   3) **위계는 크기 + 굵기가 만든다.**
+#      제목 34 / 값 22 / 섹션 15 / 본문 13 / 캡션 10. 크기 차를 크게 벌린다.
+#      프로젝트에 폰트 리소스가 없어 굵기를 못 냈으므로 FontVariation 으로 만든다.
+#
+#   4) **액센트와 분류색을 나눈다.**
+#      ACCENT(앰버)는 "주 동작 1개" 전용이다. 역할·태그처럼 서로 구분돼야 하는
+#      정보는 UITheme 의 분류색(SKY/CORAL/LEAF)을 쓴다.
+#      앰버 하나로 다 칠하면 목록에서 역할이 구분되지 않는다.
+#
+# 유지한 레이아웃 문법:
+#   좌 리스트 / 중앙 프리뷰 / 우 상세, 한글 라벨 옆 영문 병기,
+#   높은 정보 밀도, 우하단 주 CTA 1개, 증감 ▲▼.
+#
+# 버린 것:
+#   각진 모서리·헤어라인·스캔라인·L자 브래킷(다크 HUD 시절 잔재).
+#   선택 표시는 이제 브래킷이 아니라 **액센트 꽉 채움 + 반전 글자**다.
+#   은은한 알파 틴트로 선택을 표시하면 밝은 톤에서 거의 안 보인다.
 
 # ===== 치수 =====
-# 모서리·테두리는 UITheme 을 따른다. 여기서 따로 정하면 메인화면과 또 어긋난다.
-const RADIUS: int = UITheme.RADIUS          # 패널 모서리 (둥글게)
-const RADIUS_SMALL: int = 10                # 카드·버튼처럼 작은 요소
-const BORDER: int = UITheme.BORDER_WIDTH    # 두들 아이콘 윤곽선과 같은 두께
-const DIVIDER: int = 2                      # 패널 안 구분선 두께
-const BRACKET_LEN: int = 10                 # 선택 표시 L자 브래킷 길이
-const BRACKET_WIDTH: int = 3
+const RADIUS: int = 16           # 패널 모서리. 큼직하게 둥글린다.
+const RADIUS_CARD: int = 13      # 카드·버튼
+const RADIUS_CHIP: int = 999     # 칩은 완전한 알약
+const BORDER: int = UITheme.BORDER_WIDTH   # 두들 아이콘 윤곽선과 같은 두께
+const DIVIDER: int = 2           # 패널 안 구분선 두께
 
-const RAIL_WIDTH: int = 300      # 좌측 리스트 폭
-const DETAIL_WIDTH: int = 380    # 우측 상세 폭
+# 좌우 기둥 폭.
+# 1280 폭 기준으로 좌(280) + 우(340) + 바깥 여백/간격(약 70)을 빼면 중앙에 590 이 남는다.
+# 이 합이 1280 을 넘으면 마지막 기둥이 화면 밖으로 밀려 잘린다(실제로 그랬다).
+const RAIL_WIDTH: int = 280      # 좌측 리스트 폭
+const DETAIL_WIDTH: int = 340    # 우측 상세 폭
+
+# ===== 타이포 =====
+# 크기 차를 크게 벌린다. 12~14 사이에 전부 몰려 있으면 위계가 안 생긴다.
+const SIZE_TITLE: int = 34
+const SIZE_VALUE: int = 22
+const SIZE_SECTION: int = 15
+const SIZE_BODY: int = 13
+const SIZE_CAPTION: int = 10
+
+# 굵기. 프로젝트에 폰트 파일이 없어 기본 폰트를 쓰는데, 기본 폰트에는 볼드 자족이 없다.
+# FontVariation.variation_embolden 으로 윤곽을 부풀려 굵기를 만든다.
+# 파일을 추가하지 않고 굵기 대비를 얻는 유일한 방법이다(폰트 도입은 라이선스 확인이 필요).
+static var _bold_cache: Dictionary = {}
+
+
+static func weight_font(embolden: float) -> FontVariation:
+	if _bold_cache.has(embolden):
+		return _bold_cache[embolden]
+	var f := FontVariation.new()
+	f.base_font = ThemeDB.fallback_font
+	f.variation_embolden = embolden
+	_bold_cache[embolden] = f
+	return f
+
 
 # ===== 색 (UITheme 팔레트를 이 문법에 매핑) =====
 # 값의 출처는 UITheme 이다. 여기서 새 색을 만들지 않는다.
 #
-# 밝은 톤에서는 명도 순서가 다크와 반대다.
-#   바닥(진한 베이지) < 카드(기본 베이지) < 패널(크림)
-# 패널이 바닥보다 밝아야 위로 떠 보인다. 다크에서 하던 대로 패널을 어둡게 하면
-# 밝은 바닥에 구멍이 뚫린 것처럼 보인다.
+# 명도 구성: 바닥(진한 베이지) < 패널(거의 흰색) ≒ 카드(크림).
+# 패널과 카드의 **면 색은 일부러 가깝다.** 둘을 명도로 떼어 놓으려 하면
+# 밝은 톤에서 금방 탁해진다. 카드는 윤곽선과 그림자로 떼어 놓는다.
 
-# 화면 바닥. 패널보다 한 단계 진해야 패널이 떠 보인다.
+# 화면 바닥. 패널을 감싸는 액자 역할이라 확실히 진하다.
 static func ground_bg() -> Color:
 	return UITheme.TAN_DEEP
 
 
+# 패널 면. 거의 흰색이라 그 위 글자가 또렷하다.
 static func panel_fill() -> Color:
+	return UITheme.CREAM.lerp(Color.WHITE, 0.45)
+
+
+# 카드 면. 패널보다 아주 살짝 따뜻하다. 구분은 윤곽선 + 그림자가 한다.
+static func card_fill() -> Color:
 	return UITheme.CREAM
 
 
-static func card_fill() -> Color:
-	return UITheme.TAN
+# 패널 안에 파인 칸.
+static func inset_fill() -> Color:
+	return UITheme.TAN.lerp(UITheme.CREAM, 0.45)
 
 
 static func line() -> Color:
-	return _alpha(UITheme.LINE, 0.55)
+	return _alpha(UITheme.LINE, 0.45)
 
 
 static func line_hi() -> Color:
 	return UITheme.LINE
 
 
-# 밝은 면 위 글자. UITheme.INK 계열이며 CREAM 이 아니다.
+# 본문. 거의 검정. 이 화면들의 대비는 여기서 나온다.
 static func text_1() -> Color:
 	return UITheme.INK
 
 
+# 보조. INK 를 흐리게 한 것이지 갈색이 아니다.
+# INK_DIM(갈색 윤곽선색)을 본문에 쓰면 화면 전체가 탁해진다.
 static func text_2() -> Color:
-	return UITheme.INK_DIM
+	return _alpha(UITheme.INK, 0.75)
 
 
+# 캡션·비활성 전용. 본문에는 쓰지 않는다.
 static func text_3() -> Color:
-	return _alpha(UITheme.INK_DIM, 0.70)
+	return _alpha(UITheme.INK, 0.45)
 
 
-# 밝은 면 위 액센트 **글자**.
-# ACCENT 원본(앰버)은 크림/베이지 위에서 거의 안 읽힌다. 면을 칠할 때는 ACCENT 를
-# 그대로 쓰되, 글자에는 이 값을 쓴다. 다크에서는 이 구분이 필요 없었다.
+# 액센트 면 위 글자(앰버 채움 버튼·선택 카드).
+static func text_on_accent() -> Color:
+	return UITheme.INK
+
+
+# 분류색 면 위 글자(역할 칩).
+static func text_on_category() -> Color:
+	return UITheme.CREAM
+
+
+# 밝은 면 위 액센트 **글자**. 앰버 원본은 크림 위에서 안 읽힌다.
 static func accent_text() -> Color:
 	return UITheme.ACCENT.darkened(0.45)
 
@@ -98,61 +152,141 @@ static func down_color() -> Color:
 	return UITheme.NEGATIVE
 
 
+# 역할 -> 분류색. 역할의 **이름**은 CharacterData.role_to_name() 이 소유하고,
+# 여기서는 **색만** 정한다. 이름 문자열을 이 파일에 다시 적지 않는다.
+static func role_color(role: int) -> Color:
+	match role:
+		CharacterData.Role.TANK:
+			return UITheme.SKY
+		CharacterData.Role.RANGED_DEALER:
+			return UITheme.CORAL
+		CharacterData.Role.BUFFER:
+			return UITheme.LEAF
+		_:
+			return UITheme.STONE_GRAY
+
+
 static func _alpha(c: Color, a: float) -> Color:
 	return Color(c.r, c.g, c.b, a)
 
 
+# 임의의 색을 이 게임의 흙 톤 안으로 끌어들인다.
+#
+# CharacterData.tint 는 전투 스프라이트를 물들이려고 고른 값이라 순색에 가깝다
+# (형광 초록·원색 파랑). 그대로 메타 화면에 쓰면 베이지 팔레트와 아이콘을 뚫고 나온다.
+# 색상(hue)은 살려서 캐릭터를 구분할 수 있게 두되, 채도와 명도만 팔레트 쪽으로 당긴다.
+static func muted(c: Color) -> Color:
+	var out := c.lerp(UITheme.TAN, 0.5)
+	out.s = min(out.s, 0.38)
+	out.a = 1.0
+	return out
+
+
 # ===== StyleBox =====
-# 모서리를 둥글리고 테두리를 두들 아이콘과 같은 두께로 굵게 그린다.
-# 다크 시절의 각진 모서리 + 1px 헤어라인은 밝은 면 위에서 차갑게 읽힌다.
 
-static func panel(pad: int = 12) -> StyleBoxFlat:
-	return _box(panel_fill(), line_hi(), BORDER, pad, RADIUS)
+static func panel(pad: int = 14) -> StyleBoxFlat:
+	return _box(panel_fill(), line_hi(), BORDER, pad, RADIUS, UITheme.SHADOW, 5)
 
 
+# 카드. 선택 시 액센트로 꽉 채운다.
+# 알파 틴트가 아니라 꽉 채움인 이유: 밝은 톤에서 옅은 틴트는 배경과 구분되지 않는다.
 static func card(selected: bool = false) -> StyleBoxFlat:
-	# 선택 카드는 앰버로 면을 채운다. 밝은 면 위에서는 다크 때처럼 알파 0.16 으로
-	# 깔면 배경과 구분이 안 된다. 테두리도 옅게 두지 않고 윤곽선 색을 그대로 쓴다.
 	if selected:
-		return _box(_alpha(UITheme.ACCENT, 0.75), line_hi(), BORDER, 8, RADIUS_SMALL)
-	return _box(card_fill(), line(), BORDER, 8, RADIUS_SMALL)
+		return _box(UITheme.ACCENT, line_hi(), BORDER, 10, RADIUS_CARD, UITheme.SHADOW_STRONG, 5)
+	return _box(card_fill(), line(), BORDER, 10, RADIUS_CARD, UITheme.SHADOW, 3)
 
 
-# 패널 안에 파인 칸. 패널(크림)보다 한 단계 진하게 해서 눌려 보이게 한다.
-static func inset(pad: int = 8) -> StyleBoxFlat:
-	return _box(UITheme.SURFACE_DEEP, line(), BORDER, pad, RADIUS_SMALL)
+# 패널 안에 파인 칸. 그림자를 안쪽으로 못 주므로 그림자 없이 면 색으로만 눌린 느낌을 낸다.
+static func inset(pad: int = 10) -> StyleBoxFlat:
+	return _box(inset_fill(), line(), BORDER, pad, RADIUS_CARD)
 
 
 # 주 CTA. 액센트로 꽉 채운다. 화면당 하나만 쓴다.
 static func cta() -> StyleBoxFlat:
-	return _box(UITheme.ACCENT, line_hi(), BORDER, 12, RADIUS)
+	return _box(UITheme.ACCENT, line_hi(), BORDER, 14, RADIUS, UITheme.SHADOW_STRONG, 6)
 
 
-# 보조 버튼. 밝은 면 + 윤곽선.
+# 눌린 CTA. 그림자를 줄이고 면을 어둡게 해서 실제로 눌린 것처럼 보이게 한다.
+static func cta_pressed() -> StyleBoxFlat:
+	return _box(UITheme.ACCENT.darkened(0.12), line_hi(), BORDER, 14, RADIUS, UITheme.SHADOW, 2)
+
+
+# 보조 버튼.
 static func ghost() -> StyleBoxFlat:
-	return _box(UITheme.SURFACE, line_hi(), BORDER, 10, RADIUS_SMALL)
+	return _box(card_fill(), line_hi(), BORDER, 12, RADIUS_CARD, UITheme.SHADOW, 3)
 
 
 static func ghost_hover() -> StyleBoxFlat:
-	return _box(_alpha(UITheme.ACCENT, 0.45), line_hi(), BORDER, 10, RADIUS_SMALL)
+	return _box(UITheme.SURFACE, line_hi(), BORDER, 12, RADIUS_CARD, UITheme.SHADOW, 3)
 
 
-static func _box(fill: Color, border: Color, width: int, pad: int, radius: int = RADIUS) -> StyleBoxFlat:
+static func ghost_pressed() -> StyleBoxFlat:
+	return _box(UITheme.SURFACE_DEEP, line_hi(), BORDER, 12, RADIUS_CARD)
+
+
+# 칩(역할·태그). 완전한 알약. 테두리는 면색을 어둡게 해서 만든다.
+static func chip(fill: Color) -> StyleBoxFlat:
+	var box := _box(fill, fill.darkened(0.25), 2, 6, RADIUS_CHIP)
+	box.content_margin_left = 9
+	box.content_margin_right = 9
+	box.content_margin_top = 3
+	box.content_margin_bottom = 3
+	return box
+
+
+static func _box(fill: Color, border: Color, width: int, pad: int, radius: int,
+		shadow: Color = Color(0, 0, 0, 0), shadow_size: int = 0) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.bg_color = fill
 	box.set_corner_radius_all(radius)
 	box.set_border_width_all(width)
 	box.border_color = border
 	box.set_content_margin_all(pad)
+	if shadow.a > 0.0:
+		box.shadow_color = shadow
+		box.shadow_size = shadow_size
+		# 아래로만 떨어뜨린다. 사방으로 퍼지면 흐릿한 후광이 되어 스티커 느낌이 사라진다.
+		box.shadow_offset = Vector2(0, max(2, shadow_size - 1))
 	return box
+
+
+# ===== 기울인 조각 (블루 아카이브 계열 시그니처) =====
+# 섹션 제목 왼쪽의 색 막대. 직사각형이 아니라 살짝 기울인 평행사변형이다.
+# Control 에는 skew 속성이 없어서 폴리곤으로 직접 그린다.
+class SkewBar:
+	extends Control
+
+	var bar_color: Color = Color.WHITE
+	var slant: float = 4.0
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		resized.connect(queue_redraw)
+
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(slant, 0), Vector2(w, 0),
+			Vector2(w - slant, h), Vector2(0, h),
+		]), bar_color)
+
+
+static func accent_bar(color: Color = UITheme.ACCENT, width: int = 6, height: int = 20) -> Control:
+	var bar := SkewBar.new()
+	bar.bar_color = color
+	bar.custom_minimum_size = Vector2(width, height)
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return bar
 
 
 # ===== 화면 뼈대 =====
 
-# 화면 바닥.
+# 화면 바닥. 진한 베이지 위에 아주 옅은 대각 줄무늬를 깐다.
 #
-# 다크 시절에는 여기에 4px 간격 스캔라인 셰이더를 깔았다. 밝은 베이지 바닥에서는
-# 같은 줄무늬가 질감이 아니라 얼룩으로 읽혀서 걷어냈다. 단색 한 장이면 충분하다.
+# #118 에서 다크 시절의 가로 스캔라인을 걷어냈는데, 그건 어두운 줄을 밝은 면에
+# 얹어서 얼룩으로 읽혔기 때문이다. 여기서는 **밝은 줄을 중간 명도 면에** 45도로
+# 얹는다. 같은 "줄무늬"지만 방향·명도·용도가 달라서 직물 질감으로 읽힌다.
 static func make_backdrop() -> Control:
 	var root := Control.new()
 	root.name = "Backdrop"
@@ -164,6 +298,26 @@ static func make_backdrop() -> Control:
 	base.set_anchors_preset(Control.PRESET_FULL_RECT)
 	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(base)
+
+	var weave := ColorRect.new()
+	weave.name = "Weave"
+	weave.set_anchors_preset(Control.PRESET_FULL_RECT)
+	weave.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var shader := Shader.new()
+	shader.code = """
+shader_type canvas_item;
+uniform vec4 stripe : source_color = vec4(1.0);
+uniform float period = 16.0;
+void fragment() {
+	float d = mod(FRAGCOORD.x + FRAGCOORD.y, period);
+	COLOR = vec4(stripe.rgb, d < period * 0.5 ? stripe.a : 0.0);
+}
+"""
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	mat.set_shader_parameter("stripe", _alpha(UITheme.CREAM, 0.10))
+	weave.material = mat
+	root.add_child(weave)
 	return root
 
 
@@ -171,16 +325,18 @@ static func make_backdrop() -> Control:
 # on_back 이 비어 있으면 ScreenManager.pop() 을 부른다.
 static func make_header(title_ko: String, title_en: String, icon_name: String = "", on_back: Callable = Callable()) -> Control:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
+	row.add_theme_constant_override("separation", 14)
 
 	var back := Button.new()
 	back.text = "←"
-	back.custom_minimum_size = Vector2(40, 40)
-	back.add_theme_font_size_override("font_size", 18)
+	back.custom_minimum_size = Vector2(52, 52)
+	back.add_theme_font_size_override("font_size", 22)
+	back.add_theme_font_override("font", weight_font(0.5))
 	back.add_theme_color_override("font_color", text_1())
+	back.add_theme_color_override("font_hover_color", text_1())
 	back.add_theme_stylebox_override("normal", ghost())
 	back.add_theme_stylebox_override("hover", ghost_hover())
-	back.add_theme_stylebox_override("pressed", ghost())
+	back.add_theme_stylebox_override("pressed", ghost_pressed())
 	back.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	if on_back.is_valid():
 		back.pressed.connect(on_back)
@@ -188,8 +344,11 @@ static func make_header(title_ko: String, title_en: String, icon_name: String = 
 		back.pressed.connect(func(): ScreenManager.pop())
 	row.add_child(back)
 
+	# 제목 앞의 기울인 액센트 막대. 이 장르의 헤더 시그니처다.
+	row.add_child(accent_bar(UITheme.ACCENT, 7, 40))
+
 	if not icon_name.is_empty():
-		var icon := make_icon(icon_name, 26)
+		var icon := make_icon(icon_name, 36)
 		if icon != null:
 			row.add_child(icon)
 
@@ -198,7 +357,7 @@ static func make_header(title_ko: String, title_en: String, icon_name: String = 
 	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(box)
 
-	box.add_child(label(title_ko, 24, text_1(), 700))
+	box.add_child(label(title_ko, SIZE_TITLE, text_1(), 700))
 	# 영문 병기 — 이 장르의 가장 강한 시각 시그니처다.
 	box.add_child(caption(title_en))
 	return row
@@ -208,19 +367,26 @@ static func make_header(title_ko: String, title_en: String, icon_name: String = 
 static func caption(text_en: String) -> Label:
 	var l := Label.new()
 	l.text = text_en.to_upper()
-	l.add_theme_font_size_override("font_size", 10)
+	l.add_theme_font_size_override("font_size", SIZE_CAPTION)
+	l.add_theme_font_override("font", weight_font(0.2))
 	l.add_theme_color_override("font_color", text_3())
 	l.add_theme_constant_override("line_spacing", 0)
 	return l
 
 
-# 한글 섹션 제목 + 영문 병기를 한 줄로.
-static func section(title_ko: String, title_en: String) -> Control:
+# 한글 섹션 제목 + 영문 병기. 왼쪽에 기울인 액센트 막대가 붙는다.
+static func section(title_ko: String, title_en: String, bar_color: Color = UITheme.ACCENT) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.add_child(accent_bar(bar_color, 5, 26))
+
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 0)
-	box.add_child(label(title_ko, 13, text_2(), 600))
+	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(box)
+	box.add_child(label(title_ko, SIZE_SECTION, text_1(), 700))
 	box.add_child(caption(title_en))
-	return box
+	return row
 
 
 static func label(text: String, size: int, color: Color, weight: int = 400) -> Label:
@@ -228,73 +394,126 @@ static func label(text: String, size: int, color: Color, weight: int = 400) -> L
 	l.text = text
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
+	# 굵기를 실제로 적용한다. #118 까지는 이 인자가 아무 효과가 없었다.
 	if weight >= 700:
-		l.add_theme_constant_override("outline_size", 0)
+		l.add_theme_font_override("font", weight_font(0.6))
+	elif weight >= 600:
+		l.add_theme_font_override("font", weight_font(0.35))
 	return l
 
 
 # 수치. 크고 굵게.
-static func value(text: String, size: int = 20) -> Label:
+static func value(text: String, size: int = SIZE_VALUE) -> Label:
 	return label(text, size, text_1(), 700)
+
+
+# 역할 칩. 색 + 한글 이름. 이름의 출처는 CharacterData 다.
+static func role_chip(role: int, icon_name: String = "") -> Control:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", chip(role_color(role)))
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(row)
+
+	if not icon_name.is_empty():
+		var icon := make_icon(icon_name, 14)
+		if icon != null:
+			row.add_child(icon)
+
+	row.add_child(label(CharacterData.role_to_name(role), 11, text_on_category(), 700))
+	return p
+
+
+# 캐릭터 초상 자리.
+#
+# portrait 가 있으면 그것을 채우고, 없으면 tint 색 판을 둔다(docs §0: 아트 확정 전 플레이스홀더).
+# 여섯 화면이 각자 ColorRect 로 만들던 것을 여기로 모은다 — 모서리 반경과 채도가
+# 화면마다 달랐다.
+static func portrait_block(character: CharacterData, min_size: Vector2) -> Control:
+	var p := PanelContainer.new()
+	var tint: Color = character.tint if character != null else UITheme.STONE_GRAY
+	p.add_theme_stylebox_override("panel", _box(muted(tint), line(), 2, 0, RADIUS_CARD))
+	p.custom_minimum_size = min_size
+	p.clip_contents = true
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	if character != null and character.portrait != null:
+		var t := TextureRect.new()
+		t.texture = character.portrait
+		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p.add_child(t)
+	return p
+
+
+# 캐릭터의 역할 칩들을 한 줄로. 겸직이면 2개가 나온다.
+static func role_chip_row(character: CharacterData, icon_names: Dictionary = {}) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if character == null:
+		return row
+	for role in character.get_roles():
+		row.add_child(role_chip(role, icon_names.get(role, "")))
+	return row
+
+
+# 일반 태그 칩. 등급·상태 등 역할이 아닌 분류에 쓴다.
+static func tag_chip(text: String, color: Color) -> Control:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", chip(color))
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var l := label(text, 11, text_on_category(), 700)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(l)
+	return p
 
 
 # 라벨(좌) + 값(우) 한 행. 정보 밀도의 기본 단위다.
 static func stat_row(label_ko: String, label_en: String, value_text: String, bonus_text: String = "") -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	row.custom_minimum_size = Vector2(0, 26)
+	row.custom_minimum_size = Vector2(0, 30)
 
 	var left := HBoxContainer.new()
 	left.add_theme_constant_override("separation", 6)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.add_child(label(label_ko, 12, text_2()))
+	left.add_child(label(label_ko, SIZE_BODY, text_2()))
 	left.add_child(caption(label_en))
 	row.add_child(left)
 
-	row.add_child(label(value_text, 14, text_1(), 700))
+	row.add_child(label(value_text, 16, text_1(), 700))
 	# 장비 보정분은 액센트로. (+320) 형태.
 	if not bonus_text.is_empty():
-		row.add_child(label(bonus_text, 12, accent_text(), 700))
+		row.add_child(label(bonus_text, SIZE_BODY, accent_text(), 700))
 	return row
 
 
 # 증감 표시. 상승 ▲ 초록 / 하락 ▼ 빨강 / 0 은 회색.
 static func delta(amount: int, suffix: String = "") -> Label:
 	if amount > 0:
-		return label("▲ +%d%s" % [amount, suffix], 12, up_color(), 700)
+		return label("▲ +%d%s" % [amount, suffix], SIZE_BODY, up_color(), 700)
 	if amount < 0:
-		return label("▼ %d%s" % [amount, suffix], 12, down_color(), 700)
-	return label("- 0%s" % suffix, 12, text_3())
+		return label("▼ %d%s" % [amount, suffix], SIZE_BODY, down_color(), 700)
+	return label("- 0%s" % suffix, SIZE_BODY, text_3())
 
 
-# 선택 표시용 L자 브래킷 네 모서리. 패널 위에 겹쳐 놓는다.
-static func make_brackets() -> Control:
-	var holder := Control.new()
-	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for corner in 4:
-		for axis in 2:
-			var bar := ColorRect.new()
-			# 밝은 면 위에서는 앰버 브래킷이 배경에 묻는다. 윤곽선 색으로 그린다.
-			bar.color = UITheme.LINE
-			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			var horizontal := axis == 0
-			bar.custom_minimum_size = Vector2(
-				BRACKET_LEN if horizontal else BRACKET_WIDTH,
-				BRACKET_WIDTH if horizontal else BRACKET_LEN)
-			var preset: int = [Control.PRESET_TOP_LEFT, Control.PRESET_TOP_RIGHT,
-				Control.PRESET_BOTTOM_LEFT, Control.PRESET_BOTTOM_RIGHT][corner]
-			bar.set_anchors_preset(preset)
-			bar.size = bar.custom_minimum_size
-			holder.add_child(bar)
-	return holder
+# 패널 안 구분선.
+static func rule() -> ColorRect:
+	var r := ColorRect.new()
+	r.color = line()
+	r.custom_minimum_size = Vector2(0, DIVIDER)
+	return r
 
 
 # 분위기용 더미 텍스트. 데이터가 없는 여백에 좌표·시리얼을 아주 흐리게 깐다.
 # 장르 문법이며 정보가 아니다(읽으라고 두는 것이 아니다).
 static func make_serial(text: String) -> Label:
-	var l := label(text, 10, _alpha(UITheme.INK_DIM, 0.35))
-	return l
+	return label(text, SIZE_CAPTION, _alpha(UITheme.INK, 0.30))
 
 
 static func make_icon(icon_name: String, size: int) -> TextureRect:
@@ -312,38 +531,40 @@ static func make_icon(icon_name: String, size: int) -> TextureRect:
 	return rect
 
 
-# 주 CTA 버튼(우하단 하나). 큰 액센트 채움.
+# 주 CTA 버튼(우하단 하나). 크고 두껍게.
 static func make_cta(text_ko: String, text_en: String) -> Button:
 	var b := Button.new()
 	b.text = "%s  %s" % [text_ko, text_en.to_upper()]
-	b.custom_minimum_size = Vector2(180, 52)
-	b.add_theme_font_size_override("font_size", 16)
-	b.add_theme_color_override("font_color", UITheme.INK)
-	b.add_theme_color_override("font_hover_color", UITheme.INK)
-	# 비활성일 때 면이 밝은 베이지로 바뀐다. Godot 기본 disabled 글자색은 그 위에서
-	# 거의 안 보이므로 명시한다("재료 부족" 같은 안내가 CTA 안에 들어간다).
-	b.add_theme_color_override("font_disabled_color", text_2())
+	b.custom_minimum_size = Vector2(210, 62)
+	b.add_theme_font_size_override("font_size", 18)
+	b.add_theme_font_override("font", weight_font(0.6))
+	b.add_theme_color_override("font_color", text_on_accent())
+	b.add_theme_color_override("font_hover_color", text_on_accent())
+	b.add_theme_color_override("font_pressed_color", text_on_accent())
+	# 비활성일 때 면이 밝게 바뀐다. 기본 disabled 글자색은 그 위에서 거의 안 보인다.
+	b.add_theme_color_override("font_disabled_color", text_3())
 	b.add_theme_stylebox_override("normal", cta())
 	b.add_theme_stylebox_override("hover", cta())
-	b.add_theme_stylebox_override("pressed", ghost())
+	b.add_theme_stylebox_override("pressed", cta_pressed())
 	b.add_theme_stylebox_override("disabled", ghost())
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	return b
 
 
-# 보조 버튼. 아웃라인.
-static func make_ghost(text_ko: String, min_width: int = 110) -> Button:
+# 보조 버튼.
+static func make_ghost(text_ko: String, min_width: int = 120) -> Button:
 	var b := Button.new()
 	b.text = text_ko
-	b.custom_minimum_size = Vector2(min_width, 40)
-	b.add_theme_font_size_override("font_size", 13)
+	b.custom_minimum_size = Vector2(min_width, 50)
+	b.add_theme_font_size_override("font_size", 14)
+	b.add_theme_font_override("font", weight_font(0.35))
 	b.add_theme_color_override("font_color", text_1())
-	# hover 면이 앰버로 차므로 글자를 앰버로 두면 겹쳐서 안 읽힌다. 잉크로 유지한다.
 	b.add_theme_color_override("font_hover_color", text_1())
+	b.add_theme_color_override("font_pressed_color", text_1())
 	b.add_theme_color_override("font_disabled_color", text_3())
 	b.add_theme_stylebox_override("normal", ghost())
 	b.add_theme_stylebox_override("hover", ghost_hover())
-	b.add_theme_stylebox_override("pressed", ghost())
+	b.add_theme_stylebox_override("pressed", ghost_pressed())
 	b.add_theme_stylebox_override("disabled", ghost())
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	return b
@@ -351,23 +572,20 @@ static func make_ghost(text_ko: String, min_width: int = 110) -> Button:
 
 # 패널 하나. 제목(한/영)과 내용 칸을 함께 만든다.
 # 반환값의 meta "body" 에 내용 컨테이너가 들어 있다.
-static func make_panel(title_ko: String, title_en: String, pad: int = 12) -> PanelContainer:
+static func make_panel(title_ko: String, title_en: String, pad: int = 14) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", panel(pad))
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
+	box.add_theme_constant_override("separation", 10)
 	p.add_child(box)
 
 	if not title_ko.is_empty():
 		box.add_child(section(title_ko, title_en))
-		var rule := ColorRect.new()
-		rule.color = line()
-		rule.custom_minimum_size = Vector2(0, DIVIDER)
-		box.add_child(rule)
+		box.add_child(rule())
 
 	var body := VBoxContainer.new()
-	body.add_theme_constant_override("separation", 6)
+	body.add_theme_constant_override("separation", 8)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(body)
 
