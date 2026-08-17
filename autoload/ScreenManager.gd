@@ -24,6 +24,15 @@ const SCREEN_LAYER: int = 10
 # 화면 스택이 비었음을 뜻한다.
 const EMPTY_DEPTH: int = 0
 
+# ===== 전환 (#139) =====
+# 화면이 한 프레임 만에 갈아치워지면 깜빡이는 것처럼 보인다. 짧게 겹쳐 준다.
+#
+# 매우 짧게 두는 이유: 화면은 몇 번이고 오가는 곳이라 전환이 길면 곧 방해가 된다.
+# 전환은 **스택 상태와 무관하다** — 깊이·신호는 즉시 갱신되고 연출만 뒤따른다.
+# 그래야 화면 코드가 get_depth() 를 믿고 쓸 수 있다.
+const FADE_IN: float = 0.18
+const FADE_OUT: float = 0.14
+
 # 화면이 열렸을 때 (열린 화면 노드).
 signal screen_pushed(screen: Control)
 
@@ -48,6 +57,9 @@ var _stack: Array[Control] = []
 
 func _ready() -> void:
 	name = "ScreenManager"
+	# 메타 화면이 떠 있는 동안 트리가 멈추므로(_apply_pause), 전환 트윈을 이 노드가
+	# 소유하려면 이쪽도 정지 중에 돌아야 한다.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_layer = CanvasLayer.new()
 	_layer.name = "ScreenLayer"
 	_layer.layer = SCREEN_LAYER
@@ -87,6 +99,7 @@ func push(scene: PackedScene) -> Control:
 	# 게임플레이가 멈춰도 화면은 계속 동작해야 버튼을 누를 수 있다.
 	screen.process_mode = Node.PROCESS_MODE_ALWAYS
 	_stack.append(screen)
+	_fade_in(screen)
 
 	screen_pushed.emit(screen)
 	if was_empty:
@@ -102,7 +115,8 @@ func pop() -> void:
 		return
 
 	var top: Control = _stack.pop_back()
-	top.queue_free()
+	# 스택에서는 이미 빠졌다. 화면 노드만 잠시 남아 사라지는 걸 보여 준 뒤 해제된다.
+	_fade_out_and_free(top)
 
 	if not _stack.is_empty():
 		_stack.back().visible = true
@@ -138,11 +152,36 @@ func close_all() -> void:
 	if _stack.is_empty():
 		return
 	for screen in _stack:
-		screen.queue_free()
+		_fade_out_and_free(screen)
 	_stack.clear()
 	_apply_pause(false)
 	screen_popped.emit(EMPTY_DEPTH)
 	screen_visibility_changed.emit(false)
+
+
+# ===== 전환 (Transition) =====
+#
+# 트윈을 **이 시스템이 소유한다.** 사라지는 화면에 트윈을 걸면, 입력을 끊으려고
+# process_mode 를 껐을 때 그 트윈까지 함께 멈춰 화면이 반투명한 채로 남는다.
+
+func _fade_in(screen: Control) -> void:
+	screen.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(screen, "modulate:a", 1.0, FADE_IN)
+
+
+func _fade_out_and_free(screen: Control) -> void:
+	if screen == null or not is_instance_valid(screen):
+		return
+	# 이미 닫힌 화면이 남은 0.1초 동안 클릭을 가로채면 안 된다.
+	# DISABLED 는 처리와 입력만 끊는다(그리기는 계속되므로 페이드가 보인다).
+	screen.process_mode = Node.PROCESS_MODE_DISABLED
+
+	var tween := create_tween()
+	tween.tween_property(screen, "modulate:a", 0.0, FADE_OUT)
+	tween.tween_callback(func():
+		if is_instance_valid(screen):
+			screen.queue_free())
 
 
 # 게임플레이 정지 상태를 적용한다. 정책이 꺼져 있으면 아무것도 하지 않는다.
