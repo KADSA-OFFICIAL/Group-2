@@ -10,34 +10,6 @@ signal damage_taken(target, damage, position)
 @warning_ignore("unused_signal")
 signal healing_applied(target, amount)
 
-# Movement signals
-@warning_ignore("unused_signal")
-signal dash_performed(position)
-@warning_ignore("unused_signal")
-signal player_moved(position)
-
-# Parry signals
-@warning_ignore("unused_signal")
-signal parry_success(position)
-@warning_ignore("unused_signal")
-signal parry_failed
-@warning_ignore("unused_signal")
-signal parry_window_opened
-@warning_ignore("unused_signal")
-signal parry_window_closed
-
-# Attack signals
-@warning_ignore("unused_signal")
-signal attack_performed(attacker, position)
-@warning_ignore("unused_signal")
-signal attack_hit(target, damage)
-
-# Status effect signals
-@warning_ignore("unused_signal")
-signal status_effect_applied(target, effect_type, duration)
-@warning_ignore("unused_signal")
-signal status_effect_removed(target, effect_type)
-
 # Game state signals
 @warning_ignore("unused_signal")
 signal game_paused
@@ -56,10 +28,24 @@ signal currency_added(currency_type: String, amount: int, new_balance: int)
 @warning_ignore("unused_signal")
 signal currency_subtracted(currency_type: String, amount: int, new_balance: int)
 
-# AI signals
+# Party signals
 @warning_ignore("unused_signal")
-signal enemy_spotted(enemy, target)
+signal party_changed(members)              # 파티 편성이 바뀜 (Array[CharacterData])
 @warning_ignore("unused_signal")
-signal enemy_lost_target(enemy)
+signal party_control_changed(index: int)   # 조종 대상이 바뀜 (-1 = 없음)
+
+# Equipment signals
 @warning_ignore("unused_signal")
-signal ai_state_changed(enemy, state)
+signal equipment_crafted(equipment_id: StringName)
+@warning_ignore("unused_signal")
+signal equipment_equipped(character_id: StringName, equipment_id: StringName, slot: int)
+@warning_ignore("unused_signal")
+signal equipment_unequipped(character_id: StringName, slot: int)
+
+# 장비가 인벤토리에 들어옴 (제작 외의 경로 — 상점 구매, 우편 수령 등).
+# 제작은 equipment_crafted 를 따로 쏘므로 둘을 구분해 들을 수 있다.
+signal equipment_granted(equipment_id: StringName, count: int)
+
+# ===== 우편 (Mail) =====
+signal mail_added(mail_id: int)
+signal mail_claimed(mail_id: int)

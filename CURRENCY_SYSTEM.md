@@ -80,8 +80,6 @@ CurrencySystem.currency_changed.connect(func(type, amount, balance):
 
 ```json
 {
-  "player_hp": 100,
-  "player_position": {"x": 0, "y": 0},
   "stage": "Stage1_1",
   "playtime": 0.0,
   "currencies": {
@@ -100,10 +98,8 @@ CurrencySystem.currency_changed.connect(func(type, amount, balance):
 
 새로운 재화 타입을 추가하려면:
 
-1. `CurrencySystem._ready()`의 `currencies` dictionary에 추가
-2. `CurrencySystem.reset_currencies()`에 추가
-3. `SaveSystem.get_default_save()`의 currencies에 추가
-4. HUD의 `update_currency_display()`에 표시 추가
+1. `CurrencySystem.DEFAULT_CURRENCIES` 상수에 추가 (재화 목록의 단일 출처 — `_ready()`/`reset_currencies()`/`SaveSystem` 기본 저장값이 모두 이 상수를 참조)
+2. HUD의 `update_currency_display()`에 표시 추가
 
 ## 테스트 씬
 

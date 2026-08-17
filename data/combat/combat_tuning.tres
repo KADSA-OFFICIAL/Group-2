@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="CombatTuning" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/CombatTuning.gd" id="1_tuning"]
+
+[resource]
+script = ExtResource("1_tuning")
+base_attack_cooldown = 0.5
+base_move_speed = 200.0
+damage_defense_constant = 100.0
+damage_min = 1
+strength_to_phys_atk = 2.0
+strength_to_phys_def = 1.0
+strength_to_magic_def = 0.5
+defense_to_phys_def = 1.5
+defense_to_magic_def = 1.5
+faith_to_magic_atk = 2.0
+faith_to_skill_boost = 0.05
+mark_threshold = 5
+mark_gain_per_hit = 1
+mark_stun_duration = 2.0
+mark_burst_damage_multiplier = 2.0
+reflect_damage_percent = 0.3
+stun_heal_percent = 0.05
+stack_max = 10
+stack_gain_per_hit = 1
+stack_attack_speed_per_stack = 0.05
+stack_move_speed_per_stack = 0.02
+stack_decay_per_sec_controlled = 1.0
+stack_decay_per_sec_uncontrolled = 2.5
+lifesteal_percent = 0.15
+overheal_to_shield_percent = 0.5
+shield_max_percent = 0.3
+execute_hp_percent = 0.2
+heal_to_damage_percent = 0.5
+capture_hold_seconds = 10.0

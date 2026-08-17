@@ -25,33 +25,62 @@ func load_room():
 	for child in current_room.get_children():
 		child.queue_free()
 	
-	# Spawn player
-	spawn_player()
+	# Spawn party
+	spawn_party()
 	
 	# Spawn enemies
 	spawn_enemies()
 
-func spawn_player():
-	var player_scene = load("res://entities/player/Player.tscn")
-	if player_scene:
-		var player = player_scene.instantiate()
-		current_room.add_child(player)
-		player.global_position = Vector2(100, 100)
-	else:
-		# Fallback: create player manually
-		var player = CharacterBody2D.new()
-		player.name = "Player"
-		player.add_to_group("player")
-		current_room.add_child(player)
-		player.global_position = Vector2(100, 100)
+# 파티가 비어 있을 때 쓰는 기본 편성.
+# 순혈 3명이라 각 역할이 1카운트씩 되어 세 시너지가 모두 1단계로 켜진다.
+# (편성 UI가 생기면 이 기본값 대신 플레이어 선택을 쓴다.)
+const DEFAULT_PARTY := [&"shipduck", &"ranged_pure", &"buffer_pure"]
+
+# 파티 멤버를 스폰한다.
+# 캐릭터 정의는 PartySystem(-> CharacterDatabase)이 출처이며 여기서 재정의하지 않는다.
+# 조종 여부도 PartySystem이 정하므로 노드에는 party_index만 넘긴다.
+func spawn_party():
+	if PartySystem.is_empty():
+		PartySystem.set_party(DEFAULT_PARTY)
+
+	var member_scene = load("res://entities/player/Player.tscn")
+	if member_scene == null:
+		push_warning("Stage: Player.tscn을 불러올 수 없습니다.")
+		return
+
+	var members = PartySystem.get_members()
+	for i in range(members.size()):
+		var node = member_scene.instantiate()
+		node.data = members[i]
+		node.party_index = i
+		current_room.add_child(node)
+		# 겹치지 않게 세로로 배치한다.
+		node.global_position = Vector2(100, 100 + i * 40)
+
+# 훈련용 고블린. data가 없어 AI가 꺼진 샌드백이다(피해 확인용).
+const TRAINING_GOBLIN_SCENE := "res://entities/enemies/TrainingGoblin.tscn"
+# 돌창병. EnemyData가 지정되어 있어 추적·공격 AI가 동작한다.
+const STONE_SPEARMAN_SCENE := "res://entities/enemies/StoneSpearman.tscn"
 
 func spawn_enemies():
-	var goblin_scene = load("res://entities/enemies/TrainingGoblin.tscn")
+	var goblin_scene = load(TRAINING_GOBLIN_SCENE)
 	if goblin_scene:
 		for i in range(2):
 			var goblin = goblin_scene.instantiate()
 			current_room.add_child(goblin)
 			goblin.global_position = Vector2(400 + i * 100, 200)
+
+	# 추적·공격하는 적 1마리.
+	# 파티 스폰 지점(x=100)에서 탐지 범위(300) 밖에 두어, 플레이어가 전진했을 때
+	# "탐지 -> 접근 -> 공격" 과정이 눈에 보이게 한다.
+	var spearman_scene = load(STONE_SPEARMAN_SCENE)
+	if spearman_scene == null:
+		push_warning("Stage: StoneSpearman.tscn을 불러올 수 없습니다.")
+		return
+
+	var spearman = spearman_scene.instantiate()
+	current_room.add_child(spearman)
+	spearman.global_position = Vector2(600, 140)
 
 func complete_stage():
 	EventBus.stage_completed.emit(stage_name)

@@ -1,156 +1,220 @@
 extends CharacterBody2D
+class_name EnemyBase
 
-var config: Dictionary = {}
-var hp: int = 30
-var max_hp: int = 30
+# 적 정의 바탕: EnemyData가 적의 유일한 정의 출처다(EnemyDatabase로 조회).
+# 설정되면 이 정의의 스텟/외형을 사용한다.
+# 비어 있으면 아래 stats를 그대로 쓰므로 기존 씬은 그대로 동작한다(하위 호환).
+@export var data: EnemyData = null
+
+# 스텟 바탕: PlayerStats를 적의 HP/방어력 출처로 재사용한다.
+# (faith/intelligence는 적에게 미사용, 기본값 유지)
+# 씬에서 .tres로 교체 주입할 수 있도록 export 한다.
+@export var stats: PlayerStats = PlayerStats.new()
+
+var hp: int = 0
+var max_hp: int = 0
 var is_alive: bool = true
 
-var detection_range: float = 300
-var patrol_range: float = 200
-var state: String = "idle"  # idle, patrol, chase, attack
-var target: Node = null
-var start_position: Vector2
+# ===== AI 상태 (AI State) =====
+# 행동 파라미터의 출처는 EnemyData다("AI 행동" 그룹). 여기서 수치를 새로 만들지 않는다.
+# data가 없으면 AI가 동작하지 않으므로, 씬에만 저작된 기존 적(TrainingGoblin)은
+# 지금까지와 똑같이 정지 상태를 유지한다(하위 호환).
 
-var sprite: Sprite2D
-var animation_player: AnimationPlayer
-var attack_area: Area2D
-var detection_area: Area2D
+# 평타 쿨다운 잔여 시간(초).
+var _attack_cooldown_left: float = 0.0
+
+# 현재 추적 대상. 죽거나 탐지 범위를 벗어나면 다시 고른다.
+# Node2D로 타입을 잡아 global_position 접근이 정적으로 안전하게 한다.
+var _target: Node2D = null
+
+# 이 개체가 소유하는 런타임 스텟. 정의(EnemyData)의 스텟 사본이다.
+#
+# 왜 사본인가: .tres는 경로 기준으로 캐시되므로, 같은 종류의 적을 여러 마리 스폰하면
+# EnemyData와 그 안의 PlayerStats가 **하나로 공유된다**(적 씬이 data를 ExtResource로
+# 참조하므로 인스턴스마다 같은 리소스를 가리킨다).
+# 지금은 스텟을 읽기만 해서 무해하지만, StatusEffectData가 PlayerStats의 버프 채널을
+# 대상으로 삼기 때문에 한 마리에 건 디버프가 같은 종류 전체에 걸린다.
+# 정의(.tres)는 읽기 전용 데이터로 남기고, 전투 중 변하는 값은 개체가 소유한다.
+var _runtime_stats: PlayerStats = null
+
+# 유효한 스텟 출처를 반환한다.
+# data가 설정되어 있으면 그 정의의 스텟이 사본의 바탕이 된다(적 정의가 단일 출처).
+# 스텟 계산은 언제나 PlayerStats가 소유하므로 여기서 수치를 다시 만들지 않는다.
+func get_stats() -> PlayerStats:
+	if _runtime_stats == null:
+		_runtime_stats = _make_runtime_stats()
+	return _runtime_stats
+
+# 정의(또는 씬에 주입된 stats)에서 이 개체만의 스텟 사본을 만든다.
+# 처음 get_stats()가 불릴 때 한 번만 만들어지므로, 씬이 export로 주입한 값이 반영된 뒤다.
+# duplicate(true): 이후 PlayerStats에 하위 리소스가 추가되어도 같이 복제되게 한다.
+func _make_runtime_stats() -> PlayerStats:
+	var source: PlayerStats = data.get_stats() if data != null else stats
+	if source == null:
+		return PlayerStats.new()
+	return source.duplicate(true)
 
 func _ready():
-	start_position = global_position
 	GameManager.register_enemy(self)
-	load_config()
-	
-	# Find child nodes safely
-	sprite = get_node_or_null("Sprite2D")
-	animation_player = get_node_or_null("AnimationPlayer")
-	attack_area = get_node_or_null("AttackArea2D")
-	detection_area = get_node_or_null("DetectionArea2D")
-	
-	if attack_area:
-		attack_area.area_entered.connect(_on_attack_area_entered)
-	
-	if detection_area:
-		detection_area.area_entered.connect(_on_detection_area_entered)
-		detection_area.area_exited.connect(_on_detection_area_exited)
-	
-	EventBus.player_died.connect(_on_player_died)
+	_apply_data()
+	max_hp = get_stats().get_max_hp()
+	hp = max_hp
+
+# EnemyData가 설정된 경우에만 정의의 외형을 반영한다.
+# data가 없으면 씬에 저작된 값을 건드리지 않는다.
+#
+# 노드 name은 건드리지 않는다: name은 씬 트리 식별자이고 display_name은 UI 표시용이다.
+# (Godot이 name을 유일화하므로 둘을 섞으면 표시 이름이 깨진다.)
+# 표시 이름이 필요한 UI는 data.display_name을 직접 읽는다.
+func _apply_data() -> void:
+	if data == null:
+		return
+
+	var sprite := get_node_or_null("Sprite2D")
+	if sprite is Sprite2D:
+		if data.sprite_texture != null:
+			sprite.texture = data.sprite_texture
+		sprite.self_modulate = data.tint
+		sprite.scale = data.sprite_scale
 
 func _exit_tree():
 	GameManager.unregister_enemy(self)
 
-func load_config():
-	var config_file = FileAccess.open("res://config/enemy_config.json", FileAccess.READ)
-	if config_file:
-		var json = JSON.new()
-		json.parse(config_file.get_as_text())
-		var all_configs = json.data
-		if all_configs.has("training_goblin"):
-			config = all_configs["training_goblin"]
-	
-	detection_range = config.get("detection_range", 300)
-	patrol_range = config.get("patrol_range", 200)
-	max_hp = config.get("max_hp", 30)
-	hp = max_hp
 
-func _physics_process(delta):
-	if not is_alive:
+# ===== AI (추적 / 공격) =====
+
+# AI가 지금 동작해야 하는가.
+# data가 없는 적(씬에만 저작된 기존 적)과 ai_enabled=false인 적은 정지한다.
+func is_ai_active() -> bool:
+	return is_alive and data != null and data.ai_enabled
+
+
+func _physics_process(delta: float) -> void:
+	if _attack_cooldown_left > 0.0:
+		_attack_cooldown_left -= delta
+
+	if not is_ai_active():
 		return
-	
-	update_state()
-	execute_state(delta)
+
+	_target = _resolve_target()
+	if _target == null:
+		velocity = Vector2.ZERO
+		return
+
+	# 사거리 안이면 멈춰서 때리고, 밖이면 직선으로 접근한다.
+	# 길찾기(장애물 회피)는 이 단계의 범위가 아니다.
+	if global_position.distance_to(_target.global_position) <= data.attack_range:
+		velocity = Vector2.ZERO
+		try_attack()
+	else:
+		velocity = global_position.direction_to(_target.global_position) * get_move_speed()
+
 	move_and_slide()
 
-func update_state():
-	var player = get_tree().get_first_node_in_group("player")
-	
-	if player and is_instance_valid(player):
-		var distance = global_position.distance_to(player.global_position)
-		
-		if distance <= detection_range:
-			target = player
-			change_state("chase")
-			EventBus.enemy_spotted.emit(self, player)
-		else:
-			target = null
-			if state == "chase":
-				change_state("patrol")
-				EventBus.enemy_lost_target.emit(self)
-	else:
-		if state != "idle":
-			change_state("patrol")
 
-func execute_state(delta):
-	match state:
-		"idle":
-			velocity = Vector2.ZERO
-		"patrol":
-			patrol()
-		"chase":
-			if target:
-				chase(delta)
-		"attack":
-			if target:
-				attack(delta)
+# 추적 대상을 결정한다.
+# 지금 대상이 아직 유효하면 유지하고(대상이 매 프레임 바뀌어 떠는 것을 막는다),
+# 아니면 가장 가까운 파티 멤버를 새로 고른다.
+func _resolve_target() -> Node2D:
+	if _is_valid_target(_target):
+		return _target
+	return _find_nearest_party_member()
 
-func patrol():
-	# Simple patrol behavior
-	var distance_from_start = global_position.distance_to(start_position)
-	if distance_from_start > patrol_range:
-		velocity = (start_position - global_position).normalized() * config.get("base_speed", 100)
-	else:
-		velocity = Vector2.ZERO
 
-func chase(_delta):
-	var distance_to_target = global_position.distance_to(target.global_position)
-	var attack_range = config.get("attack_range", 25)
-	
-	if distance_to_target <= attack_range:
-		change_state("attack")
-	else:
-		var direction = (target.global_position - global_position).normalized()
-		velocity = direction * config.get("base_speed", 100)
+# 추적 대상으로 쓸 수 있는 노드인가.
+# 살아 있고 탐지 범위 안에 있어야 한다. 범위를 벗어나면 놓으므로 무한 추격이 되지 않는다.
+func _is_valid_target(node: Node) -> bool:
+	# 탐지 범위의 출처가 data이므로 data가 없으면 대상 판정 자체가 성립하지 않는다.
+	if data == null:
+		return false
+	if node == null or not is_instance_valid(node):
+		return false
+	var target := node as Node2D
+	if target == null:
+		return false
+	# 파티 멤버는 is_alive를 가진다. 죽은 대상은 추적하지 않는다.
+	# get()으로 읽어 is_alive가 없는 노드도 안전하게 처리한다(없으면 null).
+	var alive = target.get("is_alive")
+	if alive != null and not bool(alive):
+		return false
+	return global_position.distance_to(target.global_position) <= data.detection_range
 
-func attack(_delta):
-	velocity = Vector2.ZERO
-	# Attack implementation would go here
 
-func change_state(new_state: String):
-	if state != new_state:
-		state = new_state
-		EventBus.ai_state_changed.emit(self, new_state)
+# 탐지 범위 안에서 가장 가까운 살아 있는 파티 멤버를 반환한다. 없으면 null.
+#
+# 그룹으로 조회하는 이유: GameManager는 적 등록/조회만 담당하고 파티 멤버 노드
+# 레지스트리가 없다. (PartySystem은 CharacterData 편성만 알고 씬 노드는 모른다.)
+# 그룹 이름은 PartySystem.MEMBER_GROUP이 단일 출처이며 여기서 문자열을 다시 적지 않는다.
+func _find_nearest_party_member() -> Node2D:
+	var nearest: Node2D = null
+	var nearest_distance := INF
 
-func take_damage(amount: int):
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if not _is_valid_target(node):
+			continue
+		var member := node as Node2D
+		var distance := global_position.distance_to(member.global_position)
+		if distance < nearest_distance:
+			nearest_distance = distance
+			nearest = member
+
+	return nearest
+
+
+# 실제 이동속도 = 기본 속도(CombatConfig) x 적 고유 배수(EnemyData) x 버프 이속 배수(PlayerStats).
+# 버프 채널을 곱에 포함해 두면 이후 이속 디버프가 적에게도 그대로 적용된다.
+func get_move_speed() -> float:
+	var unit: float = 1.0 if data == null else data.move_speed_multiplier
+	return CombatConfig.tuning.base_move_speed * unit * get_stats().get_move_speed_multiplier()
+
+
+# 실제 평타 쿨다운 = 기본 쿨다운(CombatConfig) / (적 고유 공속 배수 x 버프 공속 배수).
+func get_attack_cooldown() -> float:
+	var unit: float = 1.0 if data == null else data.attack_speed_multiplier
+	var multiplier := unit * get_stats().get_attack_speed_multiplier()
+	if multiplier <= 0.0:
+		return CombatConfig.tuning.base_attack_cooldown
+	return CombatConfig.tuning.base_attack_cooldown / multiplier
+
+
+func can_attack() -> bool:
+	return is_alive and _attack_cooldown_left <= 0.0
+
+
+# 현재 대상에게 평타를 넣는다. 쿨다운 중이면 아무것도 하지 않는다.
+# 피해량은 PlayerStats.get_physical_attack()이 출처이고,
+# 방어력 적용은 대상의 take_damage()(-> PlayerStats.apply_defense())가 한다.
+# 여기서 피해를 다시 계산하지 않는다.
+func try_attack() -> bool:
+	if not can_attack():
+		return false
+	if not _is_valid_target(_target):
+		return false
+	if not _target.has_method("take_damage"):
+		return false
+
+	_attack_cooldown_left = get_attack_cooldown()
+	_target.take_damage(get_stats().get_physical_attack(), self)
+	return true
+
+func take_damage(amount: int, _source = null):
 	if not is_alive:
 		return
-	
-	hp -= amount
+
+	# 방어력 적용. 피해 공식은 PlayerStats.apply_defense()가 단일 출처다.
+	# (여기서 다시 계산하지 않는다 — 이전에는 Player와 중복 구현되어 있었다.)
+	var dealt = get_stats().apply_defense(amount)
+	hp -= dealt
 	hp = max(hp, 0)
-	
-	EventBus.damage_taken.emit(self, amount, global_position)
-	
+
+	if EventBus:
+		EventBus.damage_taken.emit(self, dealt, global_position)
+
 	if hp <= 0:
 		die()
 
 func die():
 	is_alive = false
-	EventBus.enemy_died.emit(self)
+	if EventBus:
+		EventBus.enemy_died.emit(self)
 	queue_free()
-
-func _on_attack_area_entered(body):
-	if body.is_in_group("player"):
-		var damage = config.get("attack_damage", 8)
-		CombatSystem.apply_damage(body, damage, {"source": self})
-
-func _on_detection_area_entered(area):
-	if area.is_in_group("player") or (area.get_parent() and area.get_parent().is_in_group("player")):
-		target = area if area.is_in_group("player") else area.get_parent()
-		change_state("chase")
-
-func _on_detection_area_exited(area):
-	if area == target:
-		target = null
-
-func _on_player_died():
-	change_state("idle")
-

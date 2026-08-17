@@ -1,0 +1,229 @@
+[gd_resource type="Resource" script_class="StoryChapterData" load_steps=34 format=3]
+
+[ext_resource type="Script" path="res://entities/story/StoryChapterData.gd" id="1"]
+[ext_resource type="Script" path="res://entities/story/StoryLineData.gd" id="2"]
+
+[sub_resource type="Resource" id="L0"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공(독백)"
+text = "그녀를 짝사랑 한지 어언 6년…오늘은 무조건 그녀에게 고백하고 말겠어!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L1"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "소꿉아, 이따 방과후에 학교 옆 골목길로 와줄래?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L2"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+text = "응..? 삥이라도 뜯을려고?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L3"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "ㅇ..아니 그건 그때 가서 알려줄게.. 이따봐!(쥰내 튄다)"
+stage_id = &""
+
+[sub_resource type="Resource" id="L4"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "방과후"
+stage_id = &""
+
+[sub_resource type="Resource" id="L5"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "주인공 골목길에서 소꿉친구를 기다린다. 시간이 조금 지나자 그녀가 걸어온다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L6"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "소꿉아..기다리고 있었어!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L7"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+text = "그래서 왜 부른거야? 역시 나에게 몹쓸 짓을..!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L8"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "아니아니! 그게 아니고.. 사실..예전부터 널 계속 좋아하고 있었어! 나랑 사귀어주지 않을래?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L9"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+text = "...미안해, 난 널 이성으로 본 적이 없어. 우리 친구로 계속 지내자."
+stage_id = &""
+
+[sub_resource type="Resource" id="L10"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "아..그렇구나..(훌쩍) 부담줘서 미안해..혹시 내가 왜 남자처럼 안보이는 이유를 알려줄래?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L11"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+text = "나는 삼각근이 우람한 남자가 좋거든. 하지만 너의 삼각근은 겉으로 봐서는 있는지도 모르겠어서. 대답이 됐니? 가봐도 될까? 헬스장 가서 삼각근 구경해야 되는데.."
+stage_id = &""
+
+[sub_resource type="Resource" id="L12"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "ㄱ..그래 잘가.."
+stage_id = &""
+
+[sub_resource type="Resource" id="L13"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+text = "응."
+stage_id = &""
+
+[sub_resource type="Resource" id="L14"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "주인공 소꿉이를 꼬시기 위한 삼각근 성장을 위해 등산(등산길 주변에 보이는 낙석주의 표지판)을 하러 간다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L15"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "반드시 삼각근을 우람하게 성장시켜 소꿉이를 여친으로 만들고 말거야!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L16"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "한시간정도 등산을 한다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L17"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "헥, 흐엑, 흐억, 헉 쥰내 힘들다,, 슬슬 집으로 돌아가야겠다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L18"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "하산로를 걸어가던 주인공, 갑작스럽게 떨어지는 슴베찌르개에 머리를 찍혀 정신을 잃는다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L19"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "꾸엑!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L20"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "암전"
+stage_id = &""
+
+[sub_resource type="Resource" id="L21"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "정신을 차린 주인공, 주변은 온통 하얗다. 눈 앞에 금발의 여자가 있다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L22"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "ㄴ..누구세요..? 여긴 어디죠? 저 죽은거에요? 갑자기 머리가 아프던ㄷ"
+stage_id = &""
+
+[sub_resource type="Resource" id="L23"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "조용, 조용! 어우, 시끄러워! 말이 뭐이리 많아? 다 설명해줄테니까 나약한 인간은 입 다물고 있어!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L24"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "(쭈굴)"
+stage_id = &""
+
+[sub_resource type="Resource" id="L25"]
+script = ExtResource("2")
+kind = 1
+speaker = "여신"
+text = "난 이 세계를 관장하는 여신이야. 지금의 나는 6,000만년 전의 과거에서 왔지 너의 전두엽에 슴베찌르개를 박아놓은 것도 나야. 다 이유가 있으니까 그런 눈으로 보지마! 아무튼 비록 하찮은 인간의 뇌라도 공룡이 6,600만년 전에 멸망한 건 알고 있지? 여기서 문제가 생겼어. 내가 공룡을 멸망시키기 위해 준비해놓았던 소행성이 실수로 부서져버렸어.\n그 바람에 공룡이 인간이랑 공존하게 되어서 공룡 수인도 생겨버렸다구! 그래서 그걸 너가 멸종시켜줘야겠어."
+stage_id = &""
+
+[sub_resource type="Resource" id="L26"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "잠깐, 잠깐만요? 이게 무슨 소리에요..이해가 전혀 가질 않는데..제가 왜 공룡을 멸종시켜야 하는거죠? 여신님이 멸종시키면 되는거 아니에요?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L27"]
+script = ExtResource("2")
+kind = 1
+speaker = "여신"
+text = "역시 허접인간이라 나의 큰 뜻을 모르는군. 솔직히 말하자면..공룡을 계속 보다보니까 정이 생겨버렸어! 그렇게 귀여운 생물을 내 손으로 어떻게 멸종시켜! 너가 멸종시켜! 그럴려고 너 살려준거야! 멸종 못 시키면 너가 멸종될 줄 알아!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L28"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "넵, 꼭 모든 공룡들을 구축하겠습니다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L29"]
+script = ExtResource("2")
+kind = 1
+speaker = "여신"
+text = "처음으로 마음에 드는 말이군. 바로 과거로 보내줄게. 수고해~."
+stage_id = &""
+
+[sub_resource type="Resource" id="L30"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "주인공 다시 정신을 잃는다."
+stage_id = &""
+
+[resource]
+script = ExtResource("1")
+chapter_id = &"chapter_1"
+number = 1
+title = "고백, 그리고 슴베찌르개"
+summary = "짝사랑 고백에 실패한 주인공이 삼각근을 키우러 등산했다가 6,000만년 전으로 떨어진다."
+lines = [SubResource("L0"), SubResource("L1"), SubResource("L2"), SubResource("L3"), SubResource("L4"), SubResource("L5"), SubResource("L6"), SubResource("L7"), SubResource("L8"), SubResource("L9"), SubResource("L10"), SubResource("L11"), SubResource("L12"), SubResource("L13"), SubResource("L14"), SubResource("L15"), SubResource("L16"), SubResource("L17"), SubResource("L18"), SubResource("L19"), SubResource("L20"), SubResource("L21"), SubResource("L22"), SubResource("L23"), SubResource("L24"), SubResource("L25"), SubResource("L26"), SubResource("L27"), SubResource("L28"), SubResource("L29"), SubResource("L30")]

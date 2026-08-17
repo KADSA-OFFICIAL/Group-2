@@ -21,12 +21,32 @@ EventBus="*res://autoload/EventBus.gd"
 GameManager="*res://autoload/GameManager.gd"
 SaveSystem="*res://autoload/SaveSystem.gd"
 CurrencySystem="*res://autoload/CurrencySystem.gd"
-ParrySystem="*res://systems/ParrySystem.gd"
-CombatSystem="*res://systems/CombatSystem.gd"
-SkillSystem="*res://systems/SkillSystem.gd"
-StatusEffectSystem="*res://systems/StatusEffectSystem.gd"
-FeedbackSystem="*res://systems/FeedbackSystem.gd"
-TelegraphSystem="*res://systems/TelegraphSystem.gd"
+CharacterDatabase="*res://autoload/CharacterDatabase.gd"
+EquipmentDatabase="*res://autoload/EquipmentDatabase.gd"
+EquipmentSystem="*res://autoload/EquipmentSystem.gd"
+CombatConfig="*res://autoload/CombatConfig.gd"
+StatusEffectDatabase="*res://autoload/StatusEffectDatabase.gd"
+EnemyDatabase="*res://autoload/EnemyDatabase.gd"
+StageDatabase="*res://autoload/StageDatabase.gd"
+SettingsSystem="*res://autoload/SettingsSystem.gd"
+ShopDatabase="*res://autoload/ShopDatabase.gd"
+ShopSystem="*res://autoload/ShopSystem.gd"
+MailSystem="*res://autoload/MailSystem.gd"
+StoryDatabase="*res://autoload/StoryDatabase.gd"
+OrderSystem="*res://autoload/OrderSystem.gd"
+StoryProgress="*res://autoload/StoryProgress.gd"
+SynergySystem="*res://autoload/SynergySystem.gd"
+PartySystem="*res://autoload/PartySystem.gd"
+ScreenManager="*res://autoload/ScreenManager.gd"
+PlayerProfile="*res://autoload/PlayerProfile.gd"
+GuideSystem="*res://autoload/GuideSystem.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [input]
 
@@ -69,6 +89,27 @@ parry={
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":70,"physical_keycode":0,"key_label":0,"unicode":102,"location":0,"echo":false,"script":null)
 ]
 }
+switch_member_1={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":49,"physical_keycode":0,"key_label":0,"unicode":49,"location":0,"echo":false,"script":null)
+]
+}
+switch_member_2={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":50,"physical_keycode":0,"key_label":0,"unicode":50,"location":0,"echo":false,"script":null)
+]
+}
+switch_member_3={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":51,"physical_keycode":0,"key_label":0,"unicode":51,"location":0,"echo":false,"script":null)
+]
+}
+open_menu={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194305,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
