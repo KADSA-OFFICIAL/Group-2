@@ -81,6 +81,15 @@ const SHAKE_TIME := 0.34
 const SHAKE_STRENGTH := 14.0
 const BLACKOUT_TIME := 0.45
 
+# ===== 챕터 타이틀 / 장면 페이드 (#137) =====
+# 전체 길이가 2초를 넘지 않게 잡는다. 두 번째부터는 기다리고 싶지 않은 구간이라
+# 언제든 눌러서 건너뛸 수 있다.
+const TITLE_FADE_IN := 0.45
+const TITLE_HOLD := 0.85
+const TITLE_FADE_OUT := 0.40
+const CURTAIN_OPEN := 0.55    # 장면이 밝아지는 시간
+const CURTAIN_CLOSE := 0.25   # 나갈 때. 나가는 길을 기다리게 하면 안 된다
+
 var _chapter: StoryChapterData
 var _index: int = 0
 
@@ -112,6 +121,20 @@ var _next_arrow: Label
 var _battle_card: Control
 var _end_card: Control
 var _auto_button: Button
+
+# 장면 전체를 덮는 검은 막. _blackout(줄 단위 암전)과 다르다:
+# _blackout 은 대사 상자 **아래**에 있어 암전 중에도 대사가 읽힌다.
+# 이쪽은 모든 것 위에 있어 화면 자체를 열고 닫는다.
+var _curtain: ColorRect
+var _title_card: Control
+var _title_label: Label
+var _title_caption: Label
+
+# 타이틀이 도는 동안이다. 이때 입력은 "다음 줄"이 아니라 "건너뛰기"로 해석한다.
+var _intro_active: bool = false
+var _intro_tween: Tween
+# 나가는 중. 연타해도 pop() 이 두 번 불리지 않게 한다.
+var _closing: bool = false
 
 
 # 기울인 이름표. Control 에 skew 속성이 없어서 폴리곤으로 직접 그린다.
@@ -154,6 +177,52 @@ func open_chapter(chapter_id: StringName) -> void:
 	_apply_chapter_background()
 	_index = 0
 	_show_line()
+	_play_intro()
+
+
+# ===== 챕터 타이틀 / 장면 페이드 =====
+
+# 검은 화면 → 제목 → 장면. 첫 줄은 이미 만들어져 막 뒤에 서 있다.
+func _play_intro() -> void:
+	if _chapter == null:
+		return
+	_intro_active = true
+	_curtain.color.a = 1.0
+	_title_card.modulate.a = 0.0
+	_title_label.text = _chapter.title
+	_title_caption.text = "CHAPTER %d" % _chapter.number
+
+	if _intro_tween != null and _intro_tween.is_valid():
+		_intro_tween.kill()
+	_intro_tween = create_tween()
+	_intro_tween.tween_property(_title_card, "modulate:a", 1.0, TITLE_FADE_IN)
+	_intro_tween.tween_interval(TITLE_HOLD)
+	# 제목이 사라지는 것과 장면이 밝아지는 것을 겹친다. 따로 하면 검은 화면이 길어진다.
+	_intro_tween.tween_property(_curtain, "color:a", 0.0, CURTAIN_OPEN)
+	_intro_tween.parallel().tween_property(_title_card, "modulate:a", 0.0, TITLE_FADE_OUT)
+	_intro_tween.tween_callback(func(): _intro_active = false)
+
+
+# 타이틀 중 입력은 건너뛰기다. 두 번째부터는 기다리고 싶지 않다.
+func _skip_intro() -> void:
+	if _intro_tween != null and _intro_tween.is_valid():
+		_intro_tween.kill()
+	_curtain.color.a = 0.0
+	_title_card.modulate.a = 0.0
+	_intro_active = false
+
+
+# 어두워진 뒤 닫는다. 연타해도 pop() 은 한 번만 부른다.
+func _close() -> void:
+	if _closing:
+		return
+	_closing = true
+	if _intro_tween != null and _intro_tween.is_valid():
+		_intro_tween.kill()
+	_title_card.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(_curtain, "color:a", 1.0, CURTAIN_CLOSE)
+	tween.tween_callback(func(): ScreenManager.pop())
 
 
 # ===== 화면 구성 =====
@@ -202,6 +271,16 @@ func _build() -> void:
 	_build_battle_card()
 	_build_end_card()
 	_build_top_bar()
+
+	# 막과 타이틀은 마지막에 넣어 모든 것 위에 놓는다.
+	# 처음부터 닫혀 있어야 open_chapter() 전에 장면이 한 프레임 비치지 않는다.
+	_curtain = ColorRect.new()
+	_curtain.color = Color(0, 0, 0, 1)
+	_curtain.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_curtain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_curtain)
+
+	_build_title_card()
 
 
 # ── 하단 대사 상자 ──
@@ -266,6 +345,39 @@ func _build_dialogue() -> void:
 	arrow_row.add_child(_next_arrow)
 
 
+# ── 챕터 타이틀 ──
+# 검은 막 위에 뜬다. "지금부터 이 이야기를 본다"는 신호다.
+func _build_title_card() -> void:
+	_title_card = Control.new()
+	_title_card.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_title_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_title_card.modulate.a = 0.0
+	add_child(_title_card)
+
+	var column := VBoxContainer.new()
+	column.set_anchors_preset(Control.PRESET_FULL_RECT)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 10)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_title_card.add_child(column)
+
+	_title_caption = HUDKit.caption("")
+	_title_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title_caption.add_theme_color_override("font_color", UITheme.ACCENT)
+	column.add_child(_title_caption)
+
+	_title_label = HUDKit.label("", 40, UITheme.CREAM, 700)
+	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_title_label)
+
+	# 제목 아래 기울인 액센트 선. 헤더와 같은 시그니처다.
+	var bar_row := HBoxContainer.new()
+	bar_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	bar_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(bar_row)
+	bar_row.add_child(HUDKit.accent_bar(UITheme.ACCENT, 120, 5))
+
+
 # ── 우상단 조작 ──
 func _build_top_bar() -> void:
 	var row := HBoxContainer.new()
@@ -290,7 +402,7 @@ func _build_top_bar() -> void:
 
 	var close := HUDKit.make_ghost("닫기", 80)
 	close.custom_minimum_size = Vector2(80, 44)
-	close.pressed.connect(func(): ScreenManager.pop())
+	close.pressed.connect(_close)
 	row.add_child(close)
 
 
@@ -360,7 +472,7 @@ func _build_end_card() -> void:
 	actions.add_child(again)
 
 	var back := HUDKit.make_cta("목록으로", "back")
-	back.pressed.connect(func(): ScreenManager.pop())
+	back.pressed.connect(_close)
 	actions.add_child(back)
 
 
@@ -716,7 +828,9 @@ func _line_text(line: StoryLineData) -> String:
 
 
 func _process(delta: float) -> void:
-	if _chapter == null or _end_card.visible:
+	# 타이틀이 도는 동안에는 타자기를 세워 둔다.
+	# 막 뒤에서 이미 다 찍혀 있으면 장면이 열렸을 때 첫 줄을 놓친다.
+	if _chapter == null or _end_card.visible or _intro_active or _closing:
 		return
 	var total := _text_label.text.length()
 
@@ -751,7 +865,12 @@ func _unhandled_input(event: InputEvent) -> void:
 # 다음 줄로. 아직 찍는 중이면 먼저 그 줄을 전부 보여준다.
 # (한 번의 입력으로 두 가지가 일어나면 대사를 놓친다.)
 func _advance() -> void:
-	if _chapter == null or _end_card.visible:
+	if _chapter == null or _end_card.visible or _closing:
+		return
+
+	# 타이틀 중 입력은 진행이 아니라 건너뛰기다.
+	if _intro_active:
+		_skip_intro()
 		return
 
 	var total := _text_label.text.length()
@@ -788,6 +907,8 @@ func _restart() -> void:
 	_end_card.visible = false
 	_blackout.color.a = 0.0
 	_show_line()
+	# 다시 보기도 타이틀부터다. 처음 볼 때와 같은 흐름이어야 한다.
+	_play_intro()
 
 
 func _finish() -> void:
