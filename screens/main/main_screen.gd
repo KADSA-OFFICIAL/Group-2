@@ -374,6 +374,9 @@ func _make_round_button(icon_path: String, tooltip: String, scene: PackedScene) 
 	button.icon = _load_texture(icon_path)
 	button.custom_minimum_size = Vector2(32, 32)
 	button.expand_icon = true
+	# HBoxContainer 는 자식을 줄 높이에 맞춰 늘린다. 그대로 두면 옆의 재화 칩(글자가 있어
+	# 더 높다) 높이까지 늘어나 원형 버튼이 세로로 긴 타원이 됐다. 늘리지 않는다.
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	button.add_theme_stylebox_override("normal", UITheme.overlay_pill())
 	button.add_theme_stylebox_override("hover", UITheme.overlay_pill(UITheme.SURFACE))
 	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
@@ -605,4 +608,5 @@ func _fill_mail_button() -> void:
 		return
 
 	# 점은 버튼 위에 겹친다. 별도 칸을 만들면 줄이 길어진다.
-	button.add_child(HUDKit.overlay_new_dot(11))
+	# 안쪽 여백만큼 넣어 버튼 모서리가 아니라 우편 아이콘 우상단에 딱 붙게 한다.
+	button.add_child(HUDKit.overlay_new_dot(7, UITheme.OVERLAY_PAD))

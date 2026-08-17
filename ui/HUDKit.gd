@@ -534,25 +534,29 @@ static func empty_notice(title: String, hint: String) -> PanelContainer:
 # 개수를 적지 않는 이유: 개수는 열어 보면 알 수 있는 정보이고, 목록 밖에서 필요한 것은
 # 볼 것이 있는지 여부뿐이다. 숫자 배지는 앰버(주 액센트)를 써서 주 CTA 와 시선을
 # 다투기도 했다. 점은 하락색(붉은 흙빛)이라 액센트와 겹치지 않는다.
-static func new_dot(size: int = 10) -> Control:
+static func new_dot(size: int = 8) -> Control:
 	var dot := PanelContainer.new()
 	dot.custom_minimum_size = Vector2(size, size)
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	# 테두리를 패널 면 색으로 둘러 어떤 배경 위에서도 점의 윤곽이 살아 있게 한다.
+	# 테두리를 두르지 않는다. 이 크기에서는 테두리가 점의 절반을 먹어서
+	# 붉은 점이 아니라 작은 회색 고리처럼 보인다.
 	dot.add_theme_stylebox_override("panel",
-		_box(UITheme.NEGATIVE, panel_fill(), 2, 0, RADIUS_CHIP))
+		_box(UITheme.NEGATIVE, UITheme.NEGATIVE, 0, 0, RADIUS_CHIP))
 	return dot
 
 
-# 버튼·아이콘 위에 겹쳐 놓는 알림 점. 우상단에 붙는다.
-static func overlay_new_dot(size: int = 12) -> Control:
+# 버튼·아이콘 위에 겹쳐 놓는 알림 점. 우상단 모서리에 붙는다.
+#
+# inset 은 버튼 테두리에서 안쪽으로 얼마나 들어갈지다. 아이콘 버튼은 내용 여백만큼
+# 넣어 줘야 점이 버튼 모서리가 아니라 **아이콘 모서리**에 붙는다.
+static func overlay_new_dot(size: int = 8, inset: float = 0.0) -> Control:
 	var dot := new_dot(size)
 	dot.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	dot.offset_left = -float(size) - 1.0
-	dot.offset_top = -1.0
-	dot.offset_right = -1.0
-	dot.offset_bottom = float(size) - 1.0
+	dot.offset_left = -inset - float(size)
+	dot.offset_top = inset
+	dot.offset_right = -inset
+	dot.offset_bottom = inset + float(size)
 	return dot
 
 
