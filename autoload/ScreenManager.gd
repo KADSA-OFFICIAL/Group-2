@@ -30,8 +30,10 @@ const EMPTY_DEPTH: int = 0
 # 매우 짧게 두는 이유: 화면은 몇 번이고 오가는 곳이라 전환이 길면 곧 방해가 된다.
 # 전환은 **스택 상태와 무관하다** — 깊이·신호는 즉시 갱신되고 연출만 뒤따른다.
 # 그래야 화면 코드가 get_depth() 를 믿고 쓸 수 있다.
-const FADE_IN: float = 0.18
-const FADE_OUT: float = 0.14
+# 짧게. 화면 전환은 게임 중 가장 자주 겪는 동작이라, 여기서 몇 프레임만 길어도
+# 조작이 굼떠진 것처럼 느껴진다. "부드럽다"보다 "안 끊긴다" 정도만 노린다.
+const FADE_IN: float = 0.08
+const FADE_OUT: float = 0.06
 
 # 화면이 열렸을 때 (열린 화면 노드).
 signal screen_pushed(screen: Control)
