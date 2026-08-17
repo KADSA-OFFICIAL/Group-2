@@ -82,10 +82,17 @@ func _build() -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(body)
 
-	body.add_child(_build_tab_rail())
-	body.add_child(_build_roster_panel())
-	body.add_child(_build_center())
-	body.add_child(_build_detail_panel())
+	var _col0 := _build_tab_rail()
+	body.add_child(_col0)
+	var _col1 := _build_roster_panel()
+	body.add_child(_col1)
+	var _col2 := _build_center()
+	body.add_child(_col2)
+	var _col3 := _build_detail_panel()
+	body.add_child(_col3)
+
+	# 좌에서 우로 차례로 나타난다. 화면 구조를 눈이 따라가게 하는 순서다.
+	HUDKit.play_enter([_col0, _col1, _col2, _col3])
 
 
 # ── 좌측 끝: 세로 서브탭 레일 ──
@@ -128,6 +135,8 @@ func _fill_tab_rail() -> void:
 			button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		button.pressed.connect(_on_tab_pressed.bind(tab))
 		holder.add_child(button)
+		# 카드는 전면 투명 버튼이 클릭을 받으므로, 호버 신호도 그 버튼에서 듣는다.
+		HUDKit.hover_lift(holder, button)
 
 
 		_tab_rail.add_child(holder)
@@ -282,6 +291,8 @@ func _make_roster_card(id: StringName) -> Control:
 		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	button.pressed.connect(_on_card_pressed.bind(id))
 	card.add_child(button)
+	# 카드는 전면 투명 버튼이 클릭을 받으므로, 호버 신호도 그 버튼에서 듣는다.
+	HUDKit.hover_lift(card, button)
 
 	return card
 

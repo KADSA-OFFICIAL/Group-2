@@ -86,9 +86,15 @@ func _build() -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(body)
 
-	body.add_child(_build_inventory_panel())
-	body.add_child(_build_center())
-	body.add_child(_build_detail())
+	var _col0 := _build_inventory_panel()
+	body.add_child(_col0)
+	var _col1 := _build_center()
+	body.add_child(_col1)
+	var _col2 := _build_detail()
+	body.add_child(_col2)
+
+	# 좌에서 우로 차례로 나타난다. 화면 구조를 눈이 따라가게 하는 순서다.
+	HUDKit.play_enter([_col0, _col1, _col2])
 
 
 # ── 좌: 인벤토리 ──
@@ -326,6 +332,8 @@ func _make_item_card(id: StringName) -> Control:
 		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	button.pressed.connect(_on_item_pressed.bind(id))
 	card.add_child(button)
+	# 카드는 전면 투명 버튼이 클릭을 받으므로, 호버 신호도 그 버튼에서 듣는다.
+	HUDKit.hover_lift(card, button)
 
 	return card
 
