@@ -138,13 +138,19 @@ func _physics_process(delta: float) -> void:
 	if _attack_cooldown_left > 0.0:
 		_attack_cooldown_left -= delta
 
+	_decay_stack(delta)
+
 	# 조종 중인 멤버만 입력을 받는다.
 	# 나머지는 이 단계에서 정지한다(AI는 후속 이슈).
 	if not is_controlled():
 		velocity = Vector2.ZERO
 		return
 
-	_handle_movement()
+	# 기절 등 CONTROL 효과가 이동을 막으면 움직이지 않는다.
+	if StatusEffectSystem.blocks_movement(self):
+		velocity = Vector2.ZERO
+	else:
+		_handle_movement()
 	move_and_slide()
 
 	if Input.is_action_pressed("attack"):
@@ -168,10 +174,14 @@ func get_attack_cooldown() -> float:
 	return CombatConfig.tuning.base_attack_cooldown / mult
 
 func can_attack() -> bool:
-	return is_alive and _attack_cooldown_left <= 0.0
+	# 기절 등 CONTROL 효과가 평타를 막으면 공격할 수 없다.
+	return is_alive and _attack_cooldown_left <= 0.0 and not StatusEffectSystem.blocks_attack(self)
 
 # 사거리 안의 적에게 평타를 넣는다. 쿨다운 중이면 아무것도 하지 않는다.
 # 피해량은 PlayerStats.get_physical_attack(), 방어 적용은 대상의 apply_defense()가 한다.
+#
+# 평타는 역할 메커니즘(§8.1 시너지 1단계)이 걸리는 지점이기도 하다.
+# 순서: 처형 판정 -> 피해 -> 표식 부여 -> 표식 충전 -> 스택 축적
 func try_attack() -> bool:
 	if not can_attack():
 		return false
@@ -181,8 +191,150 @@ func try_attack() -> bool:
 		return false
 
 	_attack_cooldown_left = get_attack_cooldown()
+
+	# 버퍼: 조건이 맞으면 피해 대신 처형한다.
+	if _try_execute(target):
+		_gain_stack()
+		return true
+
 	target.take_damage(get_stats().get_physical_attack(), self)
+
+	# 대상이 이 평타로 죽었으면 이후 처리를 하지 않는다.
+	if not is_instance_valid(target) or not target.is_alive:
+		_gain_stack()
+		return true
+
+	# 탱커: 표식을 부여한다(이미 있으면 StatusEffectData의 중첩 규칙대로).
+	if _is_role_active(CharacterData.Role.TANK):
+		StatusEffectSystem.apply(target, MARK_EFFECT, self)
+
+	# 표식 충전은 **파티 전체**의 평타로 이뤄진다(탱커 본인만이 아니다).
+	_charge_mark(target)
+
+	# 원거리: 스택을 쌓는다.
+	_gain_stack()
 	return true
+
+
+# ===== 역할 메커니즘 (Role Mechanics) =====
+# 메커니즘은 시너지 1단계가 곧 역할 정체성이라는 설계(docs §2)를 따른다.
+# 그래서 "이 캐릭터가 그 역할을 가졌는가" + "파티에서 그 역할 시너지가 켜졌는가"를 함께 본다.
+
+const MARK_EFFECT := &"mark"
+const STACK_BONUS_KEY := &"ranged_stack"
+
+# 원거리 스택. 정수 단위로 서서히 감소하므로 float로 들고 표시할 때 내림한다.
+var _stack: float = 0.0
+
+# 이 멤버에게 해당 역할의 메커니즘이 활성인가.
+# 배타 규칙(#73)이 get_active_tiers()에 이미 반영되어 있으므로,
+# 다른 역할이 3단계를 발동하면 여기서도 자동으로 꺼진다.
+func _is_role_active(role: CharacterData.Role) -> bool:
+	if data == null or not data.has_role(role):
+		return false
+	return SynergySystem.is_tier1_active(PartySystem.get_members(), role)
+
+
+# --- 탱커: 표식 → 기절 + 추가 피해 ---
+
+# 표식이 걸린 대상이면 게이지를 채운다. 임계치에서 터지면 추가 피해를 넣는다.
+# 충전은 역할과 무관하게 파티 전체가 한다(표식은 파티 공동 자원).
+func _charge_mark(target: Node) -> void:
+	if not StatusEffectSystem.has_effect(target, MARK_EFFECT):
+		return
+
+	# 표식을 건 주체(탱커)를 폭발 피해 계산에 쓰려고 미리 붙잡는다.
+	var marker := StatusEffectSystem.get_source(target, MARK_EFFECT)
+
+	if not StatusEffectSystem.add_gauge(target, MARK_EFFECT):
+		return
+
+	# 터졌다: 기절은 StatusEffectSystem이 이미 걸었고, 여기서는 추가 피해만 넣는다.
+	_apply_mark_burst_damage(target, marker)
+
+
+func _apply_mark_burst_damage(target: Node, marker: Node) -> void:
+	if not is_instance_valid(target) or not target.is_alive:
+		return
+
+	# 추가 피해 = 표식을 건 탱커의 물리 공격력 x 배수.
+	# 표식 주체가 사라졌으면 때린 사람 기준으로 대체한다.
+	var attacker: Node = marker if is_instance_valid(marker) and marker.has_method("get_stats") else self
+	var power := int(round(attacker.get_stats().get_physical_attack() * CombatConfig.tuning.mark_burst_damage_multiplier))
+	target.take_damage(power, self)
+
+
+# --- 원거리: 평타 스택 ---
+
+# 평타 적중 시 스택을 쌓는다.
+func _gain_stack() -> void:
+	if not _is_role_active(CharacterData.Role.RANGED_DEALER):
+		return
+	_stack = minf(_stack + CombatConfig.tuning.stack_gain_per_hit, float(CombatConfig.tuning.stack_max))
+	_push_stack_bonus()
+
+# 스택은 놓으면 서서히 감소한다(docs §4.1의 전투 리듬).
+# 조종 중일 때보다 미조종(AI) 중일 때 더 빨리 빠진다.
+func _decay_stack(delta: float) -> void:
+	if _stack <= 0.0:
+		return
+
+	# 역할 시너지가 꺼졌으면 스택을 즉시 정리한다.
+	if not _is_role_active(CharacterData.Role.RANGED_DEALER):
+		_stack = 0.0
+		_push_stack_bonus()
+		return
+
+	var rate := CombatConfig.tuning.stack_decay_per_sec_controlled if is_controlled() \
+		else CombatConfig.tuning.stack_decay_per_sec_uncontrolled
+	_stack = maxf(_stack - rate * delta, 0.0)
+	_push_stack_bonus()
+
+# 현재 스택 수(표시·판정용). 내림한 정수다.
+func get_stack_count() -> int:
+	return int(floor(_stack))
+
+# 스택 보너스를 버프 채널에 반영한다.
+# 직접 set_buff_bonuses()를 호출하지 않고 StatusEffectSystem을 거치는 이유:
+# 그 채널은 최종값을 받으므로 기록자가 둘이면 서로 덮어쓴다(#105 참조).
+func _push_stack_bonus() -> void:
+	var count := get_stack_count()
+	if count <= 0:
+		StatusEffectSystem.clear_external_bonus(self, STACK_BONUS_KEY)
+		return
+
+	StatusEffectSystem.set_external_bonus(self, STACK_BONUS_KEY, {}, {
+		"attack_speed": CombatConfig.tuning.stack_attack_speed_per_stack * count,
+		"move_speed": CombatConfig.tuning.stack_move_speed_per_stack * count,
+	})
+
+
+# --- 버퍼: 처형 ---
+
+# 처형 조건을 만족하면 대상을 즉시 쓰러뜨린다.
+# 조건 셋을 모두 만족해야 한다:
+#   ① 이 멤버가 버퍼 역할이고 그 시너지가 켜져 있다 (버퍼가 **직접** 공격해야 한다)
+#   ② 대상에 디버프가 걸려 있다
+#   ③ 대상 체력이 execute_hp_percent 이하다
+func _try_execute(target: Node) -> bool:
+	if not _is_role_active(CharacterData.Role.BUFFER):
+		return false
+	if not StatusEffectSystem.has_any_debuff(target):
+		return false
+	if not can_execute(target):
+		return false
+
+	# 남은 체력을 확실히 넘기는 피해를 넣어 방어력에 막히지 않게 한다.
+	target.take_damage(target.max_hp * 100, self)
+	return true
+
+# 대상이 처형 가능한 체력인가. HUD 표시에도 쓸 수 있도록 분리한다.
+func can_execute(target) -> bool:
+	if not is_instance_valid(target) or not target.is_alive:
+		return false
+	if target.max_hp <= 0:
+		return false
+	return float(target.hp) / float(target.max_hp) <= CombatConfig.tuning.execute_hp_percent
 
 # 사거리 안에서 가장 가까운 살아있는 적을 찾는다.
 # 적 목록은 GameManager가 단일 출처다.

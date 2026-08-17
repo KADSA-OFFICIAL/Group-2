@@ -1,15 +1,17 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=3 format=3 uid="uid://b8shipduck0chr"]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=5 format=3 uid="uid://b8shipduck0chr"]
 
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 
+[ext_resource type="Texture2D" uid="uid://cr25fx8k35l53" path="res://assets/sprites/placeholder/shape_tank.svg" id="9_shape"]
+
 [sub_resource type="Resource" id="PlayerStats_shipduck"]
 script = ExtResource("2_stats")
-hp = 100
-strength = 10
-defense = 10
-intelligence = 10
-faith = 10
+hp = 1400
+strength = 80
+defense = 160
+intelligence = 100
+faith = 100
 equip_physical_defense = 0
 equip_magic_defense = 0
 
@@ -19,5 +21,6 @@ character_id = &"shipduck"
 display_name = "Shipduck"
 description = "기본 플레이어 캐릭터."
 stats = SubResource("PlayerStats_shipduck")
+sprite_texture = ExtResource("9_shape")
 tint = Color(0, 0.5, 1, 1)
 sprite_scale = Vector2(2, 2)
