@@ -63,9 +63,15 @@ func _build() -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(body)
 
-	body.add_child(_build_leader_panel())
-	body.add_child(_build_center())
-	body.add_child(_build_roster_panel())
+	var _col0 := _build_leader_panel()
+	body.add_child(_col0)
+	var _col1 := _build_center()
+	body.add_child(_col1)
+	var _col2 := _build_roster_panel()
+	body.add_child(_col2)
+
+	# 좌에서 우로 차례로 나타난다. 화면 구조를 눈이 따라가게 하는 순서다.
+	HUDKit.play_enter([_col0, _col1, _col2])
 
 
 # ── 좌: 교주 ──
