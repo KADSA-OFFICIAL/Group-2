@@ -135,6 +135,7 @@ kind = 0
 speaker = ""
 text = "하산로를 걸어가던 주인공, 갑작스럽게 떨어지는 슴베찌르개에 머리를 찍혀 정신을 잃는다."
 stage_id = &""
+screen_effect = 1
 
 [sub_resource type="Resource" id="L19"]
 script = ExtResource("2")
@@ -149,6 +150,7 @@ kind = 0
 speaker = ""
 text = "암전"
 stage_id = &""
+screen_effect = 1
 
 [sub_resource type="Resource" id="L21"]
 script = ExtResource("2")
@@ -219,6 +221,7 @@ kind = 0
 speaker = ""
 text = "주인공 다시 정신을 잃는다."
 stage_id = &""
+screen_effect = 1
 
 [resource]
 script = ExtResource("1")

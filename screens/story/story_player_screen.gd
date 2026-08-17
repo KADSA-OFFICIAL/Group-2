@@ -81,10 +81,6 @@ const SHAKE_TIME := 0.34
 const SHAKE_STRENGTH := 14.0
 const BLACKOUT_TIME := 0.45
 
-# 지문이 이 말을 담고 있으면 화면을 실제로 어둡게 한다.
-# 대본에 이미 쓰이는 표현이라 새 필드를 만들지 않고 여기서 읽어낸다.
-const BLACKOUT_WORDS := ["암전", "정신을 잃", "눈을 감"]
-
 var _chapter: StoryChapterData
 var _index: int = 0
 
@@ -580,11 +576,11 @@ func _start_idle() -> void:
 	_idle_tween.tween_property(inner, "position:y", 0.0, IDLE_PERIOD * 0.5)
 
 
-# 대사 내용에 대한 반응.
+# 인물 반응.
 #
-# 대본에 연출 지시가 없으므로 문장부호에서 읽어낸다. 새 필드를 만들면 대본 저작 규약이
-# 바뀌는 일이라 이번 범위 밖이다(#133 non-goals).
-func _emote(speaker: String, text: String) -> void:
+# 무엇을 할지는 대본이 정한다(StoryLineData.emotion). 화면은 그 지시를 몸짓으로 옮길
+# 뿐이고, 본문을 훑지 않는다. AUTO 해석도 StoryLineData 가 한다.
+func _emote(speaker: String, emotion: int) -> void:
 	if _emote_tween != null and _emote_tween.is_valid():
 		_emote_tween.kill()
 	var figure: Control = _figures.get(speaker)
@@ -598,22 +594,23 @@ func _emote(speaker: String, text: String) -> void:
 	_emote_tween = inner.create_tween()
 	_emote_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-	if text.contains("!"):
-		# 놀람·강조: 튀어오른다.
-		_emote_tween.tween_property(inner, "position:y", -22.0, 0.12)
-		_emote_tween.tween_property(inner, "position:y", 0.0, 0.18)
-	elif text.contains("?"):
-		# 의문: 고개를 갸웃한다.
-		_emote_tween.tween_property(inner, "rotation", 0.05, 0.14)
-		_emote_tween.tween_property(inner, "rotation", 0.0, 0.20)
-	elif text.contains("..") or text.contains("…"):
-		# 머뭇거림: 처진다.
-		_emote_tween.tween_property(inner, "position:y", 7.0, 0.20)
-		_emote_tween.tween_property(inner, "position:y", 0.0, 0.26)
-	else:
-		# 평범한 대사: 가볍게 끄덕인다.
-		_emote_tween.tween_property(inner, "position:y", -8.0, 0.10)
-		_emote_tween.tween_property(inner, "position:y", 0.0, 0.16)
+	match emotion:
+		StoryLineData.Emotion.SURPRISE:
+			# 놀람·강조: 튀어오른다.
+			_emote_tween.tween_property(inner, "position:y", -22.0, 0.12)
+			_emote_tween.tween_property(inner, "position:y", 0.0, 0.18)
+		StoryLineData.Emotion.QUESTION:
+			# 의문: 고개를 갸웃한다.
+			_emote_tween.tween_property(inner, "rotation", 0.05, 0.14)
+			_emote_tween.tween_property(inner, "rotation", 0.0, 0.20)
+		StoryLineData.Emotion.DOWN:
+			# 머뭇거림·낙담: 처진다.
+			_emote_tween.tween_property(inner, "position:y", 7.0, 0.20)
+			_emote_tween.tween_property(inner, "position:y", 0.0, 0.26)
+		_:
+			# 평범한 대사: 가볍게 끄덕인다.
+			_emote_tween.tween_property(inner, "position:y", -8.0, 0.10)
+			_emote_tween.tween_property(inner, "position:y", 0.0, 0.16)
 
 	# 반응이 끝나면 숨쉬기를 다시 건다(반응 트윈이 idle 을 덮어썼으므로).
 	_emote_tween.tween_callback(_start_idle)
@@ -645,11 +642,20 @@ func _blackout_flash() -> void:
 	tween.tween_property(_blackout, "color:a", 0.0, BLACKOUT_TIME * 0.55).set_delay(0.15)
 
 
-func _is_blackout_line(text: String) -> bool:
-	for word in BLACKOUT_WORDS:
-		if text.contains(word):
-			return true
-	return false
+# 대본이 지시한 화면 연출을 건다.
+#
+# 전투 줄은 따로 지시하지 않아도 흔들린다 — 그건 본문 추측이 아니라 **줄 종류**가
+# 정하는 것이라 저작 실수로 잘못 걸릴 여지가 없다.
+# 다만 저작자가 명시한 연출이 있으면 그쪽이 이긴다(전투인데 암전을 원할 수 있다).
+func _apply_screen_effect(line: StoryLineData) -> void:
+	match line.screen_effect:
+		StoryLineData.ScreenEffect.BLACKOUT:
+			_blackout_flash()
+		StoryLineData.ScreenEffect.SHAKE:
+			_shake()
+		_:
+			if line.kind == StoryLineData.Kind.BATTLE:
+				_shake()
 
 
 # ===== 재생 =====
@@ -682,14 +688,14 @@ func _show_line() -> void:
 			_text_label.add_theme_color_override("font_color", UITheme.CREAM)
 			_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 			_update_stage(line.speaker)
-			_emote(line.speaker, text)
+			# 무엇을 할지는 대본이 정한다. AUTO 해석도 StoryLineData 가 한다.
+			_emote(line.speaker, line.resolve_emotion())
 		StoryLineData.Kind.BATTLE:
 			_name_plate.visible = false
 			# 전투 줄은 text 가 비어 있을 수 있다. 그때도 무엇이 일어나는지는 알려야 한다.
 			_text_label.add_theme_color_override("font_color", UITheme.CREAM)
 			_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			_update_stage("")
-			_shake()
 		_:
 			# 지문은 이름표 없이, 흐리고 가운데로. 대사와 한눈에 구분되어야 한다.
 			_name_plate.visible = false
@@ -697,9 +703,8 @@ func _show_line() -> void:
 				Color(UITheme.CREAM.r, UITheme.CREAM.g, UITheme.CREAM.b, 0.78))
 			_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			_update_stage("")
-			if _is_blackout_line(text):
-				_blackout_flash()
 
+	_apply_screen_effect(line)
 	_text_label.text = text
 	_text_label.visible_characters = 0
 
