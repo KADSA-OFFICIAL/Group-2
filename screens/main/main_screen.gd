@@ -374,6 +374,9 @@ func _make_round_button(icon_path: String, tooltip: String, scene: PackedScene) 
 	button.icon = _load_texture(icon_path)
 	button.custom_minimum_size = Vector2(32, 32)
 	button.expand_icon = true
+	# HBoxContainer 는 자식을 줄 높이에 맞춰 늘린다. 그대로 두면 옆의 재화 칩(글자가 있어
+	# 더 높다) 높이까지 늘어나 원형 버튼이 세로로 긴 타원이 됐다. 늘리지 않는다.
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	button.add_theme_stylebox_override("normal", UITheme.overlay_pill())
 	button.add_theme_stylebox_override("hover", UITheme.overlay_pill(UITheme.SURFACE))
 	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
@@ -588,7 +591,11 @@ func _comma(value: int) -> String:
 
 
 # ── 우편 버튼 ──
-# 미수령 개수를 배지로 겹쳐 표시한다. 개수의 출처는 MailSystem 이다.
+# 받지 않은 우편이 있으면 작은 점 하나만 겹쳐 표시한다.
+#
+# 개수를 적지 않는다: 몇 통인지는 우편함을 열면 알 수 있고, 메인화면에서 필요한 것은
+# "볼 게 있다" 뿐이다. 숫자 배지는 앰버(주 액센트)라 출격 CTA 와 시선을 다투기도 했다.
+# 있는지 없는지의 출처는 MailSystem 이다(화면이 세지 않는다).
 func _fill_mail_button() -> void:
 	if not is_instance_valid(_mail_holder):
 		return
@@ -597,16 +604,9 @@ func _fill_mail_button() -> void:
 	var button := _make_round_button(MAIL_ICON, "우편", MAIL_SCREEN)
 	_mail_holder.add_child(button)
 
-	var unclaimed := MailSystem.get_unclaimed_count()
-	if unclaimed <= 0:
+	if not MailSystem.has_unclaimed():
 		return
 
-	# 배지는 버튼 위에 겹친다. 별도 칸을 만들면 줄이 길어진다.
-	var badge := PanelContainer.new()
-	badge.add_theme_stylebox_override("panel", UITheme.pill_box(UITheme.ACCENT))
-	badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	badge.offset_left = -10
-	badge.offset_top = -6
-	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	badge.add_child(_text(str(unclaimed), 10, UITheme.INK))
-	button.add_child(badge)
+	# 점은 버튼 위에 겹친다. 별도 칸을 만들면 줄이 길어진다.
+	# 안쪽 여백만큼 넣어 버튼 모서리가 아니라 우편 아이콘 우상단에 딱 붙게 한다.
+	button.add_child(HUDKit.overlay_new_dot(7, UITheme.OVERLAY_PAD))

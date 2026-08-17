@@ -127,11 +127,12 @@ func _make_mail_card(mail: Dictionary) -> Control:
 	var title_row := HBoxContainer.new()
 	title_row.add_theme_constant_override("separation", 8)
 	info.add_child(title_row)
+	# 미수령 표시는 점 하나. 메인화면 우편 버튼과 같은 표시를 쓴다.
+	if not claimed:
+		title_row.add_child(HUDKit.new_dot(10))
 	title_row.add_child(HUDKit.label(String(mail["title"]), 16, HUDKit.text_1(), 700))
 	if claimed:
 		title_row.add_child(HUDKit.tag_chip("수령 완료", UITheme.STONE_DARK))
-	else:
-		title_row.add_child(HUDKit.tag_chip("NEW", UITheme.NEGATIVE))
 
 	var body := String(mail["body"])
 	if not body.is_empty():
