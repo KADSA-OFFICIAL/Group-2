@@ -27,15 +27,41 @@ var _attack_cooldown_left: float = 0.0
 # Node2D로 타입을 잡아 global_position 접근이 정적으로 안전하게 한다.
 var _target: Node2D = null
 
+# 이 개체가 소유하는 런타임 스텟. 정의(EnemyData)의 스텟 사본이다.
+#
+# 왜 사본인가: .tres는 경로 기준으로 캐시되므로, 같은 종류의 적을 여러 마리 스폰하면
+# EnemyData와 그 안의 PlayerStats가 **하나로 공유된다**(적 씬이 data를 ExtResource로
+# 참조하므로 인스턴스마다 같은 리소스를 가리킨다).
+# 지금은 스텟을 읽기만 해서 무해하지만, StatusEffectData가 PlayerStats의 버프 채널을
+# 대상으로 삼기 때문에 한 마리에 건 디버프가 같은 종류 전체에 걸린다.
+# 정의(.tres)는 읽기 전용 데이터로 남기고, 전투 중 변하는 값은 개체가 소유한다.
+var _runtime_stats: PlayerStats = null
+
+# ===== 외형 (Appearance) =====
+
+# 워크 애니메이션을 그리는 노드. 씬에 AnimatedSprite2D가 있고 data.walk_frames가
+# 채워져 있을 때만 잡힌다. null이면 이 스크립트는 외형에 전혀 손대지 않으므로
+# 시트가 없는 적(TrainingGoblin 등)은 지금까지와 똑같이 Sprite2D 정지 이미지로 남는다.
+var _anim_sprite: AnimatedSprite2D = null
+
+# 멈춤 판정 임계값과 방향 판정은 WalkAnimation이 소유한다(플레이어와 같은 규약).
+
 # 유효한 스텟 출처를 반환한다.
-# data가 설정되어 있으면 그 정의의 스텟이 우선한다(적 정의가 단일 출처).
+# data가 설정되어 있으면 그 정의의 스텟이 사본의 바탕이 된다(적 정의가 단일 출처).
 # 스텟 계산은 언제나 PlayerStats가 소유하므로 여기서 수치를 다시 만들지 않는다.
 func get_stats() -> PlayerStats:
-	if data != null:
-		return data.get_stats()
-	if stats == null:
-		stats = PlayerStats.new()
-	return stats
+	if _runtime_stats == null:
+		_runtime_stats = _make_runtime_stats()
+	return _runtime_stats
+
+# 정의(또는 씬에 주입된 stats)에서 이 개체만의 스텟 사본을 만든다.
+# 처음 get_stats()가 불릴 때 한 번만 만들어지므로, 씬이 export로 주입한 값이 반영된 뒤다.
+# duplicate(true): 이후 PlayerStats에 하위 리소스가 추가되어도 같이 복제되게 한다.
+func _make_runtime_stats() -> PlayerStats:
+	var source: PlayerStats = data.get_stats() if data != null else stats
+	if source == null:
+		return PlayerStats.new()
+	return source.duplicate(true)
 
 func _ready():
 	GameManager.register_enemy(self)
@@ -60,6 +86,25 @@ func _apply_data() -> void:
 		sprite.self_modulate = data.tint
 		sprite.scale = data.sprite_scale
 
+	# 워크 시트가 있으면 AnimatedSprite2D가 외형을 맡고 도형 플레이스홀더는 숨는다.
+	# 둘 중 하나만 보이게 해서 실제 아트 위에 도형이 겹쳐 보이지 않게 한다.
+	#
+	# tint를 입히지 않는 이유: tint는 흰색 도형을 칠하려고 둔 값이라
+	# 색이 있는 실제 아트에 곱하면 색이 죽는다(EnemyData.tint 주석 참고).
+	var anim := get_node_or_null("AnimatedSprite2D")
+	if anim is AnimatedSprite2D and data.walk_frames != null:
+		_anim_sprite = anim
+		_anim_sprite.sprite_frames = data.walk_frames
+		_anim_sprite.scale = data.walk_sprite_scale
+		_anim_sprite.offset = data.walk_sprite_offset
+		# 첫 프레임은 정면 정지 포즈로 둔다. animation을 지정하지 않으면 기본값 &"default"를
+		# 찾다가 없어서 경고가 난다.
+		_anim_sprite.animation = WalkAnimation.ANIMATIONS[WalkAnimation.DOWN]
+		_anim_sprite.frame = 0
+		_anim_sprite.visible = true
+		if sprite is Sprite2D:
+			sprite.visible = false
+
 func _exit_tree():
 	GameManager.unregister_enemy(self)
 
@@ -76,7 +121,23 @@ func _physics_process(delta: float) -> void:
 	if _attack_cooldown_left > 0.0:
 		_attack_cooldown_left -= delta
 
+	_process_ai()
+
+	# AI가 꺼져 있어도(velocity가 계속 0) 호출한다. 그래야 정지 포즈로 고정된다.
+	_update_walk_animation()
+
+
+# 추적/공격 AI 한 틱. velocity를 정하고 필요하면 실제로 이동시킨다.
+# 외형 갱신과 분리해 둔 이유: 아래 조기 반환들이 애니메이션 갱신까지 건너뛰면
+# 적이 멈춘 뒤에도 걷는 모션이 남기 때문이다.
+func _process_ai() -> void:
 	if not is_ai_active():
+		return
+
+	# 기절 등 CONTROL 효과가 이동을 막으면 추적하지 않는다.
+	# (탱커 표식이 터져 기절시켰을 때 적이 실제로 멈춰야 한다.)
+	if StatusEffectSystem.blocks_movement(self):
+		velocity = Vector2.ZERO
 		return
 
 	_target = _resolve_target()
@@ -93,6 +154,28 @@ func _physics_process(delta: float) -> void:
 		velocity = global_position.direction_to(_target.global_position) * get_move_speed()
 
 	move_and_slide()
+
+
+# ===== 워크 애니메이션 (Walk animation) =====
+
+# 지금 속도에 맞는 방향 애니메이션을 재생한다. 멈춰 있으면 정지 포즈로 고정한다.
+# 시트가 없는 적은 _anim_sprite가 null이라 아무 일도 하지 않는다.
+func _update_walk_animation() -> void:
+	if _anim_sprite == null:
+		return
+
+	if not WalkAnimation.is_walking(velocity):
+		# 멈추면 재생을 세우고 정지 포즈(0번 프레임)로 고정한다.
+		# animation은 그대로 두어 마지막으로 향했던 방향을 유지한다
+		# — 멈출 때마다 정면으로 홱 돌아보면 어색하기 때문이다.
+		if _anim_sprite.is_playing():
+			_anim_sprite.stop()
+			_anim_sprite.frame = 0
+		return
+
+	var anim := WalkAnimation.animation_for(velocity)
+	if _anim_sprite.animation != anim or not _anim_sprite.is_playing():
+		_anim_sprite.play(anim)
 
 
 # 추적 대상을 결정한다.
@@ -161,7 +244,8 @@ func get_attack_cooldown() -> float:
 
 
 func can_attack() -> bool:
-	return is_alive and _attack_cooldown_left <= 0.0
+	# 기절 등 CONTROL 효과가 평타를 막으면 공격할 수 없다.
+	return is_alive and _attack_cooldown_left <= 0.0 and not StatusEffectSystem.blocks_attack(self)
 
 
 # 현재 대상에게 평타를 넣는다. 쿨다운 중이면 아무것도 하지 않는다.

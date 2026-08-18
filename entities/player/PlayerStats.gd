@@ -12,11 +12,11 @@ class_name PlayerStats
 #   - 지능   -> 추후 설계 (값만 보관, 파생 계산에는 미연결)
 
 # ===== 기초 스텟 (Base Stats) =====
-@export var hp: int = 100            # 최대 HP
-@export var strength: int = 10       # 근력 (삼각근 강화로 상승)
-@export var defense: int = 10        # 방어력 (장비 + 근력 기반)
-@export var intelligence: int = 10   # 지능 (추후 설계)
-@export var faith: int = 10          # 신앙심
+@export var hp: int = 1000           # 최대 HP
+@export var strength: int = 100      # 근력 (삼각근 강화로 상승)
+@export var defense: int = 100       # 방어력 (장비 + 근력 기반)
+@export var intelligence: int = 100  # 지능 (추후 설계)
+@export var faith: int = 100          # 신앙심
 
 # ===== 장비 보너스 (Equipment Bonuses) =====
 # 장비 시스템이 채워 넣는 입력값. 각 파생 스텟 계산에 합산된다.
@@ -134,23 +134,34 @@ func get_goddess_skill_boost() -> float:
 
 # 들어온 피해에 이 대상의 물리 방어력을 적용해 실제 피해를 반환한다.
 #
-# 비율 공식: 피해 = 원피해 x (K / (K + 방어력))
-#   감산 공식(원피해 - 방어력)이 아니다. 감산은 방어가 공격을 넘으면 피해가 최소치로
-#   눌리고, 경계 근처에서 스텟 1포인트가 피해를 몇 배로 바꿔 밸런싱이 불가능했다.
-#   비율은 방어가 피해를 완전히 무효화하지 못하고 수익이 매끄럽게 체감한다.
+# 스케일 불변 공식: 피해 = 원피해² / (원피해 + 방어력)
+#
+#   성질:
+#     방어력 0          -> 피해 전량
+#     방어력 = 원피해   -> 정확히 절반
+#     방어력 = 원피해x3 -> 정확히 1/4
+#
+#   왜 이 공식인가:
+#     ① 감산(원피해 - 방어력)은 방어가 공격을 넘으면 피해가 최소치로 눌리고,
+#        경계 근처에서 스텟 1포인트가 피해를 몇 배로 바꿔 밸런싱이 불가능했다.
+#     ② 이전의 K 비율식(원피해 x K/(K+방어력))은 K가 방어력의 **절대 스케일**에 묶여 있었다.
+#        스탯을 10배 하면 피해가 10배가 아니라 뭉개져, 스케일을 바꿀 때마다 K를 다시
+#        조정해야 했다.
+#     이 공식은 상수가 없어 **스케일 불변**이다. 공격력과 방어력을 함께 k배 하면
+#     피해도 정확히 k배가 되므로, 스탯 스케일을 바꿔도 공식을 다시 만지지 않는다.
 #
 # **피해 공식은 이 메서드에만 존재한다.** Player와 EnemyBase가 각자 계산하지 않고
-# 이 메서드를 호출한다(이전에는 양쪽에 중복 구현되어 있었다).
+# 이 메서드를 호출한다.
 func apply_defense(raw_damage: int) -> int:
 	var t := get_tuning()
-	var k := t.damage_defense_constant
-	var def := float(get_physical_defense())
+	var raw := float(raw_damage)
+	var def := maxf(float(get_physical_defense()), 0.0)
 
-	# k가 0 이하면 0으로 나누게 되므로 방어를 적용하지 않는다(validate가 잡지만 방어적으로 처리).
-	if k <= 0.0:
-		return maxi(raw_damage, t.damage_min)
+	# 원피해가 0 이하면 방어를 적용할 것이 없다(0으로 나누는 것도 막는다).
+	if raw <= 0.0:
+		return t.damage_min
 
-	var reduced: float = float(raw_damage) * (k / (k + maxf(def, 0.0)))
+	var reduced: float = raw * raw / (raw + def)
 	return maxi(int(round(reduced)), t.damage_min)
 
 

@@ -28,6 +28,14 @@ signal currency_added(currency_type: String, amount: int, new_balance: int)
 @warning_ignore("unused_signal")
 signal currency_subtracted(currency_type: String, amount: int, new_balance: int)
 
+# Status effect signals
+@warning_ignore("unused_signal")
+signal status_effect_applied(target, effect_id: StringName)
+@warning_ignore("unused_signal")
+signal status_effect_removed(target, effect_id: StringName)
+@warning_ignore("unused_signal")
+signal status_effect_burst(target, effect_id: StringName)   # GAUGE가 임계치에서 터짐
+
 # Party signals
 @warning_ignore("unused_signal")
 signal party_changed(members)              # 파티 편성이 바뀜 (Array[CharacterData])
@@ -41,3 +49,11 @@ signal equipment_crafted(equipment_id: StringName)
 signal equipment_equipped(character_id: StringName, equipment_id: StringName, slot: int)
 @warning_ignore("unused_signal")
 signal equipment_unequipped(character_id: StringName, slot: int)
+
+# 장비가 인벤토리에 들어옴 (제작 외의 경로 — 상점 구매, 우편 수령 등).
+# 제작은 equipment_crafted 를 따로 쏘므로 둘을 구분해 들을 수 있다.
+signal equipment_granted(equipment_id: StringName, count: int)
+
+# ===== 우편 (Mail) =====
+signal mail_added(mail_id: int)
+signal mail_claimed(mail_id: int)

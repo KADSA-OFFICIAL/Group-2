@@ -14,6 +14,40 @@ const DEFAULT_CURRENCIES := {
 	"faith_stone": 0
 }
 
+# 저장 스키마에서 재화가 들어가는 키. 기존 세이브 파일과 같은 키를 유지한다.
+const SAVE_KEY := "currencies"
+
+
+# 메인화면처럼 좁은 자리에 상시 노출할 "주요 재화".
+# 어떤 재화가 중요한지는 재화 도메인의 지식이므로 화면이 아니라 여기서 정한다.
+# (화면마다 각자 고르면 화면끼리 목록이 어긋난다.)
+#
+# 위 주석의 분류를 그대로 따랐다: 통화(gold) + 특수 재화(faith_stone).
+# 나머지(제작 재료)는 창고 화면에서 전부 볼 수 있다.
+# 자리 제약상 최대 MAX_PRIMARY 개까지만 둔다.
+const MAX_PRIMARY: int = 3
+const PRIMARY_CURRENCIES := ["gold", "faith_stone"]
+
+
+# 주요 재화 목록. 상한을 넘게 저작되어도 화면이 깨지지 않도록 잘라서 돌려준다.
+func get_primary_currencies() -> Array:
+	var out: Array = []
+	for currency_type in PRIMARY_CURRENCIES:
+		if DEFAULT_CURRENCIES.has(currency_type) and out.size() < MAX_PRIMARY:
+			out.append(currency_type)
+	return out
+
+
+# 주요 재화를 뺀 나머지(창고에서 보여줄 재화).
+func get_secondary_currencies() -> Array:
+	var primary := get_primary_currencies()
+	var out: Array = []
+	for currency_type in DEFAULT_CURRENCIES:
+		if not primary.has(currency_type):
+			out.append(currency_type)
+	return out
+
+
 # Dictionary to store currency amounts
 var currencies: Dictionary = {}
 
@@ -27,6 +61,8 @@ func _ready():
 	# Initialize default currencies
 	if currencies.is_empty():
 		currencies = DEFAULT_CURRENCIES.duplicate()
+	# 저장 스키마의 재화 부분은 이 시스템이 소유한다(SaveSystem은 내부를 모른다).
+	SaveSystem.register_provider(SAVE_KEY, self)
 
 # Add currency amount
 func add_currency(currency_type: String, amount: int) -> bool:
@@ -96,3 +132,13 @@ func reset_currencies():
 # Check if has enough currency
 func has_enough(currency_type: String, amount: int) -> bool:
 	return get_balance(currency_type) >= amount
+
+# ===== 저장/복원 (Save / Load) =====
+# SaveSystem이 이 두 함수만 호출한다. 재화의 내부 표현은 이 시스템 밖으로 나가지 않는다.
+
+func to_save_dict() -> Dictionary:
+	return get_all_currencies()
+
+func from_save_dict(data: Dictionary) -> void:
+	for currency_type in data:
+		set_currency(currency_type, int(data[currency_type]))
