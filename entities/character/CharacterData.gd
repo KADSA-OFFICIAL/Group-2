@@ -81,8 +81,10 @@ enum SecondaryRole {
 # 슬롯당 1개 장착. 장착/해제 시 스텟에 보너스를 합산/원복한다.
 # 착탈 오케스트레이션·제작·인벤토리는 EquipmentSystem(autoload)이 담당한다.
 @export var equipped_weapon: EquipmentData = null
-@export var equipped_armor: EquipmentData = null
-@export var equipped_accessory: EquipmentData = null
+@export var equipped_helmet: EquipmentData = null
+@export var equipped_chest: EquipmentData = null
+@export var equipped_leggings: EquipmentData = null
+@export var equipped_mirror: EquipmentData = null
 
 # ----- 확장 가이드 (Extensibility) -----
 # 새 항목은 위 섹션 중 알맞은 곳에 @export 필드를 "기본값과 함께" 추가한다.
@@ -164,10 +166,14 @@ func equip(item: EquipmentData) -> void:
 	match item.slot:
 		EquipmentData.Slot.WEAPON:
 			equipped_weapon = item
-		EquipmentData.Slot.ARMOR:
-			equipped_armor = item
-		EquipmentData.Slot.ACCESSORY:
-			equipped_accessory = item
+		EquipmentData.Slot.HELMET:
+			equipped_helmet = item
+		EquipmentData.Slot.CHEST:
+			equipped_chest = item
+		EquipmentData.Slot.LEGGINGS:
+			equipped_leggings = item
+		EquipmentData.Slot.MIRROR:
+			equipped_mirror = item
 	_apply_equipment_to_stats()
 
 # 특정 슬롯의 장비를 해제한다. 해제 후 스텟 보너스를 재계산한다.
@@ -175,10 +181,14 @@ func unequip(slot: EquipmentData.Slot) -> void:
 	match slot:
 		EquipmentData.Slot.WEAPON:
 			equipped_weapon = null
-		EquipmentData.Slot.ARMOR:
-			equipped_armor = null
-		EquipmentData.Slot.ACCESSORY:
-			equipped_accessory = null
+		EquipmentData.Slot.HELMET:
+			equipped_helmet = null
+		EquipmentData.Slot.CHEST:
+			equipped_chest = null
+		EquipmentData.Slot.LEGGINGS:
+			equipped_leggings = null
+		EquipmentData.Slot.MIRROR:
+			equipped_mirror = null
 	_apply_equipment_to_stats()
 
 # 슬롯에 장착된 장비를 반환한다. 없으면 null.
@@ -186,10 +196,14 @@ func get_equipped(slot: EquipmentData.Slot) -> EquipmentData:
 	match slot:
 		EquipmentData.Slot.WEAPON:
 			return equipped_weapon
-		EquipmentData.Slot.ARMOR:
-			return equipped_armor
-		EquipmentData.Slot.ACCESSORY:
-			return equipped_accessory
+		EquipmentData.Slot.HELMET:
+			return equipped_helmet
+		EquipmentData.Slot.CHEST:
+			return equipped_chest
+		EquipmentData.Slot.LEGGINGS:
+			return equipped_leggings
+		EquipmentData.Slot.MIRROR:
+			return equipped_mirror
 	return null
 
 # 장착된 모든 장비의 스텟 보너스를 합산해 Dictionary로 반환한다.
@@ -200,8 +214,10 @@ func get_equipment_bonuses() -> Dictionary:
 		"physical_defense": 0,
 		"magic_defense": 0,
 		"hp": 0,
+		"move_speed_percent": 0.0,
+		"goddess_boost": 0.0,
 	}
-	for item in [equipped_weapon, equipped_armor, equipped_accessory]:
+	for item in [equipped_weapon, equipped_helmet, equipped_chest, equipped_leggings, equipped_mirror]:
 		if item == null:
 			continue
 		totals["physical_attack"] += item.physical_attack_bonus
@@ -209,6 +225,8 @@ func get_equipment_bonuses() -> Dictionary:
 		totals["physical_defense"] += item.physical_defense_bonus
 		totals["magic_defense"] += item.magic_defense_bonus
 		totals["hp"] += item.hp_bonus
+		totals["move_speed_percent"] += item.move_speed_bonus
+		totals["goddess_boost"] += item.goddess_skill_boost_bonus
 	return totals
 
 # 장착 상태의 보너스 합계를 PlayerStats(단일 출처)에 밀어 넣는다.
@@ -216,7 +234,8 @@ func _apply_equipment_to_stats() -> void:
 	var b := get_equipment_bonuses()
 	get_stats().set_equipment_bonuses(
 		b["physical_attack"], b["magic_attack"],
-		b["physical_defense"], b["magic_defense"], b["hp"]
+		b["physical_defense"], b["magic_defense"], b["hp"],
+		b["move_speed_percent"], b["goddess_boost"]
 	)
 
 # 데이터 무결성 점검 (id가 비었는지 등). 문제 메시지 배열을 반환한다.

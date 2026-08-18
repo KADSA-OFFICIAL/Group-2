@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/equipment/EquipmentData.gd" id="1_equipmentdata"]
+
+[resource]
+script = ExtResource("1_equipmentdata")
+equipment_id = &"hudamantium_chest"
+display_name = "후다만티움 갑옷"
+description = "후다만티움 티어 갑옷(스톤 x2.56). 물리 방어와 HP를 크게 올리는 주력 방어구다. 제작 비용은 [임시값]이며 밸런싱 대상이다."
+slot = 2
+tier = 3
+physical_defense_bonus = 15
+hp_bonus = 64
+craft_cost = {
+"coal": 8,
+"gold": 700,
+"hudamantium": 9
+}

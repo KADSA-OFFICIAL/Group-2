@@ -6,19 +6,26 @@ class_name EquipmentData
 # 실제 장비 아이템은 data/equipment/*.tres로 저작하고, EquipmentDatabase가 로드한다.
 
 # ===== 슬롯 (Slot) =====
+# 방어구는 3부위(투구/갑옷/레깅스)로 나뉘고, 거울은 여신 스킬 강화 전용이다.
 enum Slot {
-	WEAPON,     # 무기
-	ARMOR,      # 방어구
-	ACCESSORY,  # 장신구
+	WEAPON,    # 무기
+	HELMET,    # 투구
+	CHEST,     # 갑옷
+	LEGGINGS,  # 레깅스
+	MIRROR,    # 거울
 }
 
 # ===== 식별 (Identity) =====
-@export var equipment_id: StringName = &""   # 고유 식별자 (예: &"iron_sword")
+@export var equipment_id: StringName = &""   # 고유 식별자 (예: &"stone_helmet")
 @export var display_name: String = ""         # 화면 표시 이름
 @export_multiline var description: String = ""
 
 # 장착 슬롯. 슬롯당 1개만 장착된다.
 @export var slot: Slot = Slot.WEAPON
+
+# 재료 티어. 밸런스 기준축(1=스톤/청동, 2=철, 3=후다만티움).
+# 같은 라인 안에서 티어마다 스탯이 대략 x1.6씩 오른다(#157).
+@export var tier: int = 1
 
 # ===== 스텟 보너스 (Stat Bonuses) =====
 # 장착 시 PlayerStats 파생 계산에 합산되는 입력값. 모두 기본 0이라
@@ -28,6 +35,10 @@ enum Slot {
 @export var physical_defense_bonus: int = 0
 @export var magic_defense_bonus: int = 0
 @export var hp_bonus: int = 0
+# 이동속도(비율, 0.05 = +5%) — 레깅스가 제공.
+@export var move_speed_bonus: float = 0.0
+# 여신 스킬 강화(가산, 0.10 = +10%p) — 거울이 제공.
+@export var goddess_skill_boost_bonus: float = 0.0
 
 # ===== 제작 (Crafting) =====
 # 제작 비용. 재화 id(String) -> 필요 수량(int).
@@ -49,10 +60,14 @@ func get_slot_name() -> String:
 	match slot:
 		Slot.WEAPON:
 			return "무기"
-		Slot.ARMOR:
-			return "방어구"
-		Slot.ACCESSORY:
-			return "장신구"
+		Slot.HELMET:
+			return "투구"
+		Slot.CHEST:
+			return "갑옷"
+		Slot.LEGGINGS:
+			return "레깅스"
+		Slot.MIRROR:
+			return "거울"
 		_:
 			return "알 수 없음"
 
