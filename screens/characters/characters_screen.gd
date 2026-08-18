@@ -91,8 +91,6 @@ func _build() -> void:
 	var _col3 := _build_detail_panel()
 	body.add_child(_col3)
 
-	# 좌에서 우로 차례로 나타난다. 화면 구조를 눈이 따라가게 하는 순서다.
-	HUDKit.play_enter([_col0, _col1, _col2, _col3])
 
 
 # ── 좌측 끝: 세로 서브탭 레일 ──

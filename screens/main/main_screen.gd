@@ -371,9 +371,8 @@ func _make_currency_chip(currency_type: String) -> Control:
 	if icon != null:
 		row.add_child(icon)
 
-	# 메인화면에 들어올 때 재화가 0에서 올라간다.
-	var label := _text("", 13, UITheme.INK_ON_DARK, 700)
-	HUDKit.count_up(label, CurrencySystem.get_balance(currency_type))
+	# 재화는 즉시 최종값으로 보인다(#145). 카운트업은 메타 화면에서 걷어냈다.
+	var label := _text(_comma(CurrencySystem.get_balance(currency_type)), 13, UITheme.INK_ON_DARK, 700)
 	row.add_child(label)
 	_currency_labels[currency_type] = label
 

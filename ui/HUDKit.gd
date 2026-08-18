@@ -723,22 +723,26 @@ static func body_of(panel_node: PanelContainer) -> VBoxContainer:
 	return panel_node.get_meta("body") as VBoxContainer
 
 
-# ===== 모션 (#127) =====
+# ===== 모션 (#127 -> #145) =====
 #
-# 규칙 하나: **컨테이너가 정한 position 과 size 는 건드리지 않는다.**
+# 남은 것은 **호버 반응 하나뿐이다.**
+#
+# #127 에서 진입 스태거와 수치 카운트업을 넣었다가 #145 에서 걷어냈다.
+# 두 번에 걸쳐 시간을 줄여 봤지만(0.22/0.05 -> 0.14/0.03, 화면 열림 370ms -> 227ms)
+# 여전히 답답하다는 피드백이 나왔고, 줄여서 해결될 문제가 아니었다.
+#
+# 메타 화면은 게임 중 수십 번 오가는 곳이다. 여기서 연출은 "분위기"가 아니라
+# **정보와 조작 사이에 낀 지연**으로 느껴진다.
+# 반대로 스토리 재생 화면은 **보는 것 자체가 목적**이라 같은 연출이 제 역할을 한다.
+# 그쪽 연출(타이틀·페이드·인물 등퇴장·반응)은 그대로 두었다.
+#
+# 호버만 남긴 이유: 이건 **입력에 대한 즉각적인 반응**이지 대기 시간이 아니다.
+# 없애면 버튼이 죽은 것처럼 느껴져서, 답답함을 줄이려다 반응이 없는 UI가 된다.
+#
+# 규칙(호버에도 그대로 적용): **컨테이너가 정한 position 과 size 는 건드리지 않는다.**
 # VBox/HBox 안의 노드를 position 으로 움직이면 다음 레이아웃에서 곧바로 되돌아가
-# 모션이 튄다. 그래서 여기서는 modulate(투명도)와 scale 만 쓴다. 이 둘은 컨테이너가
-# 관여하지 않는다.
-#
-# 규칙 둘: **짧게.** 화면은 몇 번이고 다시 들어오는 곳이라 긴 연출은 곧 방해가 된다.
+# 모션이 튄다. scale 만 쓴다 — 컨테이너가 관여하지 않는다.
 
-# 진입 시간은 **화면 전환 페이드 위에 겹쳐** 돈다(#139). 둘을 합친 것이 체감 시간이다.
-# 처음 잡은 0.22 / 0.05 는 기둥이 4개인 화면에서 마지막 것이 0.37초에 끝나서,
-# 전환 페이드까지 더하면 화면 하나 여는 데 0.5초가 넘었다. 시차 연출은 남기고 줄인다.
-const ENTER_TIME := 0.14        # 한 요소가 나타나는 데 걸리는 시간
-const ENTER_STEP := 0.03        # 요소 사이의 시차
-const ENTER_SCALE := 0.985      # 시작 크기. 눈에 띄면 안 되고 "가라앉았다 뜨는" 정도만
-const COUNT_TIME := 0.45        # 수치 카운트업 시간
 const HOVER_SCALE := 1.03       # 호버 확대율
 const HOVER_TIME := 0.09
 
@@ -760,48 +764,6 @@ static func _center_pivot(node: Control) -> void:
 static func _on_pivot_resize(node: Control) -> void:
 	if is_instance_valid(node):
 		node.pivot_offset = node.size * 0.5
-
-
-# 진입 스태거. 넘긴 순서대로 시차를 두고 나타난다.
-#
-# 나타나는 중에도 클릭이 먹는다(투명도만 낮출 뿐 버튼을 끄지 않는다).
-# 모션 때문에 조작을 기다려야 하면 그건 모션이 아니라 지연이다.
-static func play_enter(nodes: Array) -> void:
-	for i in range(nodes.size()):
-		var node := nodes[i] as Control
-		if node == null or not is_instance_valid(node):
-			continue
-		_center_pivot(node)
-		node.modulate.a = 0.0
-		node.scale = Vector2(ENTER_SCALE, ENTER_SCALE)
-
-		var tween := node.create_tween()
-		tween.set_parallel(false)
-		tween.tween_interval(ENTER_STEP * float(i))
-		tween.set_parallel(true)
-		tween.tween_property(node, "modulate:a", 1.0, ENTER_TIME)
-		tween.tween_property(node, "scale", Vector2.ONE, ENTER_TIME) \
-			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-
-
-# 수치 카운트업.
-#
-# 끝값을 먼저 정확히 넣고 시작한다: 트윈이 중간에 끊겨도(화면이 닫히거나 값이 다시
-# 바뀌어도) 라벨에 남는 값이 맞아야 한다. 어중간한 숫자가 남는 것이 제일 나쁘다.
-static func count_up(label: Label, to_value: int, from_value: int = 0) -> void:
-	if label == null or not is_instance_valid(label):
-		return
-	label.text = comma(to_value)
-	if from_value == to_value:
-		return
-
-	var tween := label.create_tween()
-	tween.tween_method(
-		func(v: float):
-			if is_instance_valid(label):
-				label.text = comma(int(round(v))),
-		float(from_value), float(to_value), COUNT_TIME
-	).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 # 호버하면 살짝 커진다.

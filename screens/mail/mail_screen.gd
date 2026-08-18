@@ -66,7 +66,6 @@ func _build() -> void:
 	_list_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_list_holder)
 
-	HUDKit.play_enter([head, scroll])
 
 
 # ===== 갱신 =====
