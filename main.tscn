@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://c4rq7nas2b1f"]
+[gd_scene load_steps=7 format=3 uid="uid://c4rq7nas2b1f"]
 
 [ext_resource type="PackedScene" uid="uid://d87uv8f6k3n8" path="res://stage/Stage1_1.tscn" id="1_stage"]
 [ext_resource type="Script" path="res://camera/GameCamera.gd" id="2_cam"]
 [ext_resource type="Script" path="res://ui/HUD.gd" id="3_hud"]
 [ext_resource type="Script" path="res://debug/DebugOverlay.gd" id="4_dbg"]
 [ext_resource type="Script" path="res://screens/main/main_screen_launcher.gd" id="5_launcher"]
+[ext_resource type="Script" path="res://screens/result/stage_result_launcher.gd" id="6_result"]
 
 [node name="Main" type="Node2D"]
 
@@ -24,4 +25,7 @@ layer = 2
 
 [node name="MainScreenLauncher" type="Node" parent="."]
 script = ExtResource("5_launcher")
+
+[node name="StageResultLauncher" type="Node" parent="."]
+script = ExtResource("6_result")
 

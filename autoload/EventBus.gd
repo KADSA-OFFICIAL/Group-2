@@ -18,7 +18,9 @@ signal game_resumed
 @warning_ignore("unused_signal")
 signal stage_started(stage_name)
 @warning_ignore("unused_signal")
-signal stage_completed(stage_name)
+signal stage_completed(stage_name)   # 승리 — 스테이지의 승리 조건을 채웠다
+@warning_ignore("unused_signal")
+signal stage_failed(stage_name)      # 패배 — 파티가 전멸했다
 
 # Currency signals
 @warning_ignore("unused_signal")
