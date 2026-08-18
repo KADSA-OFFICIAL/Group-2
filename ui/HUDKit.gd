@@ -489,8 +489,14 @@ static func role_chip(role: int) -> Control:
 #
 # 캐릭터와 적이 각자 다른 리소스 타입(CharacterData / EnemyData)이라 텍스처와 색만 받는다.
 # 어느 필드에서 꺼내는지는 호출부가 안다.
+# fallback: 초상이 없을 때 색 판 위에 얹을 그림(역할 아이콘·전장 도형 등).
+#   아트가 아니라 **무엇의 자리인지 알려 주는 표시**다. 색 판만 두면 카드 넉 장이
+#   서로 구별되지 않는다(tint 가 비슷한 캐릭터끼리 특히).
+# fallback_modulate: 그 그림에 곱할 색. 흰 도형은 어둡게 눌러야 색 판 위에서 읽히고,
+#   자기 색이 있는 두들 아이콘은 알파만 낮춘다. 무엇을 넘기는지는 호출부가 안다.
 static func portrait_frame(portrait: Texture2D, tint: Color, min_size: Vector2,
-		head_crop: bool = false) -> Control:
+		head_crop: bool = false, fallback: Texture2D = null,
+		fallback_modulate: Color = Color(1, 1, 1, 0.85)) -> Control:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", _box(muted(tint), line(), 2, 0, RADIUS_CARD))
 	p.custom_minimum_size = min_size
@@ -504,14 +510,53 @@ static func portrait_frame(portrait: Texture2D, tint: Color, min_size: Vector2,
 		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		p.add_child(t)
+		return p
+
+	if fallback != null:
+		p.add_child(_fallback_mark(fallback, fallback_modulate))
 	return p
 
 
+# 초상 대신 얹는 표시. 자리 크기를 따라 커진다 —
+# 같은 코드가 44px 썸네일부터 330px 상세까지 쓰이므로 고정 크기를 쓸 수 없다.
+static func _fallback_mark(texture: Texture2D, modulate_color: Color) -> Control:
+	var holder := MarginContainer.new()
+	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var mark := TextureRect.new()
+	mark.texture = texture
+	mark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	mark.modulate = modulate_color
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(mark)
+
+	# 여백은 자리의 짧은 변에 비례한다. 레이아웃이 돌기 전에는 size 가 0이라
+	# 지금 계산하면 여백이 없다. 크기가 정해질 때마다 다시 잡는다.
+	holder.resized.connect(_fit_fallback_mark.bind(holder))
+	_fit_fallback_mark(holder)
+	return holder
+
+
+# 자리의 짧은 변 기준 22% 를 여백으로 둔다(그림은 56% 정도를 차지한다).
+# 꽉 채우면 색 판이 사라져 초상이 있는 것처럼 보이고, 너무 작으면 점으로 보인다.
+static func _fit_fallback_mark(holder: MarginContainer) -> void:
+	if not is_instance_valid(holder):
+		return
+	var side: float = minf(holder.size.x, holder.size.y)
+	var pad: int = maxi(int(side * 0.22), 2)
+	for edge in ["left", "right", "top", "bottom"]:
+		holder.add_theme_constant_override("margin_" + edge, pad)
+
+
 # 캐릭터 초상 자리.
+# 아트가 없으면 그 캐릭터의 주 역할 아이콘을 얹는다. 이름을 읽기 전에 역할이 먼저 보인다.
 static func portrait_block(character: CharacterData, min_size: Vector2) -> Control:
 	if character == null:
 		return portrait_frame(null, UITheme.STONE_GRAY, min_size)
-	return portrait_frame(character.portrait, character.tint, min_size)
+	return portrait_frame(character.portrait, character.tint, min_size, false,
+		load_icon(UITheme.role_icon_name(character.role)))
 
 
 # 초상의 머리 쪽 정사각형만 잘라낸 텍스처.
@@ -560,8 +605,13 @@ static func head_texture(portrait: Texture2D) -> Texture2D:
 static func enemy_portrait_block(enemy: EnemyData, min_size: Vector2) -> Control:
 	if enemy == null:
 		return portrait_frame(null, UITheme.STONE_GRAY, min_size)
-	# HUD 썸네일은 작다. 전신 그대로 넣으면 몸통만 잡히므로 머리 쪽을 쓴다.
-	return portrait_frame(enemy.portrait, enemy.tint, min_size, true)
+
+	# 초상이 없으면 전장에서 쓰는 도형을 얹는다. 목록의 그림과 전장의 모양이 같아야
+	# 어느 줄이 어느 적인지 이어진다(색만으로는 구별되지 않는다).
+	# 도형 원본은 흰색이므로 잉크색으로 눌러야 밝은 색 판 위에서 읽힌다.
+	# HUD 썸네일은 작다. 전신 초상을 그대로 넣으면 몸통만 잡히므로 머리 쪽을 쓴다.
+	return portrait_frame(enemy.portrait, enemy.tint, min_size, true,
+		enemy.sprite_texture, _alpha(UITheme.INK, 0.55))
 
 
 # 캐릭터의 역할 칩들을 한 줄로. 겸직이면 2개가 나온다.
