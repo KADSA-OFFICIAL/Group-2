@@ -45,6 +45,9 @@ func load_room() -> void:
 	spawn_party()
 	spawn_enemies()
 
+	# 적이 놓인 뒤에 판정을 켠다. 순서가 바뀌면 진입하자마자 승리가 된다.
+	_begin_judging()
+
 # 파티가 비어 있을 때 쓰는 기본 편성.
 # 순혈 3명이라 각 역할이 1카운트씩 되어 세 시너지가 모두 1단계로 켜진다.
 # (편성 UI가 생기면 이 기본값 대신 플레이어 선택을 쓴다.)
@@ -57,12 +60,15 @@ func spawn_party():
 	if PartySystem.is_empty():
 		PartySystem.set_party(DEFAULT_PARTY)
 
+	_party_spawned = 0
+
 	var member_scene = load("res://entities/player/Player.tscn")
 	if member_scene == null:
 		push_warning("Stage: Player.tscn을 불러올 수 없습니다.")
 		return
 
 	var members = PartySystem.get_members()
+	_party_spawned = members.size()
 	for i in range(members.size()):
 		var node = member_scene.instantiate()
 		node.data = members[i]
@@ -91,5 +97,80 @@ func spawn_enemies() -> void:
 			enemy.global_position = spawn.get_position(i)
 
 
+# ===== 승패 판정 (Outcome) =====
+#
+# 소탕(적 전멸) = 승리, 파티 전멸 = 패배. docs §5.1 의 [확정] 사항이다.
+#
+# 점령은 판정하지 않는다: 존 위치와 확보 시간이 §5.2 에서 [미정]이라 만들 근거가 없다.
+# 점령이 필요한 스테이지에서는 판정을 켜지 않고 경고만 남긴다(전투는 계속된다).
+#
+# 결과 화면을 여는 일은 여기서 하지 않는다. 전장은 화면을 모르고,
+# EventBus 로 알리기만 한다(screens/result/stage_result_launcher.gd 가 받는다).
+
+# 판정이 도는 중인가. 승패가 한 번 나면 꺼져서 같은 판을 두 번 끝내지 않는다.
+var _judging: bool = false
+
+# 이번 판에 놓인 파티 인원. 전멸 판정의 기준이다.
+#
+# 살아 있는 노드만 세면 전멸을 알 수 없다 — Player.die() 가 노드를 queue_free 해서
+# 마지막 한 명이 죽는 순간 그룹이 비고, "아직 스폰 전"과 구별되지 않는다.
+var _party_spawned: int = 0
+
+
+func _process(_delta: float) -> void:
+	if not _judging:
+		return
+
+	if _party_wiped():
+		_finish(false)
+		return
+
+	# 소탕 조건은 진입 시 확인했다(_begin_judging). 여기서는 남은 적만 본다.
+	if GameManager.get_all_enemies().is_empty():
+		_finish(true)
+
+
+# 방을 새로 만든 직후에 부른다. 판정 가능 여부는 이때 한 번만 따진다.
+func _begin_judging() -> void:
+	_judging = false
+
+	var stage := StageSystem.get_current_stage()
+	if stage == null:
+		return
+
+	if not stage.requires_clear():
+		# 점령 전용 스테이지. 판정할 수단이 없다.
+		push_warning("Stage: 점령 판정은 아직 없습니다(§5.2 미정). 승패를 판정하지 않습니다: " + stage_name)
+		return
+
+	# 적이 하나도 스폰되지 않았으면 진입하자마자 승리가 되어 버린다.
+	# (StageData.validate 가 막지만, 씬이 비어 있는 경우까지 여기서 막는다.)
+	if GameManager.get_all_enemies().is_empty():
+		push_warning("Stage: 적이 없어 소탕을 판정하지 않습니다: " + stage_name)
+		return
+
+	_judging = true
+
+
+func _party_wiped() -> bool:
+	if _party_spawned <= 0:
+		# 아직 스폰 전이거나 놓을 파티가 없다. 전멸로 보지 않는다.
+		return false
+
+	for member in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if is_instance_valid(member) and member.is_alive:
+			return false
+	return true
+
+
+func _finish(victory: bool) -> void:
+	_judging = false
+	if victory:
+		EventBus.stage_completed.emit(stage_name)
+	else:
+		EventBus.stage_failed.emit(stage_name)
+
+
+# 바깥에서 판을 끝내야 할 때(치트·연출 등) 쓰는 진입점.
 func complete_stage():
-	EventBus.stage_completed.emit(stage_name)
+	_finish(true)

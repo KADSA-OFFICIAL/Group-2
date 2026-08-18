@@ -56,6 +56,10 @@ func _ready() -> void:
 	if EventBus:
 		EventBus.party_changed.connect(_on_party_changed)
 		EventBus.party_control_changed.connect(_on_control_changed)
+		# 승패가 나면 그 프레임에 결과 화면이 뜨고 전장이 멈춘다. 멈추기 전에 한 번
+		# 갱신하지 않으면 "소탕 완료" 옆에 죽은 적이 그대로 남은 화면이 찍힌다.
+		EventBus.stage_completed.connect(_on_stage_finished)
+		EventBus.stage_failed.connect(_on_stage_finished)
 
 	_rebuild_party_rows()
 
@@ -294,6 +298,12 @@ func _rebuild_enemy_rows(ids: Array, counts: Dictionary) -> void:
 
 func _on_party_changed(_members) -> void:
 	_rebuild_party_rows()
+
+
+# 판이 끝났다. 멈추기 전 마지막 상태를 그린다.
+func _on_stage_finished(_stage_name) -> void:
+	_update_party()
+	_update_enemies()
 
 func _on_control_changed(_index: int) -> void:
 	_update_party()
