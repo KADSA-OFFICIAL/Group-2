@@ -11,7 +11,9 @@ extends SceneTree
 ## 정규화 규칙:
 ##   - 가로: 프레임마다 내용 경계상자의 중심을 셀 중심에 맞춘다.
 ##     한 행 안에서 경계상자 폭이 같으면 이 이동은 순수 평행이동 제거이므로 무손실이다.
-##     (폭이 다르면 경고를 낸다 — 겹침 때문에 잘렸다는 신호다.)
+##
+## 잘림 판정: **내부 절단선 위에 내용 픽셀이 있는지**로 본다(있으면 그만큼 잘려 나갔다).
+## 프레임 폭 차이는 잘림의 근거가 아니다 — 정상적인 포즈 차이로도 몇 px 달라진다.
 ##   - 세로: 행 단위로 맞춘다. 행 안 프레임끼리의 높이차(발 들기)는 보존하고,
 ##     행의 바닥선만 모든 행이 공유하는 기준선에 맞춘다.
 ##   - 리샘플링하지 않는다. 정수 픽셀 복사만 해서 원본 해상도를 유지한다.
@@ -79,6 +81,19 @@ func _initialize() -> void:
 		boxes.append(row)
 		print("  행 %d (%s): y %d..%d, 열 절단 %s" % [r, ROW_NAMES[r], y0, y1, str(cuts)])
 
+		# 잘림 판정: **내부** 절단선 위에 내용 픽셀이 있으면 내용을 가로질러 자른 것이다.
+		# 양 끝 절단선은 정의상 내용 경계와 같으므로 세지 않는다.
+		# (프레임 폭 차이는 잘림의 근거가 아니다 — 발이나 머리카락이 한 프레임에서
+		#  더 나오는 정상적인 포즈 차이로도 몇 px 달라진다.)
+		for k in range(1, COLS):
+			var cut_x: int = cuts[k]
+			var bleed := 0
+			for y in range(y0, y1 + 1):
+				if src.get_pixel(cut_x, y).a >= ALPHA_MIN:
+					bleed += 1
+			if bleed > 0:
+				print("    경고: 절단선 x=%d 위에 내용 %dpx — 프레임이 겹쳐 그만큼 잘려 나간다" % [cut_x, bleed])
+
 	# --- 3. 셀 크기 결정 ---
 	var max_w := 0
 	var max_h := 0
@@ -90,11 +105,14 @@ func _initialize() -> void:
 			rb = maxi(rb, boxes[r][c].position.y + boxes[r][c].size.y - 1)
 			widths.append(boxes[r][c].size.x)
 		row_bottom.append(rb)
-		# 폭이 다르면 겹침 때문에 잘렸다는 신호다. 가로 중심 정렬의 무손실 전제가 깨진다.
+		# 폭이 완전히 같으면 가로 중심 정렬이 순수 평행이동 제거이므로 무손실이다.
+		# 다르면 포즈 차이라는 뜻이고, 중심 정렬이 그 차이의 절반만큼 프레임을 밀어
+		# 원본에 없던 미세한 이동이 생긴다(보통 몇 px이라 무해하다).
+		# 실제 잘림 여부는 위의 절단선 검사가 판정한다.
 		var wmin: int = widths.min()
 		var wmax: int = widths.max()
-		if wmax - wmin > 2:
-			print("  경고: 행 %d(%s)의 프레임 폭이 다르다 %s — 겹친 부분이 잘렸을 수 있다" % [r, ROW_NAMES[r], str(widths)])
+		if wmax - wmin > 0:
+			print("    참고: 행 %d(%s) 프레임 폭 %s — 포즈 차이. 중심 정렬로 최대 %.1fpx 밀림" % [r, ROW_NAMES[r], str(widths), float(wmax - wmin) / 2.0])
 		for c in range(COLS):
 			max_w = maxi(max_w, boxes[r][c].size.x)
 			max_h = maxi(max_h, rb - boxes[r][c].position.y + 1)

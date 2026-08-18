@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/brachio_beastfolk_walk_frames.tres" id="10_walk"]
+
+[sub_resource type="Resource" id="PlayerStats_brachio_beastfolk"]
+script = ExtResource("2_stats")
+
+[resource]
+script = ExtResource("1_enemydata")
+enemy_id = &"brachio_beastfolk"
+display_name = "브라키오 수인"
+description = "4방향 이동 모션이 저작된 근거리 추적형 적. 스텟은 PlayerStats 기본값(HP 1000 / 근력 100 / 방어 100)이고 AI 파라미터도 EnemyData 기본값이다 — 밸런스는 팀이 정한다. 개성/설정/고유 스킬 미정."
+stats = SubResource("PlayerStats_brachio_beastfolk")
+sprite_texture = ExtResource("9_shape")
+tint = Color(0.55, 0.4, 0.3, 1)
+sprite_scale = Vector2(1.5, 1.5)
+walk_frames = ExtResource("10_walk")
+walk_sprite_scale = Vector2(0.25, 0.25)
+walk_sprite_offset = Vector2(0, -183)
+ai_enabled = true
+detection_range = 300.0
+attack_range = 45.0
+move_speed_multiplier = 1.0
+attack_speed_multiplier = 1.0
