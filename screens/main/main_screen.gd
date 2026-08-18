@@ -31,12 +31,6 @@ extends Control
 # 화면 전환은 ScreenManager가 한다. 이 화면은 자신을 pop 할 뿐 다음 화면을 모른다.
 
 
-const ROLE_ICON_NAME := {
-	CharacterData.Role.TANK: "icon_role_tank",
-	CharacterData.Role.RANGED_DEALER: "icon_role_ranged_dealer",
-	CharacterData.Role.BUFFER: "icon_role_buffer",
-}
-
 const BATTLE_ICON := "icon_battle"
 const FORMATION_ICON := "icon_formation"
 const CHARACTERS_ICON := "icon_characters"
@@ -232,7 +226,7 @@ func _fill_nameplate() -> void:
 	plate.add_child(row)
 
 	for role in character.get_roles():
-		var icon := _make_icon(ROLE_ICON_NAME.get(role, ""), UITheme.ICON_ROUND)
+		var icon := _make_icon(UITheme.role_icon_name(role), UITheme.ICON_ROUND)
 		if icon != null:
 			row.add_child(icon)
 	row.add_child(_text(character.display_name, 20, UITheme.INK_ON_DARK, 700))
