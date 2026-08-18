@@ -31,11 +31,12 @@ extends Control
 #   안쪽(VBox)     = 연기.                      숨쉬기·반응이 y/rotation 을 쓴다.
 #   한 노드에 둘을 같이 걸면 자리 이동 트윈과 반응 트윈이 서로를 덮어쓴다.
 #
-# 아트가 없다:
-#   배경은 챕터별 그라데이션, 인물은 화자 이름에서 색을 뽑은 실루엣이다.
-#   **일부러 도형처럼 보이게** 두었다. 어설픈 그림을 흉내 내면 아트가 들어올 때
-#   무엇이 임시인지 알 수 없다. StoryLineData.speaker 가 로스터 id 와 이어지면
-#   그때 _make_figure() 안만 바꾸면 된다.
+# 인물 아트:
+#   대사 줄에 character_id 가 있으면 그 인물의 초상을 세운다(#187).
+#   id 가 없으면 지금까지처럼 화자 이름에서 색을 뽑은 **도형** 실루엣이다.
+#   도형은 일부러 도형처럼 보이게 두었다 — 어설픈 그림을 흉내 내면 아트가 들어올 때
+#   무엇이 임시인지 알 수 없다.
+#   배경은 여전히 챕터별 그라데이션이다(배경 아트 없음).
 #
 # 이 화면이 밝지 않은 이유:
 #   대사 상자는 그림 위에 얹히므로 반투명 어두운 판 + 밝은 글자다.
@@ -98,9 +99,10 @@ var _revealed: float = 0.0
 var _auto: bool = false
 var _auto_hold: float = 0.0
 
-# 무대에 서 있는 화자 이름(들). 넣은 순서를 유지해서 인물이 좌우로 튀지 않게 한다.
+# 무대에 서 있는 화자 **키**(들). 넣은 순서를 유지해서 인물이 좌우로 튀지 않게 한다.
+# 키는 StoryLineData.get_speaker_key() — character_id 가 있으면 id, 없으면 이름이다.
 var _stage_speakers: Array[String] = []
-# 화자 이름 -> 인물 노드(바깥 Control).
+# 화자 키 -> 인물 노드(바깥 Control).
 var _figures: Dictionary = {}
 var _active_speaker: String = ""
 
@@ -503,13 +505,18 @@ func _speaker_color(speaker: String) -> Color:
 	return FIGURE_COLORS[absi(speaker.hash()) % FIGURE_COLORS.size()]
 
 
-# 임시 인물. 머리(원) + 몸(둥근 사각형) + 이름.
-# 도형인 것이 드러나야 아트가 들어올 때 무엇이 임시였는지 알 수 있다.
+# 무대 인물.
+#
+# character_id 가 붙은 줄이면 그 인물의 **초상**을 세우고, 아니면 지금까지처럼
+# 도형(머리 원 + 몸 둥근 사각형)을 세운다. 도형인 것이 드러나야 아트가 들어올 때
+# 무엇이 임시였는지 알 수 있다.
 #
 # 바깥 Control 은 무대가 자리를 잡는 데 쓰고, 안쪽 VBox 는 연기(숨쉬기·반응)에 쓴다.
 # 안쪽 노드를 meta "inner" 로 꺼내 쓴다.
-func _make_figure(speaker: String) -> Control:
-	var color := _speaker_color(speaker)
+func _make_figure(line: StoryLineData) -> Control:
+	var key := line.get_speaker_key()
+	var display_name := line.get_speaker_name()
+	var color := _figure_color(line)
 
 	var outer := Control.new()
 	outer.custom_minimum_size = FIGURE_SIZE
@@ -517,7 +524,7 @@ func _make_figure(speaker: String) -> Control:
 	outer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# 확대는 발밑을 기준으로 커져야 한다. 가운데 기준이면 발이 땅에서 뜬다.
 	outer.pivot_offset = Vector2(FIGURE_SIZE.x * 0.5, FIGURE_SIZE.y)
-	outer.set_meta("speaker", speaker)
+	outer.set_meta("speaker", key)
 
 	var inner := VBoxContainer.new()
 	inner.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -527,6 +534,24 @@ func _make_figure(speaker: String) -> Control:
 	inner.pivot_offset = Vector2(FIGURE_SIZE.x * 0.5, FIGURE_SIZE.y * 0.5)
 	outer.add_child(inner)
 	outer.set_meta("inner", inner)
+
+	# 초상이 있으면 도형 대신 그림을 세운다.
+	var portrait := _figure_portrait(line)
+	if portrait != null:
+		var art := TextureRect.new()
+		# 여백을 잘라내야 인물이 도형 실루엣과 비슷한 크기로 선다.
+		art.texture = HUDKit.trimmed_texture(portrait)
+		art.custom_minimum_size = FIGURE_SIZE
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		# 잘리면 머리가 날아간다. 전신이 다 들어오게 맞춘다.
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inner.add_child(art)
+
+		var art_name := HUDKit.label(display_name, 13, UITheme.CREAM, 700)
+		art_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		inner.add_child(art_name)
+		return outer
 
 	var head := PanelContainer.new()
 	head.custom_minimum_size = Vector2(96, 96)
@@ -555,10 +580,29 @@ func _make_figure(speaker: String) -> Control:
 	body.add_theme_stylebox_override("panel", body_box)
 	inner.add_child(body)
 
-	var name_label := HUDKit.label(speaker, 13, UITheme.CREAM, 700)
+	var name_label := HUDKit.label(display_name, 13, UITheme.CREAM, 700)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	inner.add_child(name_label)
 	return outer
+
+
+# 인물 색. 정의가 있으면 그 인물의 tint 를, 없으면 이름 해시 색을 쓴다.
+# tint 원본은 전투 도형용이라 순색에 가깝다. VN 화면에서는 톤을 팔레트로 당긴다.
+func _figure_color(line: StoryLineData) -> Color:
+	var character := line.get_character()
+	if character != null:
+		return HUDKit.muted(character.tint)
+	return _speaker_color(line.speaker)
+
+
+# 인물 초상. 캐릭터는 PortraitSystem(선택 > 저작 기본값)을, 적은 자기 초상을 쓴다.
+func _figure_portrait(line: StoryLineData) -> Texture2D:
+	var character := line.get_character()
+	if character == null:
+		return null
+	if character is CharacterData:
+		return PortraitSystem.get_portrait(character)
+	return character.portrait
 
 
 func _inner_of(figure: Control) -> Control:
@@ -576,14 +620,19 @@ func _slot_position(index: int, count: int) -> Vector2:
 #
 # 무대 인원을 STAGE_CAPACITY 로 제한한다: 챕터에 화자가 여섯이면 여섯을 다 세울 수 없다.
 # 가장 오래 말하지 않은 인물부터 내린다.
-func _update_stage(speaker: String) -> void:
-	if not speaker.is_empty() and not _stage_speakers.has(speaker):
+# line 이 null 이거나 화자가 없는 줄(지문·전투)이면 무대는 그대로 두고 강조만 푼다.
+func _update_stage(line: StoryLineData) -> void:
+	# 무대 식별은 **키**로 한다. id 가 있으면 id, 없으면 이름 문자열이다.
+	# 그래서 같은 인물이 줄마다 다르게 적혀 있어도(띄어쓰기 등) 하나로 묶인다.
+	var key := line.get_speaker_key() if line != null else ""
+
+	if not key.is_empty() and not _stage_speakers.has(key):
 		if _stage_speakers.size() >= STAGE_CAPACITY:
 			_exit_figure(_stage_speakers[0])
-		_stage_speakers.append(speaker)
+		_stage_speakers.append(key)
 
-		var figure := _make_figure(speaker)
-		_figures[speaker] = figure
+		var figure := _make_figure(line)
+		_figures[key] = figure
 		_stage.add_child(figure)
 
 		# 등장: 제자리 아래에서 떠오르며 나타난다.
@@ -597,7 +646,7 @@ func _update_stage(speaker: String) -> void:
 		figure.modulate.a = 0.0
 		figure.scale = Vector2(BLUR_SCALE, BLUR_SCALE)
 
-	_active_speaker = speaker
+	_active_speaker = key
 	_layout_figures()
 
 
@@ -794,27 +843,28 @@ func _show_line() -> void:
 	match line.kind:
 		StoryLineData.Kind.DIALOGUE:
 			_name_plate.visible = true
-			_name_label.text = line.speaker
-			(_name_plate as SkewPlate).fill = _speaker_color(line.speaker)
+			# 이름과 색의 출처는 StoryLineData 다(id 가 있으면 캐릭터 정의에서 온다).
+			_name_label.text = line.get_speaker_name()
+			(_name_plate as SkewPlate).fill = _figure_color(line)
 			_name_plate.queue_redraw()
 			_text_label.add_theme_color_override("font_color", UITheme.CREAM)
 			_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-			_update_stage(line.speaker)
+			_update_stage(line)
 			# 무엇을 할지는 대본이 정한다. AUTO 해석도 StoryLineData 가 한다.
-			_emote(line.speaker, line.resolve_emotion())
+			_emote(line.get_speaker_key(), line.resolve_emotion())
 		StoryLineData.Kind.BATTLE:
 			_name_plate.visible = false
 			# 전투 줄은 text 가 비어 있을 수 있다. 그때도 무엇이 일어나는지는 알려야 한다.
 			_text_label.add_theme_color_override("font_color", UITheme.CREAM)
 			_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			_update_stage("")
+			_update_stage(null)
 		_:
 			# 지문은 이름표 없이, 흐리고 가운데로. 대사와 한눈에 구분되어야 한다.
 			_name_plate.visible = false
 			_text_label.add_theme_color_override("font_color",
 				Color(UITheme.CREAM.r, UITheme.CREAM.g, UITheme.CREAM.b, 0.78))
 			_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			_update_stage("")
+			_update_stage(null)
 
 	_apply_screen_effect(line)
 	_text_label.text = text

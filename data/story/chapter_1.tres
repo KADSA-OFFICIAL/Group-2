@@ -21,6 +21,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "응..? 삥이라도 뜯을려고?"
 stage_id = &""
 
@@ -56,6 +57,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "그래서 왜 부른거야? 역시 나에게 몹쓸 짓을..!"
 stage_id = &""
 
@@ -70,6 +72,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "...미안해, 난 널 이성으로 본 적이 없어. 우리 친구로 계속 지내자."
 stage_id = &""
 
@@ -84,6 +87,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "나는 삼각근이 우람한 남자가 좋거든. 하지만 너의 삼각근은 겉으로 봐서는 있는지도 모르겠어서. 대답이 됐니? 가봐도 될까? 헬스장 가서 삼각근 구경해야 되는데.."
 stage_id = &""
 
@@ -98,6 +102,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "응."
 stage_id = &""
 

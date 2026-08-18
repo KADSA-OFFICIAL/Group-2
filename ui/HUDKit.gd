@@ -590,6 +590,34 @@ static func portrait_block(character: CharacterData, min_size: Vector2) -> Contr
 # 결과는 텍스처별로 캐시한다. get_image() 는 임포트된 텍스처를 CPU 로 내려받는
 # 작업이라 줄을 다시 만들 때마다 하면 전투 중에 튄다.
 static var _head_textures: Dictionary = {}
+static var _trimmed_textures: Dictionary = {}
+
+
+# 투명 여백을 잘라낸 텍스처.
+#
+# 저작된 초상은 캔버스 가운데에 인물이 작게 들어 있고 사방이 비어 있다.
+# 그대로 자리에 맞추면 여백까지 자리를 차지해서 인물이 실제보다 작게 보인다
+# (VN 무대에서 도형 인물보다 작아 보였다).
+static func trimmed_texture(portrait: Texture2D) -> Texture2D:
+	if portrait == null:
+		return null
+
+	var key := portrait.get_rid().get_id()
+	if _trimmed_textures.has(key):
+		return _trimmed_textures[key]
+
+	var result: Texture2D = portrait
+	var image := portrait.get_image()
+	if image != null:
+		var used := image.get_used_rect()
+		if used.size.x > 0 and used.size.y > 0 and used.size != image.get_size():
+			var atlas := AtlasTexture.new()
+			atlas.atlas = portrait
+			atlas.region = Rect2(used.position, used.size)
+			result = atlas
+
+	_trimmed_textures[key] = result
+	return result
 
 static func head_texture(portrait: Texture2D) -> Texture2D:
 	if portrait == null:
