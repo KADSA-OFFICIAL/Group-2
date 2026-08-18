@@ -167,12 +167,19 @@ func _make_icon_row(icon_name: String, text_ko: String, value_text: String) -> C
 
 
 func _build_synergy_panel() -> PanelContainer:
-	var panel := HUDKit.make_panel("시너지", "SYNERGY", 10, true)
+	var panel := HUDKit.make_panel("시너지", "SYNERGY", 10, true, "icon_synergy")
 	var body := HUDKit.body_of(panel)
 
 	for role in [CharacterData.Role.TANK, CharacterData.Role.RANGED_DEALER, CharacterData.Role.BUFFER]:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
+
+		# 역할 패널(표식/스택/처형)은 이미 아이콘 + 이름 + 값 세 칸이다.
+		# 같은 오른쪽 열에 붙는 이 패널만 글자였어서 두 패널의 줄이 어긋나 있었다.
+		var icon := HUDKit.make_icon(UITheme.role_icon_name(role), ICON_SIZE)
+		if icon != null:
+			row.add_child(icon)
+
 		row.add_child(HUDKit.label(CharacterData.role_to_name(role), 12, HUDKit.text_2()))
 
 		var spacer := Control.new()

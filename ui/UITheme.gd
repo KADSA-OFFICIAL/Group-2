@@ -51,6 +51,24 @@ static func currency_icon_name(currency_type: String) -> String:
 	return "icon_" + currency_type
 
 
+# 역할 아이콘 이름. 위 재화와 같은 규약이다.
+#
+# 왜 여기인가: 화면 4곳(캐릭터/편성/메인/교단)이 같은 대응표를 각자 const 로
+# 들고 있었다. 아이콘 파일 이름이 바뀌면 네 곳을 다 고쳐야 했고, 한 곳만 놓치면
+# 그 화면에서만 아이콘이 조용히 사라진다(icon_path 가 빈 문자열을 돌려준다).
+# 역할의 출처는 CharacterData.Role 이고, 그 역할이 어떤 그림을 쓰는지는 여기가 정한다.
+static func role_icon_name(role: int) -> String:
+	match role:
+		CharacterData.Role.TANK:
+			return "icon_role_tank"
+		CharacterData.Role.RANGED_DEALER:
+			return "icon_role_ranged_dealer"
+		CharacterData.Role.BUFFER:
+			return "icon_role_buffer"
+		_:
+			return ""
+
+
 # ===== 팔레트 (아이콘과 동일한 값) =====
 # 아이콘 SVG의 색과 1:1로 대응한다. 값을 바꾸면 아이콘도 함께 바꿔야 한다.
 const OUTLINE := Color("6E6558")       # 진회갈 윤곽선

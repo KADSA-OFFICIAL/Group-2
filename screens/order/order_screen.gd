@@ -20,12 +20,6 @@ extends Control
 
 const CHARACTERS_SCREEN_PATH := "res://screens/characters/CharactersScreen.tscn"
 
-const ROLE_ICON_NAME := {
-	CharacterData.Role.TANK: "icon_role_tank",
-	CharacterData.Role.RANGED_DEALER: "icon_role_ranged_dealer",
-	CharacterData.Role.BUFFER: "icon_role_buffer",
-}
-
 var _name_edit: LineEdit
 var _profile_body: VBoxContainer
 var _roster_grid: GridContainer
@@ -230,7 +224,7 @@ func _make_member_card(id: StringName) -> Control:
 			# 칩으로 둔다. 글자색만으로 표시하면 편성된(액센트로 찬) 카드에서 묻힌다.
 			head.add_child(HUDKit.tag_chip("편성", UITheme.ACCENT.darkened(0.4)))
 
-		box.add_child(HUDKit.role_chip_row(character, ROLE_ICON_NAME))
+		box.add_child(HUDKit.role_chip_row(character))
 	else:
 		row.add_child(HUDKit.label(String(id), 13, HUDKit.text_2()))
 
