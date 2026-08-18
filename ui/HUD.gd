@@ -26,6 +26,10 @@ const MARK_EFFECT := &"mark"
 const ICON_SIZE: int = 18
 const ICON_SIZE_SMALL: int = 14
 
+# 적 초상 썸네일. 아이콘(18)보다 커야 한다 — 초상은 그림이라 그 크기에서는
+# 얼굴이 뭉개져 색 판과 구별되지 않는다.
+const ENEMY_PORTRAIT_SIZE: int = 36
+
 var _party_rows: Array = []          # [{ "root": Control, "name": Label, "hp": Label, "bracket": Control }]
 var _synergy_rows: Dictionary = {}   # Role -> Label
 var _mark_row: Control
@@ -35,7 +39,12 @@ var _stack_label: Label
 var _stack_fill: ColorRect
 var _stack_track: Control
 var _execute_row: Control
-var _enemy_label: Label
+
+# 적 패널: 종류(enemy_id)별 한 줄. 줄은 종류 구성이 바뀔 때만 다시 만든다.
+var _enemy_panel: PanelContainer
+var _enemy_body: VBoxContainer
+var _enemy_rows: Dictionary = {}     # enemy_id -> Label (수량)
+var _enemy_signature: Array = []     # 현재 줄이 만들어진 종류 목록(정렬됨)
 # 역할 패널. 안의 세 줄이 전부 숨으면 제목만 남은 빈 판이 되므로 통째로 숨긴다.
 var _mechanics_panel: PanelContainer
 
@@ -55,6 +64,7 @@ func _process(_delta: float) -> void:
 	_update_party()
 	_update_mechanics()
 	_update_synergy()
+	_update_enemies()
 
 
 # ===== 구성 (Build) =====
@@ -69,7 +79,7 @@ func _build() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	# 좌상단: 파티 / 메커니즘, 우상단: 시너지 / 적 수
+	# 좌상단: 파티 / 메커니즘, 우상단: 시너지 / 적
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 12)
 	columns.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -194,19 +204,90 @@ func _build_synergy_panel() -> PanelContainer:
 	return panel
 
 
+# 적 패널. 전장에 있는 적을 종류별로 한 줄씩 보여 준다(초상 + 이름 + 수량).
+#
+# 총 마릿수 숫자 하나였다. Stage1_1 처럼 두 종류가 섞여 나오면 무엇과 싸우는지
+# HUD 로는 알 수 없었고, 저작된 초상(EnemyData.portrait)도 쓰이는 곳이 없었다.
 func _build_enemy_panel() -> PanelContainer:
-	var panel := HUDKit.make_panel("", "", 10, true)
-	var body := HUDKit.body_of(panel)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	row.add_child(HUDKit.label("적", 12, HUDKit.text_2()))
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(spacer)
-	_enemy_label = HUDKit.value("0", 13)
-	row.add_child(_enemy_label)
-	body.add_child(row)
+	var panel := HUDKit.make_panel("적", "ENEMY", 10, true)
+	_enemy_body = HUDKit.body_of(panel)
+	_enemy_panel = panel
 	return panel
+
+
+# 살아 있는 적을 종류별로 센다. enemy_id -> { "data": EnemyData, "count": int }
+func _count_enemies() -> Dictionary:
+	var counts := {}
+	if GameManager == null:
+		return counts
+
+	for enemy in GameManager.get_all_enemies():
+		var data: EnemyData = enemy.data if enemy != null and "data" in enemy else null
+		# 데이터가 없는 적도 세기는 한다. 이름 없이 사라지면 마릿수가 틀려 보인다.
+		var id: StringName = data.enemy_id if data != null else &"unknown"
+		if counts.has(id):
+			counts[id]["count"] += 1
+		else:
+			counts[id] = { "data": data, "count": 1 }
+	return counts
+
+
+func _update_enemies() -> void:
+	if _enemy_panel == null or _enemy_body == null:
+		return
+
+	var counts := _count_enemies()
+
+	# 적이 없으면 제목만 남은 빈 판이 전장을 가린다. 역할 패널과 같은 처리다.
+	_enemy_panel.visible = not counts.is_empty()
+	if counts.is_empty():
+		# 다음에 적이 나타나면 줄을 다시 만든다.
+		_enemy_signature = []
+		return
+
+	# 종류 구성이 그대로면 줄을 다시 만들지 않는다(매 프레임 도는 경로다).
+	# 정렬한 목록으로 비교한다 — 적 노드 순서는 스폰·사망에 따라 바뀌므로
+	# 그대로 비교하면 구성이 같은데도 매 프레임 다시 만들게 된다.
+	var ids := counts.keys()
+	ids.sort()
+	if ids != _enemy_signature:
+		_rebuild_enemy_rows(ids, counts)
+
+	for id in ids:
+		var label: Label = _enemy_rows.get(id)
+		if label != null:
+			label.text = "×%d" % int(counts[id]["count"])
+
+
+# 줄 순서도 정렬한 목록을 따른다. 스폰 순서를 따르면 한 마리 죽을 때마다 순서가 튄다.
+func _rebuild_enemy_rows(ids: Array, counts: Dictionary) -> void:
+	for child in _enemy_body.get_children():
+		_enemy_body.remove_child(child)
+		child.queue_free()
+	_enemy_rows.clear()
+	_enemy_signature = ids.duplicate()
+
+	for id in ids:
+		var data: EnemyData = counts[id]["data"]
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+
+		# 초상이 없는 적은 tint 색 판이 들어간다(HUDKit 이 판단한다).
+		row.add_child(HUDKit.enemy_portrait_block(data, Vector2(ENEMY_PORTRAIT_SIZE, ENEMY_PORTRAIT_SIZE)))
+
+		var display_name: String = data.display_name if data != null else String(id)
+		row.add_child(HUDKit.label(display_name, 12, HUDKit.text_2()))
+
+		var spacer := Control.new()
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(spacer)
+
+		var value := HUDKit.value("×0", 13)
+		row.add_child(value)
+
+		_enemy_body.add_child(row)
+		_enemy_rows[id] = value
 
 
 # ===== 파티 카드 (Party) =====
@@ -309,8 +390,6 @@ func _update_mechanics() -> void:
 			or (_stack_row != null and _stack_row.visible)
 			or (_execute_row != null and _execute_row.visible))
 
-	if _enemy_label != null and GameManager != null:
-		_enemy_label.text = str(GameManager.get_all_enemies().size())
 
 
 # 표식이 걸린 적 중 가장 가까운 대상의 게이지를 보여 준다.
