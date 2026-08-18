@@ -42,11 +42,24 @@ enum Type {
 # 기본값 BATTLE: 첫 값을 기본으로 두어 누락된 .tres 도 안전하게 로드된다.
 @export var type: Type = Type.BATTLE
 
+# ===== 적 배치 (Spawns) =====
+# 이 스테이지에 놓이는 적. 한 줄이 StageSpawn 하나다(무엇을/어디에/몇 마리).
+#
+# 왜 데이터인가: 배치가 스크립트에 박혀 있으면 스테이지를 하나 더 만들 때마다
+# 코드를 고쳐야 하고, 저작된 .tres 를 골라도 화면이 달라지지 않는다.
+# §5 는 승리 조건이 "스테이지별로 달라진다(데이터 기반)"고 [확정] 했고,
+# 배치는 그 조건이 걸리는 대상이다.
+#
+# 비어 있어도 유효하다 — 적 없이 점령만 하는 스테이지가 가능하다.
+@export var spawns: Array[StageSpawn] = []
+
+
 # ----- 여기에 없는 것과 그 이유 (Extensibility) -----
 # 아래는 설계 문서에서 아직 [미정] 이므로 **필드를 만들지 않았다.**
 # 임의의 기본값을 넣으면 나중에 밸런스를 정할 때 그 값이 근거처럼 남는다.
 #
 #   - 존 확보 시간, 존 위치, 리스폰 규칙 (§5.2 [미정])
+#   - 웨이브(시간차 스폰): 위 spawns 는 시작 시 한 번에 놓는 배치만 담는다
 #   - "점령+전투" 에서 두 프리미티브를 순차/동시/보완 중 무엇으로 엮을지 (§5.2 [미정])
 #   - 잠입/전투 루트 선택의 실제 파라미터 (§7 [미정], 전투 화면 작업 범위 밖)
 #   - 적 배치·웨이브 규칙, 보상 테이블
@@ -136,4 +149,17 @@ func validate() -> Array[String]:
 	# 타입이 enum 밖이면 승리 조건을 도출할 수 없다(저작 실수로 클리어 불가 스테이지가 된다).
 	if get_objectives().is_empty():
 		problems.append("type이 알 수 없는 값입니다: %d" % type)
+
+	# 배치 한 줄이 잘못되면 그 적만 조용히 빠진다. 저작 시점에 드러나야 한다.
+	for i in range(spawns.size()):
+		var spawn := spawns[i]
+		if spawn == null:
+			problems.append("spawns[%d]가 비어 있습니다." % i)
+			continue
+		for problem in spawn.validate():
+			problems.append("spawns[%d]: %s" % [i, problem])
+
+	# 소탕이 필요한데 적이 없으면 클리어할 수 없다(저작 실수).
+	if requires_clear() and spawns.is_empty():
+		problems.append("소탕이 필요한 스테이지인데 spawns가 비어 있습니다.")
 	return problems
