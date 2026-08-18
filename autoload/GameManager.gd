@@ -4,9 +4,9 @@ static var active_enemies: Array = []
 
 func _ready():
 	name = "GameManager"
-	# Load game data on startup
-	var save_data = SaveSystem.load_game()
-	print("Game loaded! Currencies: ", CurrencySystem.get_all_currencies())
+	# 저장 불러오기는 SaveSystem이 게임 시작 시 한 번 수행한다.
+	# 여기서 부르면 안 된다: autoload 순서상 GameManager는 CurrencySystem/PartySystem/
+	# EquipmentSystem보다 앞이라, 저장 제공자가 등록되기 전에 읽어 상태가 반영되지 않는다.
 
 static func register_enemy(enemy):
 	if not active_enemies.has(enemy):

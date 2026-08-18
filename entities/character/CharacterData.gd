@@ -50,8 +50,32 @@ enum SecondaryRole {
 
 # ===== 외형 (Appearance) =====
 @export var sprite_texture: Texture2D = null
+## 흰색 도형 플레이스홀더를 칠하는 색이다. 아래 walk_frames(실제 아트)에는 입히지 않는다
+## — 실제 아트는 자기 색을 가지므로 곱하면 색이 죽는다.
+## 메타 화면(캐릭터/편성/주문 등)은 이 색을 도형 스와치에 계속 쓴다.
 @export var tint: Color = Color.WHITE
 @export var sprite_scale: Vector2 = Vector2(2, 2)
+
+# ----- 워크 애니메이션 (Walk animation) -----
+# 4방향 x 3프레임 워크 사이클. 씬에 AnimatedSprite2D가 있고 이 값이 채워져 있으면
+# 그쪽이 외형을 맡고 위 sprite_texture(도형 플레이스홀더)는 숨는다.
+# null이면 지금까지와 똑같이 Sprite2D로 정지 이미지를 그린다(하위 호환).
+#
+# 애니메이션 이름과 방향 판정의 단일 출처는 WalkAnimation이다(적과 플레이어가 같이 쓴다).
+# 규약만 지키면 시트를 갈아끼워도 스크립트를 고칠 필요가 없다.
+# 시트 저작 규약: assets/sprites/characters/README.md
+@export var walk_frames: SpriteFrames = null
+## 워크 시트 표시 배율. 시트마다 원본 해상도가 달라 sprite_texture와 따로 둔다.
+@export var walk_sprite_scale: Vector2 = Vector2(1, 1)
+## 워크 시트 표시 오프셋(px, 배율 적용 전). 셀 안의 발 기준선을 노드 원점에 맞추는 값이다.
+## 시트 셀이 캐릭터보다 크므로 이 값이 없으면 스프라이트가 발밑이 아니라 몸 한가운데에 걸린다.
+@export var walk_sprite_offset: Vector2 = Vector2.ZERO
+
+# 메타 화면(메인화면 등)에서 크게 보여주는 전신 일러스트.
+# 전투용 sprite_texture 와 용도가 다르므로 필드를 나눈다.
+# 기본값 null 이며, 비어 있으면 화면이 tint 색 플레이스홀더로 대체한다.
+# (docs §0: 아트 확정 전까지는 도형 플레이스홀더를 쓴다.)
+@export var portrait: Texture2D = null
 
 # ===== 장비 (Equipment) =====
 # 슬롯당 1개 장착. 장착/해제 시 스텟에 보너스를 합산/원복한다.
@@ -205,4 +229,10 @@ func validate() -> Array[String]:
 	# 겸직인데 주 역할과 같으면 카운트가 중복되므로 데이터 오류다.
 	if secondary_role != SecondaryRole.NONE and get_secondary_role_as_role() == role:
 		problems.append("secondary_role이 주 역할과 같습니다: " + get_role_name())
+
+	# 워크 시트를 지정했다면 네 방향이 모두 있어야 한다.
+	# 하나라도 빠지면 그 방향으로 이동할 때 재생할 애니메이션이 없어 외형이 멈춘다.
+	for anim in WalkAnimation.missing_animations(walk_frames):
+		problems.append("walk_frames에 '%s' 애니메이션이 없습니다." % anim)
+
 	return problems

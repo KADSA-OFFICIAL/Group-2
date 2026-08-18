@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 1
+stacking = 0
+max_stacks = 1
+effect_id = &"stun"
+display_name = "기절"
+description = "이동·평타·스킬이 모두 막힌다. 탱커 표식이 임계치에 도달하면 발동한다. CC이므로 디버프로 취급되며, 버퍼 처형의 조건을 만족시킨다."
+is_debuff = true
+duration = 2.0
+blocks_movement = true
+blocks_attack = true
+blocks_skill = true

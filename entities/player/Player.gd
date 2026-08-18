@@ -34,14 +34,35 @@ var _attack_cooldown_left: float = 0.0
 @onready var sprite: Sprite2D = get_node_or_null("Sprite2D")
 @onready var collision_shape = get_node_or_null("CollisionShape2D")
 
+# 워크 애니메이션을 그리는 노드. 씬에 AnimatedSprite2D가 있고 data.walk_frames가
+# 채워져 있을 때만 잡힌다. null이면 이 스크립트는 외형을 Sprite2D로만 다루므로
+# 시트가 없는 캐릭터는 지금까지와 똑같이 도형 플레이스홀더로 남는다.
+var _anim_sprite: AnimatedSprite2D = null
 
-# 유효한 스텟 출처를 반환한다. data가 있으면 그 정의의 스텟이 우선한다.
+
+# 이 노드가 소유하는 런타임 스텟. 정의(CharacterData)의 스텟 사본이다.
+#
+# 왜 사본인가: .tres는 경로 기준으로 캐시되므로 CharacterDatabase가 돌려주는 정의는
+# 로스터 전체가 공유하는 **하나의 인스턴스**다. StatusEffectData가 PlayerStats의 버프
+# 채널을 대상으로 삼기 때문에, 공유된 채로 두면 한 노드에 건 버프/디버프가 같은 정의를
+# 쓰는 쪽 전부에 걸리고, 스테이지를 다시 열어도 이전 판의 버프 잔재가 남는다.
+# 정의(.tres)는 읽기 전용 데이터로 남기고, 전투 중 변하는 값은 노드가 소유한다.
+var _runtime_stats: PlayerStats = null
+
+# 유효한 스텟 출처를 반환한다. data가 있으면 그 정의의 스텟이 사본의 바탕이 된다.
 func get_stats() -> PlayerStats:
-	if data != null:
-		return data.get_stats()
-	if stats == null:
-		stats = PlayerStats.new()
-	return stats
+	if _runtime_stats == null:
+		_runtime_stats = _make_runtime_stats()
+	return _runtime_stats
+
+# 정의(또는 씬에 주입된 stats)에서 이 노드만의 스텟 사본을 만든다.
+# 처음 get_stats()가 불릴 때 한 번만 만들어지므로, 씬이 export로 주입한 값이 반영된 뒤다.
+# duplicate(true): 이후 PlayerStats에 하위 리소스가 추가되어도 같이 복제되게 한다.
+func _make_runtime_stats() -> PlayerStats:
+	var source: PlayerStats = data.get_stats() if data != null else stats
+	if source == null:
+		return PlayerStats.new()
+	return source.duplicate(true)
 
 
 func _ready() -> void:
@@ -57,6 +78,11 @@ func _ready() -> void:
 
 	if EventBus:
 		EventBus.party_control_changed.connect(_on_control_changed)
+		# 스텟을 사본으로 떼어 놓으면 정의 쪽 장착 변경이 더 이상 자동으로 닿지 않는다.
+		# (전에는 정의의 PlayerStats를 그대로 써서 우연히 반영되고 있었다.)
+		# 그래서 자기 캐릭터의 착탈만 골라 장비 채널을 다시 밀어 넣는다.
+		EventBus.equipment_equipped.connect(func(character_id, _eid, _slot): _sync_equipment_bonuses(character_id))
+		EventBus.equipment_unequipped.connect(func(character_id, _slot): _sync_equipment_bonuses(character_id))
 	_refresh_control_visual()
 
 
@@ -73,6 +99,25 @@ func _apply_data() -> void:
 		sprite.self_modulate = data.tint
 		sprite.scale = data.sprite_scale
 
+	# 워크 시트가 있으면 AnimatedSprite2D가 외형을 맡고 도형 플레이스홀더는 숨는다.
+	# 둘 중 하나만 보이게 해서 실제 아트 위에 도형이 겹쳐 보이지 않게 한다.
+	#
+	# tint를 입히지 않는 이유: tint는 흰색 도형을 칠하려고 둔 값이라
+	# 색이 있는 실제 아트에 곱하면 색이 죽는다(CharacterData.tint 주석 참고).
+	var anim := get_node_or_null("AnimatedSprite2D")
+	if anim is AnimatedSprite2D and data.walk_frames != null:
+		_anim_sprite = anim
+		_anim_sprite.sprite_frames = data.walk_frames
+		_anim_sprite.scale = data.walk_sprite_scale
+		_anim_sprite.offset = data.walk_sprite_offset
+		# 첫 프레임은 정면 정지 포즈로 둔다. animation을 지정하지 않으면 기본값 &"default"를
+		# 찾다가 없어서 경고가 난다.
+		_anim_sprite.animation = WalkAnimation.ANIMATIONS[WalkAnimation.DOWN]
+		_anim_sprite.frame = 0
+		_anim_sprite.visible = true
+		if sprite is Sprite2D:
+			sprite.visible = false
+
 
 # ===== 조종 상태 (Control) =====
 
@@ -85,12 +130,32 @@ func is_controlled() -> bool:
 func _on_control_changed(_index: int) -> void:
 	_refresh_control_visual()
 
-# 조종 중인 멤버를 시각적으로 구분한다.
-# 도형 플레이스홀더 단계이므로 밝기로만 표시한다(아트는 추후).
-func _refresh_control_visual() -> void:
-	if sprite == null:
+
+# ===== 장비 (Equipment) =====
+
+# 장비 보너스를 정의에서 다시 읽어 이 노드의 스텟 사본에 반영한다.
+# 보너스 합산의 출처는 CharacterData.get_equipment_bonuses()다(여기서 다시 세지 않는다).
+# 다른 캐릭터의 착탈이면 아무것도 하지 않는다.
+func _sync_equipment_bonuses(character_id: StringName) -> void:
+	if data == null or character_id != data.character_id:
 		return
-	sprite.modulate = Color.WHITE if is_controlled() else Color(0.55, 0.55, 0.55, 1.0)
+	var bonuses := data.get_equipment_bonuses()
+	get_stats().set_equipment_bonuses(
+		bonuses["physical_attack"], bonuses["magic_attack"],
+		bonuses["physical_defense"], bonuses["magic_defense"], bonuses["hp"]
+	)
+
+# 조종 중인 멤버를 시각적으로 구분한다. 밝기로만 표시한다.
+#
+# 지금 화면에 보이는 노드에 걸어야 한다. 워크 시트를 쓰는 캐릭터는 Sprite2D가
+# 숨어 있으므로 거기에 modulate를 걸면 조종 표시가 아무 효과도 내지 않는다.
+# self_modulate가 아니라 modulate인 이유: self_modulate는 _apply_data()가 tint용으로
+# 쓰고 있어서, 같은 채널에 조종 밝기를 겹쳐 쓰면 서로를 지운다.
+func _refresh_control_visual() -> void:
+	var target: CanvasItem = _anim_sprite if _anim_sprite != null else sprite
+	if target == null:
+		return
+	target.modulate = Color.WHITE if is_controlled() else Color(0.55, 0.55, 0.55, 1.0)
 
 
 # ===== 이동 / 공격 (Movement / Attack) =====
@@ -102,17 +167,57 @@ func _physics_process(delta: float) -> void:
 	if _attack_cooldown_left > 0.0:
 		_attack_cooldown_left -= delta
 
+	_decay_stack(delta)
+
+	_process_control(delta)
+
+	# 조종 중이 아니어도(velocity가 계속 0) 호출한다. 그래야 정지 포즈로 고정된다.
+	_update_walk_animation()
+
+
+# 입력 처리 한 틱. velocity를 정하고 필요하면 실제로 이동시킨다.
+# 외형 갱신과 분리해 둔 이유: 아래 조기 반환이 애니메이션 갱신까지 건너뛰면
+# 조종을 넘긴 멤버가 멈춘 뒤에도 걷는 모션이 남기 때문이다.
+func _process_control(_delta: float) -> void:
 	# 조종 중인 멤버만 입력을 받는다.
 	# 나머지는 이 단계에서 정지한다(AI는 후속 이슈).
 	if not is_controlled():
 		velocity = Vector2.ZERO
 		return
 
-	_handle_movement()
+	# 기절 등 CONTROL 효과가 이동을 막으면 움직이지 않는다.
+	if StatusEffectSystem.blocks_movement(self):
+		velocity = Vector2.ZERO
+	else:
+		_handle_movement()
 	move_and_slide()
 
 	if Input.is_action_pressed("attack"):
 		try_attack()
+
+
+# ===== 워크 애니메이션 (Walk animation) =====
+
+# 지금 속도에 맞는 방향 애니메이션을 재생한다. 멈춰 있으면 정지 포즈로 고정한다.
+# 시트가 없는 캐릭터는 _anim_sprite가 null이라 아무 일도 하지 않는다.
+#
+# 방향 판정과 멈춤 임계값의 출처는 WalkAnimation이다(적과 같은 규약을 쓴다).
+func _update_walk_animation() -> void:
+	if _anim_sprite == null:
+		return
+
+	if not WalkAnimation.is_walking(velocity):
+		# 멈추면 재생을 세우고 정지 포즈(0번 프레임)로 고정한다.
+		# animation은 그대로 두어 마지막으로 향했던 방향을 유지한다
+		# — 멈출 때마다 정면으로 홱 돌아보면 어색하기 때문이다.
+		if _anim_sprite.is_playing():
+			_anim_sprite.stop()
+			_anim_sprite.frame = 0
+		return
+
+	var anim := WalkAnimation.animation_for(velocity)
+	if _anim_sprite.animation != anim or not _anim_sprite.is_playing():
+		_anim_sprite.play(anim)
 
 
 func _handle_movement() -> void:
@@ -132,10 +237,14 @@ func get_attack_cooldown() -> float:
 	return CombatConfig.tuning.base_attack_cooldown / mult
 
 func can_attack() -> bool:
-	return is_alive and _attack_cooldown_left <= 0.0
+	# 기절 등 CONTROL 효과가 평타를 막으면 공격할 수 없다.
+	return is_alive and _attack_cooldown_left <= 0.0 and not StatusEffectSystem.blocks_attack(self)
 
 # 사거리 안의 적에게 평타를 넣는다. 쿨다운 중이면 아무것도 하지 않는다.
 # 피해량은 PlayerStats.get_physical_attack(), 방어 적용은 대상의 apply_defense()가 한다.
+#
+# 평타는 역할 메커니즘(§8.1 시너지 1단계)이 걸리는 지점이기도 하다.
+# 순서: 처형 판정 -> 피해 -> 표식 부여 -> 표식 충전 -> 스택 축적
 func try_attack() -> bool:
 	if not can_attack():
 		return false
@@ -145,8 +254,150 @@ func try_attack() -> bool:
 		return false
 
 	_attack_cooldown_left = get_attack_cooldown()
+
+	# 버퍼: 조건이 맞으면 피해 대신 처형한다.
+	if _try_execute(target):
+		_gain_stack()
+		return true
+
 	target.take_damage(get_stats().get_physical_attack(), self)
+
+	# 대상이 이 평타로 죽었으면 이후 처리를 하지 않는다.
+	if not is_instance_valid(target) or not target.is_alive:
+		_gain_stack()
+		return true
+
+	# 탱커: 표식을 부여한다(이미 있으면 StatusEffectData의 중첩 규칙대로).
+	if _is_role_active(CharacterData.Role.TANK):
+		StatusEffectSystem.apply(target, MARK_EFFECT, self)
+
+	# 표식 충전은 **파티 전체**의 평타로 이뤄진다(탱커 본인만이 아니다).
+	_charge_mark(target)
+
+	# 원거리: 스택을 쌓는다.
+	_gain_stack()
 	return true
+
+
+# ===== 역할 메커니즘 (Role Mechanics) =====
+# 메커니즘은 시너지 1단계가 곧 역할 정체성이라는 설계(docs §2)를 따른다.
+# 그래서 "이 캐릭터가 그 역할을 가졌는가" + "파티에서 그 역할 시너지가 켜졌는가"를 함께 본다.
+
+const MARK_EFFECT := &"mark"
+const STACK_BONUS_KEY := &"ranged_stack"
+
+# 원거리 스택. 정수 단위로 서서히 감소하므로 float로 들고 표시할 때 내림한다.
+var _stack: float = 0.0
+
+# 이 멤버에게 해당 역할의 메커니즘이 활성인가.
+# 배타 규칙(#73)이 get_active_tiers()에 이미 반영되어 있으므로,
+# 다른 역할이 3단계를 발동하면 여기서도 자동으로 꺼진다.
+func _is_role_active(role: CharacterData.Role) -> bool:
+	if data == null or not data.has_role(role):
+		return false
+	return SynergySystem.is_tier1_active(PartySystem.get_members(), role)
+
+
+# --- 탱커: 표식 → 기절 + 추가 피해 ---
+
+# 표식이 걸린 대상이면 게이지를 채운다. 임계치에서 터지면 추가 피해를 넣는다.
+# 충전은 역할과 무관하게 파티 전체가 한다(표식은 파티 공동 자원).
+func _charge_mark(target: Node) -> void:
+	if not StatusEffectSystem.has_effect(target, MARK_EFFECT):
+		return
+
+	# 표식을 건 주체(탱커)를 폭발 피해 계산에 쓰려고 미리 붙잡는다.
+	var marker := StatusEffectSystem.get_source(target, MARK_EFFECT)
+
+	if not StatusEffectSystem.add_gauge(target, MARK_EFFECT):
+		return
+
+	# 터졌다: 기절은 StatusEffectSystem이 이미 걸었고, 여기서는 추가 피해만 넣는다.
+	_apply_mark_burst_damage(target, marker)
+
+
+func _apply_mark_burst_damage(target: Node, marker: Node) -> void:
+	if not is_instance_valid(target) or not target.is_alive:
+		return
+
+	# 추가 피해 = 표식을 건 탱커의 물리 공격력 x 배수.
+	# 표식 주체가 사라졌으면 때린 사람 기준으로 대체한다.
+	var attacker: Node = marker if is_instance_valid(marker) and marker.has_method("get_stats") else self
+	var power := int(round(attacker.get_stats().get_physical_attack() * CombatConfig.tuning.mark_burst_damage_multiplier))
+	target.take_damage(power, self)
+
+
+# --- 원거리: 평타 스택 ---
+
+# 평타 적중 시 스택을 쌓는다.
+func _gain_stack() -> void:
+	if not _is_role_active(CharacterData.Role.RANGED_DEALER):
+		return
+	_stack = minf(_stack + CombatConfig.tuning.stack_gain_per_hit, float(CombatConfig.tuning.stack_max))
+	_push_stack_bonus()
+
+# 스택은 놓으면 서서히 감소한다(docs §4.1의 전투 리듬).
+# 조종 중일 때보다 미조종(AI) 중일 때 더 빨리 빠진다.
+func _decay_stack(delta: float) -> void:
+	if _stack <= 0.0:
+		return
+
+	# 역할 시너지가 꺼졌으면 스택을 즉시 정리한다.
+	if not _is_role_active(CharacterData.Role.RANGED_DEALER):
+		_stack = 0.0
+		_push_stack_bonus()
+		return
+
+	var rate := CombatConfig.tuning.stack_decay_per_sec_controlled if is_controlled() \
+		else CombatConfig.tuning.stack_decay_per_sec_uncontrolled
+	_stack = maxf(_stack - rate * delta, 0.0)
+	_push_stack_bonus()
+
+# 현재 스택 수(표시·판정용). 내림한 정수다.
+func get_stack_count() -> int:
+	return int(floor(_stack))
+
+# 스택 보너스를 버프 채널에 반영한다.
+# 직접 set_buff_bonuses()를 호출하지 않고 StatusEffectSystem을 거치는 이유:
+# 그 채널은 최종값을 받으므로 기록자가 둘이면 서로 덮어쓴다(#105 참조).
+func _push_stack_bonus() -> void:
+	var count := get_stack_count()
+	if count <= 0:
+		StatusEffectSystem.clear_external_bonus(self, STACK_BONUS_KEY)
+		return
+
+	StatusEffectSystem.set_external_bonus(self, STACK_BONUS_KEY, {}, {
+		"attack_speed": CombatConfig.tuning.stack_attack_speed_per_stack * count,
+		"move_speed": CombatConfig.tuning.stack_move_speed_per_stack * count,
+	})
+
+
+# --- 버퍼: 처형 ---
+
+# 처형 조건을 만족하면 대상을 즉시 쓰러뜨린다.
+# 조건 셋을 모두 만족해야 한다:
+#   ① 이 멤버가 버퍼 역할이고 그 시너지가 켜져 있다 (버퍼가 **직접** 공격해야 한다)
+#   ② 대상에 디버프가 걸려 있다
+#   ③ 대상 체력이 execute_hp_percent 이하다
+func _try_execute(target: Node) -> bool:
+	if not _is_role_active(CharacterData.Role.BUFFER):
+		return false
+	if not StatusEffectSystem.has_any_debuff(target):
+		return false
+	if not can_execute(target):
+		return false
+
+	# 남은 체력을 확실히 넘기는 피해를 넣어 방어력에 막히지 않게 한다.
+	target.take_damage(target.max_hp * 100, self)
+	return true
+
+# 대상이 처형 가능한 체력인가. HUD 표시에도 쓸 수 있도록 분리한다.
+func can_execute(target) -> bool:
+	if not is_instance_valid(target) or not target.is_alive:
+		return false
+	if target.max_hp <= 0:
+		return false
+	return float(target.hp) / float(target.max_hp) <= CombatConfig.tuning.execute_hp_percent
 
 # 사거리 안에서 가장 가까운 살아있는 적을 찾는다.
 # 적 목록은 GameManager가 단일 출처다.

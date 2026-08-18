@@ -1,6 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://df6kt7j4x8m5"]
+[gd_scene load_steps=6 format=3 uid="uid://df6kt7j4x8m5"]
 
 [ext_resource type="Script" path="res://entities/enemies/TrainingGoblin.gd" id="1_goblin"]
+[ext_resource type="Resource" path="res://data/enemies/training_goblin.tres" id="2_data"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1"]
 radius = 8.0
@@ -14,6 +15,7 @@ radius = 300.0
 
 [node name="TrainingGoblin" type="CharacterBody2D" groups=["enemy"]]
 script = ExtResource("1_goblin")
+data = ExtResource("2_data")
 position = Vector2(0, 0)
 
 [node name="Sprite2D" type="Sprite2D" parent="."]

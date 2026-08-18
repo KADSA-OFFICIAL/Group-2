@@ -1,17 +1,18 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
-[ext_resource type="Texture2D" path="res://icon.svg" id="3_placeholder"]
+[ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/stone_spearman_walk_frames.tres" id="10_walk"]
 [ext_resource type="Texture2D" uid="uid://bndkmd5k1ag5e" path="res://assets/sprites/enemies/portraits/stone_spearman.png" id="4_portrait"]
 
 [sub_resource type="Resource" id="PlayerStats_stone_spearman"]
 script = ExtResource("2_stats")
-hp = 140
-strength = 9
-defense = 12
-intelligence = 10
-faith = 10
+hp = 1200
+strength = 65
+defense = 120
+intelligence = 100
+faith = 100
 
 [resource]
 script = ExtResource("1_enemydata")
@@ -19,9 +20,12 @@ enemy_id = &"stone_spearman"
 display_name = "돌창병"
 description = "근거리 추적형 적 플레이스홀더. 탐지 범위 안의 가장 가까운 파티 멤버를 쫓아가 평타를 넣는다. 파티보다 느리고 단단하다. 이름/개성/스킬 미정."
 stats = SubResource("PlayerStats_stone_spearman")
-sprite_texture = ExtResource("3_placeholder")
+sprite_texture = ExtResource("9_shape")
 tint = Color(0.85, 0.25, 0.25, 1)
-sprite_scale = Vector2(0.35, 0.35)
+sprite_scale = Vector2(1.5, 1.5)
+walk_frames = ExtResource("10_walk")
+walk_sprite_scale = Vector2(0.25, 0.25)
+walk_sprite_offset = Vector2(0, -181)
 portrait = ExtResource("4_portrait")
 ai_enabled = true
 detection_range = 300.0
