@@ -188,6 +188,29 @@ static func panel(pad: int = 14) -> StyleBoxFlat:
 	return _box(panel_fill(), line_hi(), BORDER, pad, RADIUS, UITheme.SHADOW, 5)
 
 
+# ===== 오버레이 변형 (전장 위에 얹히는 UI) =====
+#
+# 메타 화면은 화면 전체가 UI 라 패널이 불투명해도 된다.
+# 전투 HUD 는 **전장 위에 얹히므로** 불투명하면 뒤가 안 보인다.
+# 모양·테두리·그림자는 그대로 두고 면만 비치게 한다 — 같은 UI 언어를 유지하기 위해서다.
+#
+# 알파를 더 낮추면 전장은 잘 보이지만 글자가 배경에 따라 읽혔다 안 읽혔다 한다.
+# 0.78 은 전장의 형태가 비치면서 잉크 글자가 어떤 바닥 위에서도 읽히는 선이다.
+const OVERLAY_ALPHA := 0.78
+
+static func panel_overlay(pad: int = 12) -> StyleBoxFlat:
+	return _box(_alpha(panel_fill(), OVERLAY_ALPHA), line_hi(), BORDER, pad, RADIUS,
+		UITheme.SHADOW, 5)
+
+
+static func card_overlay(selected: bool = false) -> StyleBoxFlat:
+	if selected:
+		return _box(_alpha(UITheme.ACCENT, 0.92), line_hi(), BORDER, 8, RADIUS_CARD,
+			UITheme.SHADOW_STRONG, 4)
+	return _box(_alpha(card_fill(), OVERLAY_ALPHA), line(), BORDER, 8, RADIUS_CARD,
+		UITheme.SHADOW, 3)
+
+
 # 카드. 선택 시 액센트로 꽉 채운다.
 # 알파 틴트가 아니라 꽉 채움인 이유: 밝은 톤에서 옅은 틴트는 배경과 구분되지 않는다.
 static func card(selected: bool = false) -> StyleBoxFlat:
@@ -672,9 +695,11 @@ static func make_ghost(text_ko: String, min_width: int = 120) -> Button:
 
 # 패널 하나. 제목(한/영)과 내용 칸을 함께 만든다.
 # 반환값의 meta "body" 에 내용 컨테이너가 들어 있다.
-static func make_panel(title_ko: String, title_en: String, pad: int = 14) -> PanelContainer:
+# overlay = true 면 전장 위에 얹히는 반투명 패널이 된다(전투 HUD 용).
+static func make_panel(title_ko: String, title_en: String, pad: int = 14,
+		overlay: bool = false) -> PanelContainer:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", panel(pad))
+	p.add_theme_stylebox_override("panel", panel_overlay(pad) if overlay else panel(pad))
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)

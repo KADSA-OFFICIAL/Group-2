@@ -182,9 +182,31 @@ func _fill_art() -> void:
 		return
 
 	# 일러스트 자리. 파일이 들어오면 위 분기로 그대로 대체된다.
-	var placeholder := ColorRect.new()
+	#
+	# 두 가지를 지킨다:
+	#   1) tint 원본을 쓰지 않는다. tint 는 전투 스프라이트를 물들이려고 고른 값이라
+	#      순색에 가깝고(원색 파랑), 화면 전체를 덮는 이 자리에서 흙 톤 팔레트를 가장
+	#      크게 뚫고 나온다. HUDKit.muted() 로 색상만 살리고 채도를 팔레트로 당긴다.
+	#   2) 단색 한 판이 아니라 그라데이션이다. 단색은 "덜 만든 화면"으로 읽힌다.
+	#      VN 배경과 같은 방식이다.
+	var tinted := HUDKit.muted(character.tint)
+
+	# 어두운 쪽으로 잡는다. 이 위에 얹히는 글자(하단 탭·이름표)가 전부 크림색이라
+	# 배경이 밝으면 대비가 무너진다. 밝게 잡았더니 실제로 탭 라벨이 배경에 묻었다.
+	var gradient := Gradient.new()
+	gradient.set_color(0, tinted.lerp(UITheme.INK, 0.30))
+	gradient.set_color(1, tinted.lerp(UITheme.INK, 0.70))
+
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = Vector2(0.0, 0.0)
+	texture.fill_to = Vector2(0.0, 1.0)
+
+	var placeholder := TextureRect.new()
 	placeholder.set_anchors_preset(Control.PRESET_FULL_RECT)
-	placeholder.color = Color(character.tint.r, character.tint.g, character.tint.b, 0.30)
+	placeholder.texture = texture
+	placeholder.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	placeholder.stretch_mode = TextureRect.STRETCH_SCALE
 	placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_art_layer.add_child(placeholder)
 
@@ -213,7 +235,7 @@ func _fill_nameplate() -> void:
 		var icon := _make_icon(ROLE_ICON_NAME.get(role, ""), UITheme.ICON_ROUND)
 		if icon != null:
 			row.add_child(icon)
-	row.add_child(_text(character.display_name, 18, UITheme.INK_ON_DARK))
+	row.add_child(_text(character.display_name, 20, UITheme.INK_ON_DARK, 700))
 
 	# 남는 가로 공간을 밀어내 이름표가 좌측에 붙게 한다.
 	var tail := Control.new()
@@ -321,7 +343,7 @@ func _build_profile() -> Control:
 	avatar.color = UITheme.AMBER
 	row.add_child(avatar)
 
-	row.add_child(_text("Lv.%d" % PlayerProfile.level, 14, UITheme.ACCENT))
+	row.add_child(_text("Lv.%d" % PlayerProfile.level, 14, UITheme.ACCENT, 700))
 
 	# 이름이 비었을 때의 문구는 OrderSystem 이 정한다(화면마다 다르게 적지 않는다).
 	var display_name := OrderSystem.get_leader_display_name()
@@ -349,7 +371,8 @@ func _make_currency_chip(currency_type: String) -> Control:
 	if icon != null:
 		row.add_child(icon)
 
-	var label := _text(_comma(CurrencySystem.get_balance(currency_type)), 13, UITheme.INK_ON_DARK)
+	# 재화는 즉시 최종값으로 보인다(#145). 카운트업은 메타 화면에서 걷어냈다.
+	var label := _text(_comma(CurrencySystem.get_balance(currency_type)), 13, UITheme.INK_ON_DARK, 700)
 	row.add_child(label)
 	_currency_labels[currency_type] = label
 
@@ -492,7 +515,7 @@ func _build_battle_button() -> Control:
 	if icon != null:
 		row.add_child(icon)
 
-	var label := _text("출격", 19, UITheme.INK)
+	var label := _text("출격", 20, UITheme.INK, 700)
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(label)
 
@@ -543,31 +566,23 @@ func _clear(node: Node) -> void:
 		child.queue_free()
 
 
-func _text(value: String, size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = value
-	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", color)
-	return label
+# 글자·아이콘 만들기는 HUDKit 이 소유한다.
+# 이 파일에도 같은 헬퍼가 복제되어 있었다(#123 에서 다섯 화면의 복제를 걷어냈는데
+# 메인화면만 남아 있었다). weight 를 넘기면 실제로 굵어진다 — 지역 _text() 는
+# 폰트를 갈아 끼우지 않아 굵기 인자가 아무 효과가 없었다.
+func _text(value: String, size: int, color: Color, weight: int = 400) -> Label:
+	return HUDKit.label(value, size, color, weight)
 
 
 func _chip_text(value: String) -> Control:
 	var plate := PanelContainer.new()
 	plate.add_theme_stylebox_override("panel", UITheme.overlay_text_pill())
-	plate.add_child(_text(value, 14, UITheme.INK_ON_DARK))
+	plate.add_child(_text(value, 14, UITheme.INK_ON_DARK, 600))
 	return plate
 
 
 func _make_icon(icon_name: String, size: int) -> TextureRect:
-	var texture := _load_texture(icon_name)
-	if texture == null:
-		return null
-	var rect := TextureRect.new()
-	rect.texture = texture
-	rect.custom_minimum_size = Vector2(size, size)
-	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	return rect
+	return HUDKit.make_icon(icon_name, size)
 
 
 # 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.
