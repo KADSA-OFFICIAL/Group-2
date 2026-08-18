@@ -38,6 +38,16 @@ class_name EnemyData
 @export var tint: Color = Color.WHITE
 @export var sprite_scale: Vector2 = Vector2(2, 2)
 
+## 프로필(초상) 이미지. 적 정보 UI·도감·조우 연출 등 **화면 밖 표시**에 쓴다.
+##
+## sprite_texture와 용도가 다르다:
+##   - sprite_texture: 전투 화면에 서 있는 인게임 스프라이트 (tint/sprite_scale이 함께 적용됨)
+##   - portrait:       초상. 인게임 스프라이트와 독립이며 tint/sprite_scale의 영향을 받지 않는다.
+##
+## 기본값 null이라 프로필이 없는 적도 그대로 로드된다(하위 호환).
+## 표시하는 쪽은 null을 확인하고 대체 표시를 준비한다.
+@export var portrait: Texture2D = null
+
 # ----- 워크 애니메이션 (Walk animation) -----
 # 4방향 x 3프레임 워크 사이클. 씬에 AnimatedSprite2D가 있고 이 값이 채워져 있으면
 # 그쪽이 외형을 맡고 위 sprite_texture(도형 플레이스홀더)는 숨는다.
