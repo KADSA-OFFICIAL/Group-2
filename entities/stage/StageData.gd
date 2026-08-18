@@ -54,12 +54,25 @@ enum Type {
 @export var spawns: Array[StageSpawn] = []
 
 
+# ===== 보상 (Rewards) =====
+# 클리어 보상. 재화 id(String) -> 수량(int).
+# 키는 CurrencySystem.DEFAULT_CURRENCIES 의 재화 id 를 참조한다(단일 출처).
+# EquipmentData.craft_cost 와 같은 규약이다.
+#
+# 비어 있으면 보상 없는 스테이지다(연습·튜토리얼 등).
+# 지급은 StageProgress 가 CurrencySystem 을 통해 한다 — 여기는 정의만 담는다.
+#
+# 수치는 [임시값]이다. 밸런스(획득 속도 대비 제작 비용)는 별도 작업이다.
+@export var clear_rewards: Dictionary = {}
+
+
 # ----- 여기에 없는 것과 그 이유 (Extensibility) -----
 # 아래는 설계 문서에서 아직 [미정] 이므로 **필드를 만들지 않았다.**
 # 임의의 기본값을 넣으면 나중에 밸런스를 정할 때 그 값이 근거처럼 남는다.
 #
 #   - 존 확보 시간, 존 위치, 리스폰 규칙 (§5.2 [미정])
 #   - 웨이브(시간차 스폰): 위 spawns 는 시작 시 한 번에 놓는 배치만 담는다
+#   - 첫 클리어 보너스·별점·드랍 테이블: 보상 규칙이 아직 clear_rewards 하나뿐이다
 #   - "점령+전투" 에서 두 프리미티브를 순차/동시/보완 중 무엇으로 엮을지 (§5.2 [미정])
 #   - 잠입/전투 루트 선택의 실제 파라미터 (§7 [미정], 전투 화면 작업 범위 밖)
 #   - 적 배치·웨이브 규칙, 보상 테이블
@@ -158,6 +171,13 @@ func validate() -> Array[String]:
 			continue
 		for problem in spawn.validate():
 			problems.append("spawns[%d]: %s" % [i, problem])
+
+	# 보상 키/수량 검증. 잘못된 값은 지급 시점이 아니라 저작 시점에 드러나야 한다.
+	for key in clear_rewards:
+		if typeof(clear_rewards[key]) != TYPE_INT or int(clear_rewards[key]) < 0:
+			problems.append("clear_rewards['%s']는 0 이상의 정수여야 합니다." % str(key))
+		elif not CurrencySystem.DEFAULT_CURRENCIES.has(str(key)):
+			problems.append("clear_rewards['%s']는 알 수 없는 재화입니다." % str(key))
 
 	# 소탕이 필요한데 적이 없으면 클리어할 수 없다(저작 실수).
 	if requires_clear() and spawns.is_empty():
