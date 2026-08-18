@@ -27,6 +27,17 @@ enum Slot {
 # 같은 라인 안에서 티어마다 스탯이 대략 x1.6씩 오른다(#157).
 @export var tier: int = 1
 
+# ===== 무기 분류 (Attack Type) =====
+# 무기 슬롯에만 의미가 있다. 물리 무기는 물리 공격력, 마법 무기는 마법 공격력을 올린다.
+# NONE은 무기가 아닌 장비(방어구/거울)의 기본값이다.
+enum AttackType {
+	NONE,      # 무기 아님
+	PHYSICAL,  # 물리 무기
+	MAGIC,     # 마법 무기
+}
+
+@export var attack_type: AttackType = AttackType.NONE
+
 # ===== 스텟 보너스 (Stat Bonuses) =====
 # 장착 시 PlayerStats 파생 계산에 합산되는 입력값. 모두 기본 0이라
 # 값을 지정하지 않은 장비는 해당 스텟에 영향을 주지 않는다.
@@ -70,6 +81,16 @@ func get_slot_name() -> String:
 			return "거울"
 		_:
 			return "알 수 없음"
+
+# 무기 분류의 화면 표시용 한글 이름을 반환한다. 무기가 아니면 빈 문자열.
+func get_attack_type_name() -> String:
+	match attack_type:
+		AttackType.PHYSICAL:
+			return "물리"
+		AttackType.MAGIC:
+			return "마법"
+		_:
+			return ""
 
 # 데이터 무결성 점검. 문제 메시지 배열을 반환한다.
 func validate() -> Array[String]:
