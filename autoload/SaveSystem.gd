@@ -36,6 +36,10 @@ func _ready():
 
 	# 자동 저장 시점: 편성 확정 / 장비 제작 / 장비 착탈.
 	# (재화는 이 시점들과 종료 시에 함께 기록된다. 전투 중 재화 변동마다 파일을 쓰지는 않는다.)
+	#
+	# 스테이지 클리어는 여기서 듣지 않는다: 같은 신호를 StageProgress 도 듣고 기록하는데,
+	# 이 노드가 먼저 등록되어 먼저 실행되므로 여기서 저장하면 기록 이전 상태가 쓰인다.
+	# 그래서 그쪽이 기록을 끝낸 뒤 직접 request_save() 를 부른다.
 	EventBus.party_changed.connect(func(_members): request_save())
 	EventBus.equipment_crafted.connect(func(_id): request_save())
 	EventBus.equipment_equipped.connect(func(_cid, _eid, _slot): request_save())
