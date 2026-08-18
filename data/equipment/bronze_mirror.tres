@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/equipment/EquipmentData.gd" id="1_equipmentdata"]
+
+[resource]
+script = ExtResource("1_equipmentdata")
+equipment_id = &"bronze_mirror"
+display_name = "청동 거울"
+description = "청동 티어 거울. 여신의 스킬 강화를 올린다. 청동은 주석(tin)과 구리(copper)로 제작한다. 제작 비용은 [임시값]이며 밸런싱 대상이다."
+slot = 4
+tier = 1
+goddess_skill_boost_bonus = 0.1
+craft_cost = {
+"copper": 6,
+"gold": 200,
+"tin": 6
+}

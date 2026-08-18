@@ -26,6 +26,9 @@ class_name PlayerStats
 @export var equip_physical_attack: int = 0
 @export var equip_magic_attack: int = 0
 @export var equip_max_hp: int = 0
+# 이동속도(비율, 0.05 = +5%)와 여신 스킬 강화(가산, 0.10 = +10%p) 장비 입력.
+@export var equip_move_speed_percent: float = 0.0
+@export var equip_goddess_boost: float = 0.0
 
 # ===== 버프/디버프 보너스 (Status Effect Bonuses) =====
 # 상태 효과 시스템이 채워 넣는 입력값. 장비 채널(equip_*)과 **독립적인 별도 채널**이라
@@ -123,11 +126,11 @@ func get_attack_speed_multiplier() -> float:
 # 이동 속도 배수. 기초 이동속도는 CombatConfig.BASE_MOVE_SPEED가 소유한다.
 # 사용 예: 실제 이동속도 = CombatConfig.BASE_MOVE_SPEED * get_move_speed_multiplier()
 func get_move_speed_multiplier() -> float:
-	return _buff_multiplier(buff_move_speed_percent)
+	return _buff_multiplier(buff_move_speed_percent + equip_move_speed_percent)
 
-# 여신의 스킬 강화 배수 (신앙심 기여). 1.0 = 강화 없음.
+# 여신의 스킬 강화 배수 (신앙심 기여 + 장비). 1.0 = 강화 없음.
 func get_goddess_skill_boost() -> float:
-	return 1.0 + faith * get_tuning().faith_to_skill_boost
+	return 1.0 + faith * get_tuning().faith_to_skill_boost + equip_goddess_boost
 
 
 # ===== 피해 계산 (Damage) =====
@@ -180,12 +183,14 @@ func set_equipment_defense(physical: int, magic: int) -> void:
 
 # 장비 보너스 전체를 갱신한다 (CharacterData가 장착 상태를 합산해 호출).
 # 음수는 0으로 클램프한다.
-func set_equipment_bonuses(physical_attack: int, magic_attack: int, physical_defense: int, magic_defense: int, max_hp: int) -> void:
+func set_equipment_bonuses(physical_attack: int, magic_attack: int, physical_defense: int, magic_defense: int, max_hp: int, move_speed_percent: float = 0.0, goddess_boost: float = 0.0) -> void:
 	equip_physical_attack = max(physical_attack, 0)
 	equip_magic_attack = max(magic_attack, 0)
 	equip_physical_defense = max(physical_defense, 0)
 	equip_magic_defense = max(magic_defense, 0)
 	equip_max_hp = max(max_hp, 0)
+	equip_move_speed_percent = max(move_speed_percent, 0.0)
+	equip_goddess_boost = max(goddess_boost, 0.0)
 
 # 버프/디버프 보너스 전체를 갱신한다 (상태 효과 시스템에서 호출).
 # 장비 채널과 별도이므로 이 호출은 equip_* 값을 건드리지 않는다.

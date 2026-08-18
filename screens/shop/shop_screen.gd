@@ -15,8 +15,10 @@ extends Control
 
 const SLOT_ICON_NAME := {
 	EquipmentData.Slot.WEAPON: "icon_slot_weapon",
-	EquipmentData.Slot.ARMOR: "icon_slot_armor",
-	EquipmentData.Slot.ACCESSORY: "icon_slot_accessory",
+	EquipmentData.Slot.HELMET: "icon_slot_armor",
+	EquipmentData.Slot.CHEST: "icon_slot_armor",
+	EquipmentData.Slot.LEGGINGS: "icon_slot_armor",
+	EquipmentData.Slot.MIRROR: "icon_slot_accessory",
 }
 
 # 토스트가 스스로 사라지기까지의 시간(초).

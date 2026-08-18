@@ -26,8 +26,10 @@ const CRAFT_SCREEN_PATH := "res://screens/craft/CraftScreen.tscn"
 
 const SLOT_ICON_NAME := {
 	EquipmentData.Slot.WEAPON: "icon_slot_weapon",
-	EquipmentData.Slot.ARMOR: "icon_slot_armor",
-	EquipmentData.Slot.ACCESSORY: "icon_slot_accessory",
+	EquipmentData.Slot.HELMET: "icon_slot_armor",
+	EquipmentData.Slot.CHEST: "icon_slot_armor",
+	EquipmentData.Slot.LEGGINGS: "icon_slot_armor",
+	EquipmentData.Slot.MIRROR: "icon_slot_accessory",
 }
 
 var _character_id: StringName = &""
@@ -449,10 +451,14 @@ func _slot_en(slot: int) -> String:
 	match slot:
 		EquipmentData.Slot.WEAPON:
 			return "weapon"
-		EquipmentData.Slot.ARMOR:
-			return "armor"
-		EquipmentData.Slot.ACCESSORY:
-			return "accessory"
+		EquipmentData.Slot.HELMET:
+			return "helmet"
+		EquipmentData.Slot.CHEST:
+			return "chest"
+		EquipmentData.Slot.LEGGINGS:
+			return "leggings"
+		EquipmentData.Slot.MIRROR:
+			return "mirror"
 		_:
 			return "slot"
 

@@ -23,8 +23,10 @@ const EQUIPMENT_SCREEN_PATH := "res://screens/equipment/EquipmentScreen.tscn"
 
 const SLOT_ICON_NAME := {
 	EquipmentData.Slot.WEAPON: "icon_slot_weapon",
-	EquipmentData.Slot.ARMOR: "icon_slot_armor",
-	EquipmentData.Slot.ACCESSORY: "icon_slot_accessory",
+	EquipmentData.Slot.HELMET: "icon_slot_armor",
+	EquipmentData.Slot.CHEST: "icon_slot_armor",
+	EquipmentData.Slot.LEGGINGS: "icon_slot_armor",
+	EquipmentData.Slot.MIRROR: "icon_slot_accessory",
 }
 
 var _selected: StringName = &""
