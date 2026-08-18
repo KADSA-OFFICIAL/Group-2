@@ -20,11 +20,23 @@ enum Kind {
 
 # 화자 이름. DIALOGUE 일 때만 쓴다.
 #
-# CharacterData 의 id 가 아니라 **표시 이름 문자열**이다.
-# 대본의 화자 중 상당수가 아직 로스터에 없거나(여신, 마을 사람들, 각종 수인)
-# 이름이 미정이기 때문이다("주인공", "소꿉친구", "???").
-# 로스터와의 연결이 정해지면 character_id 필드를 함께 두고 이 값을 표시용으로 남긴다.
+# **표시용 폴백**이다. character_id 가 비어 있는 줄(군중·독백·아직 정해지지 않은 인물)은
+# 이 문자열이 그대로 이름이 되고, 화면은 이름 해시로 색을 고른다.
 @export var speaker: String = ""
+
+# 이 화자가 게임에 정의된 인물이면 그 id. 비어 있어도 된다(기존 대본 그대로 동작).
+#
+# 왜 speaker 를 두고 id 를 따로 두는가:
+#   문자열이 정체성이면 오타가 곧 다른 인물이 된다. 실제로 chapter_3 에
+#   "마을사람들" 과 "마을 사람들" 이 함께 있어 서로 다른 색으로 무대에 섰다.
+#   id 가 있으면 이름·초상·색이 한 출처에서 나오고, 이름을 바꿔도 대본을 고칠 필요가 없다.
+#
+# 해석 순서는 CharacterDatabase -> EnemyDatabase 다(#187).
+#   적도 대사를 한다. 스토리 전용 인물을 위한 별도 cast 리소스는 두지 않았다 —
+#   지금 대본의 화자는 로스터나 적으로 전부 표현되고, 쓰지 않는 세 번째 출처를
+#   미리 만들면 그쪽이 곧 정본처럼 굳는다. 군중처럼 어디에도 넣기 곤란한 인물이
+#   실제로 필요해지면 그때 만들어 이 순서 앞에 끼운다.
+@export var character_id: StringName = &""
 
 @export_multiline var text: String = ""
 
@@ -70,6 +82,38 @@ enum ScreenEffect {
 @export var screen_effect: ScreenEffect = ScreenEffect.NONE
 
 
+# ===== 화자 조회 (Speaker lookup) =====
+#
+# "대본 한 줄의 화자가 누구인가"는 데이터의 책임이다. 화면이 여러 개가 되어도
+# (예: 대사 로그) 해석은 하나여야 하므로 여기 둔다.
+
+# 이 줄의 화자 정의. CharacterData 또는 EnemyData, 없으면 null.
+func get_character() -> Resource:
+	if String(character_id).is_empty():
+		return null
+	if CharacterDatabase.has_character(character_id):
+		return CharacterDatabase.get_character(character_id)
+	if EnemyDatabase.has_enemy(character_id):
+		return EnemyDatabase.get_enemy(character_id)
+	return null
+
+
+# 화면에 쓸 이름. 정의가 있으면 그쪽 표시 이름이 정본이다.
+func get_speaker_name() -> String:
+	var character := get_character()
+	if character != null and not character.display_name.is_empty():
+		return character.display_name
+	return speaker
+
+
+# 무대에서 이 화자를 식별하는 키.
+# id 가 있으면 id 다 — 같은 인물이 줄마다 다르게 적혀 있어도 하나로 묶인다.
+func get_speaker_key() -> String:
+	if not String(character_id).is_empty():
+		return String(character_id)
+	return speaker
+
+
 # 이 줄에서 인물이 어떤 반응을 할지 확정한다.
 #
 # AUTO 추론을 여기 두는 이유: "대본 한 줄을 어떻게 해석할 것인가"는 데이터의 책임이지
@@ -99,6 +143,11 @@ func validate() -> Array[String]:
 				problems.append("지문인데 text가 비어 있습니다.")
 		Kind.BATTLE:
 			pass
+
+	# 알 수 없는 id 는 조용히 폴백되어(문자열 이름) 저작자가 눈치채지 못한다.
+	# 오타를 저작 시점에 잡는다.
+	if not String(character_id).is_empty() and get_character() == null:
+		problems.append("알 수 없는 character_id 입니다: %s" % String(character_id))
 
 	# 화자가 없는 줄에 인물 반응을 지시해 봐야 반응할 인물이 없다.
 	# 저작 실수를 조용히 넘기지 않고 여기서 잡는다.
