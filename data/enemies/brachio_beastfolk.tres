@@ -7,12 +7,17 @@
 
 [sub_resource type="Resource" id="PlayerStats_brachio_beastfolk"]
 script = ExtResource("2_stats")
+hp = 2200
+strength = 60
+defense = 220
+intelligence = 100
+faith = 100
 
 [resource]
 script = ExtResource("1_enemydata")
 enemy_id = &"brachio_beastfolk"
 display_name = "브라키오 수인"
-description = "4방향 이동 모션이 저작된 근거리 추적형 적. 스텟은 PlayerStats 기본값(HP 1000 / 근력 100 / 방어 100)이고 AI 파라미터도 EnemyData 기본값이다 — 밸런스는 팀이 정한다. 개성/설정/고유 스킬 미정."
+description = "느리고 단단한 벽. 파티의 35% 속도로 다가와 잘 죽지 않지만, 원피해 DPS는 돌창병보다 낮아 순간에 녹이지 않는다. 처치에 걸리는 시간은 돌창병의 약 2.4배다(원거리딜러 단독 22대). 단단함의 주 레버는 방어다(물방 계수 x1.5). 근력은 돌창병보다 낮춰 위협도를 내렸다. 개성/설정/고유 스킬 미정."
 stats = SubResource("PlayerStats_brachio_beastfolk")
 sprite_texture = ExtResource("9_shape")
 tint = Color(0.55, 0.4, 0.3, 1)
@@ -23,5 +28,5 @@ walk_sprite_offset = Vector2(0, -183)
 ai_enabled = true
 detection_range = 300.0
 attack_range = 45.0
-move_speed_multiplier = 1.0
-attack_speed_multiplier = 1.0
+move_speed_multiplier = 0.35
+attack_speed_multiplier = 0.5
