@@ -16,6 +16,13 @@ extends Control
 #
 # 참고: docs/combat-screen-design.md §5, data/stages/README.md
 
+# 승리 조건 프리미티브 -> 아이콘 이름. 조건의 출처는 StageData.Objective 이고,
+# 그 조건이 어떤 그림을 쓰는지는 이 화면이 정한다(장비 슬롯 아이콘과 같은 규약).
+const OBJECTIVE_ICON_NAME := {
+	StageData.Objective.CLEAR: "icon_battle",
+	StageData.Objective.CAPTURE: "icon_capture",
+}
+
 var _list_holder: VBoxContainer
 
 
@@ -117,7 +124,7 @@ func _make_stage_card(id: StringName) -> Control:
 	# 타입 이름과 승리 조건 문구의 출처는 StageData 다.
 	title_row.add_child(HUDKit.tag_chip(stage.get_type_name(), UITheme.SKY))
 
-	info.add_child(HUDKit.label("승리 조건: %s" % stage.get_objectives_display_name(), 13, HUDKit.text_2()))
+	info.add_child(_objective_row(stage))
 
 	if not stage.description.is_empty():
 		var desc := HUDKit.label(stage.description, 12, HUDKit.text_3())
@@ -129,6 +136,36 @@ func _make_stage_card(id: StringName) -> Control:
 	button.pressed.connect(_on_launch_pressed)
 	row.add_child(button)
 	return card
+
+
+# 승리 조건 한 줄. 조건마다 아이콘 + 이름 칩을 둔다.
+#
+# 글자 한 줄("승리 조건: 소탕 + 점령")이었다. 카드가 늘어나면 이 줄은 설명문과
+# 같은 높이·같은 색이라 눈에 걸리지 않는다. 조건은 카드를 고르는 기준이므로
+# 아이콘으로 먼저 읽히게 한다. 이름 문구의 출처는 그대로 StageData 다.
+func _objective_row(stage: StageData) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+
+	row.add_child(HUDKit.label("승리 조건", 13, HUDKit.text_3()))
+
+	for objective in stage.get_objectives():
+		var chip := PanelContainer.new()
+		chip.add_theme_stylebox_override("panel", HUDKit.inset(4))
+		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(chip)
+
+		var box := HBoxContainer.new()
+		box.add_theme_constant_override("separation", 4)
+		chip.add_child(box)
+
+		var icon := HUDKit.make_icon(OBJECTIVE_ICON_NAME.get(objective, ""), 18)
+		if icon != null:
+			box.add_child(icon)
+
+		box.add_child(HUDKit.label(StageData.objective_to_name(objective), 13, HUDKit.text_2(), 600))
+
+	return row
 
 
 # ===== 조작 =====

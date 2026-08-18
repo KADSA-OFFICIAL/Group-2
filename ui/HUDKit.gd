@@ -364,7 +364,18 @@ static func make_header(title_ko: String, title_en: String, icon_name: String = 
 	row.add_theme_constant_override("separation", 14)
 
 	var back := Button.new()
-	back.text = "←"
+	# 아이콘 에셋(icon_back)이 있으면 그것을 쓴다.
+	# 문자 화살표는 에셋이 없을 때의 대체물이다 — 폰트마다 굵기·크기가 달라
+	# 옆에 붙는 두들 아이콘들과 톤이 어긋난다.
+	var back_icon := load_icon("icon_back")
+	if back_icon != null:
+		back.icon = back_icon
+		# 원본이 512px 라 그대로 두면 버튼을 뚫고 나온다.
+		# expand_icon 이 스타일박스 여백 안쪽에 맞춰 줄여 준다.
+		back.expand_icon = true
+		back.add_theme_constant_override("icon_max_width", 26)
+	else:
+		back.text = "←"
 	back.custom_minimum_size = Vector2(52, 52)
 	back.add_theme_font_size_override("font_size", 22)
 	back.add_theme_font_override("font", weight_font(0.5))
@@ -411,10 +422,17 @@ static func caption(text_en: String) -> Label:
 
 
 # 한글 섹션 제목 + 영문 병기. 왼쪽에 기울인 액센트 막대가 붙는다.
-static func section(title_ko: String, title_en: String, bar_color: Color = UITheme.ACCENT) -> Control:
+# icon_name 을 주면 막대와 제목 사이에 아이콘이 들어간다(헤더와 같은 순서다).
+static func section(title_ko: String, title_en: String, bar_color: Color = UITheme.ACCENT,
+		icon_name: String = "") -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	row.add_child(accent_bar(bar_color, 5, 26))
+
+	if not icon_name.is_empty():
+		var icon := make_icon(icon_name, 22)
+		if icon != null:
+			row.add_child(icon)
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 0)
@@ -443,8 +461,9 @@ static func value(text: String, size: int = SIZE_VALUE) -> Label:
 	return label(text, size, text_1(), 700)
 
 
-# 역할 칩. 색 + 한글 이름. 이름의 출처는 CharacterData 다.
-static func role_chip(role: int, icon_name: String = "") -> Control:
+# 역할 칩. 아이콘 + 색 + 한글 이름.
+# 이름의 출처는 CharacterData, 아이콘 이름의 출처는 UITheme.role_icon_name() 이다.
+static func role_chip(role: int) -> Control:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", chip(role_color(role)))
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -454,10 +473,9 @@ static func role_chip(role: int, icon_name: String = "") -> Control:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(row)
 
-	if not icon_name.is_empty():
-		var icon := make_icon(icon_name, 14)
-		if icon != null:
-			row.add_child(icon)
+	var icon := make_icon(UITheme.role_icon_name(role), 14)
+	if icon != null:
+		row.add_child(icon)
 
 	row.add_child(label(CharacterData.role_to_name(role), 11, text_on_category(), 700))
 	return p
@@ -487,14 +505,14 @@ static func portrait_block(character: CharacterData, min_size: Vector2) -> Contr
 
 
 # 캐릭터의 역할 칩들을 한 줄로. 겸직이면 2개가 나온다.
-static func role_chip_row(character: CharacterData, icon_names: Dictionary = {}) -> Control:
+static func role_chip_row(character: CharacterData) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if character == null:
 		return row
 	for role in character.get_roles():
-		row.add_child(role_chip(role, icon_names.get(role, "")))
+		row.add_child(role_chip(role))
 	return row
 
 
@@ -637,11 +655,17 @@ static func make_serial(text: String) -> Label:
 	return label(text, SIZE_CAPTION, _alpha(UITheme.INK, 0.30))
 
 
-static func make_icon(icon_name: String, size: int) -> TextureRect:
+# 아이콘 텍스처. Button.icon 처럼 노드가 아니라 Texture2D 를 받는 자리에서 쓴다.
+# 없으면 null 이다 — 호출부는 그때 글자 등으로 떨어진다.
+static func load_icon(icon_name: String) -> Texture2D:
 	var path := UITheme.icon_path(icon_name)
 	if path.is_empty():
 		return null
-	var texture := load(path) as Texture2D
+	return load(path) as Texture2D
+
+
+static func make_icon(icon_name: String, size: int) -> TextureRect:
+	var texture := load_icon(icon_name)
 	if texture == null:
 		return null
 	var rect := TextureRect.new()
@@ -674,9 +698,16 @@ static func make_cta(text_ko: String, text_en: String) -> Button:
 
 
 # 보조 버튼.
-static func make_ghost(text_ko: String, min_width: int = 120) -> Button:
+static func make_ghost(text_ko: String, min_width: int = 120, icon_name: String = "") -> Button:
 	var b := Button.new()
 	b.text = text_ko
+	if not icon_name.is_empty():
+		var icon := load_icon(icon_name)
+		if icon != null:
+			b.icon = icon
+			b.expand_icon = true
+			b.add_theme_constant_override("icon_max_width", 18)
+			b.add_theme_constant_override("h_separation", 6)
 	b.custom_minimum_size = Vector2(min_width, 50)
 	b.add_theme_font_size_override("font_size", 14)
 	b.add_theme_font_override("font", weight_font(0.35))
@@ -697,7 +728,7 @@ static func make_ghost(text_ko: String, min_width: int = 120) -> Button:
 # 반환값의 meta "body" 에 내용 컨테이너가 들어 있다.
 # overlay = true 면 전장 위에 얹히는 반투명 패널이 된다(전투 HUD 용).
 static func make_panel(title_ko: String, title_en: String, pad: int = 14,
-		overlay: bool = false) -> PanelContainer:
+		overlay: bool = false, icon_name: String = "") -> PanelContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", panel_overlay(pad) if overlay else panel(pad))
 
@@ -706,7 +737,7 @@ static func make_panel(title_ko: String, title_en: String, pad: int = 14,
 	p.add_child(box)
 
 	if not title_ko.is_empty():
-		box.add_child(section(title_ko, title_en))
+		box.add_child(section(title_ko, title_en, UITheme.ACCENT, icon_name))
 		box.add_child(rule())
 
 	var body := VBoxContainer.new()

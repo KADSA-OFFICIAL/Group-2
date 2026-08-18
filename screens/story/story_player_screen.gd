@@ -400,8 +400,8 @@ func _build_top_bar() -> void:
 	skip.pressed.connect(_finish)
 	row.add_child(skip)
 
-	var close := HUDKit.make_ghost("닫기", 80)
-	close.custom_minimum_size = Vector2(80, 44)
+	var close := HUDKit.make_ghost("닫기", 96, "icon_close")
+	close.custom_minimum_size = Vector2(96, 44)
 	close.pressed.connect(_close)
 	row.add_child(close)
 

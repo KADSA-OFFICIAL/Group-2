@@ -19,12 +19,6 @@ extends Control
 
 const EQUIPMENT_SCREEN_PATH := "res://screens/equipment/EquipmentScreen.tscn"
 
-const ROLE_ICON_NAME := {
-	CharacterData.Role.TANK: "icon_role_tank",
-	CharacterData.Role.RANGED_DEALER: "icon_role_ranged_dealer",
-	CharacterData.Role.BUFFER: "icon_role_buffer",
-}
-
 const SLOT_ICON_NAME := {
 	EquipmentData.Slot.WEAPON: "icon_slot_weapon",
 	EquipmentData.Slot.ARMOR: "icon_slot_armor",
@@ -278,7 +272,7 @@ func _make_roster_card(id: StringName) -> Control:
 		if PartySystem.has_character(id):
 			head.add_child(HUDKit.tag_chip("편성", UITheme.ACCENT.darkened(0.4)))
 
-		box.add_child(HUDKit.role_chip_row(character, ROLE_ICON_NAME))
+		box.add_child(HUDKit.role_chip_row(character))
 	else:
 		row.add_child(HUDKit.label(String(id), 13, HUDKit.text_2()))
 
@@ -321,7 +315,7 @@ func _refresh_preview() -> void:
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(name_label)
 
-	var chips := HUDKit.role_chip_row(character, ROLE_ICON_NAME)
+	var chips := HUDKit.role_chip_row(character)
 	(chips as HBoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_child(chips)
 
@@ -439,7 +433,7 @@ func _role_badge(role: int) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
 	badge.add_child(row)
-	var icon := HUDKit.make_icon(ROLE_ICON_NAME.get(role, ""), 16)
+	var icon := HUDKit.make_icon(UITheme.role_icon_name(role), 16)
 	if icon != null:
 		row.add_child(icon)
 	row.add_child(HUDKit.label(CharacterData.role_to_name(role), 11, HUDKit.text_2(), 600))

@@ -21,12 +21,6 @@ extends Control
 # 캐릭터 화면은 경로만 둔다. 그쪽도 이 화면을 참조하므로 서로 preload 하면 순환이 된다.
 const CHARACTERS_SCREEN_PATH := "res://screens/characters/CharactersScreen.tscn"
 
-const ROLE_ICON_NAME := {
-	CharacterData.Role.TANK: "icon_role_tank",
-	CharacterData.Role.RANGED_DEALER: "icon_role_ranged_dealer",
-	CharacterData.Role.BUFFER: "icon_role_buffer",
-}
-
 # 확정 전 임시 선택 (character_id). 순서가 곧 파티 순서다.
 var _selected: Array[StringName] = []
 
@@ -129,7 +123,7 @@ func _build_right() -> Control:
 	column.custom_minimum_size = Vector2(HUDKit.DETAIL_WIDTH, 0)
 	column.add_theme_constant_override("separation", 10)
 
-	var panel := HUDKit.make_panel("시너지 미리보기", "synergy preview")
+	var panel := HUDKit.make_panel("시너지 미리보기", "synergy preview", 14, false, "icon_synergy")
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(panel)
 
@@ -198,7 +192,7 @@ func _refresh_slots() -> void:
 				name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				box.add_child(name_label)
 
-				box.add_child(HUDKit.role_chip_row(character, ROLE_ICON_NAME))
+				box.add_child(HUDKit.role_chip_row(character))
 		else:
 			var empty := PanelContainer.new()
 			empty.add_theme_stylebox_override("panel", HUDKit.inset(10))
@@ -236,6 +230,12 @@ func _refresh_synergy() -> void:
 		# 활성 카드는 액센트로 꽉 차 있다. 그 위 글자를 액센트로 두면 안 보인다.
 		var head_color: Color = HUDKit.text_on_accent() if active else HUDKit.text_1()
 		var sub_color: Color = HUDKit.text_on_accent() if active else HUDKit.text_3()
+
+		# 카드가 어느 역할의 것인지는 이름 글자보다 아이콘이 먼저 읽힌다.
+		# 아이콘 이름의 출처는 UITheme 다(여기서 대응표를 다시 적지 않는다).
+		var icon := HUDKit.make_icon(UITheme.role_icon_name(int(entry.get("role", -1))), 20)
+		if icon != null:
+			head.add_child(icon)
 
 		var name_label := HUDKit.label(String(entry.get("name", "?")), 15, head_color, 700)
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -280,7 +280,7 @@ func _make_roster_card(id: StringName) -> Control:
 		row.add_child(box)
 
 		box.add_child(HUDKit.label(character.display_name, 15, HUDKit.text_1(), 700))
-		box.add_child(HUDKit.role_chip_row(character, ROLE_ICON_NAME))
+		box.add_child(HUDKit.role_chip_row(character))
 	else:
 		row.add_child(HUDKit.label(String(id), 13, HUDKit.text_2()))
 
