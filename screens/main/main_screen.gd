@@ -164,10 +164,12 @@ func _fill_art() -> void:
 	if character == null:
 		return
 
-	if character.portrait != null:
+	# 어떤 초상을 쓸지는 PortraitSystem 이 정한다(캐릭터 화면에서 고른 값 > 저작 기본값).
+	var portrait := PortraitSystem.get_portrait(character)
+	if portrait != null:
 		var art := TextureRect.new()
 		art.set_anchors_preset(Control.PRESET_FULL_RECT)
-		art.texture = character.portrait
+		art.texture = portrait
 		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		# 화면을 꽉 채우되 비율은 유지한다(넘치는 부분은 잘린다).
 		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
