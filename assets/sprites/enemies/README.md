@@ -4,8 +4,10 @@
 
 | 파일 | 내용 |
 |---|---|
-| `stone_spearman_walk.png` | 4방향 x 3프레임 워크 시트 (셀 524x492, 시트 1572x1968) |
+| `stone_spearman_walk.png` | 돌창병. 4방향 x 3프레임 워크 시트 (셀 524x492, 시트 1572x1968) |
 | `stone_spearman_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+| `brachio_beastfolk_walk.png` | 브라키오 수인. 4방향 x 3프레임 워크 시트 (셀 424x496, 시트 1272x1984) |
+| `brachio_beastfolk_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
 
 ## 시트 규약
 
@@ -23,7 +25,7 @@
 **프레임 순서**는 `0 → 1 → 2` 반복이다. 0번과 2번이 좌·우 접지 포즈이고 1번이 중간 스트라이드라
 그대로 이으면 표준 3프레임 보행이 된다. **0번이 정지 포즈**이며, 적이 멈추면 여기에 고정된다.
 
-이름 목록의 단일 출처는 [`EnemyData.WALK_ANIMATIONS`](../../../entities/enemies/EnemyData.gd)다.
+이름 목록과 방향 판정의 단일 출처는 [`WalkAnimation`](../../../entities/shared/WalkAnimation.gd)다(적과 플레이어가 같이 쓴다).
 이 규약만 지키면 시트를 갈아끼워도 스크립트를 고칠 필요가 없다.
 
 ## 배정 규칙
@@ -50,7 +52,26 @@ offset.y = 14 / 0.25 - 237 = -181
 
 배율 `0.25`에서 캐릭터 키는 `474 x 0.25 ≈ 119px`로, 파티 멤버(64px 도형 x 2 = 128px)와 비슷하다.
 
-## 원본에서 이 시트를 만든 방법
+## 새 시트를 추가할 때
+
+[`tools/normalize_walk_sheet.gd`](../../../tools/normalize_walk_sheet.gd)가 아래 정규화를 대신 한다.
+
+```bash
+godot --headless --path . --script res://tools/normalize_walk_sheet.gd -- <입력png> <출력res경로>
+```
+
+도구는 셀 크기·발 기준선·`SpriteFrames` region·`walk_sprite_offset` 계산식을 출력하고,
+**내부 절단선 위에 내용 픽셀이 있으면**(= 프레임이 겹쳐 잘렸다는 뜻) 경고를 낸다.
+프레임 폭 차이는 잘림의 근거가 아니라 포즈 차이이므로 정보성 안내로만 나온다.
+
+### 시트별 손실 여부
+
+| 시트 | 프레임 겹침 | 손실 |
+|---|---|---|
+| `stone_spearman_walk.png` | 뒷모습 행에서 겹침 | 머리카락 끝 7px·9px (폭 507px의 1.5% 미만) |
+| `brachio_beastfolk_walk.png` | 없음 | **없음** |
+
+## 원본에서 돌창병 시트를 만든 방법
 
 생성기 산출물(1603x2200)은 그대로 쓸 수 없었다.
 
@@ -71,6 +92,7 @@ offset.y = 14 / 0.25 - 237 = -181
 
 **알려진 손실**: 3행(뒷모습)의 0·1번 프레임은 옆 프레임과 겹친 구간을 열 밀도 골짜기에서
 잘랐다. 바깥쪽 머리카락 끝이 각각 7px, 9px(전체 폭 507px의 1.5% 미만) 빠져 있다.
+브라키오 수인 시트는 프레임이 겹치지 않아 이 손실이 없다.
 
 임포트는 `mipmaps/generate=true`로 두었다. 원본이 크고 화면에서는 0.25배로 줄여 그리므로
 밉맵이 없으면 이동할 때 픽셀이 지글거린다.

@@ -4,13 +4,13 @@
 
 [resource]
 script = ExtResource("1_equipmentdata")
-equipment_id = &"stone_axe"
-display_name = "돌도끼"
-description = "스톤 티어 물리 무기. 물리 공격력을 올린다. 제작 비용은 [임시값]이며 밸런싱 대상이다."
+equipment_id = &"stone_staff"
+display_name = "돌 지팡이"
+description = "스톤 티어 마법 무기. 마법 공격력을 올린다. 제작 비용은 [임시값]이며 밸런싱 대상이다."
 slot = 0
 tier = 1
-attack_type = 1
-physical_attack_bonus = 6
+attack_type = 2
+magic_attack_bonus = 6
 craft_cost = {
 "gold": 100,
 "stone": 8

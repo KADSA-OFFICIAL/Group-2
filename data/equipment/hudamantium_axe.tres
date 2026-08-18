@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/equipment/EquipmentData.gd" id="1_equipmentdata"]
+
+[resource]
+script = ExtResource("1_equipmentdata")
+equipment_id = &"hudamantium_axe"
+display_name = "후다만티움 도끼"
+description = "후다만티움 티어 물리 무기(스톤 x2.56). 물리 공격력을 올린다. 제작 비용은 [임시값]이며 밸런싱 대상이다."
+slot = 0
+tier = 3
+attack_type = 1
+physical_attack_bonus = 15
+craft_cost = {
+"coal": 5,
+"gold": 520,
+"hudamantium": 6
+}

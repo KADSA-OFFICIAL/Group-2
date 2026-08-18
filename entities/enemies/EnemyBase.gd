@@ -44,10 +44,7 @@ var _runtime_stats: PlayerStats = null
 # 시트가 없는 적(TrainingGoblin 등)은 지금까지와 똑같이 Sprite2D 정지 이미지로 남는다.
 var _anim_sprite: AnimatedSprite2D = null
 
-# 이 값보다 느리면 "멈춤"으로 본다.
-# move_and_slide()가 벽에 붙었을 때 아주 작은 잔여 속도를 남기는데,
-# 0과 정확히 비교하면 제자리에서 발만 구르게 된다.
-const WALK_STOP_SPEED := 1.0
+# 멈춤 판정 임계값과 방향 판정은 WalkAnimation이 소유한다(플레이어와 같은 규약).
 
 # 유효한 스텟 출처를 반환한다.
 # data가 설정되어 있으면 그 정의의 스텟이 사본의 바탕이 된다(적 정의가 단일 출처).
@@ -102,7 +99,7 @@ func _apply_data() -> void:
 		_anim_sprite.offset = data.walk_sprite_offset
 		# 첫 프레임은 정면 정지 포즈로 둔다. animation을 지정하지 않으면 기본값 &"default"를
 		# 찾다가 없어서 경고가 난다.
-		_anim_sprite.animation = EnemyData.WALK_ANIMATIONS[0]
+		_anim_sprite.animation = WalkAnimation.ANIMATIONS[WalkAnimation.DOWN]
 		_anim_sprite.frame = 0
 		_anim_sprite.visible = true
 		if sprite is Sprite2D:
@@ -167,7 +164,7 @@ func _update_walk_animation() -> void:
 	if _anim_sprite == null:
 		return
 
-	if velocity.length() < WALK_STOP_SPEED:
+	if not WalkAnimation.is_walking(velocity):
 		# 멈추면 재생을 세우고 정지 포즈(0번 프레임)로 고정한다.
 		# animation은 그대로 두어 마지막으로 향했던 방향을 유지한다
 		# — 멈출 때마다 정면으로 홱 돌아보면 어색하기 때문이다.
@@ -176,19 +173,9 @@ func _update_walk_animation() -> void:
 			_anim_sprite.frame = 0
 		return
 
-	var anim := walk_animation_for(velocity)
+	var anim := WalkAnimation.animation_for(velocity)
 	if _anim_sprite.animation != anim or not _anim_sprite.is_playing():
 		_anim_sprite.play(anim)
-
-
-# 이동 방향 -> 재생할 애니메이션 이름. 4방향 시트이므로 성분이 큰 축을 주 방향으로 삼는다.
-# 대각선(|x| == |y|)에서는 좌우를 택한다: 쿼터뷰에서 옆모습이 더 잘 읽히고,
-# 경계에서 상하/좌우가 번갈아 튀는 것도 막는다.
-# 이름 목록의 출처는 EnemyData.WALK_ANIMATIONS다(여기서 문자열을 다시 적지 않는다).
-func walk_animation_for(direction: Vector2) -> StringName:
-	if absf(direction.x) >= absf(direction.y):
-		return EnemyData.WALK_ANIMATIONS[3] if direction.x > 0.0 else EnemyData.WALK_ANIMATIONS[1]
-	return EnemyData.WALK_ANIMATIONS[0] if direction.y > 0.0 else EnemyData.WALK_ANIMATIONS[2]
 
 
 # 추적 대상을 결정한다.

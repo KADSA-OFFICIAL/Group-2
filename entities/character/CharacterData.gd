@@ -50,8 +50,26 @@ enum SecondaryRole {
 
 # ===== 외형 (Appearance) =====
 @export var sprite_texture: Texture2D = null
+## 흰색 도형 플레이스홀더를 칠하는 색이다. 아래 walk_frames(실제 아트)에는 입히지 않는다
+## — 실제 아트는 자기 색을 가지므로 곱하면 색이 죽는다.
+## 메타 화면(캐릭터/편성/주문 등)은 이 색을 도형 스와치에 계속 쓴다.
 @export var tint: Color = Color.WHITE
 @export var sprite_scale: Vector2 = Vector2(2, 2)
+
+# ----- 워크 애니메이션 (Walk animation) -----
+# 4방향 x 3프레임 워크 사이클. 씬에 AnimatedSprite2D가 있고 이 값이 채워져 있으면
+# 그쪽이 외형을 맡고 위 sprite_texture(도형 플레이스홀더)는 숨는다.
+# null이면 지금까지와 똑같이 Sprite2D로 정지 이미지를 그린다(하위 호환).
+#
+# 애니메이션 이름과 방향 판정의 단일 출처는 WalkAnimation이다(적과 플레이어가 같이 쓴다).
+# 규약만 지키면 시트를 갈아끼워도 스크립트를 고칠 필요가 없다.
+# 시트 저작 규약: assets/sprites/characters/README.md
+@export var walk_frames: SpriteFrames = null
+## 워크 시트 표시 배율. 시트마다 원본 해상도가 달라 sprite_texture와 따로 둔다.
+@export var walk_sprite_scale: Vector2 = Vector2(1, 1)
+## 워크 시트 표시 오프셋(px, 배율 적용 전). 셀 안의 발 기준선을 노드 원점에 맞추는 값이다.
+## 시트 셀이 캐릭터보다 크므로 이 값이 없으면 스프라이트가 발밑이 아니라 몸 한가운데에 걸린다.
+@export var walk_sprite_offset: Vector2 = Vector2.ZERO
 
 # 메타 화면(메인화면 등)에서 크게 보여주는 전신 일러스트.
 # 전투용 sprite_texture 와 용도가 다르므로 필드를 나눈다.
@@ -63,8 +81,10 @@ enum SecondaryRole {
 # 슬롯당 1개 장착. 장착/해제 시 스텟에 보너스를 합산/원복한다.
 # 착탈 오케스트레이션·제작·인벤토리는 EquipmentSystem(autoload)이 담당한다.
 @export var equipped_weapon: EquipmentData = null
-@export var equipped_armor: EquipmentData = null
-@export var equipped_accessory: EquipmentData = null
+@export var equipped_helmet: EquipmentData = null
+@export var equipped_chest: EquipmentData = null
+@export var equipped_leggings: EquipmentData = null
+@export var equipped_mirror: EquipmentData = null
 
 # ----- 확장 가이드 (Extensibility) -----
 # 새 항목은 위 섹션 중 알맞은 곳에 @export 필드를 "기본값과 함께" 추가한다.
@@ -146,10 +166,14 @@ func equip(item: EquipmentData) -> void:
 	match item.slot:
 		EquipmentData.Slot.WEAPON:
 			equipped_weapon = item
-		EquipmentData.Slot.ARMOR:
-			equipped_armor = item
-		EquipmentData.Slot.ACCESSORY:
-			equipped_accessory = item
+		EquipmentData.Slot.HELMET:
+			equipped_helmet = item
+		EquipmentData.Slot.CHEST:
+			equipped_chest = item
+		EquipmentData.Slot.LEGGINGS:
+			equipped_leggings = item
+		EquipmentData.Slot.MIRROR:
+			equipped_mirror = item
 	_apply_equipment_to_stats()
 
 # 특정 슬롯의 장비를 해제한다. 해제 후 스텟 보너스를 재계산한다.
@@ -157,10 +181,14 @@ func unequip(slot: EquipmentData.Slot) -> void:
 	match slot:
 		EquipmentData.Slot.WEAPON:
 			equipped_weapon = null
-		EquipmentData.Slot.ARMOR:
-			equipped_armor = null
-		EquipmentData.Slot.ACCESSORY:
-			equipped_accessory = null
+		EquipmentData.Slot.HELMET:
+			equipped_helmet = null
+		EquipmentData.Slot.CHEST:
+			equipped_chest = null
+		EquipmentData.Slot.LEGGINGS:
+			equipped_leggings = null
+		EquipmentData.Slot.MIRROR:
+			equipped_mirror = null
 	_apply_equipment_to_stats()
 
 # 슬롯에 장착된 장비를 반환한다. 없으면 null.
@@ -168,10 +196,14 @@ func get_equipped(slot: EquipmentData.Slot) -> EquipmentData:
 	match slot:
 		EquipmentData.Slot.WEAPON:
 			return equipped_weapon
-		EquipmentData.Slot.ARMOR:
-			return equipped_armor
-		EquipmentData.Slot.ACCESSORY:
-			return equipped_accessory
+		EquipmentData.Slot.HELMET:
+			return equipped_helmet
+		EquipmentData.Slot.CHEST:
+			return equipped_chest
+		EquipmentData.Slot.LEGGINGS:
+			return equipped_leggings
+		EquipmentData.Slot.MIRROR:
+			return equipped_mirror
 	return null
 
 # 장착된 모든 장비의 스텟 보너스를 합산해 Dictionary로 반환한다.
@@ -182,8 +214,10 @@ func get_equipment_bonuses() -> Dictionary:
 		"physical_defense": 0,
 		"magic_defense": 0,
 		"hp": 0,
+		"move_speed_percent": 0.0,
+		"goddess_boost": 0.0,
 	}
-	for item in [equipped_weapon, equipped_armor, equipped_accessory]:
+	for item in [equipped_weapon, equipped_helmet, equipped_chest, equipped_leggings, equipped_mirror]:
 		if item == null:
 			continue
 		totals["physical_attack"] += item.physical_attack_bonus
@@ -191,6 +225,8 @@ func get_equipment_bonuses() -> Dictionary:
 		totals["physical_defense"] += item.physical_defense_bonus
 		totals["magic_defense"] += item.magic_defense_bonus
 		totals["hp"] += item.hp_bonus
+		totals["move_speed_percent"] += item.move_speed_bonus
+		totals["goddess_boost"] += item.goddess_skill_boost_bonus
 	return totals
 
 # 장착 상태의 보너스 합계를 PlayerStats(단일 출처)에 밀어 넣는다.
@@ -198,7 +234,8 @@ func _apply_equipment_to_stats() -> void:
 	var b := get_equipment_bonuses()
 	get_stats().set_equipment_bonuses(
 		b["physical_attack"], b["magic_attack"],
-		b["physical_defense"], b["magic_defense"], b["hp"]
+		b["physical_defense"], b["magic_defense"], b["hp"],
+		b["move_speed_percent"], b["goddess_boost"]
 	)
 
 # 데이터 무결성 점검 (id가 비었는지 등). 문제 메시지 배열을 반환한다.
@@ -211,4 +248,10 @@ func validate() -> Array[String]:
 	# 겸직인데 주 역할과 같으면 카운트가 중복되므로 데이터 오류다.
 	if secondary_role != SecondaryRole.NONE and get_secondary_role_as_role() == role:
 		problems.append("secondary_role이 주 역할과 같습니다: " + get_role_name())
+
+	# 워크 시트를 지정했다면 네 방향이 모두 있어야 한다.
+	# 하나라도 빠지면 그 방향으로 이동할 때 재생할 애니메이션이 없어 외형이 멈춘다.
+	for anim in WalkAnimation.missing_animations(walk_frames):
+		problems.append("walk_frames에 '%s' 애니메이션이 없습니다." % anim)
+
 	return problems

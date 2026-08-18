@@ -1,7 +1,7 @@
 extends Node
 
 # 재화 정식 목록(단일 출처). 다른 시스템(SaveSystem 등)은 이 상수를 참조한다.
-# 장비 제작 재료: stone, tin, copper, iron_ore, coal
+# 장비 제작 재료: stone, tin, copper, iron_ore, coal, hudamantium
 # 통화: gold
 # 특수 재화: faith_stone
 const DEFAULT_CURRENCIES := {
@@ -11,7 +11,8 @@ const DEFAULT_CURRENCIES := {
 	"iron_ore": 0,
 	"coal": 0,
 	"gold": 0,
-	"faith_stone": 0
+	"faith_stone": 0,
+	"hudamantium": 0
 }
 
 # 저장 스키마에서 재화가 들어가는 키. 기존 세이브 파일과 같은 키를 유지한다.

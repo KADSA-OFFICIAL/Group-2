@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/equipment/EquipmentData.gd" id="1_equipmentdata"]
+
+[resource]
+script = ExtResource("1_equipmentdata")
+equipment_id = &"iron_leggings"
+display_name = "철 레깅스"
+description = "철 티어 레깅스(스톤 x1.6). HP와 이동속도를 올린다. 제작 비용은 [임시값]이며 밸런싱 대상이다."
+slot = 3
+tier = 2
+hp_bonus = 24
+move_speed_bonus = 0.08
+craft_cost = {
+"coal": 3,
+"gold": 240,
+"iron_ore": 8
+}

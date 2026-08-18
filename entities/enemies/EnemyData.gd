@@ -27,6 +27,15 @@ class_name EnemyData
 # (faith/intelligence는 적에게 미사용이며 기본값을 유지한다.)
 @export var stats: PlayerStats = PlayerStats.new()
 
+# ===== 밸런스 (Balance, 하이브리드 C #157) =====
+# balance_tier > 0 이면 hp/strength/defense를 BalanceReference 기준선 × 개체 배수로 파생한다
+# (EnemyDatabase가 로드 시 apply_balance() 호출). 0이면 위 stats의 수기 값을 그대로 쓴다(하위 호환).
+# 개체 배수로 개성을 준다: 예) 브라키오 = 고체력·고근접딜, 서아 = 표준(전부 1.0).
+@export var balance_tier: int = 0
+@export var hp_multiplier: float = 1.0
+@export var attack_multiplier: float = 1.0
+@export var defense_multiplier: float = 1.0
+
 # ===== 스킬 (Skills) =====
 @export var skills: Array[SkillData] = []
 
@@ -38,12 +47,22 @@ class_name EnemyData
 @export var tint: Color = Color.WHITE
 @export var sprite_scale: Vector2 = Vector2(2, 2)
 
+## 프로필(초상) 이미지. 적 정보 UI·도감·조우 연출 등 **화면 밖 표시**에 쓴다.
+##
+## sprite_texture와 용도가 다르다:
+##   - sprite_texture: 전투 화면에 서 있는 인게임 스프라이트 (tint/sprite_scale이 함께 적용됨)
+##   - portrait:       초상. 인게임 스프라이트와 독립이며 tint/sprite_scale의 영향을 받지 않는다.
+##
+## 기본값 null이라 프로필이 없는 적도 그대로 로드된다(하위 호환).
+## 표시하는 쪽은 null을 확인하고 대체 표시를 준비한다.
+@export var portrait: Texture2D = null
+
 # ----- 워크 애니메이션 (Walk animation) -----
 # 4방향 x 3프레임 워크 사이클. 씬에 AnimatedSprite2D가 있고 이 값이 채워져 있으면
 # 그쪽이 외형을 맡고 위 sprite_texture(도형 플레이스홀더)는 숨는다.
 # null이면 지금까지와 똑같이 Sprite2D로 정지 이미지를 그린다(하위 호환).
 #
-# 애니메이션 이름은 아래 WALK_ANIMATIONS가 단일 출처다. EnemyBase가 이 이름으로 재생하므로
+# 애니메이션 이름과 방향 판정의 단일 출처는 WalkAnimation이다(적과 플레이어가 같이 쓴다).
 # 규약만 지키면 시트를 갈아끼워도 스크립트를 고칠 필요가 없다.
 @export var walk_frames: SpriteFrames = null
 ## 워크 시트 표시 배율. 시트마다 원본 해상도가 달라 sprite_texture와 따로 둔다.
@@ -51,10 +70,6 @@ class_name EnemyData
 ## 워크 시트 표시 오프셋(px, 배율 적용 전). 셀 안의 발 기준선을 노드 원점에 맞추는 값이다.
 ## 시트 셀이 캐릭터보다 크므로 이 값이 없으면 스프라이트가 발밑이 아니라 몸 한가운데에 걸린다.
 @export var walk_sprite_offset: Vector2 = Vector2.ZERO
-
-## 워크 시트가 가져야 할 애니메이션 이름. 방향 판정과 재생이 모두 이 목록을 따른다.
-## 순서는 화면 방향 기준 하/좌/상/우이며, Godot의 +y가 아래인 좌표계에 맞춘 것이다.
-const WALK_ANIMATIONS: Array[StringName] = [&"walk_down", &"walk_left", &"walk_up", &"walk_right"]
 
 # ===== AI 행동 (AI Behavior) =====
 # 적의 행동 파라미터. EnemyBase의 추적/공격 AI가 이 값을 읽는다.
@@ -94,6 +109,17 @@ func get_stats() -> PlayerStats:
 		stats = PlayerStats.new()
 	return stats
 
+# 밸런스 기준선 × 개체 배수로 hp/strength/defense를 파생한다 (하이브리드 C).
+# balance_tier <= 0 이면 수기 스탯을 유지한다. faith/intelligence/speeds는 건드리지 않는다.
+func apply_balance() -> void:
+	if balance_tier <= 0:
+		return
+	var base := BalanceReference.enemy_baseline(balance_tier)
+	var s := get_stats()
+	s.hp = int(round(base["hp"] * hp_multiplier))
+	s.strength = int(round(base["strength"] * attack_multiplier))
+	s.defense = int(round(base["defense"] * defense_multiplier))
+
 # skill_id로 스킬을 찾는다. 없으면 null.
 func find_skill(id: StringName) -> SkillData:
 	for skill in skills:
@@ -126,9 +152,7 @@ func validate() -> Array[String]:
 
 	# 워크 시트를 지정했다면 네 방향이 모두 있어야 한다.
 	# 하나라도 빠지면 그 방향으로 이동할 때 재생할 애니메이션이 없어 외형이 멈춘다.
-	if walk_frames != null:
-		for anim in WALK_ANIMATIONS:
-			if not walk_frames.has_animation(anim):
-				problems.append("walk_frames에 '%s' 애니메이션이 없습니다." % anim)
+	for anim in WalkAnimation.missing_animations(walk_frames):
+		problems.append("walk_frames에 '%s' 애니메이션이 없습니다." % anim)
 
 	return problems

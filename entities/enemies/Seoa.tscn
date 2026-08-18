@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://entities/enemies/EnemyBase.gd" id="1_enemybase"]
+[ext_resource type="Resource" path="res://data/enemies/seoa.tres" id="2_data"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1"]
+radius = 10.0
+height = 28.0
+
+[node name="Seoa" type="CharacterBody2D" groups=["enemy"]]
+script = ExtResource("1_enemybase")
+data = ExtResource("2_data")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CapsuleShape2D_1")

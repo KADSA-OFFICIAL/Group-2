@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/brachio_beastfolk_walk_frames.tres" id="10_walk"]
+
+[sub_resource type="Resource" id="PlayerStats_brachio_beastfolk"]
+script = ExtResource("2_stats")
+hp = 2400
+strength = 91
+defense = 144
+intelligence = 100
+faith = 100
+
+[resource]
+script = ExtResource("1_enemydata")
+enemy_id = &"brachio_beastfolk"
+display_name = "브라키오 수인"
+description = "고체력 근접 딜러. 느리게(파티 35% 속도) 다가오지만 체력이 높고 근접 피해가 세다. 하이브리드 C 기준 표준 적(서아) 대비 HP x2.0, 근접 공격 x1.4, 방어 x1.2로 '때리는 브루저'다. 개성/설정/고유 스킬 미정."
+stats = SubResource("PlayerStats_brachio_beastfolk")
+balance_tier = 1
+hp_multiplier = 2.0
+attack_multiplier = 1.4
+defense_multiplier = 1.2
+sprite_texture = ExtResource("9_shape")
+tint = Color(0.55, 0.4, 0.3, 1)
+sprite_scale = Vector2(1.5, 1.5)
+walk_frames = ExtResource("10_walk")
+walk_sprite_scale = Vector2(0.25, 0.25)
+walk_sprite_offset = Vector2(0, -183)
+ai_enabled = true
+detection_range = 300.0
+attack_range = 45.0
+move_speed_multiplier = 0.35
+attack_speed_multiplier = 0.5
