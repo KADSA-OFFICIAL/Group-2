@@ -707,8 +707,11 @@ static func body_of(panel_node: PanelContainer) -> VBoxContainer:
 #
 # 규칙 둘: **짧게.** 화면은 몇 번이고 다시 들어오는 곳이라 긴 연출은 곧 방해가 된다.
 
-const ENTER_TIME := 0.22        # 한 요소가 나타나는 데 걸리는 시간
-const ENTER_STEP := 0.05        # 요소 사이의 시차
+# 진입 시간은 **화면 전환 페이드 위에 겹쳐** 돈다(#139). 둘을 합친 것이 체감 시간이다.
+# 처음 잡은 0.22 / 0.05 는 기둥이 4개인 화면에서 마지막 것이 0.37초에 끝나서,
+# 전환 페이드까지 더하면 화면 하나 여는 데 0.5초가 넘었다. 시차 연출은 남기고 줄인다.
+const ENTER_TIME := 0.14        # 한 요소가 나타나는 데 걸리는 시간
+const ENTER_STEP := 0.03        # 요소 사이의 시차
 const ENTER_SCALE := 0.985      # 시작 크기. 눈에 띄면 안 되고 "가라앉았다 뜨는" 정도만
 const COUNT_TIME := 0.45        # 수치 카운트업 시간
 const HOVER_SCALE := 1.03       # 호버 확대율
