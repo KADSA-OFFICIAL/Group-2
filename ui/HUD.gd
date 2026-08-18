@@ -36,6 +36,8 @@ var _stack_fill: ColorRect
 var _stack_track: Control
 var _execute_row: Control
 var _enemy_label: Label
+# 역할 패널. 안의 세 줄이 전부 숨으면 제목만 남은 빈 판이 되므로 통째로 숨긴다.
+var _mechanics_panel: PanelContainer
 
 
 func _ready() -> void:
@@ -97,14 +99,14 @@ func _build() -> void:
 
 
 func _build_party_panel() -> PanelContainer:
-	var panel := HUDKit.make_panel("파티", "PARTY", 10)
+	var panel := HUDKit.make_panel("파티", "PARTY", 10, true)
 	var body := HUDKit.body_of(panel)
 	body.name = "PartyBody"
 	return panel
 
 
 func _build_mechanics_panel() -> PanelContainer:
-	var panel := HUDKit.make_panel("역할", "ROLE", 10)
+	var panel := HUDKit.make_panel("역할", "ROLE", 10, true)
 	var body := HUDKit.body_of(panel)
 
 	_mark_row = _make_icon_row("icon_mark", "표식", "")
@@ -117,6 +119,7 @@ func _build_mechanics_panel() -> PanelContainer:
 	_execute_row = _make_icon_row("icon_execute", "처형 가능", "")
 	body.add_child(_execute_row)
 
+	_mechanics_panel = panel
 	return panel
 
 
@@ -135,7 +138,7 @@ func _build_stack_row() -> Control:
 	row.add_child(_stack_track)
 
 	_stack_fill = ColorRect.new()
-	_stack_fill.color = UITheme.ACCENT
+	_stack_fill.color = UITheme.ACCENT  # 면을 칠하는 것이라 원본 앰버가 맞다
 	_stack_fill.custom_minimum_size = Vector2(0, 6)
 	_stack_track.add_child(_stack_fill)
 
@@ -164,7 +167,7 @@ func _make_icon_row(icon_name: String, text_ko: String, value_text: String) -> C
 
 
 func _build_synergy_panel() -> PanelContainer:
-	var panel := HUDKit.make_panel("시너지", "SYNERGY", 10)
+	var panel := HUDKit.make_panel("시너지", "SYNERGY", 10, true)
 	var body := HUDKit.body_of(panel)
 
 	for role in [CharacterData.Role.TANK, CharacterData.Role.RANGED_DEALER, CharacterData.Role.BUFFER]:
@@ -185,7 +188,7 @@ func _build_synergy_panel() -> PanelContainer:
 
 
 func _build_enemy_panel() -> PanelContainer:
-	var panel := HUDKit.make_panel("", "", 10)
+	var panel := HUDKit.make_panel("", "", 10, true)
 	var body := HUDKit.body_of(panel)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
@@ -230,14 +233,14 @@ func _rebuild_party_rows() -> void:
 
 func _make_party_row(index: int, character: CharacterData) -> Dictionary:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", HUDKit.card(false))
+	panel.add_theme_stylebox_override("panel", HUDKit.card_overlay(false))
 
 	var box := HBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	panel.add_child(box)
 
 	# 전환 키 번호
-	box.add_child(HUDKit.label(str(index + 1), 13, UITheme.ACCENT, 700))
+	box.add_child(HUDKit.label(str(index + 1), 13, HUDKit.accent_text(), 700))
 
 	var text_col := VBoxContainer.new()
 	text_col.add_theme_constant_override("separation", 0)
@@ -273,7 +276,7 @@ func _update_party() -> void:
 		var controlled := PartySystem.is_controlled(index)
 
 		# 조종 중인 멤버를 카드 테두리로 강조한다(HUDKit의 선택 표시 규칙).
-		(row["panel"] as PanelContainer).add_theme_stylebox_override("panel", HUDKit.card(controlled))
+		(row["panel"] as PanelContainer).add_theme_stylebox_override("panel", HUDKit.card_overlay(controlled))
 		(row["name"] as Label).add_theme_color_override(
 			"font_color", HUDKit.text_1() if controlled else HUDKit.text_3())
 
@@ -291,6 +294,13 @@ func _update_mechanics() -> void:
 	_update_mark(controlled)
 	_update_stack(controlled)
 	_update_execute(controlled)
+
+	# 세 줄이 전부 숨었으면 제목만 남은 빈 판이 전장을 가린다. 판째로 숨긴다.
+	if _mechanics_panel != null:
+		_mechanics_panel.visible = (
+			(_mark_row != null and _mark_row.visible)
+			or (_stack_row != null and _stack_row.visible)
+			or (_execute_row != null and _execute_row.visible))
 
 	if _enemy_label != null and GameManager != null:
 		_enemy_label.text = str(GameManager.get_all_enemies().size())
@@ -401,7 +411,7 @@ func _update_synergy() -> void:
 		label.text = "%d · %s" % [count, SynergySystem.tier_to_name(tier)]
 		# 활성이면 액센트, 비활성이면 흐리게. 2카운트 비활성이 눈에 띄어야 한다.
 		label.add_theme_color_override(
-			"font_color", UITheme.ACCENT if tier != SynergySystem.Tier.NONE else HUDKit.text_3())
+			"font_color", HUDKit.accent_text() if tier != SynergySystem.Tier.NONE else HUDKit.text_3())
 
 
 # ===== 조회 (Lookup) =====

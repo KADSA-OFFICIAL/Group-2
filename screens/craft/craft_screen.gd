@@ -81,9 +81,13 @@ func _build() -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(body)
 
-	body.add_child(_build_recipe_panel())
-	body.add_child(_build_center())
-	body.add_child(_build_right())
+	var _col0 := _build_recipe_panel()
+	body.add_child(_col0)
+	var _col1 := _build_center()
+	body.add_child(_col1)
+	var _col2 := _build_right()
+	body.add_child(_col2)
+
 
 
 func _build_recipe_panel() -> Control:
@@ -141,7 +145,7 @@ func _build_right() -> Control:
 	_material_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_material_body)
 
-	_notice = HUDKit.label("", 12, UITheme.ACCENT)
+	_notice = HUDKit.label("", 13, HUDKit.accent_text(), 700)
 	column.add_child(_notice)
 
 	var actions := HBoxContainer.new()
@@ -205,25 +209,32 @@ func _make_recipe_row(id: StringName) -> Control:
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+	row.add_theme_constant_override("separation", 10)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(row)
 
 	if item != null:
-		var icon := HUDKit.make_icon(SLOT_ICON_NAME.get(item.slot, ""), 28)
+		var icon := HUDKit.make_icon(SLOT_ICON_NAME.get(item.slot, ""), 30)
 		if icon != null:
 			row.add_child(icon)
 
 		var box := VBoxContainer.new()
 		box.add_theme_constant_override("separation", 1)
 		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(box)
-		box.add_child(HUDKit.label(item.display_name, 13, HUDKit.text_1(), 600))
+		# 고른 행은 액센트로 꽉 차 있으므로 글자를 잉크로 뒤집는다.
+		var name_color: Color = HUDKit.text_on_accent() if selected else HUDKit.text_1()
+		box.add_child(HUDKit.label(item.display_name, 15, name_color, 700))
 		box.add_child(HUDKit.caption("%s / owned %d" % [item.get_slot_name(), EquipmentSystem.get_owned_count(id)]))
 
 		# 제작 불가는 흐리게(장르 문법).
-		if not craftable:
-			row.modulate = Color(1, 1, 1, 0.45)
+		#
+		# 0.45 까지 내리면 지금 고른 행까지 같이 흐려져서 무엇을 보고 있는지 알 수 없다
+		# (재료가 하나도 없는 초반에는 모든 행이 제작 불가라 화면 전체가 흐려졌다).
+		# 고른 행은 흐리게 하지 않고, 나머지도 읽을 수는 있는 정도까지만 내린다.
+		if not craftable and not selected:
+			row.modulate = Color(1, 1, 1, 0.6)
 
 	var button := Button.new()
 	button.flat = true
@@ -232,9 +243,9 @@ func _make_recipe_row(id: StringName) -> Control:
 		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	button.pressed.connect(_on_recipe_pressed.bind(id))
 	card.add_child(button)
+	# 카드는 전면 투명 버튼이 클릭을 받으므로, 호버 신호도 그 버튼에서 듣는다.
+	HUDKit.hover_lift(card, button)
 
-	if selected:
-		card.add_child(HUDKit.make_brackets())
 	return card
 
 

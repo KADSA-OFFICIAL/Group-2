@@ -36,6 +36,7 @@ var _focus_equipment: StringName = &""
 
 var _character_row: HBoxContainer
 var _slot_column: VBoxContainer
+var _figure_holder: VBoxContainer
 var _inventory_grid: GridContainer
 var _detail_body: VBoxContainer
 var _notice: Label
@@ -85,9 +86,13 @@ func _build() -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(body)
 
-	body.add_child(_build_inventory_panel())
-	body.add_child(_build_center())
-	body.add_child(_build_detail())
+	var _col0 := _build_inventory_panel()
+	body.add_child(_col0)
+	var _col1 := _build_center()
+	body.add_child(_col1)
+	var _col2 := _build_detail()
+	body.add_child(_col2)
+
 
 
 # ── 좌: 인벤토리 ──
@@ -127,7 +132,7 @@ func _build_center() -> Control:
 	# 슬롯에서 캐릭터로 이어지는 연결선(장르 문법). 장식이며 정보가 아니다.
 	var connector := ColorRect.new()
 	connector.color = HUDKit.line()
-	connector.custom_minimum_size = Vector2(28, HUDKit.HAIRLINE)
+	connector.custom_minimum_size = Vector2(28, HUDKit.DIVIDER)
 	connector.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	center.add_child(connector)
 
@@ -136,10 +141,12 @@ func _build_center() -> Control:
 	figure.add_theme_constant_override("separation", 6)
 	center.add_child(figure)
 
-	var silhouette := ColorRect.new()
-	silhouette.name = "Silhouette"
-	silhouette.custom_minimum_size = Vector2(180, 300)
-	figure.add_child(silhouette)
+	# 캐릭터 자리. 색을 지정하지 않은 ColorRect 였던 탓에 흰 사각형이 떠 있었다.
+	# 초상은 HUDKit 이 만든다(초상 아트가 들어오면 색면 대신 그림이 들어간다).
+	_figure_holder = VBoxContainer.new()
+	_figure_holder.alignment = BoxContainer.ALIGNMENT_CENTER
+	_figure_holder.add_theme_constant_override("separation", 8)
+	figure.add_child(_figure_holder)
 
 	var serial := HUDKit.make_serial("EQP.LOADOUT")
 	serial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -168,7 +175,7 @@ func _build_detail() -> Control:
 	_detail_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_detail_body)
 
-	_notice = HUDKit.label("", 12, UITheme.ACCENT)
+	_notice = HUDKit.label("", 13, HUDKit.accent_text(), 700)
 	column.add_child(_notice)
 
 	var actions := HBoxContainer.new()
@@ -215,10 +222,19 @@ func _refresh_characters() -> void:
 
 func _refresh_slots() -> void:
 	_clear(_slot_column)
+	_clear(_figure_holder)
 	var character := _current_character()
 	if character == null:
-		_slot_column.add_child(HUDKit.label("캐릭터가 없습니다.", 12, HUDKit.text_2()))
+		_slot_column.add_child(HUDKit.label("캐릭터가 없습니다.", 13, HUDKit.text_2()))
 		return
+
+	var art := HUDKit.portrait_block(character, Vector2(190, 280))
+	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_figure_holder.add_child(art)
+
+	var art_name := HUDKit.label(character.display_name, 18, HUDKit.text_1(), 700)
+	art_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_figure_holder.add_child(art_name)
 
 	# 슬롯 목록의 출처는 EquipmentData.Slot 이다(아래 대응표는 아이콘용일 뿐이다).
 	for slot in EquipmentData.Slot.values():
@@ -314,9 +330,9 @@ func _make_item_card(id: StringName) -> Control:
 		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	button.pressed.connect(_on_item_pressed.bind(id))
 	card.add_child(button)
+	# 카드는 전면 투명 버튼이 클릭을 받으므로, 호버 신호도 그 버튼에서 듣는다.
+	HUDKit.hover_lift(card, button)
 
-	if selected:
-		card.add_child(HUDKit.make_brackets())
 	return card
 
 

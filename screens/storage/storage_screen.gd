@@ -11,11 +11,9 @@ extends Control
 #   재화 목록·분류 -> CurrencySystem (DEFAULT_CURRENCIES / get_primary_currencies /
 #                     get_secondary_currencies)
 #   잔액           -> CurrencySystem.get_balance()
-#   색             -> UITheme
+#   색·조각        -> UITheme / HUDKit
 #
 # 어떤 재화가 주요인지 화면에서 고르지 않는다. 재화가 추가되면 자동으로 나타난다.
-
-const BACK_ICON := "icon_back"
 
 # 재화 키 -> 잔액 Label. 잔액이 바뀔 때 해당 라벨만 갱신한다.
 var _labels: Dictionary = {}
@@ -27,110 +25,88 @@ func _ready() -> void:
 
 
 func _build() -> void:
-	add_child(UITheme.make_background())
+	add_child(HUDKit.make_backdrop())
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_bottom", 20)
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 16)
 	add_child(margin)
 
 	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 14)
+	root.add_theme_constant_override("separation", 12)
 	margin.add_child(root)
 
-	root.add_child(_build_header())
+	root.add_child(HUDKit.make_header("창고", "storage", "icon_storage"))
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	root.add_child(scroll)
 
 	var body := VBoxContainer.new()
-	body.add_theme_constant_override("separation", 14)
+	body.add_theme_constant_override("separation", 12)
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(body)
 
 	# 메인화면에 나오는 재화와 그렇지 않은 재화를 나눠 보여준다.
 	# 두 목록의 출처는 CurrencySystem 이므로 화면이 분류를 따로 갖지 않는다.
-	body.add_child(_build_section("주요 재화", CurrencySystem.get_primary_currencies()))
-	body.add_child(_build_section("보관 재화", CurrencySystem.get_secondary_currencies()))
+	var primary := _build_section("주요 재화", "primary", CurrencySystem.get_primary_currencies())
+	var stored := _build_section("보관 재화", "stored", CurrencySystem.get_secondary_currencies())
+	body.add_child(primary)
+	body.add_child(stored)
 
 
-func _build_header() -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
 
-	var back := Button.new()
-	back.text = " 뒤로"
-	back.icon = _texture(BACK_ICON)
-	# Button.icon 은 텍스처를 원본 크기(64px)로 그려 버튼 높이를 넘으면 잘린다.
-	# expand_icon 을 켜면 버튼 크기에 맞춰 비율을 유지하며 줄어든다.
-	back.expand_icon = true
-	back.custom_minimum_size = Vector2(0, 40)
-	back.add_theme_stylebox_override("normal", UITheme.panel_box())
-	back.add_theme_stylebox_override("hover", UITheme.panel_box())
-	back.add_theme_stylebox_override("pressed", UITheme.panel_box_deep())
-	back.add_theme_color_override("font_color", UITheme.INK)
-	back.pressed.connect(func(): ScreenManager.pop())
-	row.add_child(back)
-
-	var title := Label.new()
-	title.text = "창고"
-	title.add_theme_font_size_override("font_size", 20)
-	title.add_theme_color_override("font_color", UITheme.INK_ON_DARK)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(title)
-	return row
-
-
-func _build_section(title: String, currency_types: Array) -> Control:
-	var section := VBoxContainer.new()
-	section.add_theme_constant_override("separation", 8)
-	section.add_child(_text(title, 16, UITheme.INK_ON_DARK))
+func _build_section(title_ko: String, title_en: String, currency_types: Array) -> Control:
+	var panel := HUDKit.make_panel(title_ko, title_en)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var body := HUDKit.body_of(panel)
 
 	if currency_types.is_empty():
-		section.add_child(_text("없습니다.", 13, UITheme.INK_DIM))
-		return section
+		body.add_child(HUDKit.label("없습니다.", 13, HUDKit.text_2()))
+		return panel
 
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	section.add_child(grid)
+	body.add_child(grid)
 
 	for currency_type in currency_types:
 		grid.add_child(_make_currency_card(String(currency_type)))
-	return section
+	return panel
 
 
 func _make_currency_card(currency_type: String) -> Control:
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", UITheme.panel_box())
-	card.custom_minimum_size = Vector2(180, 0)
+	card.add_theme_stylebox_override("panel", HUDKit.card())
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.custom_minimum_size = Vector2(0, 72)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(row)
 
-	var icon := _icon(UITheme.currency_icon_name(currency_type), 34)
+	var icon := HUDKit.make_icon(UITheme.currency_icon_name(currency_type), 36)
 	if icon != null:
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(icon)
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 2)
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(box)
 
 	# 재화의 표시 이름 체계가 아직 없으므로 키를 그대로 보여준다.
 	# (이름이 정해지면 CurrencySystem 쪽에 표시 이름을 두고 여기서 읽는다.)
-	box.add_child(_text(currency_type, 13, UITheme.INK_DIM))
+	box.add_child(HUDKit.caption(currency_type))
 
-	var value := _text(_comma(CurrencySystem.get_balance(currency_type)), 18, UITheme.INK)
+	var value := HUDKit.value(HUDKit.comma(CurrencySystem.get_balance(currency_type)), 22)
 	box.add_child(value)
 	_labels[currency_type] = value
 	return card
@@ -139,46 +115,4 @@ func _make_currency_card(currency_type: String) -> Control:
 func _on_currency_changed(currency_type: String, _amount: int, new_balance: int) -> void:
 	var label: Label = _labels.get(currency_type)
 	if label != null and is_instance_valid(label):
-		label.text = _comma(new_balance)
-
-
-# ===== 공용 조각 =====
-
-func _text(value: String, size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = value
-	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", color)
-	return label
-
-
-func _icon(icon_name: String, size: int) -> TextureRect:
-	var texture := _texture(icon_name)
-	if texture == null:
-		return null
-	var rect := TextureRect.new()
-	rect.texture = texture
-	rect.custom_minimum_size = Vector2(size, size)
-	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	return rect
-
-
-# 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.
-func _texture(icon_name: String) -> Texture2D:
-	var path := UITheme.icon_path(icon_name)
-	if path.is_empty():
-		return null
-	return load(path) as Texture2D
-
-
-func _comma(value: int) -> String:
-	var digits := str(value)
-	var out := ""
-	var count := 0
-	for i in range(digits.length() - 1, -1, -1):
-		out = digits[i] + out
-		count += 1
-		if count % 3 == 0 and i != 0:
-			out = "," + out
-	return out
+		label.text = HUDKit.comma(new_balance)
