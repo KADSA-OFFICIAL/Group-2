@@ -481,27 +481,87 @@ static func role_chip(role: int) -> Control:
 	return p
 
 
-# 캐릭터 초상 자리.
+# 초상 자리 한 칸.
 #
 # portrait 가 있으면 그것을 채우고, 없으면 tint 색 판을 둔다(docs §0: 아트 확정 전 플레이스홀더).
 # 여섯 화면이 각자 ColorRect 로 만들던 것을 여기로 모은다 — 모서리 반경과 채도가
 # 화면마다 달랐다.
-static func portrait_block(character: CharacterData, min_size: Vector2) -> Control:
+#
+# 캐릭터와 적이 각자 다른 리소스 타입(CharacterData / EnemyData)이라 텍스처와 색만 받는다.
+# 어느 필드에서 꺼내는지는 호출부가 안다.
+static func portrait_frame(portrait: Texture2D, tint: Color, min_size: Vector2,
+		head_crop: bool = false) -> Control:
 	var p := PanelContainer.new()
-	var tint: Color = character.tint if character != null else UITheme.STONE_GRAY
 	p.add_theme_stylebox_override("panel", _box(muted(tint), line(), 2, 0, RADIUS_CARD))
 	p.custom_minimum_size = min_size
 	p.clip_contents = true
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	if character != null and character.portrait != null:
+	if portrait != null:
 		var t := TextureRect.new()
-		t.texture = character.portrait
+		t.texture = head_texture(portrait) if head_crop else portrait
 		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		p.add_child(t)
 	return p
+
+
+# 캐릭터 초상 자리.
+static func portrait_block(character: CharacterData, min_size: Vector2) -> Control:
+	if character == null:
+		return portrait_frame(null, UITheme.STONE_GRAY, min_size)
+	return portrait_frame(character.portrait, character.tint, min_size)
+
+
+# 초상의 머리 쪽 정사각형만 잘라낸 텍스처.
+#
+# 왜 필요한가: 저작된 초상은 전신 일러스트다(세로가 가로의 3~4배).
+# 작은 정사각 썸네일에 KEEP_ASPECT_COVERED 로 넣으면 가운데인 **몸통**이 잡혀서
+# 누구인지 알아볼 수 없다. 얼굴이 보여야 초상을 쓰는 의미가 있다.
+#
+# 투명 여백을 뺀 실제 그림 범위(get_used_rect)의 위쪽 정사각형을 쓴다.
+# 여백째로 자르면 그림이 작게 들어간 초상에서 머리가 또 빗나간다.
+#
+# 결과는 텍스처별로 캐시한다. get_image() 는 임포트된 텍스처를 CPU 로 내려받는
+# 작업이라 줄을 다시 만들 때마다 하면 전투 중에 튄다.
+static var _head_textures: Dictionary = {}
+
+static func head_texture(portrait: Texture2D) -> Texture2D:
+	if portrait == null:
+		return null
+
+	var key := portrait.get_rid().get_id()
+	if _head_textures.has(key):
+		return _head_textures[key]
+
+	var result: Texture2D = portrait
+	var image := portrait.get_image()
+	if image != null:
+		var used := image.get_used_rect()
+		if used.size.x > 0 and used.size.y > 0:
+			var side: int = mini(used.size.x, used.size.y)
+			var atlas := AtlasTexture.new()
+			atlas.atlas = portrait
+			# 가로는 그림 가운데, 세로는 그림 맨 위 = 머리.
+			atlas.region = Rect2(
+				used.position.x + (used.size.x - side) / 2.0,
+				used.position.y,
+				side, side)
+			result = atlas
+
+	_head_textures[key] = result
+	return result
+
+
+# 적 초상 자리. 전투 HUD 가 쓴다.
+# EnemyData.tint 는 흰 도형 플레이스홀더를 칠하려고 고른 값이라 순색에 가깝다.
+# portrait_frame 안의 muted() 가 팔레트 톤으로 당겨 준다(캐릭터 쪽과 같은 처리다).
+static func enemy_portrait_block(enemy: EnemyData, min_size: Vector2) -> Control:
+	if enemy == null:
+		return portrait_frame(null, UITheme.STONE_GRAY, min_size)
+	# HUD 썸네일은 작다. 전신 그대로 넣으면 몸통만 잡히므로 머리 쪽을 쓴다.
+	return portrait_frame(enemy.portrait, enemy.tint, min_size, true)
 
 
 # 캐릭터의 역할 칩들을 한 줄로. 겸직이면 2개가 나온다.
