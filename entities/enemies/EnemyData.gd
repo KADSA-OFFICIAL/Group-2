@@ -27,6 +27,15 @@ class_name EnemyData
 # (faith/intelligence는 적에게 미사용이며 기본값을 유지한다.)
 @export var stats: PlayerStats = PlayerStats.new()
 
+# ===== 밸런스 (Balance, 하이브리드 C #157) =====
+# balance_tier > 0 이면 hp/strength/defense를 BalanceReference 기준선 × 개체 배수로 파생한다
+# (EnemyDatabase가 로드 시 apply_balance() 호출). 0이면 위 stats의 수기 값을 그대로 쓴다(하위 호환).
+# 개체 배수로 개성을 준다: 예) 브라키오 = 고체력·고근접딜, 서아 = 표준(전부 1.0).
+@export var balance_tier: int = 0
+@export var hp_multiplier: float = 1.0
+@export var attack_multiplier: float = 1.0
+@export var defense_multiplier: float = 1.0
+
 # ===== 스킬 (Skills) =====
 @export var skills: Array[SkillData] = []
 
@@ -99,6 +108,17 @@ func get_stats() -> PlayerStats:
 	if stats == null:
 		stats = PlayerStats.new()
 	return stats
+
+# 밸런스 기준선 × 개체 배수로 hp/strength/defense를 파생한다 (하이브리드 C).
+# balance_tier <= 0 이면 수기 스탯을 유지한다. faith/intelligence/speeds는 건드리지 않는다.
+func apply_balance() -> void:
+	if balance_tier <= 0:
+		return
+	var base := BalanceReference.enemy_baseline(balance_tier)
+	var s := get_stats()
+	s.hp = int(round(base["hp"] * hp_multiplier))
+	s.strength = int(round(base["strength"] * attack_multiplier))
+	s.defense = int(round(base["defense"] * defense_multiplier))
 
 # skill_id로 스킬을 찾는다. 없으면 null.
 func find_skill(id: StringName) -> SkillData:

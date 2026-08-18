@@ -20,6 +20,7 @@ enemy_id = &"seoa"
 display_name = "서아"
 description = "근거리 추적형 적. 탐지 범위 안의 가장 가까운 파티 멤버를 쫓아가 평타를 넣는다. 파티보다 느리고 단단하다. 개성/고유 스킬 미정."
 stats = SubResource("PlayerStats_seoa")
+balance_tier = 1
 sprite_texture = ExtResource("9_shape")
 tint = Color(0.85, 0.25, 0.25, 1)
 sprite_scale = Vector2(1.5, 1.5)

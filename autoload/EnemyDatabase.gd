@@ -57,6 +57,9 @@ func _load_one(path: String) -> void:
 		push_warning("EnemyDatabase: 중복 enemy_id(건너뜀): " + String(data.enemy_id))
 		return
 
+	# 하이브리드 C: balance_tier가 지정된 적은 기준선 × 개체 배수로 스탯을 파생한다.
+	data.apply_balance()
+
 	_enemies[data.enemy_id] = data
 
 # id로 적을 조회한다. 없으면 경고 후 null.

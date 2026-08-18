@@ -7,9 +7,9 @@
 
 [sub_resource type="Resource" id="PlayerStats_brachio_beastfolk"]
 script = ExtResource("2_stats")
-hp = 2200
-strength = 60
-defense = 220
+hp = 2400
+strength = 91
+defense = 144
 intelligence = 100
 faith = 100
 
@@ -17,8 +17,12 @@ faith = 100
 script = ExtResource("1_enemydata")
 enemy_id = &"brachio_beastfolk"
 display_name = "브라키오 수인"
-description = "느리고 단단한 벽. 파티의 35% 속도로 다가와 잘 죽지 않지만, 원피해 DPS는 돌창병보다 낮아 순간에 녹이지 않는다. 처치에 걸리는 시간은 돌창병의 약 2.4배다(원거리딜러 단독 22대). 단단함의 주 레버는 방어다(물방 계수 x1.5). 근력은 돌창병보다 낮춰 위협도를 내렸다. 개성/설정/고유 스킬 미정."
+description = "고체력 근접 딜러. 느리게(파티 35% 속도) 다가오지만 체력이 높고 근접 피해가 세다. 하이브리드 C 기준 표준 적(서아) 대비 HP x2.0, 근접 공격 x1.4, 방어 x1.2로 '때리는 브루저'다. 개성/설정/고유 스킬 미정."
 stats = SubResource("PlayerStats_brachio_beastfolk")
+balance_tier = 1
+hp_multiplier = 2.0
+attack_multiplier = 1.4
+defense_multiplier = 1.2
 sprite_texture = ExtResource("9_shape")
 tint = Color(0.55, 0.4, 0.3, 1)
 sprite_scale = Vector2(1.5, 1.5)
