@@ -352,6 +352,12 @@ func _make_party_row(index: int, character: CharacterData) -> Dictionary:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_child(spacer)
 
+	# 보호막은 체력과 다른 자원이라 같은 숫자에 더하면 안 된다(원거리 3단계).
+	# 0이면 숨긴다 — 대부분의 판에서 이 자원은 없다.
+	var shield_label := HUDKit.label("", 12, UITheme.SKY, 700)
+	shield_label.visible = false
+	box.add_child(shield_label)
+
 	var hp_label := HUDKit.value("-", 13)
 	box.add_child(hp_label)
 
@@ -360,6 +366,7 @@ func _make_party_row(index: int, character: CharacterData) -> Dictionary:
 		"panel": panel,
 		"name": name_label,
 		"hp": hp_label,
+		"shield": shield_label,
 		"index": index,
 	}
 
@@ -378,10 +385,17 @@ func _update_party() -> void:
 		(row["name"] as Label).add_theme_color_override(
 			"font_color", HUDKit.text_1() if controlled else HUDKit.text_3())
 
+		var shield_label := row["shield"] as Label
 		if node == null:
 			(row["hp"] as Label).text = "-"
+			shield_label.visible = false
 		else:
 			(row["hp"] as Label).text = "%d/%d" % [node.hp, node.max_hp]
+
+			var shield: int = node.get_shield() if node.has_method("get_shield") else 0
+			shield_label.visible = shield > 0
+			if shield > 0:
+				shield_label.text = "+%d" % shield
 
 
 # ===== 메커니즘 (Mechanics) =====
