@@ -43,7 +43,7 @@ class_name EnemyData
 # 그쪽이 외형을 맡고 위 sprite_texture(도형 플레이스홀더)는 숨는다.
 # null이면 지금까지와 똑같이 Sprite2D로 정지 이미지를 그린다(하위 호환).
 #
-# 애니메이션 이름은 아래 WALK_ANIMATIONS가 단일 출처다. EnemyBase가 이 이름으로 재생하므로
+# 애니메이션 이름과 방향 판정의 단일 출처는 WalkAnimation이다(적과 플레이어가 같이 쓴다).
 # 규약만 지키면 시트를 갈아끼워도 스크립트를 고칠 필요가 없다.
 @export var walk_frames: SpriteFrames = null
 ## 워크 시트 표시 배율. 시트마다 원본 해상도가 달라 sprite_texture와 따로 둔다.
@@ -51,10 +51,6 @@ class_name EnemyData
 ## 워크 시트 표시 오프셋(px, 배율 적용 전). 셀 안의 발 기준선을 노드 원점에 맞추는 값이다.
 ## 시트 셀이 캐릭터보다 크므로 이 값이 없으면 스프라이트가 발밑이 아니라 몸 한가운데에 걸린다.
 @export var walk_sprite_offset: Vector2 = Vector2.ZERO
-
-## 워크 시트가 가져야 할 애니메이션 이름. 방향 판정과 재생이 모두 이 목록을 따른다.
-## 순서는 화면 방향 기준 하/좌/상/우이며, Godot의 +y가 아래인 좌표계에 맞춘 것이다.
-const WALK_ANIMATIONS: Array[StringName] = [&"walk_down", &"walk_left", &"walk_up", &"walk_right"]
 
 # ===== AI 행동 (AI Behavior) =====
 # 적의 행동 파라미터. EnemyBase의 추적/공격 AI가 이 값을 읽는다.
@@ -126,9 +122,7 @@ func validate() -> Array[String]:
 
 	# 워크 시트를 지정했다면 네 방향이 모두 있어야 한다.
 	# 하나라도 빠지면 그 방향으로 이동할 때 재생할 애니메이션이 없어 외형이 멈춘다.
-	if walk_frames != null:
-		for anim in WALK_ANIMATIONS:
-			if not walk_frames.has_animation(anim):
-				problems.append("walk_frames에 '%s' 애니메이션이 없습니다." % anim)
+	for anim in WalkAnimation.missing_animations(walk_frames):
+		problems.append("walk_frames에 '%s' 애니메이션이 없습니다." % anim)
 
 	return problems

@@ -1,9 +1,10 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 
 [ext_resource type="Texture2D" uid="uid://c3mw0ogq7drhf" path="res://assets/sprites/placeholder/shape_buffer.svg" id="9_shape"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/characters/buffer_pure_walk_frames.tres" id="10_walk"]
 
 [sub_resource type="Resource" id="PlayerStats_buffer_pure"]
 script = ExtResource("2_stats")
@@ -24,3 +25,6 @@ stats = SubResource("PlayerStats_buffer_pure")
 sprite_texture = ExtResource("9_shape")
 tint = Color(0.3, 1, 0.3, 1)
 sprite_scale = Vector2(2, 2)
+walk_frames = ExtResource("10_walk")
+walk_sprite_scale = Vector2(0.25, 0.25)
+walk_sprite_offset = Vector2(0, -177)
