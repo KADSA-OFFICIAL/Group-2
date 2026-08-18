@@ -62,7 +62,8 @@ const TRAINING_GOBLIN_SCENE := "res://entities/enemies/TrainingGoblin.tscn"
 # 서아. EnemyData가 지정되어 있어 추적·공격 AI가 동작한다.
 const SEOA_SCENE := "res://entities/enemies/Seoa.tscn"
 # 브라키오 수인. 추적·공격 AI + 4방향 워크 모션.
-# 스텟/AI 파라미터는 아직 기본값이라 서아보다 빠르고 물렁하다(밸런스 미정).
+# 느리고 단단한 벽: 파티의 35% 속도(70 px/s)로 다가오고 서아의 약 2.4배를 버틴다.
+# 대신 원피해 DPS는 서아보다 낮아 순간에 녹이지 않는다.
 const BRACHIO_BEASTFOLK_SCENE := "res://entities/enemies/BrachioBeastfolk.tscn"
 
 func spawn_enemies():
