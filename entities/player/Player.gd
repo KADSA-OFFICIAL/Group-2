@@ -260,7 +260,10 @@ func try_attack() -> bool:
 		_gain_stack()
 		return true
 
-	target.take_damage(get_stats().get_physical_attack(), self)
+	var dealt: int = target.take_damage(get_stats().get_physical_attack(), self)
+
+	# 원거리 3단계: 실제로 준 피해에 비례해 회복한다(죽인 타격도 포함이다).
+	_apply_lifesteal(dealt)
 
 	# 대상이 이 평타로 죽었으면 이후 처리를 하지 않는다.
 	if not is_instance_valid(target) or not target.is_alive:
@@ -289,6 +292,12 @@ const STACK_BONUS_KEY := &"ranged_stack"
 # 원거리 스택. 정수 단위로 서서히 감소하므로 float로 들고 표시할 때 내림한다.
 var _stack: float = 0.0
 
+# 보호막. 피해를 체력보다 먼저 흡수한다(원거리 3단계의 초과 피흡분에서만 쌓인다).
+#
+# 왜 별도 자원인가: 초과 회복분을 체력으로 되돌리면 "가득 찬 뒤"라는 조건이 무의미해진다.
+# docs §6 이 보호막을 HUD 미표시로 둔 것은 자원이 없었기 때문이고, 생겼으므로 표시한다.
+var _shield: int = 0
+
 # 이 멤버에게 해당 역할의 메커니즘이 활성인가.
 # 배타 규칙(#73)이 get_active_tiers()에 이미 반영되어 있으므로,
 # 다른 역할이 3단계를 발동하면 여기서도 자동으로 꺼진다.
@@ -296,6 +305,14 @@ func _is_role_active(role: CharacterData.Role) -> bool:
 	if data == null or not data.has_role(role):
 		return false
 	return SynergySystem.is_tier1_active(PartySystem.get_members(), role)
+
+
+# 이 멤버에게 해당 역할의 **3단계**가 활성인가.
+# 3단계는 1단계 위에 추가로 누적된다(docs §8.1) — 1단계를 대체하지 않는다.
+func _is_role_tier3(role: CharacterData.Role) -> bool:
+	if data == null or not data.has_role(role):
+		return false
+	return SynergySystem.is_tier3_active(PartySystem.get_members(), role)
 
 
 # --- 탱커: 표식 → 기절 + 추가 피해 ---
@@ -314,6 +331,12 @@ func _charge_mark(target: Node) -> void:
 
 	# 터졌다: 기절은 StatusEffectSystem이 이미 걸었고, 여기서는 추가 피해만 넣는다.
 	_apply_mark_burst_damage(target, marker)
+
+	# 탱커 3단계: 기절시킨 대가로 표식을 건 탱커가 회복한다.
+	# 때린 사람이 아니라 **표식 주체**가 받는다 — 표식은 탱커의 메커니즘이고,
+	# 충전은 파티 전체가 하기 때문이다.
+	if is_instance_valid(marker) and marker.has_method("_on_stunned_enemy"):
+		marker._on_stunned_enemy()
 
 
 func _apply_mark_burst_damage(target: Node, marker: Node) -> void:
@@ -372,6 +395,72 @@ func _push_stack_bonus() -> void:
 	})
 
 
+# --- 탱커 3단계: 반사 / 기절 회복 ---
+
+# 받은 피해의 일부를 공격자에게 되돌린다.
+#
+# 되돌린 피해로 또 반사가 일어나지는 않는다: 적(EnemyBase)에는 반사가 없고,
+# 파티원끼리는 서로 때리지 않는다. 그래도 자기 자신에게는 넣지 않도록 막아 둔다.
+func _reflect_damage(source, amount: int) -> void:
+	if amount <= 0 or source == null or source == self:
+		return
+	if not _is_role_tier3(CharacterData.Role.TANK):
+		return
+	if not is_instance_valid(source) or not source.has_method("take_damage"):
+		return
+
+	var reflected := int(round(amount * CombatConfig.tuning.reflect_damage_percent))
+	if reflected <= 0:
+		return
+	source.take_damage(reflected, self)
+
+
+# 적을 기절시켰다. 표식을 부여한 탱커가 회복한다.
+# 회복량은 그 탱커의 최대 체력 기준이다(적 체력과 무관하다).
+func _on_stunned_enemy() -> void:
+	if not _is_role_tier3(CharacterData.Role.TANK):
+		return
+	var amount := int(round(max_hp * CombatConfig.tuning.stun_heal_percent))
+	if amount > 0:
+		heal(amount)
+
+
+# --- 원거리 3단계: 피흡 / 보호막 ---
+
+# 평타로 실제로 준 피해에 비례해 회복한다.
+# 체력이 가득 차 있으면 초과분의 일부가 보호막이 된다(한도까지).
+func _apply_lifesteal(damage_dealt: int) -> void:
+	if damage_dealt <= 0:
+		return
+	if not _is_role_tier3(CharacterData.Role.RANGED_DEALER):
+		return
+
+	var amount := int(round(damage_dealt * CombatConfig.tuning.lifesteal_percent))
+	if amount <= 0:
+		return
+
+	var missing := max_hp - hp
+	var healed := mini(amount, missing)
+	if healed > 0:
+		heal(healed)
+
+	var overflow := amount - healed
+	if overflow > 0:
+		_gain_shield(int(round(overflow * CombatConfig.tuning.overheal_to_shield_percent)))
+
+
+func _gain_shield(amount: int) -> void:
+	if amount <= 0:
+		return
+	var limit := int(round(max_hp * CombatConfig.tuning.shield_max_percent))
+	_shield = mini(_shield + amount, limit)
+
+
+# 현재 보호막(표시·판정용).
+func get_shield() -> int:
+	return _shield
+
+
 # --- 버퍼: 처형 ---
 
 # 처형 조건을 만족하면 대상을 즉시 쓰러뜨린다.
@@ -422,20 +511,34 @@ func get_attack_range() -> float:
 
 # ===== 피해 / 사망 (Damage / Death) =====
 
-func take_damage(amount: int, _source = null) -> void:
+# 실제로 들어간 피해(방어·보호막 적용 후 체력에서 깎인 양)를 반환한다.
+# 적 쪽(EnemyBase.take_damage)과 같은 규약이다.
+func take_damage(amount: int, source = null) -> int:
 	if not is_alive:
-		return
+		return 0
 
 	# 방어력 적용. 피해 공식은 PlayerStats.apply_defense()가 단일 출처다.
-	var dealt = get_stats().apply_defense(amount)
+	var dealt: int = get_stats().apply_defense(amount)
+
+	# 보호막이 먼저 받아 낸다. 남은 만큼만 체력이 깎인다.
+	var absorbed: int = mini(_shield, dealt)
+	_shield -= absorbed
+	dealt -= absorbed
+
 	hp -= dealt
 	hp = max(hp, 0)
 
 	if EventBus:
-		EventBus.damage_taken.emit(self, dealt, global_position)
+		# 흡수분도 "맞은 양"이다. 화면에 뜨는 숫자가 실제 타격과 어긋나면 안 된다.
+		EventBus.damage_taken.emit(self, dealt + absorbed, global_position)
+
+	# 탱커 3단계: 받은 피해에 비례해 공격자에게 되돌린다.
+	# 흡수분까지 포함한 양이 기준이다 — 보호막을 둘렀다고 반사가 약해질 이유가 없다.
+	_reflect_damage(source, dealt + absorbed)
 
 	if hp <= 0:
 		die()
+	return dealt
 
 func heal(amount: int) -> void:
 	if not is_alive:

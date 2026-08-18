@@ -264,9 +264,12 @@ func try_attack() -> bool:
 	_target.take_damage(get_stats().get_physical_attack(), self)
 	return true
 
-func take_damage(amount: int, _source = null):
+# 실제로 들어간 피해(방어 적용 후)를 반환한다.
+# 피흡처럼 "준 피해에 비례하는" 효과가 그 값을 알아야 한다 — 공격력으로 계산하면
+# 방어력 높은 적을 때릴 때 실제보다 크게 회복된다.
+func take_damage(amount: int, _source = null) -> int:
 	if not is_alive:
-		return
+		return 0
 
 	# 방어력 적용. 피해 공식은 PlayerStats.apply_defense()가 단일 출처다.
 	# (여기서 다시 계산하지 않는다 — 이전에는 Player와 중복 구현되어 있었다.)
@@ -279,6 +282,7 @@ func take_damage(amount: int, _source = null):
 
 	if hp <= 0:
 		die()
+	return dealt
 
 func die():
 	is_alive = false
