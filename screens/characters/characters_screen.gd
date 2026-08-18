@@ -174,7 +174,7 @@ func _build_center() -> Control:
 	_preview_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(_preview_holder)
 
-	var serial := HUDKit.make_serial("PREVIEW / NO PORTRAIT ASSET")
+	var serial := HUDKit.make_serial("PREVIEW / PORTRAIT")
 	serial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center.add_child(serial)
 	return center
@@ -320,6 +320,70 @@ func _refresh_preview() -> void:
 	var chips := HUDKit.role_chip_row(character)
 	(chips as HBoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_child(chips)
+
+	column.add_child(_make_portrait_picker(character))
+
+
+# 초상 고르기.
+#
+# 어느 그림이 어느 캐릭터인지가 아직 정해지지 않았다. .tres 를 고쳐 가며 맞추는 대신
+# 보면서 고를 수 있게 둔다. 목록·선택·저장의 출처는 PortraitSystem 이다.
+#
+# 배정이 확정되면 이 줄을 걷어내고 선택을 .tres 로 옮기면 된다.
+func _make_portrait_picker(character: CharacterData) -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+
+	var caption := HUDKit.label("초상 고르기", 11, HUDKit.text_3())
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(caption)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 6)
+	box.add_child(row)
+
+	var selected := PortraitSystem.get_selected_id(character.character_id)
+
+	# "없음" 은 선택 안 함(저작 기본값)과 다르다. 명시적으로 비우는 칸이다.
+	row.add_child(_make_portrait_choice(character, PortraitSystem.NONE_ID, null,
+		selected == PortraitSystem.NONE_ID))
+
+	for portrait_id in PortraitSystem.get_all_ids():
+		row.add_child(_make_portrait_choice(character, portrait_id,
+			PortraitSystem.get_texture(portrait_id), selected == portrait_id))
+
+	return box
+
+
+func _make_portrait_choice(character: CharacterData, portrait_id: StringName,
+		texture: Texture2D, is_selected: bool) -> Control:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(44, 44)
+	button.tooltip_text = "초상 없음" if portrait_id == PortraitSystem.NONE_ID else String(portrait_id)
+	button.add_theme_stylebox_override("normal", HUDKit.card(is_selected))
+	button.add_theme_stylebox_override("hover", HUDKit.card(true))
+	button.add_theme_stylebox_override("pressed", HUDKit.card(true))
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+
+	if texture != null:
+		# 목록에서도 얼굴이 보여야 고를 수 있다. 전신을 그대로 넣으면 몸통만 잡힌다.
+		button.icon = HUDKit.head_texture(texture)
+		button.expand_icon = true
+		button.add_theme_constant_override("icon_max_width", 34)
+	else:
+		button.text = "-"
+		button.add_theme_color_override("font_color", HUDKit.text_3())
+
+	button.pressed.connect(_on_portrait_chosen.bind(character.character_id, portrait_id))
+	return button
+
+
+func _on_portrait_chosen(character_id: StringName, portrait_id: StringName) -> void:
+	PortraitSystem.select(character_id, portrait_id)
+	# 초상은 미리보기와 목록 카드 양쪽에 나온다. 둘 다 다시 그린다.
+	_refresh_preview()
+	_refresh_roster()
 
 
 func _refresh_detail() -> void:

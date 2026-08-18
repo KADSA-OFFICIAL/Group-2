@@ -481,6 +481,11 @@ static func role_chip(role: int) -> Control:
 	return p
 
 
+# 이 크기 이하의 초상 자리는 "썸네일"로 본다(머리 쪽만 자른다).
+# 편성 로스터·캐릭터 목록이 44~52px, 파티 슬롯이 150px 라 그 사이에 둔다.
+const THUMB_MAX_SIDE: float = 96.0
+
+
 # 초상 자리 한 칸.
 #
 # portrait 가 있으면 그것을 채우고, 없으면 tint 색 판을 둔다(docs §0: 아트 확정 전 플레이스홀더).
@@ -507,7 +512,11 @@ static func portrait_frame(portrait: Texture2D, tint: Color, min_size: Vector2,
 		var t := TextureRect.new()
 		t.texture = head_texture(portrait) if head_crop else portrait
 		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		# 썸네일(머리 컷)은 정사각이라 꽉 채우는 편이 낫고,
+		# 전신 일러스트는 **잘리면 안 된다** — 세로로 긴 그림을 정사각에 가까운 칸에
+		# 꽉 채우면 가운데인 몸통만 남고 머리가 잘린다(편성 슬롯에서 실제로 그랬다).
+		# 남는 자리는 뒤의 tint 판이 채운다.
+		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if head_crop 			else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		p.add_child(t)
 		return p
@@ -551,11 +560,21 @@ static func _fit_fallback_mark(holder: MarginContainer) -> void:
 
 
 # 캐릭터 초상 자리.
+#
+# 어떤 그림을 쓸지는 PortraitSystem 이 정한다(화면에서 고른 선택 > 저작 기본값).
+# 여기서 character.portrait 를 직접 읽지 않는다 — 그러면 화면마다 다른 그림이 뜬다.
+#
 # 아트가 없으면 그 캐릭터의 주 역할 아이콘을 얹는다. 이름을 읽기 전에 역할이 먼저 보인다.
 static func portrait_block(character: CharacterData, min_size: Vector2) -> Control:
 	if character == null:
 		return portrait_frame(null, UITheme.STONE_GRAY, min_size)
-	return portrait_frame(character.portrait, character.tint, min_size, false,
+
+	# 작은 자리(목록 썸네일)에는 머리 쪽만 자른다. 전신 일러스트를 44px 칸에 그대로
+	# 넣으면 얼굴이 몇 픽셀밖에 안 되어 누구인지 알 수 없다.
+	# 큰 자리(상세·슬롯)는 전신 그대로가 맞다 — 그게 이 아트를 쓰는 이유다.
+	var head_crop := minf(min_size.x, min_size.y) > 0.0 and minf(min_size.x, min_size.y) <= THUMB_MAX_SIDE
+
+	return portrait_frame(PortraitSystem.get_portrait(character), character.tint, min_size, head_crop,
 		load_icon(UITheme.role_icon_name(character.role)))
 
 
