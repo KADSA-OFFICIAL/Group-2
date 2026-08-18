@@ -204,6 +204,25 @@ func _fill_art() -> void:
 	placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_art_layer.add_child(placeholder)
 
+	# 그라데이션만 있으면 화면이 비어 보이고, 어느 캐릭터를 보고 있는지도 배경에서는
+	# 알 수 없다. 역할 아이콘을 워터마크로 크게 깐다.
+	#
+	# 아주 옅어야 한다: 이 위에 얹히는 이름표·하단 탭 글자가 전부 크림색이라
+	# 배경에 밝은 형태가 뚜렷하면 글자가 묻힌다. 형태만 겨우 읽히는 정도로 둔다.
+	# 화면 높이의 절반 정도. 배경 장식이라 정확한 값보다 "크고 흐릿함"이 중요하다.
+	var mark := _make_icon(UITheme.role_icon_name(character.role), 360)
+	if mark == null:
+		return
+	mark.modulate = Color(1, 1, 1, 0.10)
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# 가운데 정렬은 컨테이너에 맡긴다. 앵커 프리셋은 크기를 나중에 바꾸면 어긋난다.
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(mark)
+	_art_layer.add_child(center)
+
 
 # ── 좌하단 이름표 ──
 # 그림 위에 직접 얹는다. 별도 칸을 만들지 않는다.
