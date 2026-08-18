@@ -34,6 +34,11 @@ var _attack_cooldown_left: float = 0.0
 @onready var sprite: Sprite2D = get_node_or_null("Sprite2D")
 @onready var collision_shape = get_node_or_null("CollisionShape2D")
 
+# 워크 애니메이션을 그리는 노드. 씬에 AnimatedSprite2D가 있고 data.walk_frames가
+# 채워져 있을 때만 잡힌다. null이면 이 스크립트는 외형을 Sprite2D로만 다루므로
+# 시트가 없는 캐릭터는 지금까지와 똑같이 도형 플레이스홀더로 남는다.
+var _anim_sprite: AnimatedSprite2D = null
+
 
 # 이 노드가 소유하는 런타임 스텟. 정의(CharacterData)의 스텟 사본이다.
 #
@@ -94,6 +99,25 @@ func _apply_data() -> void:
 		sprite.self_modulate = data.tint
 		sprite.scale = data.sprite_scale
 
+	# 워크 시트가 있으면 AnimatedSprite2D가 외형을 맡고 도형 플레이스홀더는 숨는다.
+	# 둘 중 하나만 보이게 해서 실제 아트 위에 도형이 겹쳐 보이지 않게 한다.
+	#
+	# tint를 입히지 않는 이유: tint는 흰색 도형을 칠하려고 둔 값이라
+	# 색이 있는 실제 아트에 곱하면 색이 죽는다(CharacterData.tint 주석 참고).
+	var anim := get_node_or_null("AnimatedSprite2D")
+	if anim is AnimatedSprite2D and data.walk_frames != null:
+		_anim_sprite = anim
+		_anim_sprite.sprite_frames = data.walk_frames
+		_anim_sprite.scale = data.walk_sprite_scale
+		_anim_sprite.offset = data.walk_sprite_offset
+		# 첫 프레임은 정면 정지 포즈로 둔다. animation을 지정하지 않으면 기본값 &"default"를
+		# 찾다가 없어서 경고가 난다.
+		_anim_sprite.animation = WalkAnimation.ANIMATIONS[WalkAnimation.DOWN]
+		_anim_sprite.frame = 0
+		_anim_sprite.visible = true
+		if sprite is Sprite2D:
+			sprite.visible = false
+
 
 # ===== 조종 상태 (Control) =====
 
@@ -121,12 +145,17 @@ func _sync_equipment_bonuses(character_id: StringName) -> void:
 		bonuses["physical_defense"], bonuses["magic_defense"], bonuses["hp"]
 	)
 
-# 조종 중인 멤버를 시각적으로 구분한다.
-# 도형 플레이스홀더 단계이므로 밝기로만 표시한다(아트는 추후).
+# 조종 중인 멤버를 시각적으로 구분한다. 밝기로만 표시한다.
+#
+# 지금 화면에 보이는 노드에 걸어야 한다. 워크 시트를 쓰는 캐릭터는 Sprite2D가
+# 숨어 있으므로 거기에 modulate를 걸면 조종 표시가 아무 효과도 내지 않는다.
+# self_modulate가 아니라 modulate인 이유: self_modulate는 _apply_data()가 tint용으로
+# 쓰고 있어서, 같은 채널에 조종 밝기를 겹쳐 쓰면 서로를 지운다.
 func _refresh_control_visual() -> void:
-	if sprite == null:
+	var target: CanvasItem = _anim_sprite if _anim_sprite != null else sprite
+	if target == null:
 		return
-	sprite.modulate = Color.WHITE if is_controlled() else Color(0.55, 0.55, 0.55, 1.0)
+	target.modulate = Color.WHITE if is_controlled() else Color(0.55, 0.55, 0.55, 1.0)
 
 
 # ===== 이동 / 공격 (Movement / Attack) =====
@@ -140,6 +169,16 @@ func _physics_process(delta: float) -> void:
 
 	_decay_stack(delta)
 
+	_process_control(delta)
+
+	# 조종 중이 아니어도(velocity가 계속 0) 호출한다. 그래야 정지 포즈로 고정된다.
+	_update_walk_animation()
+
+
+# 입력 처리 한 틱. velocity를 정하고 필요하면 실제로 이동시킨다.
+# 외형 갱신과 분리해 둔 이유: 아래 조기 반환이 애니메이션 갱신까지 건너뛰면
+# 조종을 넘긴 멤버가 멈춘 뒤에도 걷는 모션이 남기 때문이다.
+func _process_control(_delta: float) -> void:
 	# 조종 중인 멤버만 입력을 받는다.
 	# 나머지는 이 단계에서 정지한다(AI는 후속 이슈).
 	if not is_controlled():
@@ -155,6 +194,30 @@ func _physics_process(delta: float) -> void:
 
 	if Input.is_action_pressed("attack"):
 		try_attack()
+
+
+# ===== 워크 애니메이션 (Walk animation) =====
+
+# 지금 속도에 맞는 방향 애니메이션을 재생한다. 멈춰 있으면 정지 포즈로 고정한다.
+# 시트가 없는 캐릭터는 _anim_sprite가 null이라 아무 일도 하지 않는다.
+#
+# 방향 판정과 멈춤 임계값의 출처는 WalkAnimation이다(적과 같은 규약을 쓴다).
+func _update_walk_animation() -> void:
+	if _anim_sprite == null:
+		return
+
+	if not WalkAnimation.is_walking(velocity):
+		# 멈추면 재생을 세우고 정지 포즈(0번 프레임)로 고정한다.
+		# animation은 그대로 두어 마지막으로 향했던 방향을 유지한다
+		# — 멈출 때마다 정면으로 홱 돌아보면 어색하기 때문이다.
+		if _anim_sprite.is_playing():
+			_anim_sprite.stop()
+			_anim_sprite.frame = 0
+		return
+
+	var anim := WalkAnimation.animation_for(velocity)
+	if _anim_sprite.animation != anim or not _anim_sprite.is_playing():
+		_anim_sprite.play(anim)
 
 
 func _handle_movement() -> void:
