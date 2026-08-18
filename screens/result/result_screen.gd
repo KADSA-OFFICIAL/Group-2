@@ -7,6 +7,7 @@ extends Control
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
 #   승패·스테이지  -> 띄우는 쪽(stage_result_launcher)이 set_outcome() 으로 넘긴다
 #   스테이지 이름   -> StageData.display_name (여기서 문자열을 만들지 않는다)
+#   보상·클리어 여부 -> StageProgress (지급은 그쪽이 이미 했다. 여기는 결과를 읽어 보여만 준다)
 #   재진입         -> StageSystem.request_stage()
 #   색·조각        -> UITheme / HUDKit
 #
@@ -19,6 +20,7 @@ var _stage_id: StringName = &""
 
 var _title: Label
 var _subtitle: Label
+var _reward_row: HBoxContainer
 
 
 func _ready() -> void:
@@ -66,6 +68,11 @@ func _build() -> void:
 	_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_subtitle)
 
+	_reward_row = HBoxContainer.new()
+	_reward_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_reward_row.add_theme_constant_override("separation", 6)
+	box.add_child(_reward_row)
+
 	box.add_child(HUDKit.rule())
 
 	var actions := HBoxContainer.new()
@@ -94,6 +101,32 @@ func _refresh() -> void:
 	var stage := StageDatabase.get_stage(_stage_id) if StageDatabase.has_stage(_stage_id) else null
 	var stage_name: String = stage.display_name if stage != null else String(_stage_id)
 	_subtitle.text = "%s · %s" % [stage_name, "소탕 완료" if _victory else "파티 전멸"]
+
+	_refresh_rewards()
+
+
+# 받은 보상. 지급은 StageProgress 가 이미 했고 여기서는 그 결과만 읽는다.
+# 다른 판의 결과를 보여 주지 않도록 stage_id 와 승패를 대조한다.
+func _refresh_rewards() -> void:
+	if not is_instance_valid(_reward_row):
+		return
+	for child in _reward_row.get_children():
+		_reward_row.remove_child(child)
+		child.queue_free()
+
+	var result := StageProgress.get_last_result()
+	if result.get("stage_id", &"") != _stage_id or result.get("victory", false) != _victory:
+		return
+
+	if bool(result.get("first_clear", false)):
+		_reward_row.add_child(HUDKit.tag_chip("첫 클리어", UITheme.ACCENT.darkened(0.4)))
+
+	var rewards: Dictionary = result.get("rewards", {})
+	for currency_type in rewards:
+		_reward_row.add_child(HUDKit.currency_chip(
+			str(currency_type), "+%s" % HUDKit.comma(int(rewards[currency_type]))))
+
+	_reward_row.visible = _reward_row.get_child_count() > 0
 
 
 # ===== 조작 =====
