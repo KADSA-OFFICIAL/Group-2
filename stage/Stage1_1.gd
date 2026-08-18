@@ -1,34 +1,48 @@
 extends Node2D
 class_name Stage
 
-var stage_name: String = "Stage1_1"
+# 씬 트리 노드 이름이자 stage_started/completed 에 실리는 값.
+# 어떤 스테이지가 로드됐는지 드러나야 하므로 현재 스테이지 id 를 따른다.
+var stage_name: String = "Stage"
 var current_room: Node = null
 
+
 func _ready():
+	StageSystem.stage_requested.connect(_on_stage_requested)
+	_enter_current_stage()
+
+
+# 출격 화면에서 다른 스테이지를 고르면 그 배치로 다시 만든다.
+func _on_stage_requested(_stage_id: StringName) -> void:
+	_enter_current_stage()
+
+
+func _enter_current_stage() -> void:
+	var stage := StageSystem.get_current_stage()
+	stage_name = String(StageSystem.get_current_id()) if stage != null else "Stage"
 	name = stage_name
 	EventBus.stage_started.emit(stage_name)
 	load_room()
 
-func load_room():
-	# Load the first room
-	if current_room:
-		current_room.queue_free()
-	
-	# Get or create room
-	current_room = get_node_or_null("Room1")
-	if not current_room:
-		current_room = Node2D.new()
-		current_room.name = "Room1"
-		add_child(current_room)
-	
-	# Clear existing children in room
-	for child in current_room.get_children():
-		child.queue_free()
-	
-	# Spawn party
+# 방을 새로 만들고 파티와 적을 놓는다. 다시 부르면 이전 방을 통째로 버린다.
+#
+# 예전 코드는 current_room 을 queue_free 한 **뒤에 같은 노드를 다시 찾아** 거기에
+# 스폰했다. queue_free 는 프레임 끝에 실제로 지우므로, 새로 놓은 파티·적이
+# 그 방과 함께 사라졌다(다시 로드하면 전장이 텅 비었다).
+# 진입이 한 번뿐일 때는 드러나지 않던 버그다.
+func load_room() -> void:
+	var previous := get_node_or_null("Room1")
+	if previous != null:
+		# 트리에서 즉시 떼어낸다. 프레임 끝까지 남겨 두면 이름이 겹치고
+		# 적 등록 해제(EnemyBase._exit_tree)도 늦는다.
+		remove_child(previous)
+		previous.queue_free()
+
+	current_room = Node2D.new()
+	current_room.name = "Room1"
+	add_child(current_room)
+
 	spawn_party()
-	
-	# Spawn enemies
 	spawn_enemies()
 
 # 파티가 비어 있을 때 쓰는 기본 편성.
@@ -57,48 +71,25 @@ func spawn_party():
 		# 겹치지 않게 세로로 배치한다.
 		node.global_position = Vector2(100, 100 + i * 40)
 
-# 훈련용 고블린. data가 없어 AI가 꺼진 샌드백이다(피해 확인용).
-const TRAINING_GOBLIN_SCENE := "res://entities/enemies/TrainingGoblin.tscn"
-# 서아. EnemyData가 지정되어 있어 추적·공격 AI가 동작한다.
-const SEOA_SCENE := "res://entities/enemies/Seoa.tscn"
-# 브라키오 수인. 추적·공격 AI + 4방향 워크 모션.
-# 느리고 단단한 벽: 파티의 35% 속도(70 px/s)로 다가오고 서아의 약 2.4배를 버틴다.
-# 대신 원피해 DPS는 서아보다 낮아 순간에 녹이지 않는다.
-const BRACHIO_BEASTFOLK_SCENE := "res://entities/enemies/BrachioBeastfolk.tscn"
-
-func spawn_enemies():
-	var goblin_scene = load(TRAINING_GOBLIN_SCENE)
-	if goblin_scene:
-		for i in range(2):
-			var goblin = goblin_scene.instantiate()
-			current_room.add_child(goblin)
-			goblin.global_position = Vector2(400 + i * 100, 200)
-
-	# 추적·공격하는 적 1마리.
-	# 파티 스폰 지점(x=100)에서 탐지 범위(300) 밖에 두어, 플레이어가 전진했을 때
-	# "탐지 -> 접근 -> 공격" 과정이 눈에 보이게 한다.
-	var seoa_scene = load(SEOA_SCENE)
-	if seoa_scene == null:
-		push_warning("Stage: Seoa.tscn을 불러올 수 없습니다.")
+# 적을 배치한다. 무엇을 어디에 몇 마리 놓을지는 **StageData.spawns** 가 정한다.
+#
+# 예전에는 씬 경로 상수 3개와 좌표가 이 파일에 박혀 있었다. 그래서 스테이지를
+# 저작해도 화면이 달라지지 않았고, 새 배치를 만들려면 코드를 고쳐야 했다.
+func spawn_enemies() -> void:
+	var stage := StageSystem.get_current_stage()
+	if stage == null:
+		# 저작된 스테이지가 없어도 전장은 열린다(파티만 놓인다).
+		push_warning("Stage: 현재 스테이지 정의가 없습니다. 적 없이 시작합니다.")
 		return
 
-	var seoa = seoa_scene.instantiate()
-	current_room.add_child(seoa)
-	seoa.global_position = Vector2(600, 140)
+	for spawn in stage.spawns:
+		if spawn == null or spawn.enemy_scene == null:
+			continue
+		for i in range(spawn.count):
+			var enemy = spawn.enemy_scene.instantiate()
+			current_room.add_child(enemy)
+			enemy.global_position = spawn.get_position(i)
 
-	# 브라키오 수인 1마리.
-	# 돌창병과 세로로 떨어뜨려 둔다. 둘이 같은 파티 멤버를 쫓아와 겹치면
-	# 어느 쪽 모션인지 구분이 안 되기 때문이다.
-	# 파티 스폰 지점(x=100)에서 탐지 범위(300) 밖이라 전진해야 반응한다.
-	var brachio_scene = load(BRACHIO_BEASTFOLK_SCENE)
-	if brachio_scene == null:
-		push_warning("Stage: BrachioBeastfolk.tscn을 불러올 수 없습니다.")
-		return
-
-	var brachio = brachio_scene.instantiate()
-	current_room.add_child(brachio)
-	brachio.global_position = Vector2(600, 320)
 
 func complete_stage():
 	EventBus.stage_completed.emit(stage_name)
-

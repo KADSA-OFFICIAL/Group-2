@@ -133,7 +133,7 @@ func _make_stage_card(id: StringName) -> Control:
 
 	var button := HUDKit.make_cta("출격", "go")
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	button.pressed.connect(_on_launch_pressed)
+	button.pressed.connect(_on_stage_launch_pressed.bind(id))
 	row.add_child(button)
 	return card
 
@@ -170,11 +170,19 @@ func _objective_row(stage: StageData) -> Control:
 
 # ===== 조작 =====
 
-# 출격 = 메타 화면을 모두 닫아 게임플레이를 드러낸다.
+# 고른 스테이지로 출격한다.
 #
-# 고른 스테이지를 실제로 불러오지는 않는다(아직 못 한다):
-# 승리 조건 판정(소탕 완료 / 점령 게이지)이 구현되지 않았고, 스테이지 로딩도
-# Stage1_1 하나로 하드코딩되어 있다. 그 둘이 생기면 여기서 id 를 넘기면 된다.
+# 어떤 스테이지를 플레이 중인지는 StageSystem 이 안다. 이 화면은 id 만 넘기고,
+# 전장을 그 배치로 다시 만드는 일은 Stage 노드가 한다(화면은 전장을 모른다).
+#
+# 승리 조건 판정(소탕 완료 / 점령 게이지)은 아직 없다. 지금은 그 스테이지의
+# 배치로 전투가 시작되는 데까지다.
+func _on_stage_launch_pressed(id: StringName) -> void:
+	StageSystem.request_stage(id)
+	ScreenManager.close_all()
+
+
+# 저작된 스테이지가 없을 때의 출격. 현재 전장을 그대로 드러낸다.
 func _on_launch_pressed() -> void:
 	ScreenManager.close_all()
 
