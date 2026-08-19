@@ -543,8 +543,15 @@ func _make_figure(line: StoryLineData) -> Control:
 		art.texture = HUDKit.trimmed_texture(portrait)
 		art.custom_minimum_size = FIGURE_SIZE
 		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		# 잘리면 머리가 날아간다. 전신이 다 들어오게 맞춘다.
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		if HUDKit.is_bust_art(portrait):
+			# 반신 초상은 발이 없어 전신과 같은 바닥선에 세울 수 없다.
+			# 자리 높이에 맞춰 키우고 좌우가 잘리게 둔다 = **가까이 있는 인물**.
+			# 그대로 비율만 맞춰 넣으면 자리의 3분의 2만 채우고 발밑에 빈 공간이 생겨
+			# 혼자 공중에 뜬 것처럼 보인다.
+			art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		else:
+			# 전신은 잘리면 머리가 날아간다. 다 들어오게 맞춘다.
+			art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		inner.add_child(art)
 

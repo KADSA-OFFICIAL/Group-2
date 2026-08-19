@@ -126,6 +126,18 @@ func _refresh_rewards() -> void:
 		_reward_row.add_child(HUDKit.currency_chip(
 			str(currency_type), "+%s" % HUDKit.comma(int(rewards[currency_type]))))
 
+	# 프로틴과 삼각근 Lv.업. 재화 칩과 달리 프로틴은 재화가 아니므로 태그 칩으로 둔다.
+	var protein := int(result.get("protein", 0))
+	if protein > 0:
+		_reward_row.add_child(HUDKit.tag_chip(
+			"프로틴 +%s" % HUDKit.comma(protein), UITheme.POSITIVE.darkened(0.4)))
+
+	var level_before := int(result.get("deltoid_level_before", 0))
+	var level_after := int(result.get("deltoid_level_after", 0))
+	if level_after > level_before:
+		_reward_row.add_child(HUDKit.tag_chip(
+			"삼각근 Lv.%d → Lv.%d" % [level_before, level_after], UITheme.ACCENT.darkened(0.4)))
+
 	_reward_row.visible = _reward_row.get_child_count() > 0
 
 

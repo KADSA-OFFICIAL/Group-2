@@ -486,6 +486,36 @@ static func role_chip(role: int) -> Control:
 const THUMB_MAX_SIDE: float = 96.0
 
 
+# 초상을 어떻게 잘라 보여 줄지. **자리마다 필요한 것이 다르다.**
+#
+# 왜 크기로 추측하지 않고 호출부가 고르는가:
+#   예전에는 자리의 짧은 변이 96px 이하면 머리, 아니면 전신으로 정했다.
+#   그런데 편성 파티 슬롯은 min_size 를 Vector2(0, 150) 으로 넘긴다(가로는 칸에 맡긴다).
+#   짧은 변이 0 이라 "전신"으로 빠지고, 세로로 긴 그림이 가로로 넓은 칸에 들어가
+#   양옆이 색 판으로 가득 차고 인물은 손톱만 하게 남았다.
+#   자리의 숫자만 봐서는 그 자리가 무엇을 보여 주려는 자리인지 알 수 없다.
+enum Framing {
+	AUTO,  # 예전 규칙(짧은 변 <= THUMB_MAX_SIDE 면 머리). 지정하지 않은 호출부용.
+	HEAD,  # 머리 정사각. 목록 썸네일처럼 "누구인지"만 알면 되는 자리.
+	BUST,  # 머리 + 상반신. 카드·슬롯처럼 얼굴이 커야 하고 칸을 채워야 하는 자리.
+	FULL,  # 전신 전체. 상세 일러스트·스토리 무대처럼 그림 자체를 보여 주는 자리.
+}
+
+# 상반신 크롭의 가로세로비(가로 / 세로). 1 보다 작으므로 세로로 조금 길다.
+# 정사각으로 자르면 어깨에서 끊겨 답답하고, 더 길게 자르면 얼굴이 다시 작아진다.
+const BUST_CROP_ASPECT: float = 0.85
+
+# 이 가로세로비 이상이면 **반신(가슴 위) 구도로 저작된 초상**으로 본다.
+#
+# 저작본 실측: 전신은 인물 경계상자 비율이 0.30 ~ 0.50(팔을 벌려도 0.50)이고,
+# 반신은 0.73 이다. 그 사이를 넉넉히 갈랐다.
+#
+# 왜 구분해야 하는가: 반신은 전신과 나란히 세울 수 없다. 발이 없어 바닥선에 맞출 수
+# 없고, 전신에 키를 맞추면 혼자 작은 사람이 된다. 대신 "가까이 있는 인물"로 두고
+# 화면 밖으로 잘라 낸다(VN 에서 흔히 쓰는 문법이다).
+const BUST_ART_MIN_ASPECT: float = 0.62
+
+
 # 초상 자리 한 칸.
 #
 # portrait 가 있으면 그것을 채우고, 없으면 tint 색 판을 둔다(docs §0: 아트 확정 전 플레이스홀더).
@@ -500,7 +530,7 @@ const THUMB_MAX_SIDE: float = 96.0
 # fallback_modulate: 그 그림에 곱할 색. 흰 도형은 어둡게 눌러야 색 판 위에서 읽히고,
 #   자기 색이 있는 두들 아이콘은 알파만 낮춘다. 무엇을 넘기는지는 호출부가 안다.
 static func portrait_frame(portrait: Texture2D, tint: Color, min_size: Vector2,
-		head_crop: bool = false, fallback: Texture2D = null,
+		framing: Framing = Framing.AUTO, fallback: Texture2D = null,
 		fallback_modulate: Color = Color(1, 1, 1, 0.85)) -> Control:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", _box(muted(tint), line(), 2, 0, RADIUS_CARD))
@@ -509,14 +539,16 @@ static func portrait_frame(portrait: Texture2D, tint: Color, min_size: Vector2,
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	if portrait != null:
+		var mode := resolve_framing(framing, min_size)
 		var t := TextureRect.new()
-		t.texture = head_texture(portrait) if head_crop else portrait
+		t.texture = framed_texture(portrait, mode)
 		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		# 썸네일(머리 컷)은 정사각이라 꽉 채우는 편이 낫고,
-		# 전신 일러스트는 **잘리면 안 된다** — 세로로 긴 그림을 정사각에 가까운 칸에
+		# 잘라 둔 그림(머리·상반신)은 칸을 꽉 채우는 편이 낫다 —
+		# 무엇을 보여 줄지는 자를 때 이미 정했으므로 여백이 생길 이유가 없다.
+		# 전신은 **잘리면 안 된다** — 세로로 긴 그림을 정사각에 가까운 칸에
 		# 꽉 채우면 가운데인 몸통만 남고 머리가 잘린다(편성 슬롯에서 실제로 그랬다).
 		# 남는 자리는 뒤의 tint 판이 채운다.
-		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if head_crop 			else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED if mode == Framing.FULL else TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		p.add_child(t)
 		return p
@@ -565,17 +597,38 @@ static func _fit_fallback_mark(holder: MarginContainer) -> void:
 # 여기서 character.portrait 를 직접 읽지 않는다 — 그러면 화면마다 다른 그림이 뜬다.
 #
 # 아트가 없으면 그 캐릭터의 주 역할 아이콘을 얹는다. 이름을 읽기 전에 역할이 먼저 보인다.
-static func portrait_block(character: CharacterData, min_size: Vector2) -> Control:
+# framing: 이 자리가 무엇을 보여 주는 자리인지. 호출부가 고른다(Framing 주석 참고).
+static func portrait_block(character: CharacterData, min_size: Vector2,
+		framing: Framing = Framing.AUTO) -> Control:
 	if character == null:
 		return portrait_frame(null, UITheme.STONE_GRAY, min_size)
 
-	# 작은 자리(목록 썸네일)에는 머리 쪽만 자른다. 전신 일러스트를 44px 칸에 그대로
-	# 넣으면 얼굴이 몇 픽셀밖에 안 되어 누구인지 알 수 없다.
-	# 큰 자리(상세·슬롯)는 전신 그대로가 맞다 — 그게 이 아트를 쓰는 이유다.
-	var head_crop := minf(min_size.x, min_size.y) > 0.0 and minf(min_size.x, min_size.y) <= THUMB_MAX_SIDE
-
-	return portrait_frame(PortraitSystem.get_portrait(character), character.tint, min_size, head_crop,
+	return portrait_frame(PortraitSystem.get_portrait(character), character.tint, min_size, framing,
 		load_icon(UITheme.role_icon_name(character.role)))
+
+
+# AUTO 를 실제 프레이밍으로 푼다.
+#
+# 예전 규칙 그대로다: 작은 자리(목록 썸네일)는 머리, 나머지는 전신.
+# 전신 일러스트를 44px 칸에 그대로 넣으면 얼굴이 몇 픽셀밖에 안 되어 누구인지 알 수 없다.
+# 자리의 짧은 변이 0 이면(가로를 칸에 맡긴 슬롯) 크기를 알 수 없으므로 전신으로 둔다 —
+# 그런 자리는 AUTO 로 두지 말고 호출부가 BUST 를 명시하는 것이 맞다.
+static func resolve_framing(framing: Framing, min_size: Vector2) -> Framing:
+	if framing != Framing.AUTO:
+		return framing
+	var side := minf(min_size.x, min_size.y)
+	return Framing.HEAD if side > 0.0 and side <= THUMB_MAX_SIDE else Framing.FULL
+
+
+# 프레이밍에 맞게 잘라 낸 텍스처.
+static func framed_texture(portrait: Texture2D, mode: Framing) -> Texture2D:
+	match mode:
+		Framing.HEAD:
+			return head_texture(portrait)
+		Framing.BUST:
+			return bust_texture(portrait)
+		_:
+			return portrait
 
 
 # 초상의 머리 쪽 정사각형만 잘라낸 텍스처.
@@ -646,6 +699,54 @@ static func head_texture(portrait: Texture2D) -> Texture2D:
 	return result
 
 
+# 초상의 **상반신**만 잘라낸 텍스처.
+#
+# 왜 머리 크롭과 따로 필요한가:
+#   파티 슬롯처럼 가로가 넓고 세로가 짧은 칸에 전신을 넣으면, 비율을 지키느라
+#   인물이 칸 높이에 맞춰 줄어들고 양옆이 색 판으로 가득 찬다(인물은 손톱만 해진다).
+#   반대로 머리만 자르면 얼굴은 크지만 어느 캐릭터가 무엇을 입었는지 알 수 없다.
+#   그 사이가 상반신이다 — 얼굴이 충분히 크고, 칸도 채운다.
+#
+# 자르는 폭은 그림 전체 너비, 높이는 BUST_CROP_ASPECT 로 정한다. 그림 맨 위가 머리다.
+# 반신(가슴 위) 구도로 저작된 초상은 잘라 낼 아래가 없는데, 그때는 min() 이 걸려
+# 있는 만큼만 쓰므로 원본 그대로가 된다.
+static var _bust_textures: Dictionary = {}
+
+static func bust_texture(portrait: Texture2D) -> Texture2D:
+	if portrait == null:
+		return null
+
+	var key := portrait.get_rid().get_id()
+	if _bust_textures.has(key):
+		return _bust_textures[key]
+
+	var result: Texture2D = portrait
+	var image := portrait.get_image()
+	if image != null:
+		var used := image.get_used_rect()
+		if used.size.x > 0 and used.size.y > 0:
+			var height: float = minf(float(used.size.y), float(used.size.x) / BUST_CROP_ASPECT)
+			var atlas := AtlasTexture.new()
+			atlas.atlas = portrait
+			atlas.region = Rect2(used.position.x, used.position.y, used.size.x, height)
+			result = atlas
+
+	_bust_textures[key] = result
+	return result
+
+
+# 반신 구도로 저작된 초상인지. 판정 근거는 BUST_ART_MIN_ASPECT 주석 참고.
+# 여백을 뺀 **인물**의 비율로 본다 — 캔버스 비율은 전신·반신이 똑같이 맞춰져 있다.
+static func is_bust_art(portrait: Texture2D) -> bool:
+	if portrait == null:
+		return false
+	var trimmed := trimmed_texture(portrait)
+	var size := trimmed.get_size()
+	if size.y <= 0.0:
+		return false
+	return size.x / size.y >= BUST_ART_MIN_ASPECT
+
+
 # 적 초상 자리. 전투 HUD 가 쓴다.
 # EnemyData.tint 는 흰 도형 플레이스홀더를 칠하려고 고른 값이라 순색에 가깝다.
 # portrait_frame 안의 muted() 가 팔레트 톤으로 당겨 준다(캐릭터 쪽과 같은 처리다).
@@ -657,7 +758,7 @@ static func enemy_portrait_block(enemy: EnemyData, min_size: Vector2) -> Control
 	# 어느 줄이 어느 적인지 이어진다(색만으로는 구별되지 않는다).
 	# 도형 원본은 흰색이므로 잉크색으로 눌러야 밝은 색 판 위에서 읽힌다.
 	# HUD 썸네일은 작다. 전신 초상을 그대로 넣으면 몸통만 잡히므로 머리 쪽을 쓴다.
-	return portrait_frame(enemy.portrait, enemy.tint, min_size, true,
+	return portrait_frame(enemy.portrait, enemy.tint, min_size, Framing.HEAD,
 		enemy.sprite_texture, _alpha(UITheme.INK, 0.55))
 
 

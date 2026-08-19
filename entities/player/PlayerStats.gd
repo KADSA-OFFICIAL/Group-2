@@ -18,6 +18,17 @@ class_name PlayerStats
 @export var intelligence: int = 100  # 지능 (추후 설계)
 @export var faith: int = 100          # 신앙심
 
+# ===== 성장 채널 (Growth) =====
+# 삼각근 Lv.이 만드는 기초 스텟 배수. 1.0 = Lv.1(보너스 없음).
+# 밀어 넣는 쪽은 PlayerProfile 이고, 대상은 로스터 캐릭터뿐이다.
+#
+# @export 가 아닌 이유: 이 값의 출처는 플레이어 진행도(세이브)이지 캐릭터 저작
+# 데이터가 아니다. .tres 에 굳으면 같은 값이 저작 파일과 세이브 두 곳에 남는다.
+#
+# 적(EnemyData.stats)도 이 클래스를 공유하므로 여기서 PlayerProfile 을 직접 읽지
+# 않는다. 그러면 적까지 같이 강해진다. 장비(equip_*)·버프(buff_*) 와 같은 입력 채널이다.
+var growth_multiplier: float = 1.0
+
 # ===== 장비 보너스 (Equipment Bonuses) =====
 # 장비 시스템이 채워 넣는 입력값. 각 파생 스텟 계산에 합산된다.
 # 모두 기본 0이라 장비가 없으면 파생 계산에 영향을 주지 않는다(기존 .tres 호환).
@@ -77,6 +88,30 @@ static func get_tuning() -> CombatTuning:
 	return _fallback_tuning
 
 
+# ===== 기초 스텟 조회 (Base stat accessors) =====
+#
+# 저작된 기초값에 성장 배수를 적용한 값이다. **파생 계산과 화면은 이쪽을 읽는다.**
+# 필드를 직접 읽으면 삼각근 Lv.이 반영되지 않는다.
+
+func _grown(base: int) -> int:
+	return int(round(float(base) * growth_multiplier))
+
+func get_hp() -> int:
+	return _grown(hp)
+
+func get_strength() -> int:
+	return _grown(strength)
+
+func get_defense() -> int:
+	return _grown(defense)
+
+func get_intelligence() -> int:
+	return _grown(intelligence)
+
+func get_faith() -> int:
+	return _grown(faith)
+
+
 # ===== 세부 스텟 (Derived Stats) =====
 #
 # 합산 순서: (기초 기여 + 장비 가산 + 버프 가산) * 버프 배수
@@ -88,33 +123,33 @@ func _buff_multiplier(percent: float) -> float:
 
 # 최대 HP = 기초 HP + 장비 HP 보너스 + 버프 HP 보너스
 func get_max_hp() -> int:
-	return hp + equip_max_hp + buff_max_hp
+	return get_hp() + equip_max_hp + buff_max_hp
 
 # 물리 공격력 = 근력 기여 + 장비 보너스 + 버프 (가산 후 배율)
 func get_physical_attack() -> int:
 	var t := get_tuning()
-	var total := float(int(round(strength * t.strength_to_phys_atk)) + equip_physical_attack + buff_physical_attack)
+	var total := float(int(round(get_strength() * t.strength_to_phys_atk)) + equip_physical_attack + buff_physical_attack)
 	return int(round(total * _buff_multiplier(buff_physical_attack_percent)))
 
 # 마법 공격력 = 신앙심 기여 + 장비 보너스 + 버프 (가산 후 배율)
 func get_magic_attack() -> int:
 	var t := get_tuning()
-	var total := float(int(round(faith * t.faith_to_magic_atk)) + equip_magic_attack + buff_magic_attack)
+	var total := float(int(round(get_faith() * t.faith_to_magic_atk)) + equip_magic_attack + buff_magic_attack)
 	return int(round(total * _buff_multiplier(buff_magic_attack_percent)))
 
 # 물리 방어력 = 근력 기여분 + 방어력 스텟 기여분 + 장비 + 버프 (가산 후 배율)
 func get_physical_defense() -> int:
 	var t := get_tuning()
-	var from_strength := strength * t.strength_to_phys_def
-	var from_defense := defense * t.defense_to_phys_def
+	var from_strength := get_strength() * t.strength_to_phys_def
+	var from_defense := get_defense() * t.defense_to_phys_def
 	var total := float(int(round(from_strength + from_defense)) + equip_physical_defense + buff_physical_defense)
 	return int(round(total * _buff_multiplier(buff_physical_defense_percent)))
 
 # 마법 방어력 = 근력 기여분 + 방어력 스텟 기여분 + 장비 + 버프 (가산 후 배율)
 func get_magic_defense() -> int:
 	var t := get_tuning()
-	var from_strength := strength * t.strength_to_magic_def
-	var from_defense := defense * t.defense_to_magic_def
+	var from_strength := get_strength() * t.strength_to_magic_def
+	var from_defense := get_defense() * t.defense_to_magic_def
 	var total := float(int(round(from_strength + from_defense)) + equip_magic_defense + buff_magic_defense)
 	return int(round(total * _buff_multiplier(buff_magic_defense_percent)))
 
@@ -129,8 +164,12 @@ func get_move_speed_multiplier() -> float:
 	return _buff_multiplier(buff_move_speed_percent + equip_move_speed_percent)
 
 # 여신의 스킬 강화 배수 (신앙심 기여 + 장비). 1.0 = 강화 없음.
+#
+# 신앙심은 get_faith() 로 읽는다 — 마법 공격력과 같은 스텟에서 나오는 값이므로
+# 삼각근 Lv.의 성장도 같이 받아야 한다. equip_goddess_boost 는 장비 채널이라
+# 성장 배수를 받지 않는다(기초 스텟이 아니다).
 func get_goddess_skill_boost() -> float:
-	return 1.0 + faith * get_tuning().faith_to_skill_boost + equip_goddess_boost
+	return 1.0 + get_faith() * get_tuning().faith_to_skill_boost + equip_goddess_boost
 
 
 # ===== 피해 계산 (Damage) =====
@@ -170,11 +209,13 @@ func apply_defense(raw_damage: int) -> int:
 
 # ===== 성장 (Growth) =====
 
-# 삼각근 강화: 근력을 올린다.
-func train_deltoid(amount: int = 1) -> void:
-	if amount <= 0:
-		return
-	strength += amount
+# 삼각근 Lv.의 스텟 배수를 갱신한다 (PlayerProfile 이 호출).
+#
+# 이전의 train_deltoid() 를 대체한다. 근력만 직접 더하던 방식은 성장이 어디까지
+# 진행됐는지 되돌아볼 수 없고(누적분이 기초값에 섞인다) 세이브와도 이어지지 않았다.
+# 이제 성장의 출처는 PlayerProfile 의 누적 프로틴 하나다.
+func set_growth_multiplier(value: float) -> void:
+	growth_multiplier = maxf(value, 0.0)
 
 # 장비 방어 보너스를 갱신한다 (장비 시스템에서 호출).
 func set_equipment_defense(physical: int, magic: int) -> void:
