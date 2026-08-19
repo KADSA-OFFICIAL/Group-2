@@ -1,6 +1,6 @@
 [gd_resource type="SpriteFrames" load_steps=14 format=3]
 
-[ext_resource type="Texture2D" uid="uid://c0sh5j7rys23b" path="res://assets/sprites/enemies/brachio_beastfolk_walk.png" id="1_sheet"]
+[ext_resource type="Texture2D" uid="uid://c0sh5j7rys23b" path="res://assets/sprites/enemies/mammoth_beastfolk_walk.png" id="1_sheet"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_down_0"]
 atlas = ExtResource("1_sheet")

@@ -1,13 +1,13 @@
 [gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://entities/enemies/EnemyBase.gd" id="1_enemybase"]
-[ext_resource type="Resource" path="res://data/enemies/brachio_beastfolk.tres" id="2_data"]
+[ext_resource type="Resource" path="res://data/enemies/mammoth_beastfolk.tres" id="2_data"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1"]
 radius = 10.0
 height = 28.0
 
-[node name="BrachioBeastfolk" type="CharacterBody2D" groups=["enemy"]]
+[node name="MammothBeastfolk" type="CharacterBody2D" groups=["enemy"]]
 script = ExtResource("1_enemybase")
 data = ExtResource("2_data")
 

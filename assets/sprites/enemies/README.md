@@ -6,8 +6,8 @@
 |---|---|
 | `stone_spearman_walk.png` | 돌창병. 4방향 x 3프레임 워크 시트 (셀 524x492, 시트 1572x1968) |
 | `stone_spearman_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
-| `brachio_beastfolk_walk.png` | 브라키오 수인. 4방향 x 3프레임 워크 시트 (셀 424x496, 시트 1272x1984) |
-| `brachio_beastfolk_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+| `mammoth_beastfolk_walk.png` | 매머드 수인. 4방향 x 3프레임 워크 시트 (셀 424x496, 시트 1272x1984) |
+| `mammoth_beastfolk_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
 
 ## 시트 규약
 
@@ -69,7 +69,7 @@ godot --headless --path . --script res://tools/normalize_walk_sheet.gd -- <입�
 | 시트 | 프레임 겹침 | 손실 |
 |---|---|---|
 | `stone_spearman_walk.png` | 뒷모습 행에서 겹침 | 머리카락 끝 7px·9px (폭 507px의 1.5% 미만) |
-| `brachio_beastfolk_walk.png` | 없음 | **없음** |
+| `mammoth_beastfolk_walk.png` | 없음 | **없음** |
 
 ## 원본에서 돌창병 시트를 만든 방법
 
@@ -92,7 +92,7 @@ godot --headless --path . --script res://tools/normalize_walk_sheet.gd -- <입�
 
 **알려진 손실**: 3행(뒷모습)의 0·1번 프레임은 옆 프레임과 겹친 구간을 열 밀도 골짜기에서
 잘랐다. 바깥쪽 머리카락 끝이 각각 7px, 9px(전체 폭 507px의 1.5% 미만) 빠져 있다.
-브라키오 수인 시트는 프레임이 겹치지 않아 이 손실이 없다.
+매머드 수인 시트는 프레임이 겹치지 않아 이 손실이 없다.
 
 임포트는 `mipmaps/generate=true`로 두었다. 원본이 크고 화면에서는 0.25배로 줄여 그리므로
 밉맵이 없으면 이동할 때 픽셀이 지글거린다.

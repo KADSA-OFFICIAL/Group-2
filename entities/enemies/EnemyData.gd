@@ -30,7 +30,7 @@ class_name EnemyData
 # ===== 밸런스 (Balance, 하이브리드 C #157) =====
 # balance_tier > 0 이면 hp/strength/defense를 BalanceReference 기준선 × 개체 배수로 파생한다
 # (EnemyDatabase가 로드 시 apply_balance() 호출). 0이면 위 stats의 수기 값을 그대로 쓴다(하위 호환).
-# 개체 배수로 개성을 준다: 예) 브라키오 = 고체력·고근접딜, 서아 = 표준(전부 1.0).
+# 개체 배수로 개성을 준다: 예) 매머드 = 고체력·고근접딜, 서아 = 표준(전부 1.0).
 @export var balance_tier: int = 0
 @export var hp_multiplier: float = 1.0
 @export var attack_multiplier: float = 1.0
@@ -97,7 +97,7 @@ class_name EnemyData
 
 @export_group("강화 평타 (Charged Attack)")
 ## 평타를 이 횟수만큼 명중시키면 다음 평타가 강화된다. 0이면 비활성(일반 적).
-## 예) 브라키오 = 3: 평타 3회 뒤 강화 평타로 기절.
+## 예) 매머드 = 3: 평타 3회 뒤 강화 평타로 기절.
 @export var charged_attack_threshold: int = 0
 ## 강화 평타 피해 배수(일반 평타 대비).
 @export var charged_attack_damage_multiplier: float = 1.5
