@@ -28,6 +28,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "뭐야? 너 내 이름은 어떻게 알아? 너 스토커니?"
 stage_id = &""
 
@@ -49,6 +50,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "흠..그래 믿어줄게. 너 어디 다친데는 없어? 갈 곳 없으면 우리 마을로 가자. 안그래도 요즘 쉬었음 청년이 많아서 일꾼이 없어."
 stage_id = &""
 
@@ -70,6 +72,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "뭐..뭐야 마을이 불타고 있잖아! 이게 어떻게 된 일이야!"
 stage_id = &""
 
@@ -84,6 +87,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "개소리야! 보고만 있지 말고 빨리 도와줘!"
 stage_id = &""
 
@@ -98,6 +102,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "브라키오 수인"
+character_id = &"brachio_beastfolk"
 text = "ㅈ..저희를 내버려두면 마을이 부서져 버리고 말거라구요..?"
 stage_id = &""
 
@@ -126,6 +131,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "꺄악! 마을 사람들이 당하고 있어! 빨리 도와줘!"
 stage_id = &""
 
@@ -140,6 +146,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "빨리 가서 도와주라고!"
 stage_id = &""
 
@@ -161,6 +168,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "브라키오 수인"
+character_id = &"brachio_beastfolk"
 text = "히..히익! 잘못했어요오.."
 stage_id = &""
 
@@ -231,6 +239,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "안심해, 말은 저렇게 하지만 실제론 갈 곳 없어보여서 우리 마을에서 지내라는 뜻이야."
 stage_id = &""
 
@@ -245,6 +254,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "소꿉친구"
+character_id = &"childhood_friend"
 text = "근데 마을이 부셔져서 다시 만들긴 해야돼, 도와줄 수 있지?"
 stage_id = &""
 

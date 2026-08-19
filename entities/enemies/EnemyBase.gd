@@ -23,6 +23,10 @@ var is_alive: bool = true
 # 평타 쿨다운 잔여 시간(초).
 var _attack_cooldown_left: float = 0.0
 
+# 강화 평타 충전: 명중시킨 일반 평타 수. data.charged_attack_threshold에 도달하면
+# 다음 평타가 강화된다(추가 피해 + 상태이상). threshold=0이면 비활성.
+var _charge_count: int = 0
+
 # 현재 추적 대상. 죽거나 탐지 범위를 벗어나면 다시 고른다.
 # Node2D로 타입을 잡아 global_position 접근이 정적으로 안전하게 한다.
 var _target: Node2D = null
@@ -261,7 +265,25 @@ func try_attack() -> bool:
 		return false
 
 	_attack_cooldown_left = get_attack_cooldown()
-	_target.take_damage(get_stats().get_physical_attack(), self)
+
+	# 강화 평타 판정: threshold까지 충전됐으면 이번 평타가 강화된다.
+	var threshold: int = data.charged_attack_threshold if data != null else 0
+	var is_charged: bool = threshold > 0 and _charge_count >= threshold
+
+	var damage: int = get_stats().get_physical_attack()
+	if is_charged:
+		damage = int(round(damage * data.charged_attack_damage_multiplier))
+
+	_target.take_damage(damage, self)
+
+	if is_charged:
+		_charge_count = 0
+		# 강화 평타는 대상에게 상태이상(예: 기절)을 건다. 대상이 그 사이 죽었으면 걸지 않는다.
+		if data.charged_attack_effect != &"" and is_instance_valid(_target) and _target.get("is_alive") != false:
+			StatusEffectSystem.apply(_target, data.charged_attack_effect, self)
+	else:
+		_charge_count += 1
+
 	return true
 
 # 실제로 들어간 피해(방어 적용 후)를 반환한다.
