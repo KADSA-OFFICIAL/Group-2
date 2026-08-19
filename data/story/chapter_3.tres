@@ -13,7 +13,7 @@ stage_id = &""
 [sub_resource type="Resource" id="L1"]
 script = ExtResource("2")
 kind = 1
-speaker = "마을사람들&소꿉친구"
+speaker = "마을 사람들&소꿉친구"
 text = "여기를 바로 재건하는 거 아니야?"
 stage_id = &""
 
@@ -69,7 +69,7 @@ stage_id = &""
 [sub_resource type="Resource" id="L9"]
 script = ExtResource("2")
 kind = 1
-speaker = "마을사람들"
+speaker = "마을 사람들"
 text = "주인공! 쟤네 좀 어떻게 해줘!"
 stage_id = &""
 
