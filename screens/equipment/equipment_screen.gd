@@ -230,7 +230,7 @@ func _refresh_slots() -> void:
 		_slot_column.add_child(HUDKit.label("캐릭터가 없습니다.", 13, HUDKit.text_2()))
 		return
 
-	var art := HUDKit.portrait_block(character, Vector2(190, 280))
+	var art := HUDKit.portrait_block(character, Vector2(190, 280), HUDKit.Framing.FULL)
 	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_figure_holder.add_child(art)
 

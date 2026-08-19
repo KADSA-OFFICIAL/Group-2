@@ -183,7 +183,7 @@ func _refresh_slots() -> void:
 		if filled:
 			var character := CharacterDatabase.get_character(_selected[i])
 			if character != null:
-				var portrait := HUDKit.portrait_block(character, Vector2(0, 150))
+				var portrait := HUDKit.portrait_block(character, Vector2(0, 150), HUDKit.Framing.BUST)
 				portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
 				box.add_child(portrait)
 
@@ -270,7 +270,7 @@ func _make_roster_card(id: StringName) -> Control:
 	card.add_child(row)
 
 	if character != null:
-		row.add_child(HUDKit.portrait_block(character, Vector2(44, 52)))
+		row.add_child(HUDKit.portrait_block(character, Vector2(44, 52), HUDKit.Framing.HEAD))
 
 		var box := VBoxContainer.new()
 		box.add_theme_constant_override("separation", 4)

@@ -212,7 +212,7 @@ func _make_member_card(id: StringName) -> Control:
 	card.add_child(row)
 
 	if character != null:
-		row.add_child(HUDKit.portrait_block(character, Vector2(40, 48)))
+		row.add_child(HUDKit.portrait_block(character, Vector2(40, 48), HUDKit.Framing.HEAD))
 
 		var box := VBoxContainer.new()
 		box.add_theme_constant_override("separation", 4)
