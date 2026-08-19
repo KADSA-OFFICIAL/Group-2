@@ -257,7 +257,7 @@ func _make_roster_card(id: StringName) -> Control:
 	card.add_child(row)
 
 	if character != null:
-		row.add_child(HUDKit.portrait_block(character, Vector2(44, 52)))
+		row.add_child(HUDKit.portrait_block(character, Vector2(44, 52), HUDKit.Framing.HEAD))
 
 		var box := VBoxContainer.new()
 		box.add_theme_constant_override("separation", 4)
@@ -309,7 +309,7 @@ func _refresh_preview() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_preview_holder.add_child(column)
 
-	var art := HUDKit.portrait_block(character, Vector2(230, 330))
+	var art := HUDKit.portrait_block(character, Vector2(230, 330), HUDKit.Framing.FULL)
 	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	column.add_child(art)
 
