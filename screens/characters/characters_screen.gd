@@ -430,10 +430,12 @@ func _fill_stats(character: CharacterData) -> void:
 
 	_detail_body.add_child(_rule())
 	_detail_body.add_child(HUDKit.section("기초 스탯", "base"))
-	_detail_body.add_child(HUDKit.stat_row("근력", "str", str(stats.strength)))
-	_detail_body.add_child(HUDKit.stat_row("방어력", "def", str(stats.defense)))
-	_detail_body.add_child(HUDKit.stat_row("신앙심", "faith", str(stats.faith)))
-	_detail_body.add_child(HUDKit.stat_row("지능", "int", str(stats.intelligence)))
+	# 삼각근 Lv.이 반영된 값을 보여준다. 필드를 직접 읽으면 저작값 그대로라 성장이 안 보인다.
+	# 보너스 칸에는 성장분(저작값 대비 증가분)을 적는다.
+	_detail_body.add_child(HUDKit.stat_row("근력", "str", str(stats.get_strength()), _bonus(stats.get_strength() - stats.strength)))
+	_detail_body.add_child(HUDKit.stat_row("방어력", "def", str(stats.get_defense()), _bonus(stats.get_defense() - stats.defense)))
+	_detail_body.add_child(HUDKit.stat_row("신앙심", "faith", str(stats.get_faith()), _bonus(stats.get_faith() - stats.faith)))
+	_detail_body.add_child(HUDKit.stat_row("지능", "int", str(stats.get_intelligence()), _bonus(stats.get_intelligence() - stats.intelligence)))
 
 	_detail_body.add_child(_rule())
 	_detail_body.add_child(HUDKit.section("배수", "multipliers"))

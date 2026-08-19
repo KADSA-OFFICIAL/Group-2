@@ -358,7 +358,7 @@ func _build_profile() -> Control:
 	avatar.color = UITheme.AMBER
 	row.add_child(avatar)
 
-	row.add_child(_text("Lv.%d" % PlayerProfile.level, 14, UITheme.ACCENT, 700))
+	row.add_child(_text("삼각근 Lv.%d" % PlayerProfile.deltoid_level, 14, UITheme.ACCENT, 700))
 
 	# 이름이 비었을 때의 문구는 OrderSystem 이 정한다(화면마다 다르게 적지 않는다).
 	var display_name := OrderSystem.get_leader_display_name()
