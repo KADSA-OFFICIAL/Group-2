@@ -3,9 +3,9 @@
 [ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 [ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
-[ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/brachio_beastfolk_walk_frames.tres" id="10_walk"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/mammoth_beastfolk_walk_frames.tres" id="10_walk"]
 
-[sub_resource type="Resource" id="PlayerStats_brachio_beastfolk"]
+[sub_resource type="Resource" id="PlayerStats_mammoth_beastfolk"]
 script = ExtResource("2_stats")
 hp = 2400
 strength = 91
@@ -15,10 +15,10 @@ faith = 100
 
 [resource]
 script = ExtResource("1_enemydata")
-enemy_id = &"brachio_beastfolk"
-display_name = "브라키오 수인"
+enemy_id = &"mammoth_beastfolk"
+display_name = "매머드 수인"
 description = "고체력 근접 딜러. 느리게(파티 35% 속도) 다가오지만 체력이 높고 근접 피해가 세다. 하이브리드 C 기준 표준 적(서아) 대비 HP x2.0, 근접 공격 x1.4, 방어 x1.2로 '때리는 브루저'다. 스킬: 평타를 3번 명중시키면 다음 평타가 강화되어(x1.5) 플레이어를 기절시킨다."
-stats = SubResource("PlayerStats_brachio_beastfolk")
+stats = SubResource("PlayerStats_mammoth_beastfolk")
 balance_tier = 1
 hp_multiplier = 2.0
 attack_multiplier = 1.4
