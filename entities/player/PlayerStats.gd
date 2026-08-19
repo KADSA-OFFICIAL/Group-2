@@ -164,8 +164,12 @@ func get_move_speed_multiplier() -> float:
 	return _buff_multiplier(buff_move_speed_percent + equip_move_speed_percent)
 
 # 여신의 스킬 강화 배수 (신앙심 기여 + 장비). 1.0 = 강화 없음.
+#
+# 신앙심은 get_faith() 로 읽는다 — 마법 공격력과 같은 스텟에서 나오는 값이므로
+# 삼각근 Lv.의 성장도 같이 받아야 한다. equip_goddess_boost 는 장비 채널이라
+# 성장 배수를 받지 않는다(기초 스텟이 아니다).
 func get_goddess_skill_boost() -> float:
-	return 1.0 + faith * get_tuning().faith_to_skill_boost + equip_goddess_boost
+	return 1.0 + get_faith() * get_tuning().faith_to_skill_boost + equip_goddess_boost
 
 
 # ===== 피해 계산 (Damage) =====
