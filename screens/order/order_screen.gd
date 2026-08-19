@@ -176,8 +176,14 @@ func _refresh_profile() -> void:
 		_leader_line.text = "%s · %s" % [
 			OrderSystem.get_leader_display_name(), OrderSystem.get_leader_title_line()]
 
-	_profile_body.add_child(HUDKit.stat_row("레벨", "level", "Lv.%d" % PlayerProfile.level))
-	_profile_body.add_child(HUDKit.stat_row("누적 경험치", "exp", str(PlayerProfile.exp_total)))
+	# 삼각근 Lv.과 다음 Lv.까지의 진행도. 누적 프로틴은 진행도에서 도출되므로 따로 적지 않는다.
+	var progress := PlayerProfile.get_level_progress()
+	_profile_body.add_child(HUDKit.stat_row(
+		"삼각근", "deltoid", "Lv.%d" % PlayerProfile.deltoid_level,
+		"×%.2f" % PlayerProfile.get_stat_multiplier()))
+	_profile_body.add_child(HUDKit.stat_row(
+		"프로틴", "protein", "%s / %s" % [
+			HUDKit.comma(int(progress["current"])), HUDKit.comma(int(progress["required"]))]))
 	_profile_body.add_child(HUDKit.stat_row("모인 인원", "members", "%d명" % OrderSystem.get_member_count()))
 	_profile_body.add_child(HUDKit.stat_row("편성", "party", "%d / %d" % [PartySystem.get_size(), PartySystem.PARTY_SIZE]))
 
