@@ -95,6 +95,16 @@ class_name EnemyData
 ## 클수록 빠르다. PlayerStats의 공속 배수와 같은 방향(클수록 빠름)으로 맞췄다.
 @export var attack_speed_multiplier: float = 1.0
 
+@export_group("강화 평타 (Charged Attack)")
+## 평타를 이 횟수만큼 명중시키면 다음 평타가 강화된다. 0이면 비활성(일반 적).
+## 예) 브라키오 = 3: 평타 3회 뒤 강화 평타로 기절.
+@export var charged_attack_threshold: int = 0
+## 강화 평타 피해 배수(일반 평타 대비).
+@export var charged_attack_damage_multiplier: float = 1.5
+## 강화 평타가 대상에게 거는 StatusEffect id. 비어 있으면 상태이상 없이 추가 피해만.
+## 정의 출처는 data/status_effects/*.tres (예: &"stun").
+@export var charged_attack_effect: StringName = &""
+
 # ----- 확장 가이드 (Extensibility) -----
 # 새 항목은 위 섹션 중 알맞은 곳에 @export 필드를 "기본값과 함께" 추가한다.
 # 기본값이 있으면 기존 .tres는 누락 필드를 기본값으로 로드하므로 호환이 유지된다.
