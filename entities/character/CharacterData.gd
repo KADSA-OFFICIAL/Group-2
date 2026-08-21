@@ -41,6 +41,22 @@ enum SecondaryRole {
 @export var display_name: String = ""         # 화면 표시 이름
 @export_multiline var description: String = ""
 
+# 플레이어가 파티에 넣어 쓸 수 있는가. false 면 **편성이 거부된다**(#216).
+#
+# 기본 true 라 이 필드가 없던 .tres 는 그대로 로드된다(하위 호환).
+#
+# 왜 필요한가: 초상 아트가 먼저 들어온 인물이 로스터에 저작되면(#184) 편성이 되고,
+# 편성되면 SynergySystem 이 그 역할을 세어 시너지를 열어 준다. 스토리 인물과 보스가
+# 플레이어 시너지를 만드는 것은 의도가 아니다.
+#
+# 왜 이름이 story_only 가 아닌가: goddess 는 스토리 전용이 아니라 **최종보스로 등장할**
+# 인물이다. 둘의 공통점은 "스토리에만 나온다"가 아니라 "플레이어가 쓰지 않는다"다.
+# 필드 이름은 이유가 아니라 규칙을 말해야 한다.
+#
+# **정의를 지우는 것이 아니다.** 여기 남아 있어야 스토리의 character_id 가 계속
+# 해석되어 이름·초상·색이 출처에서 나온다(#187). playable 은 편성 가능 여부만 정한다.
+@export var playable: bool = true
+
 # ===== 스텟 (Stats) =====
 # 캐릭터의 스텟 출처. 비어 있으면 기본값 PlayerStats를 사용한다.
 @export var stats: PlayerStats = PlayerStats.new()

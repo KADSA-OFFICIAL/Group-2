@@ -69,3 +69,21 @@ func get_all_ids() -> Array:
 
 func get_count() -> int:
 	return _characters.size()
+
+
+# 플레이어가 편성해 쓸 수 있는 캐릭터만 (#216).
+#
+# "누구를 쓸 수 있는가"의 단일 출처다. 화면마다 playable 을 각자 걸러 내면
+# 한 곳을 빼먹었을 때 그 화면에서만 스토리 인물이 편성 목록에 뜬다.
+# 정의 전체가 필요한 쪽(스토리 화자 해석 등)은 계속 get_all_ids() 를 쓴다.
+func get_playable_ids() -> Array:
+	var out: Array = []
+	for id in _characters:
+		var character: CharacterData = _characters[id]
+		if character != null and character.playable:
+			out.append(id)
+	return out
+
+
+func get_playable_count() -> int:
+	return get_playable_ids().size()

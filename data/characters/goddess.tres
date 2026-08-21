@@ -19,6 +19,7 @@ role = 2
 secondary_role = 2
 character_id = &"goddess"
 display_name = "여신"
+playable = false
 description = "초상 아트로 먼저 들어온 인물. 역할(버퍼/원거리)과 스텟은 [임시값]이며 같은 겸직인 buffer_ranged 를 기준으로 잡았다. 신앙심 스텟이 이 인물의 개성이 될 자리이지만 수치는 아직 정하지 않았다. 이름/개성/고유 스킬 미정."
 stats = SubResource("PlayerStats_goddess")
 sprite_texture = ExtResource("9_shape")
