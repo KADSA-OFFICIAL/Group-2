@@ -1,17 +1,9 @@
-[gd_resource type="Resource" script_class="StageData" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="StageData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
 [ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
-[ext_resource type="PackedScene" uid="uid://df6kt7j4x8m5" path="res://entities/enemies/TrainingGoblin.tscn" id="3_goblin"]
 [ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="4_seoa"]
 [ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="5_mammoth"]
-
-[sub_resource type="Resource" id="StageSpawn_goblin"]
-script = ExtResource("2_spawn")
-enemy_scene = ExtResource("3_goblin")
-position = Vector2(400, 200)
-count = 2
-offset = Vector2(100, 0)
 
 [sub_resource type="Resource" id="StageSpawn_seoa"]
 script = ExtResource("2_spawn")
@@ -31,11 +23,11 @@ offset = Vector2(100, 0)
 script = ExtResource("1_stagedata")
 stage_id = &"stage_1_1"
 display_name = "1-1 시험장"
-description = "첫 전투. 훈련용 고블린 2마리는 반격하지 않는 샌드백이고, 서아와 매머드 수인은 접근하면 쫓아온다. 파티 스폰 지점에서 탐지 범위 밖에 있어 전진해야 반응한다."
+description = "첫 전투. 서아와 매머드 수인이 접근하면 쫓아온다. 파티 스폰 지점에서 탐지 범위 밖에 있어 전진해야 반응한다."
 type = 0
 clear_rewards = {
 "gold": 40,
 "protein": 50,
 "stone": 25
 }
-spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_goblin"), SubResource("StageSpawn_seoa"), SubResource("StageSpawn_mammoth")])
+spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_seoa"), SubResource("StageSpawn_mammoth")])

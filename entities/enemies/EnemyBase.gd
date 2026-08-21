@@ -17,8 +17,9 @@ var is_alive: bool = true
 
 # ===== AI 상태 (AI State) =====
 # 행동 파라미터의 출처는 EnemyData다("AI 행동" 그룹). 여기서 수치를 새로 만들지 않는다.
-# data가 없으면 AI가 동작하지 않으므로, 씬에만 저작된 기존 적(TrainingGoblin)은
-# 지금까지와 똑같이 정지 상태를 유지한다(하위 호환).
+# data가 없으면 AI가 동작하지 않는다. 씬에만 저작된 적은 지금 하나도 없지만,
+# data 를 빼먹은 씬이 조용히 움직이는 대신 정지하도록 이 방어는 남긴다.
+# 의도적으로 멈춰 있어야 하는 적은 data.ai_enabled = false 로 저작한다.
 
 # 평타 쿨다운 잔여 시간(초).
 var _attack_cooldown_left: float = 0.0
@@ -45,7 +46,7 @@ var _runtime_stats: PlayerStats = null
 
 # 워크 애니메이션을 그리는 노드. 씬에 AnimatedSprite2D가 있고 data.walk_frames가
 # 채워져 있을 때만 잡힌다. null이면 이 스크립트는 외형에 전혀 손대지 않으므로
-# 시트가 없는 적(TrainingGoblin 등)은 지금까지와 똑같이 Sprite2D 정지 이미지로 남는다.
+# 워크 시트가 없는 적은 Sprite2D 정지 이미지(또는 도형 플레이스홀더)로 남는다.
 var _anim_sprite: AnimatedSprite2D = null
 
 # 멈춤 판정 임계값과 방향 판정은 WalkAnimation이 소유한다(플레이어와 같은 규약).

@@ -18,7 +18,7 @@ class_name EnemyData
 # 참고: docs/combat-screen-design.md, SYSTEM_CONVENTIONS.md
 
 # ===== 식별 (Identity) =====
-@export var enemy_id: StringName = &""    # 고유 식별자 (예: &"training_goblin")
+@export var enemy_id: StringName = &""    # 고유 식별자 (예: &"mammoth_beastfolk")
 @export var display_name: String = ""      # 화면 표시 이름
 @export_multiline var description: String = ""
 
