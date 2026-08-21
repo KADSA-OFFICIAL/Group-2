@@ -19,7 +19,6 @@ role = 0
 secondary_role = 3
 character_id = &"childhood_friend"
 display_name = "소꿉친구"
-playable = false
 description = "초상 아트로 먼저 들어온 인물. 역할(탱커/버퍼)과 스텟은 [임시값]이며 같은 겸직인 tank_buffer 를 기준으로 잡았다. 이름/개성/고유 스킬 미정."
 stats = SubResource("PlayerStats_childhood_friend")
 sprite_texture = ExtResource("9_shape")
