@@ -248,9 +248,9 @@ func _refresh_synergy() -> void:
 
 func _refresh_roster() -> void:
 	_clear(_roster_grid)
-	var total := CharacterDatabase.get_count()
+	var total := CharacterDatabase.get_playable_count()
 	_count_label.text = "보유 %d / %d" % [total, total]
-	for id in CharacterDatabase.get_all_ids():
+	for id in CharacterDatabase.get_playable_ids():
 		_roster_grid.add_child(_make_roster_card(id))
 
 

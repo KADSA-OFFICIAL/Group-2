@@ -193,7 +193,7 @@ func _refresh_roster() -> void:
 	if not is_instance_valid(_roster_grid):
 		return
 	_clear(_roster_grid)
-	for id in CharacterDatabase.get_all_ids():
+	for id in CharacterDatabase.get_playable_ids():
 		_roster_grid.add_child(_make_member_card(id))
 
 

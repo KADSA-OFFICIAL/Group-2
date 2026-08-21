@@ -44,8 +44,9 @@ func get_leader_title_line() -> String:
 
 
 # 교단에 모인 인원 수. 명부의 출처는 CharacterDatabase 다.
+# 스토리 인물·보스(playable = false)는 교단에 합류한 인원이 아니므로 세지 않는다 (#216).
 func get_member_count() -> int:
-	return CharacterDatabase.get_count()
+	return CharacterDatabase.get_playable_count()
 
 
 # ----- 확장 가이드 -----

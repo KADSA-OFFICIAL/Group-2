@@ -19,6 +19,7 @@ role = 1
 secondary_role = 0
 character_id = &"ranged_pure"
 display_name = "원거리(순혈)"
+playable = true
 description = "로스터 플레이스홀더. 순혈 원거리딜러 슬롯. 이름/개성/고유 스킬 미정."
 stats = SubResource("PlayerStats_ranged_pure")
 sprite_texture = ExtResource("9_shape")

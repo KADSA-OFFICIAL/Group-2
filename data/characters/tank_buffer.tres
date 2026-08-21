@@ -19,6 +19,7 @@ role = 0
 secondary_role = 3
 character_id = &"tank_buffer"
 display_name = "탱커/버퍼"
+playable = true
 description = "로스터 플레이스홀더. 겸직(탱커 + 버퍼) 슬롯. 이름/개성/고유 스킬 미정."
 stats = SubResource("PlayerStats_tank_buffer")
 sprite_texture = ExtResource("9_shape")
