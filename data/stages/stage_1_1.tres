@@ -1,17 +1,9 @@
-[gd_resource type="Resource" script_class="StageData" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="StageData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
 [ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
-[ext_resource type="PackedScene" uid="uid://df6kt7j4x8m5" path="res://entities/enemies/TrainingGoblin.tscn" id="3_goblin"]
 [ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="4_seoa"]
-[ext_resource type="PackedScene" path="res://entities/enemies/BrachioBeastfolk.tscn" id="5_brachio"]
-
-[sub_resource type="Resource" id="StageSpawn_goblin"]
-script = ExtResource("2_spawn")
-enemy_scene = ExtResource("3_goblin")
-position = Vector2(400, 200)
-count = 2
-offset = Vector2(100, 0)
+[ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="5_mammoth"]
 
 [sub_resource type="Resource" id="StageSpawn_seoa"]
 script = ExtResource("2_spawn")
@@ -20,9 +12,9 @@ position = Vector2(600, 140)
 count = 1
 offset = Vector2(100, 0)
 
-[sub_resource type="Resource" id="StageSpawn_brachio"]
+[sub_resource type="Resource" id="StageSpawn_mammoth"]
 script = ExtResource("2_spawn")
-enemy_scene = ExtResource("5_brachio")
+enemy_scene = ExtResource("5_mammoth")
 position = Vector2(600, 320)
 count = 1
 offset = Vector2(100, 0)
@@ -31,11 +23,11 @@ offset = Vector2(100, 0)
 script = ExtResource("1_stagedata")
 stage_id = &"stage_1_1"
 display_name = "1-1 시험장"
-description = "첫 전투. 훈련용 고블린 2마리는 반격하지 않는 샌드백이고, 서아와 브라키오 수인은 접근하면 쫓아온다. 파티 스폰 지점에서 탐지 범위 밖에 있어 전진해야 반응한다."
+description = "첫 전투. 서아와 매머드 수인이 스폰 지점부터 파티를 향해 다가온다(#208 로 탐지 범위가 600 이 되어 스폰 거리 500~531px 가 범위 안이다). 서아가 더 빠르게 붙고, 매머드는 느리지만 단단하다."
 type = 0
-clear_protein = 50
 clear_rewards = {
 "gold": 40,
+"protein": 50,
 "stone": 25
 }
-spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_goblin"), SubResource("StageSpawn_seoa"), SubResource("StageSpawn_brachio")])
+spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_seoa"), SubResource("StageSpawn_mammoth")])

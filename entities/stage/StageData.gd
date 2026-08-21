@@ -63,17 +63,10 @@ enum Type {
 # 지급은 StageProgress 가 CurrencySystem 을 통해 한다 — 여기는 정의만 담는다.
 #
 # 수치는 [임시값]이다. 밸런스(획득 속도 대비 제작 비용)는 별도 작업이다.
+# 성장 재료인 프로틴도 재화이므로 여기에 함께 적는다 (예: {"gold": 40, "protein": 50}).
+# #192 에서는 clear_protein 이라는 별도 필드였으나, #204 에서 프로틴이 재화가 되면서
+# 보상 정의가 이 하나로 합쳐졌다.
 @export var clear_rewards: Dictionary = {}
-
-# 클리어로 얻는 프로틴 (삼각근 Lv.의 성장 재료, #192).
-#
-# clear_rewards 와 나눠 두는 이유: 프로틴은 재화가 아니라 **진행도**다.
-# CurrencySystem 에 없는 키를 clear_rewards 에 섞으면 validate() 가 잡아낸다.
-# 지급은 StageProgress 가 PlayerProfile 을 통해 한다 — 여기는 정의만 담는다.
-#
-# 0이면 프로틴을 주지 않는 스테이지다.
-# 수치는 [임시값]이다. 획득 속도 대비 곡선 밸런스는 별도 작업이다.
-@export var clear_protein: int = 0
 
 
 # ----- 여기에 없는 것과 그 이유 (Extensibility) -----
@@ -188,10 +181,6 @@ func validate() -> Array[String]:
 			problems.append("clear_rewards['%s']는 0 이상의 정수여야 합니다." % str(key))
 		elif not CurrencySystem.DEFAULT_CURRENCIES.has(str(key)):
 			problems.append("clear_rewards['%s']는 알 수 없는 재화입니다." % str(key))
-
-	# 음수 프로틴은 삼각근 Lv.을 되돌릴 수 없으므로 조용히 무시된다. 저작 시점에 잡는다.
-	if clear_protein < 0:
-		problems.append("clear_protein은 0 이상이어야 합니다: %d" % clear_protein)
 
 	# 소탕이 필요한데 적이 없으면 클리어할 수 없다(저작 실수).
 	if requires_clear() and spawns.is_empty():

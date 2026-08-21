@@ -17,8 +17,20 @@ var is_alive: bool = true
 
 # ===== AI 상태 (AI State) =====
 # 행동 파라미터의 출처는 EnemyData다("AI 행동" 그룹). 여기서 수치를 새로 만들지 않는다.
-# data가 없으면 AI가 동작하지 않으므로, 씬에만 저작된 기존 적(TrainingGoblin)은
-# 지금까지와 똑같이 정지 상태를 유지한다(하위 호환).
+# data가 없으면 AI가 동작하지 않는다. 씬에만 저작된 적은 지금 하나도 없지만,
+# data 를 빼먹은 씬이 조용히 움직이는 대신 정지하도록 이 방어는 남긴다.
+# 의도적으로 멈춰 있어야 하는 적은 data.ai_enabled = false 로 저작한다.
+
+# 투사체 최대 비행 거리 = 사거리 x 이 배수. 딱 사거리(x1.0)로 두면 대상이 한 발짝
+# 물러난 순간 탄이 코앞에서 사라진다.
+#
+# 2.0 인 이유: 1.4(서아 기준 350px)로는 탄이 너무 일찍 사라졌다. 발사는 사거리
+# 250px 안에서만 일어나므로, x2.0 이면 최대 거리에서 쏜 탄도 대상 위치를 250px
+# 지나쳐 날아간다 — 대상이 물러나며 싸워도 탄이 따라붙는다.
+#
+# 상한의 기준은 탐지 범위다. 서아는 500px < 탐지 600px 이므로, 탄이 "추격을 놓는
+# 거리" 밖까지 날아가지는 않는다. 이 배수를 더 올릴 때는 그 관계를 함께 본다.
+const PROJECTILE_RANGE_MARGIN: float = 2.0
 
 # 평타 쿨다운 잔여 시간(초).
 var _attack_cooldown_left: float = 0.0
@@ -45,7 +57,7 @@ var _runtime_stats: PlayerStats = null
 
 # 워크 애니메이션을 그리는 노드. 씬에 AnimatedSprite2D가 있고 data.walk_frames가
 # 채워져 있을 때만 잡힌다. null이면 이 스크립트는 외형에 전혀 손대지 않으므로
-# 시트가 없는 적(TrainingGoblin 등)은 지금까지와 똑같이 Sprite2D 정지 이미지로 남는다.
+# 워크 시트가 없는 적은 Sprite2D 정지 이미지(또는 도형 플레이스홀더)로 남는다.
 var _anim_sprite: AnimatedSprite2D = null
 
 # 멈춤 판정 임계값과 방향 판정은 WalkAnimation이 소유한다(플레이어와 같은 규약).
@@ -274,17 +286,48 @@ func try_attack() -> bool:
 	if is_charged:
 		damage = int(round(damage * data.charged_attack_damage_multiplier))
 
-	_target.take_damage(damage, self)
+	var effect_id: StringName = data.charged_attack_effect if (is_charged and data != null) else &""
+
+	# 원거리 적은 탄을 날린다. 근접 적(projectile_scene 이 비어 있음)은 즉시 피해다.
+	if data != null and data.projectile_scene != null:
+		_fire_projectile(damage, effect_id)
+	else:
+		_target.take_damage(damage, self)
+		# 대상이 그 사이 죽었으면 효과를 걸지 않는다.
+		if effect_id != &"" and is_instance_valid(_target) and _target.get("is_alive") != false:
+			StatusEffectSystem.apply(_target, effect_id, self)
 
 	if is_charged:
 		_charge_count = 0
-		# 강화 평타는 대상에게 상태이상(예: 기절)을 건다. 대상이 그 사이 죽었으면 걸지 않는다.
-		if data.charged_attack_effect != &"" and is_instance_valid(_target) and _target.get("is_alive") != false:
-			StatusEffectSystem.apply(_target, data.charged_attack_effect, self)
 	else:
 		_charge_count += 1
 
 	return true
+
+
+# 대상 방향으로 투사체를 스폰한다 (#214).
+#
+# 발사 시점의 방향으로만 날아간다(유도 없음) — 그래서 대상이 비키면 빗나간다.
+# 피해량은 여기서 정해 실어 보내고, 방어 적용은 명중 시 대상의 take_damage 가 한다.
+#
+# 부모를 이 적이 아니라 **적의 부모(방)** 로 두는 이유: 적이 죽어도 이미 쏜 탄은
+# 계속 날아가야 하고, 방을 버릴 때(Stage1_1.load_room) 탄도 함께 정리되어야 한다.
+func _fire_projectile(damage: int, effect_id: StringName) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+
+	var projectile = data.projectile_scene.instantiate()
+	host.add_child(projectile)
+	projectile.global_position = global_position
+
+	# 최대 비행 거리는 사거리에 여유를 준다. 딱 사거리로 두면 대상이 한 발짝
+	# 물러난 순간 탄이 코앞에서 사라진다.
+	var reach: float = data.attack_range * PROJECTILE_RANGE_MARGIN
+	projectile.setup(
+		global_position.direction_to(_target.global_position),
+		data.projectile_speed, damage, self, reach,
+		data.projectile_hit_radius, effect_id, data.tint)
 
 # 실제로 들어간 피해(방어 적용 후)를 반환한다.
 # 피흡처럼 "준 피해에 비례하는" 효과가 그 값을 알아야 한다 — 공격력으로 계산하면

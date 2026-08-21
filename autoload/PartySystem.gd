@@ -73,6 +73,14 @@ func set_party(character_ids: Array) -> bool:
 		var data := CharacterDatabase.get_character(key)
 		if data == null:
 			return false
+
+		# 스토리 인물·보스는 정의는 있어도 편성되지 않는다 (#216).
+		# 여기서 막으면 SynergySystem 이 그 역할을 세는 일 자체가 없어진다
+		# — 시너지 쪽에 예외 분기를 두면 규칙이 두 곳으로 갈린다.
+		if not data.playable:
+			push_warning("PartySystem: 편성할 수 없는 캐릭터: " + String(key))
+			return false
+
 		resolved.append(data)
 
 	_members = resolved
@@ -164,12 +172,19 @@ func from_save_dict(data: Dictionary) -> void:
 	var ids: Array = []
 	for raw in data.get("members", []):
 		var key := StringName(raw)
-		# 로스터가 바뀌어 사라진 캐릭터는 편성에서 빼고 나머지를 복원한다.
+		# 로스터가 바뀌어 사라진 캐릭터, 편성 대상에서 빠진 캐릭터(#216)는 빼고
+		# 나머지를 복원한다.
 		# (set_party는 하나라도 문제가 있으면 전부 거부하므로 여기서 걸러 준다.)
-		if CharacterDatabase.has_character(key):
-			ids.append(key)
-		else:
+		if not CharacterDatabase.has_character(key):
 			push_warning("PartySystem: 세이브의 알 수 없는 character_id(건너뜀): " + String(key))
+			continue
+
+		var character := CharacterDatabase.get_character(key)
+		if character != null and not character.playable:
+			push_warning("PartySystem: 세이브의 편성 불가 캐릭터(건너뜀): " + String(key))
+			continue
+
+		ids.append(key)
 
 	if not set_party(ids):
 		return

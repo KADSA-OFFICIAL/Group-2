@@ -20,6 +20,7 @@ equip_magic_defense = 0
 script = ExtResource("1_chardata")
 character_id = &"shipduck"
 display_name = "Shipduck"
+playable = true
 description = "기본 플레이어 캐릭터."
 stats = SubResource("PlayerStats_shipduck")
 sprite_texture = ExtResource("9_shape")

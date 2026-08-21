@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c0sh5j7rys23b"
-path="res://.godot/imported/brachio_beastfolk_walk.png-d0b7b3731e03ee8e879f7737adb2cd35.ctex"
+path="res://.godot/imported/mammoth_beastfolk_walk.png-b95810675877d391a5ca3f5b7b41ef22.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/enemies/brachio_beastfolk_walk.png"
-dest_files=["res://.godot/imported/brachio_beastfolk_walk.png-d0b7b3731e03ee8e879f7737adb2cd35.ctex"]
+source_file="res://assets/sprites/enemies/mammoth_beastfolk_walk.png"
+dest_files=["res://.godot/imported/mammoth_beastfolk_walk.png-b95810675877d391a5ca3f5b7b41ef22.ctex"]
 
 [params]
 

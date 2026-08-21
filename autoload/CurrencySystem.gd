@@ -4,6 +4,7 @@ extends Node
 # 장비 제작 재료: stone, tin, copper, iron_ore, coal, hudamantium
 # 통화: gold
 # 특수 재화: faith_stone
+# 성장 재료: protein (삼각근 Lv.을 올리며 소모된다 — PlayerProfile 참고)
 const DEFAULT_CURRENCIES := {
 	"stone": 0,
 	"tin": 0,
@@ -12,6 +13,7 @@ const DEFAULT_CURRENCIES := {
 	"coal": 0,
 	"gold": 0,
 	"faith_stone": 0,
+	"protein": 0,
 	"hudamantium": 0
 }
 
@@ -23,11 +25,11 @@ const SAVE_KEY := "currencies"
 # 어떤 재화가 중요한지는 재화 도메인의 지식이므로 화면이 아니라 여기서 정한다.
 # (화면마다 각자 고르면 화면끼리 목록이 어긋난다.)
 #
-# 위 주석의 분류를 그대로 따랐다: 통화(gold) + 특수 재화(faith_stone).
+# 위 주석의 분류를 그대로 따랐다: 통화(gold) + 특수 재화(faith_stone) + 성장 재료(protein).
 # 나머지(제작 재료)는 창고 화면에서 전부 볼 수 있다.
 # 자리 제약상 최대 MAX_PRIMARY 개까지만 둔다.
 const MAX_PRIMARY: int = 3
-const PRIMARY_CURRENCIES := ["gold", "faith_stone"]
+const PRIMARY_CURRENCIES := ["gold", "faith_stone", "protein"]
 
 
 # 주요 재화 목록. 상한을 넘게 저작되어도 화면이 깨지지 않도록 잘라서 돌려준다.

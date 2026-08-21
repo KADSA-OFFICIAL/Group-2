@@ -101,8 +101,8 @@ stage_id = &""
 [sub_resource type="Resource" id="L13"]
 script = ExtResource("2")
 kind = 1
-speaker = "브라키오 수인"
-character_id = &"brachio_beastfolk"
+speaker = "매머드 수인"
+character_id = &"mammoth_beastfolk"
 text = "ㅈ..저희를 내버려두면 마을이 부서져 버리고 말거라구요..?"
 stage_id = &""
 
@@ -167,8 +167,8 @@ stage_id = &""
 [sub_resource type="Resource" id="L22"]
 script = ExtResource("2")
 kind = 1
-speaker = "브라키오 수인"
-character_id = &"brachio_beastfolk"
+speaker = "매머드 수인"
+character_id = &"mammoth_beastfolk"
 text = "히..히익! 잘못했어요오.."
 stage_id = &""
 

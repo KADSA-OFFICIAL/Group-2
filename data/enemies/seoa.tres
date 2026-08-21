@@ -1,10 +1,11 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 [ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
 [ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/stone_spearman_walk_frames.tres" id="10_walk"]
 [ext_resource type="Texture2D" uid="uid://bndkmd5k1ag5e" path="res://assets/sprites/enemies/portraits/seoa.png" id="4_portrait"]
+[ext_resource type="PackedScene" path="res://entities/combat/Projectile.tscn" id="11_projectile"]
 
 [sub_resource type="Resource" id="PlayerStats_seoa"]
 script = ExtResource("2_stats")
@@ -18,7 +19,7 @@ faith = 100
 script = ExtResource("1_enemydata")
 enemy_id = &"seoa"
 display_name = "서아"
-description = "근거리 추적형 적. 탐지 범위 안의 가장 가까운 파티 멤버를 쫓아가 평타를 넣는다. 파티보다 느리고 단단하다. 개성/고유 스킬 미정."
+description = "원거리 추적형 적. 탐지 범위(600) 안의 가장 가까운 파티 멤버를 쫓아가 사거리 250 에서 멈추고 투사체를 쏜다. 탄은 유도하지 않으므로 옆으로 움직이면 빗나간다. 밀고 들어와도 물러나지 않는다. 개성/고유 스킬 미정."
 stats = SubResource("PlayerStats_seoa")
 balance_tier = 1
 sprite_texture = ExtResource("9_shape")
@@ -29,7 +30,10 @@ walk_sprite_scale = Vector2(0.25, 0.25)
 walk_sprite_offset = Vector2(0, -181)
 portrait = ExtResource("4_portrait")
 ai_enabled = true
-detection_range = 300.0
-attack_range = 45.0
+detection_range = 600.0
+attack_range = 250.0
 move_speed_multiplier = 0.55
 attack_speed_multiplier = 0.6
+projectile_scene = ExtResource("11_projectile")
+projectile_speed = 320.0
+projectile_hit_radius = 14.0

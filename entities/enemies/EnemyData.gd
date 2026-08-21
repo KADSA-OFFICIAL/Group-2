@@ -18,7 +18,7 @@ class_name EnemyData
 # 참고: docs/combat-screen-design.md, SYSTEM_CONVENTIONS.md
 
 # ===== 식별 (Identity) =====
-@export var enemy_id: StringName = &""    # 고유 식별자 (예: &"training_goblin")
+@export var enemy_id: StringName = &""    # 고유 식별자 (예: &"mammoth_beastfolk")
 @export var display_name: String = ""      # 화면 표시 이름
 @export_multiline var description: String = ""
 
@@ -30,7 +30,7 @@ class_name EnemyData
 # ===== 밸런스 (Balance, 하이브리드 C #157) =====
 # balance_tier > 0 이면 hp/strength/defense를 BalanceReference 기준선 × 개체 배수로 파생한다
 # (EnemyDatabase가 로드 시 apply_balance() 호출). 0이면 위 stats의 수기 값을 그대로 쓴다(하위 호환).
-# 개체 배수로 개성을 준다: 예) 브라키오 = 고체력·고근접딜, 서아 = 표준(전부 1.0).
+# 개체 배수로 개성을 준다: 예) 매머드 = 고체력·고근접딜, 서아 = 표준(전부 1.0).
 @export var balance_tier: int = 0
 @export var hp_multiplier: float = 1.0
 @export var attack_multiplier: float = 1.0
@@ -86,7 +86,12 @@ class_name EnemyData
 @export var ai_enabled: bool = true
 ## 이 거리 안에 살아 있는 파티 멤버가 있으면 추적을 시작한다(px).
 ## 대상이 이 범위를 벗어나면 추적을 놓는다(무한 추격 방지).
-@export var detection_range: float = 300.0
+##
+## 600 인 이유(#208): 300 이었을 때 파티 스폰 지점(적까지 500~531px)이 범위 밖이라
+## 플레이어가 다가가는 1초 동안 적이 완전히 멈춰 있었다. 게다가 탐지(300)와 공격(45)
+## 사이 255px 를 플레이어(200px/s)와 적(110px/s)이 나눠 좁히므로 적이 실제로 걷는
+## 거리는 90px, 시간은 0.8초뿐이었다 — 화면에서 접근이 보이지 않았다.
+@export var detection_range: float = 600.0
 ## 이 거리 안에 들어오면 이동을 멈추고 평타를 넣는다(px).
 @export var attack_range: float = 45.0
 ## 이동속도 배수. 최종 이동속도 = base_move_speed x 이 값 x 버프 이속 배수.
@@ -95,9 +100,22 @@ class_name EnemyData
 ## 클수록 빠르다. PlayerStats의 공속 배수와 같은 방향(클수록 빠름)으로 맞췄다.
 @export var attack_speed_multiplier: float = 1.0
 
+@export_group("원거리 공격 (Ranged)")
+## 평타로 쏠 투사체 씬. **비어 있으면 근접 적**이고 사거리 안에서 즉시 피해를 준다
+## (기존 동작 그대로 — 이 필드가 없던 .tres 도 그대로 로드된다).
+##
+## 채우면 attack_range 안에서 이 씬을 스폰해 날려 보낸다. 피해량은 발사 시점의
+## get_physical_attack() 을 실어 보내고, 방어 적용은 대상의 take_damage 가 한다
+## — 즉시 피해 경로와 같은 수치가 나온다.
+@export var projectile_scene: PackedScene = null
+## 투사체 속도(px/s). 느리면 피하기 쉽고 빠르면 근접에 가까워진다.
+@export var projectile_speed: float = 400.0
+## 명중 판정 반경(px). 이 반경 안에 파티원이 들어오면 맞은 것으로 본다.
+@export var projectile_hit_radius: float = 12.0
+
 @export_group("강화 평타 (Charged Attack)")
 ## 평타를 이 횟수만큼 명중시키면 다음 평타가 강화된다. 0이면 비활성(일반 적).
-## 예) 브라키오 = 3: 평타 3회 뒤 강화 평타로 기절.
+## 예) 매머드 = 3: 평타 3회 뒤 강화 평타로 기절.
 @export var charged_attack_threshold: int = 0
 ## 강화 평타 피해 배수(일반 평타 대비).
 @export var charged_attack_damage_multiplier: float = 1.5
@@ -159,6 +177,13 @@ func validate() -> Array[String]:
 	# 0 이하면 쿨다운 계산에서 0으로 나누게 된다.
 	if attack_speed_multiplier <= 0.0:
 		problems.append("attack_speed_multiplier는 0보다 커야 합니다.")
+
+	# 원거리 적인데 탄이 서지 않거나 판정이 없으면 공격이 조용히 사라진다.
+	if projectile_scene != null:
+		if projectile_speed <= 0.0:
+			problems.append("projectile_speed는 0보다 커야 합니다.")
+		if projectile_hit_radius <= 0.0:
+			problems.append("projectile_hit_radius는 0보다 커야 합니다.")
 
 	# 워크 시트를 지정했다면 네 방향이 모두 있어야 한다.
 	# 하나라도 빠지면 그 방향으로 이동할 때 재생할 애니메이션이 없어 외형이 멈춘다.
