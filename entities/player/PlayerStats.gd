@@ -213,7 +213,7 @@ func apply_defense(raw_damage: int) -> int:
 #
 # 이전의 train_deltoid() 를 대체한다. 근력만 직접 더하던 방식은 성장이 어디까지
 # 진행됐는지 되돌아볼 수 없고(누적분이 기초값에 섞인다) 세이브와도 이어지지 않았다.
-# 이제 성장의 출처는 PlayerProfile 의 누적 프로틴 하나다.
+# 이제 성장의 출처는 PlayerProfile 의 삼각근 Lv. 하나다.
 func set_growth_multiplier(value: float) -> void:
 	growth_multiplier = maxf(value, 0.0)
 

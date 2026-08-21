@@ -4,8 +4,8 @@ extends Node
 #
 # 책임 둘:
 #   1. 어느 스테이지를 몇 번 깼는지 기억한다(저장 대상).
-#   2. 승리했을 때 클리어 보상을 지급하도록 요청한다 — 재화는 CurrencySystem 에,
-#      프로틴은 PlayerProfile 에. 어느 쪽도 여기서 직접 만지지 않는다.
+#   2. 승리했을 때 클리어 보상을 지급하도록 CurrencySystem 에 요청한다.
+#      프로틴도 재화이므로 같은 경로로 나간다(#204) — 여기서 잔액을 직접 만지지 않는다.
 #
 # 왜 StageDatabase / StageSystem 과 나누는가:
 #   StageDatabase 는 **저작 데이터**(스테이지 정의)를 소유한다. 플레이어마다 달라지지 않는다.
@@ -14,9 +14,9 @@ extends Node
 #   (StoryDatabase 와 StoryProgress 를 나눈 것과 같은 이유다.)
 #
 # 단일 출처 원칙:
-#   보상 정의   -> StageData.clear_rewards / StageData.clear_protein
+#   보상 정의   -> StageData.clear_rewards (프로틴 포함)
 #   재화 잔액   -> CurrencySystem (여기서 잔액을 직접 만지지 않는다)
-#   삼각근/프로틴 -> PlayerProfile (여기서 Lv.을 직접 만지지 않는다)
+#   삼각근 Lv.  -> PlayerProfile (프로틴 지급을 재화 신호로 듣고 스스로 정산한다)
 #   클리어 기록 -> 여기
 #
 # 참고: autoload/StoryProgress.gd, entities/stage/StageData.gd
@@ -73,16 +73,14 @@ func _on_stage_completed(stage_name) -> void:
 
 	_clears[String(stage_id)] = get_clear_count(stage_id) + 1
 
-	# 프로틴은 지급 전후로 삼각근 Lv.이 달라질 수 있다. 결과 화면이 "이번에 올랐다"를
-	# 보여줄 수 있게 지급을 감싸서 전후 Lv.을 함께 남긴다.
+	# 보상에 프로틴이 있으면 지급 도중 삼각근 Lv.이 오른다(PlayerProfile 이 재화 신호로 정산).
+	# 결과 화면이 "이번에 올랐다"를 보여줄 수 있게 지급 전후 Lv.을 함께 남긴다.
 	var level_before := PlayerProfile.deltoid_level
-	var protein := _grant_protein(stage_id)
 
 	_last_result = {
 		"stage_id": stage_id,
 		"victory": true,
 		"rewards": _grant_rewards(stage_id),
-		"protein": protein,
 		"deltoid_level_before": level_before,
 		"deltoid_level_after": PlayerProfile.deltoid_level,
 		"first_clear": first_clear,
@@ -99,7 +97,6 @@ func _on_stage_failed(stage_name) -> void:
 		"stage_id": StringName(str(stage_name)),
 		"victory": false,
 		"rewards": {},
-		"protein": 0,
 		"deltoid_level_before": PlayerProfile.deltoid_level,
 		"deltoid_level_after": PlayerProfile.deltoid_level,
 		"first_clear": false,
@@ -121,16 +118,6 @@ func _grant_rewards(stage_id: StringName) -> Dictionary:
 		if CurrencySystem.add_currency(str(currency_type), amount):
 			granted[str(currency_type)] = amount
 	return granted
-
-
-# 저작된 프로틴을 지급하고 실제로 지급된 양을 돌려준다.
-# 지급 자체는 PlayerProfile 이 한다(삼각근 Lv./프로틴의 주인이 그쪽이다).
-func _grant_protein(stage_id: StringName) -> int:
-	var stage := StageDatabase.get_stage(stage_id) if StageDatabase.has_stage(stage_id) else null
-	if stage == null or stage.clear_protein <= 0:
-		return 0
-	PlayerProfile.add_protein(stage.clear_protein)
-	return stage.clear_protein
 
 
 # ===== 저장 (Save) =====

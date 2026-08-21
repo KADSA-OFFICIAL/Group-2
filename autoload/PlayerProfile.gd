@@ -2,22 +2,23 @@ extends Node
 
 # 플레이어 프로필의 단일 출처 (autoload).
 #
-# 책임: 플레이어의 이름과 **삼각근 Lv./프로틴**을 보유한다.
+# 책임: 플레이어의 이름과 **삼각근 Lv.** 을 보유하고, 프로틴을 소모해 Lv.을 올린다.
 #
 # 단일 출처 원칙:
 #   - 화면(메인화면 프로필 칩 등)은 이 시스템에서 읽기만 한다. 값을 따로 들지 않는다.
-#   - 파티/재화/장비는 각자의 시스템이 출처다. 여기서 다시 정의하지 않는다.
+#   - **프로틴 잔액은 CurrencySystem 이 소유한다.** 여기서 잔액을 따로 들지 않는다.
+#     성장의 재료는 재화이고, 재화의 주인은 그쪽이다(#204).
+#   - 파티/장비는 각자의 시스템이 출처다. 여기서 다시 정의하지 않는다.
 #
 # 왜 "레벨"이 아니라 "삼각근"인가:
 #   chapter_1 의 주인공 동기가 삼각근 성장이고, PlayerStats.strength 도 이미
 #   "삼각근 강화로 상승"이라고 적혀 있다. 성장축의 이름이 곧 이 게임의 성장이다.
-#
-# 왜 프로틴을 CurrencySystem 재화로 두지 않는가:
-#   프로틴은 잔액이 아니라 **진행도**다. 소비처가 없고 레벨업으로 차감되지도 않는다.
-#   재화로 만들면 창고·상점이 "쓸 수 없는 재화"를 하나 떠안게 된다.
 
 # 저장 스키마에서 프로필이 들어가는 키.
 const SAVE_KEY := "profile"
+
+# 성장 재료로 쓰는 재화 id. 정의 출처는 CurrencySystem.DEFAULT_CURRENCIES 다.
+const PROTEIN := "protein"
 
 # 삼각근 Lv.의 하한. 0이나 음수는 표시·계산 모두에서 의미가 없다.
 const MIN_LEVEL: int = 1
@@ -45,30 +46,33 @@ signal deltoid_level_up(from_level: int, to_level: int)
 # 플레이어가 정한 이름. 비어 있으면 화면이 대체 문구를 쓴다(여기서 기본 이름을 만들지 않는다).
 var player_name: String = ""
 
-# 누적 프로틴. **성장의 단일 출처**다. 줄어들지 않는다.
+# 현재 삼각근 Lv. **저장 대상**이다.
 #
-# 삼각근 Lv.을 따로 저장하지 않는 이유: 둘 다 저장하면 서로 어긋난 세이브가
-# 만들어질 수 있다(손으로 고친 파일, 구 버전 등). 레벨은 언제나 여기서 파생한다.
-var protein_total: int = 0
+# 왜 파생이 아닌가(#192 에서 바뀐 점): 프로틴이 재화가 되면서 잔액은 소모로 줄어든다.
+# 줄어드는 값에서 "지금까지 얼마나 성장했는가"를 되짚을 수 없으므로 Lv.을 직접 든다.
+# 대신 누적 프로틴은 어디에도 두지 않는다 — 두 값이 어긋날 여지를 만들지 않는다.
+var deltoid_level: int = MIN_LEVEL
 
 
 func _ready() -> void:
 	name = "PlayerProfile"
+
+	# 프로틴이 **어느 경로로 들어오든**(스테이지 클리어·상점·우편) 같은 정산이 돌아야 한다.
+	# 그래서 지급하는 쪽을 일일이 고치지 않고 재화 신호 하나를 듣는다.
+	CurrencySystem.currency_added.connect(_on_currency_added)
+
 	# 저장 스키마의 프로필 부분은 이 시스템이 소유한다(SaveSystem 은 내부를 모른다).
 	# 복원은 이 호출 안에서 바로 일어난다.
 	SaveSystem.register_provider(SAVE_KEY, self)
+
+	# 저장된 잔액이 이미 기준을 넘었을 수 있다(곡선을 낮추는 밸런스 변경 등).
+	_settle_level_ups()
 	# 복원된 삼각근 Lv.을 로스터에 반영한다.
 	# autoload 순서상 CharacterDatabase 는 이미 로드를 마친 뒤다(project.godot 참고).
 	_apply_growth()
 
 
 # ===== 조회 (Query) =====
-
-# 현재 삼각근 Lv. 누적 프로틴에서 파생한다.
-var deltoid_level: int:
-	get:
-		return level_for_protein(protein_total)
-
 
 # Lv.n -> Lv.n+1 에 필요한 프로틴. n < MIN_LEVEL 이면 0.
 static func required_protein(level: int) -> int:
@@ -77,7 +81,8 @@ static func required_protein(level: int) -> int:
 	return int(BASE_PROTEIN * pow(PROTEIN_GROWTH, level - MIN_LEVEL))
 
 
-# Lv.n 에 도달하는 데 필요한 **누적** 프로틴. Lv.1 은 0이다.
+# Lv.n 에 도달하는 데 드는 **누적** 프로틴. Lv.1 은 0이다.
+# 구 세이브 마이그레이션과 저작 참고용이다(런타임 계산에는 쓰지 않는다).
 static func protein_for_level(level: int) -> int:
 	var total := 0
 	for n in range(MIN_LEVEL, level):
@@ -85,7 +90,7 @@ static func protein_for_level(level: int) -> int:
 	return total
 
 
-# 누적 프로틴이 만드는 삼각근 Lv.
+# 누적 프로틴이 만드는 삼각근 Lv. (구 세이브 마이그레이션용)
 static func level_for_protein(protein: int) -> int:
 	var level := MIN_LEVEL
 	var remaining := maxi(protein, 0)
@@ -95,12 +100,12 @@ static func level_for_protein(protein: int) -> int:
 	return level
 
 
-# 다음 Lv.까지의 진행도. (현재 Lv. 안에서 모은 프로틴, 다음 Lv.에 필요한 프로틴)
+# 다음 Lv.까지의 진행도. (지금 가진 프로틴, 다음 Lv.에 필요한 프로틴)
+# 잔액의 주인은 CurrencySystem 이므로 여기서 들지 않고 그때그때 읽는다.
 func get_level_progress() -> Dictionary:
-	var level := deltoid_level
 	return {
-		"current": protein_total - protein_for_level(level),
-		"required": required_protein(level),
+		"current": CurrencySystem.get_balance(PROTEIN),
+		"required": required_protein(deltoid_level),
 	}
 
 
@@ -118,18 +123,30 @@ func set_player_name(value: String) -> void:
 	profile_changed.emit()
 
 
-# 프로틴을 더한다. 음수는 무시한다.
-# 기준을 넘으면 그 자리에서 삼각근 Lv.이 오른다(한 번에 여러 Lv.도 가능).
-func add_protein(amount: int) -> void:
-	if amount <= 0:
-		return
-	var before := deltoid_level
-	protein_total += amount
-	var after := deltoid_level
+# ===== 성장 정산 (Level-up settlement) =====
 
-	if after != before:
-		_apply_growth()
-		deltoid_level_up.emit(before, after)
+func _on_currency_added(currency_type: String, _amount: int, _new_balance: int) -> void:
+	if currency_type == PROTEIN:
+		_settle_level_ups()
+
+
+# 잔액이 기준을 넘는 동안 필요량만큼 **차감하며** Lv.을 올린다.
+# 한 번에 여러 Lv.도 오른다. 남은 잔액은 다음 Lv.의 진행도로 남는다.
+#
+# subtract_currency 는 currency_subtracted 를 쏘므로 _on_currency_added 로 되돌아오지 않는다.
+func _settle_level_ups() -> void:
+	var before := deltoid_level
+	while CurrencySystem.get_balance(PROTEIN) >= required_protein(deltoid_level):
+		if not CurrencySystem.subtract_currency(PROTEIN, required_protein(deltoid_level)):
+			break
+		deltoid_level += 1
+
+	if deltoid_level == before:
+		return
+
+	_apply_growth()
+	SaveSystem.request_save()
+	deltoid_level_up.emit(before, deltoid_level)
 	profile_changed.emit()
 
 
@@ -153,10 +170,10 @@ func _apply_growth() -> void:
 # SaveSystem 은 이 두 함수만 호출한다.
 
 func to_save_dict() -> Dictionary:
-	# 삼각근 Lv.은 파생값이라 저장하지 않는다(누적 프로틴 하나가 출처다).
+	# 프로틴 잔액은 CurrencySystem 이 자기 키("currencies")에 저장한다. 여기서 중복하지 않는다.
 	return {
 		"name": player_name,
-		"protein_total": protein_total,
+		"deltoid_level": deltoid_level,
 	}
 
 
@@ -164,12 +181,15 @@ func from_save_dict(data: Dictionary) -> void:
 	# 없는 키는 현재 값을 유지한다(구 세이브 호환).
 	player_name = String(data.get("name", player_name))
 
-	# 구 스키마(level / exp_total) 마이그레이션.
-	# 누적 경험치는 그대로 프로틴으로 잇고, 저장돼 있던 레벨은 "그 Lv.에 도달하는 데
-	# 필요한 누적 프로틴"으로 환산해 가장 큰 쪽을 쓴다 — 어느 쪽도 값을 잃지 않는다.
-	#
-	# **있는 키만** 후보로 넣는다. 없는 키의 자리를 현재 값으로 메우면 이전 상태가
-	# 섞여 들어와, 세이브에 적힌 것보다 큰 값으로 복원될 수 있다.
+	if data.has("deltoid_level"):
+		deltoid_level = maxi(int(data["deltoid_level"]), MIN_LEVEL)
+		profile_changed.emit()
+		return
+
+	# ----- 구 스키마 마이그레이션 -----
+	# #192 의 protein_total(누적) 과 그 이전의 level / exp_total 을 모두 받는다.
+	# 있는 키만 후보로 넣는다 — 없는 키의 자리를 현재 값으로 메우면 이전 상태가
+	# 섞여 들어와 세이브에 적힌 것보다 큰 값으로 복원될 수 있다.
 	var candidates: Array[int] = []
 	if data.has("protein_total"):
 		candidates.append(int(data["protein_total"]))
@@ -178,12 +198,19 @@ func from_save_dict(data: Dictionary) -> void:
 	if data.has("level"):
 		candidates.append(protein_for_level(maxi(int(data["level"]), MIN_LEVEL)))
 
-	# 프로필 키가 하나도 없는 세이브면 현재 값을 그대로 둔다.
-	if not candidates.is_empty():
-		var restored := 0
-		for candidate in candidates:
-			restored = maxi(restored, candidate)
-		protein_total = restored
+	if candidates.is_empty():
+		profile_changed.emit()
+		return
 
-	_apply_growth()
+	var cumulative := 0
+	for candidate in candidates:
+		cumulative = maxi(cumulative, candidate)
+
+	# 누적값을 "도달한 Lv. + 남은 잔액"으로 나눈다. 어느 쪽도 잃지 않는다.
+	deltoid_level = level_for_protein(cumulative)
+	var leftover := cumulative - protein_for_level(deltoid_level)
+	if leftover > 0:
+		# leftover 는 항상 required_protein(deltoid_level) 미만이라 Lv.이 더 오르지 않는다.
+		CurrencySystem.add_currency(PROTEIN, leftover)
+
 	profile_changed.emit()

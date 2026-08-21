@@ -176,7 +176,8 @@ func _refresh_profile() -> void:
 		_leader_line.text = "%s · %s" % [
 			OrderSystem.get_leader_display_name(), OrderSystem.get_leader_title_line()]
 
-	# 삼각근 Lv.과 다음 Lv.까지의 진행도. 누적 프로틴은 진행도에서 도출되므로 따로 적지 않는다.
+	# 삼각근 Lv.과 다음 Lv.까지의 진행도.
+	# 프로틴 잔액의 주인은 CurrencySystem 이고, PlayerProfile 이 그것을 읽어 진행도로 준다.
 	var progress := PlayerProfile.get_level_progress()
 	_profile_body.add_child(HUDKit.stat_row(
 		"삼각근", "deltoid", "Lv.%d" % PlayerProfile.deltoid_level,
