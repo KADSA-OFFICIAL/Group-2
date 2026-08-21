@@ -86,7 +86,12 @@ class_name EnemyData
 @export var ai_enabled: bool = true
 ## 이 거리 안에 살아 있는 파티 멤버가 있으면 추적을 시작한다(px).
 ## 대상이 이 범위를 벗어나면 추적을 놓는다(무한 추격 방지).
-@export var detection_range: float = 300.0
+##
+## 600 인 이유(#208): 300 이었을 때 파티 스폰 지점(적까지 500~531px)이 범위 밖이라
+## 플레이어가 다가가는 1초 동안 적이 완전히 멈춰 있었다. 게다가 탐지(300)와 공격(45)
+## 사이 255px 를 플레이어(200px/s)와 적(110px/s)이 나눠 좁히므로 적이 실제로 걷는
+## 거리는 90px, 시간은 0.8초뿐이었다 — 화면에서 접근이 보이지 않았다.
+@export var detection_range: float = 600.0
 ## 이 거리 안에 들어오면 이동을 멈추고 평타를 넣는다(px).
 @export var attack_range: float = 45.0
 ## 이동속도 배수. 최종 이동속도 = base_move_speed x 이 값 x 버프 이속 배수.
