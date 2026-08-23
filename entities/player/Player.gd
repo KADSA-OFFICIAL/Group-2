@@ -31,6 +31,10 @@ var is_alive: bool = true
 # 평타 쿨다운 잔여 시간(초).
 var _attack_cooldown_left: float = 0.0
 
+# 지금까지 나간 평타 횟수. **적중이 아니라 발생** 기준이다.
+# SkillData.every_n_attacks 패시브가 이 값을 본다(주기 판정이라 리셋하지 않는다).
+var _attack_swing_count: int = 0
+
 @onready var sprite: Sprite2D = get_node_or_null("Sprite2D")
 @onready var collision_shape = get_node_or_null("CollisionShape2D")
 
@@ -255,6 +259,15 @@ func try_attack() -> bool:
 
 	_attack_cooldown_left = get_attack_cooldown()
 
+	# 평타 발생을 먼저 센다. 처형으로 끝나거나 적을 죽인 평타도 "나간 평타"다.
+	_attack_swing_count += 1
+	_apply_attack_passives()
+
+	# 패시브 광역 피해가 대상을 먼저 죽일 수 있다.
+	if not is_instance_valid(target) or not target.is_alive:
+		_gain_stack()
+		return true
+
 	# 버퍼: 조건이 맞으면 피해 대신 처형한다.
 	if _try_execute(target):
 		_gain_stack()
@@ -280,6 +293,51 @@ func try_attack() -> bool:
 	# 원거리: 스택을 쌓는다.
 	_gain_stack()
 	return true
+
+
+# ===== 평타 패시브 (Basic-attack passives) =====
+#
+# 캐릭터 고유 스킬(SkillData) 중 every_n_attacks 가 설정된 것은 평타 주기로 발동한다.
+# 역할 메커니즘(아래)과 달리 **파티 구성과 무관하다** — 시너지가 아니라 캐릭터 개성이라
+# 혼자 있어도 작동한다(docs §3 티어2).
+#
+# 데이터가 없으면 아무 일도 하지 않으므로, 패시브를 저작하지 않은 캐릭터의 평타는 이전과 같다.
+func _apply_attack_passives() -> void:
+	if data == null:
+		return
+	for skill in data.skills:
+		if skill == null or skill.every_n_attacks <= 0:
+			continue
+		if _attack_swing_count % skill.every_n_attacks != 0:
+			continue
+		_fire_attack_passive(skill)
+
+
+# 회복하고, 실제로 회복한 양에 비례해 주변 적에게 광역 피해를 준다.
+#
+# 기준이 "최대 체력"이 아니라 "잃은 체력"이라 체력이 가득 차 있으면 회복이 0이고,
+# 광역 피해도 회복량에 비례하므로 함께 0이 된다. 몰릴수록 세지는 것이 의도다.
+func _fire_attack_passive(skill: SkillData) -> void:
+	var healed := 0
+	if skill.heal_missing_hp_percent > 0.0:
+		var missing: int = max_hp - hp
+		healed = int(round(missing * skill.heal_missing_hp_percent))
+		if healed > 0:
+			heal(healed)
+
+	if healed <= 0 or skill.heal_to_aoe_damage_percent <= 0.0 or skill.aoe_radius <= 0.0:
+		return
+
+	var amount := int(round(healed * skill.heal_to_aoe_damage_percent))
+	if amount <= 0:
+		return
+
+	for enemy in GameManager.get_all_enemies():
+		if enemy == null or not enemy.is_alive:
+			continue
+		if global_position.distance_to(enemy.global_position) > skill.aoe_radius:
+			continue
+		enemy.take_damage(amount, self)
 
 
 # ===== 역할 메커니즘 (Role Mechanics) =====
