@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+
+[ext_resource type="Texture2D" uid="uid://12fmoppm4cam" path="res://assets/sprites/placeholder/shape_ranged.svg" id="9_shape"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/characters/taehee_walk_frames.tres" id="10_walk"]
+
+[sub_resource type="Resource" id="PlayerStats_taehee"]
+script = ExtResource("2_stats")
+hp = 1100
+strength = 110
+defense = 110
+intelligence = 100
+faith = 100
+
+[resource]
+script = ExtResource("1_chardata")
+role = 1
+secondary_role = 1
+character_id = &"taehee"
+display_name = "태희"
+playable = true
+description = "로스터의 겸직(원거리딜러 + 탱커) 슬롯. 플레이스홀더였던 ranged_tank 를 교체한 인물이다(#228). 스텟은 그 플레이스홀더의 값을 그대로 이어받은 [임시값]이다. 초상화는 아직 없다 — 플레이스홀더가 쓰던 girl_lilac 은 머리·눈 색이 이 인물과 달라 물려받지 않았다. 개성/고유 스킬 미정."
+stats = SubResource("PlayerStats_taehee")
+sprite_texture = ExtResource("9_shape")
+tint = Color(0.7, 0.3, 1, 1)
+sprite_scale = Vector2(2, 2)
+walk_frames = ExtResource("10_walk")
+walk_sprite_scale = Vector2(0.25, 0.25)
+walk_sprite_offset = Vector2(0, -155)

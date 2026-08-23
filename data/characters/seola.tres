@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://c3mw0ogq7drhf" path="res://assets/sprites/placeholder/shape_buffer.svg" id="9_shape"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/characters/seola_walk_frames.tres" id="10_walk"]
+
+[sub_resource type="Resource" id="PlayerStats_seola"]
+script = ExtResource("2_stats")
+hp = 900
+strength = 110
+defense = 80
+intelligence = 100
+faith = 130
+
+[resource]
+script = ExtResource("1_chardata")
+role = 2
+secondary_role = 2
+character_id = &"seola"
+display_name = "설아"
+playable = true
+description = "로스터의 겸직(버퍼 + 원거리딜러) 슬롯. 플레이스홀더였던 buffer_ranged 를 교체한 인물이다(#220). 스텟은 그 플레이스홀더의 값을 그대로 이어받은 [임시값]이다. 개성/고유 스킬 미정."
+stats = SubResource("PlayerStats_seola")
+sprite_texture = ExtResource("9_shape")
+tint = Color(0.7, 0.85, 0.95, 1)
+sprite_scale = Vector2(2, 2)
+walk_frames = ExtResource("10_walk")
+walk_sprite_scale = Vector2(0.25, 0.25)
+walk_sprite_offset = Vector2(0, -155)

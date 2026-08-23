@@ -23,6 +23,10 @@ const OBJECTIVE_ICON_NAME := {
 	StageData.Objective.CAPTURE: "icon_capture",
 }
 
+# 편성 화면은 경로만 둔다. 출격은 이 화면 -> 편성(출격 모드) 한 방향이라 순환은 아니지만,
+# 화면끼리 preload 하지 않는 이 프로젝트의 규약을 따른다.
+const FORMATION_SCREEN_PATH := "res://screens/formation/FormationScreen.tscn"
+
 var _list_holder: VBoxContainer
 
 
@@ -170,7 +174,10 @@ func _objective_row(stage: StageData) -> Control:
 
 # ===== 조작 =====
 
-# 고른 스테이지로 출격한다.
+# 고른 스테이지로 출격한다 — **파티를 먼저 고른다**(#243).
+#
+# 여기서 스테이지를 시작하지 않는 이유: 파티 선택 화면에서 뒤로 돌아올 수 있어야 하고,
+# 그때 이미 전투가 시작되어 있으면 안 된다. 실제 시작은 편성 화면이 확정할 때 한다.
 #
 # 어떤 스테이지를 플레이 중인지는 StageSystem 이 안다. 이 화면은 id 만 넘기고,
 # 전장을 그 배치로 다시 만드는 일은 Stage 노드가 한다(화면은 전장을 모른다).
@@ -178,13 +185,33 @@ func _objective_row(stage: StageData) -> Control:
 # 승리 조건 판정(소탕 완료 / 점령 게이지)은 아직 없다. 지금은 그 스테이지의
 # 배치로 전투가 시작되는 데까지다.
 func _on_stage_launch_pressed(id: StringName) -> void:
-	StageSystem.request_stage(id)
-	ScreenManager.close_all()
+	_open_party_select(id)
 
 
 # 저작된 스테이지가 없을 때의 출격. 현재 전장을 그대로 드러낸다.
+# 이때도 파티는 고르게 한다 — 고를 스테이지가 없을 뿐 파티는 고를 수 있다.
 func _on_launch_pressed() -> void:
-	ScreenManager.close_all()
+	_open_party_select(&"")
+
+
+# 파티 선택 화면을 출격 모드로 띄운다.
+#
+# 새 화면을 만들지 않고 편성 화면(FormationScreen)을 재사용한다 — 로스터·파티·시너지를
+# 읽는 UI 를 두 벌 두면 한쪽만 고쳐지는 일이 생긴다(CLAUDE.md 기초 시스템).
+func _open_party_select(stage_id: StringName) -> void:
+	var scene := load(FORMATION_SCREEN_PATH) as PackedScene
+	if scene == null:
+		push_warning("StageSelectScreen: 편성 화면을 불러올 수 없습니다: " + FORMATION_SCREEN_PATH)
+		# 파티를 고를 수 없더라도 출격 자체는 막지 않는다(기존 편성으로 나간다).
+		if not String(stage_id).is_empty():
+			StageSystem.request_stage(stage_id)
+		ScreenManager.close_all()
+		return
+
+	var screen := ScreenManager.push(scene)
+	if screen == null:
+		return
+	screen.set_sortie(stage_id)
 
 
 # ===== 공용 조각 =====

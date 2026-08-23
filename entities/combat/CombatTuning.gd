@@ -26,6 +26,45 @@ class_name CombatTuning
 ## 이동 기본 속도(px/s). 원거리 스택 이속이 여기에 곱해진다.
 @export var base_move_speed: float = 200.0
 
+# ===== 대시 (Dash) =====
+# 로스터 **전원 공용** 회피 조작이다(#235). 캐릭터별 차등은 두지 않았다.
+@export_group("대시")
+## 연속으로 쓸 수 있는 대시 횟수. 다 쓰면 dash_cooldown 이 돌고, 끝나면 이 수만큼 **함께** 복구된다.
+## (한 발씩 개별 재충전이 아니다 — "두 번 쓰면 쿨타임"이 확정 스펙이다.)
+@export var dash_charges: int = 2
+## 대시 속도 배수. 실제 속도 = base_move_speed x 이 값.
+##
+## 이속 배수(PlayerStats.get_move_speed_multiplier)를 **타지 않는다.** 회피 거리는
+## 예측 가능해야 하는데, 원거리 스택이 쌓일수록 대시가 멀리 나가면 거리 감각이 매번 달라진다.
+@export var dash_speed_multiplier: float = 4.0
+## 대시가 지속되는 시간(초). 대시 거리 = base_move_speed x dash_speed_multiplier x 이 값.
+@export var dash_duration: float = 0.15
+## 충전을 다 쓴 뒤 전부 다시 채워지기까지의 시간(초).
+@export var dash_cooldown: float = 2.0
+
+# ===== 동료 AI (Ally AI) =====
+# 조종하지 않는 파티원 2명이 스스로 하는 기본 행동의 수치다(#247, docs §4).
+# **스킬과 대시는 AI가 쓰지 않는다** — 그것은 사람이 잡아야 하는 행동이다.
+@export_group("동료 AI")
+## **조종 중인 멤버 기준** 이 거리 안에 적이 있으면 교전한다. 없으면 조종자를 따라온다.
+##
+## 기준점이 조종자인 이유: AI 자기 위치를 기준으로 하면 자기 옆의 적을 쫓느라
+## 조종자에게서 무한히 멀어진다(전환했을 때 남겨진 멤버가 계속 뒤처졌다).
+## 조종자 기준이면 파티가 조종자 주위 이 범위 안에 머문다.
+##
+## 기본값을 적 탐지 범위(EnemyData.detection_range 600, #208)와 같게 두었다.
+## 적이 나를 보는 거리와 내가 적에게 붙는 거리가 같으면, 한쪽만 일방적으로
+## 끌려가거나 무한 추격이 되는 구간이 생기지 않는다.
+@export var ally_ai_engage_range: float = 600.0
+## 평타 사거리의 이 비율까지 접근하면 멈춘다.
+##
+## 1.0 이면 사거리 경계에서 붙었다 떨어지며 떤다. 조금 안쪽에서 멈춰 여유를 둔다.
+@export var ally_ai_stop_range_ratio: float = 0.9
+## 교전할 적이 없을 때 조종 중인 멤버에게서 이 거리 안이면 멈춘다.
+##
+## 이 값이 없으면 적이 없을 때 파티가 흩어져, 전환했을 때 그 멤버가 전장 밖에 있다.
+@export var ally_ai_follow_distance: float = 80.0
+
 # ===== 피해 공식 (Damage Formula) =====
 # 피해 = 공격력² / (공격력 + 방어력)   -- 구현은 PlayerStats.apply_defense()
 #
@@ -121,6 +160,13 @@ func get_summary() -> Dictionary:
 	return {
 		"base_attack_cooldown": base_attack_cooldown,
 		"base_move_speed": base_move_speed,
+		"dash_charges": dash_charges,
+		"dash_speed_multiplier": dash_speed_multiplier,
+		"dash_duration": dash_duration,
+		"dash_cooldown": dash_cooldown,
+		"ally_ai_engage_range": ally_ai_engage_range,
+		"ally_ai_stop_range_ratio": ally_ai_stop_range_ratio,
+		"ally_ai_follow_distance": ally_ai_follow_distance,
 		"damage_min": damage_min,
 		"strength_to_phys_atk": strength_to_phys_atk,
 		"strength_to_phys_def": strength_to_phys_def,
@@ -164,6 +210,20 @@ func validate() -> Array[String]:
 		problems.append("base_attack_cooldown은 0보다 커야 합니다.")
 	if base_move_speed <= 0.0:
 		problems.append("base_move_speed는 0보다 커야 합니다.")
+	if dash_charges < 1:
+		problems.append("dash_charges는 1 이상이어야 합니다.")
+	if dash_speed_multiplier <= 1.0:
+		problems.append("dash_speed_multiplier가 1.0 이하면 대시가 평소 이동보다 느립니다.")
+	if dash_duration <= 0.0:
+		problems.append("dash_duration은 0보다 커야 합니다.")
+	if dash_cooldown <= 0.0:
+		problems.append("dash_cooldown은 0보다 커야 합니다.")
+	if ally_ai_engage_range <= 0.0:
+		problems.append("ally_ai_engage_range는 0보다 커야 합니다.")
+	if ally_ai_stop_range_ratio <= 0.0 or ally_ai_stop_range_ratio > 1.0:
+		problems.append("ally_ai_stop_range_ratio는 0보다 크고 1.0 이하여야 합니다.")
+	if ally_ai_follow_distance <= 0.0:
+		problems.append("ally_ai_follow_distance는 0보다 커야 합니다.")
 	if capture_hold_seconds <= 0.0:
 		problems.append("capture_hold_seconds는 0보다 커야 합니다.")
 

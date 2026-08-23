@@ -31,6 +31,27 @@ var is_alive: bool = true
 # 평타 쿨다운 잔여 시간(초).
 var _attack_cooldown_left: float = 0.0
 
+# 지금까지 나간 평타 횟수. **적중이 아니라 발생** 기준이다.
+# SkillData.every_n_attacks 패시브가 이 값을 본다(주기 판정이라 리셋하지 않는다).
+var _attack_swing_count: int = 0
+
+# ===== 대시 (Dash) =====
+# 로스터 전원 공용 회피 조작(#235). 수치는 CombatTuning 이 소유한다.
+#
+# 충전은 **다 쓴 뒤 한꺼번에** 돌아온다(한 발씩 개별 재충전이 아니다).
+# "두 번 쓰면 쿨타임이 돌아야 다시 쓸 수 있다"가 확정 스펙이라 그대로 옮겼다.
+
+## 남은 대시 횟수. 0 이 되면 _dash_cooldown_left 가 돌고, 끝나면 전부 복구된다.
+var _dash_charges: int = -1        # -1 = 아직 초기화 안 됨(_ready 에서 채운다)
+## 대시가 남은 시간(초). 0 보다 크면 지금 대시 중이다.
+var _dash_time_left: float = 0.0
+## 대시 진행 방향(정규화). 대시 중에는 입력을 무시하고 이 방향으로 나간다.
+var _dash_direction: Vector2 = Vector2.DOWN
+## 충전 재보급까지 남은 시간(초).
+var _dash_cooldown_left: float = 0.0
+## 마지막으로 실제 움직인 방향. 방향 입력 없이 대시했을 때 쓴다.
+var _last_move_direction: Vector2 = Vector2.DOWN
+
 @onready var sprite: Sprite2D = get_node_or_null("Sprite2D")
 @onready var collision_shape = get_node_or_null("CollisionShape2D")
 
@@ -84,6 +105,10 @@ func _ready() -> void:
 		EventBus.equipment_equipped.connect(func(character_id, _eid, _slot): _sync_equipment_bonuses(character_id))
 		EventBus.equipment_unequipped.connect(func(character_id, _slot): _sync_equipment_bonuses(character_id))
 	_refresh_control_visual()
+
+	# 머리 위 체력 바. 아군이라 테두리는 기본 윤곽선 색이다(#249).
+	# _apply_data() 뒤에 붙인다 — 바가 보이는 스프라이트에서 높이를 계산하기 때문이다.
+	_attach_health_bar(false)
 
 
 # CharacterData가 설정된 경우에만 정의의 외형을 반영한다.
@@ -169,6 +194,10 @@ func _physics_process(delta: float) -> void:
 
 	_decay_stack(delta)
 
+	_tick_dash(delta)
+	_tick_skill_shield(delta)
+	_tick_skill_cooldowns(delta)
+
 	_process_control(delta)
 
 	# 조종 중이 아니어도(velocity가 계속 0) 호출한다. 그래야 정지 포즈로 고정된다.
@@ -178,22 +207,125 @@ func _physics_process(delta: float) -> void:
 # 입력 처리 한 틱. velocity를 정하고 필요하면 실제로 이동시킨다.
 # 외형 갱신과 분리해 둔 이유: 아래 조기 반환이 애니메이션 갱신까지 건너뛰면
 # 조종을 넘긴 멤버가 멈춘 뒤에도 걷는 모션이 남기 때문이다.
-func _process_control(_delta: float) -> void:
-	# 조종 중인 멤버만 입력을 받는다.
-	# 나머지는 이 단계에서 정지한다(AI는 후속 이슈).
-	if not is_controlled():
-		velocity = Vector2.ZERO
-		return
+func _process_control(delta: float) -> void:
+	if is_controlled():
+		_process_input(delta)
+	else:
+		_process_ally_ai(delta)
 
+
+# 사람이 잡고 있을 때. 이동·평타·대시·스킬이 모두 입력에서 나온다.
+func _process_input(_delta: float) -> void:
 	# 기절 등 CONTROL 효과가 이동을 막으면 움직이지 않는다.
 	if StatusEffectSystem.blocks_movement(self):
 		velocity = Vector2.ZERO
+		# 기절 등으로 이동이 막히면 진행 중인 대시도 끊는다.
+		_dash_time_left = 0.0
 	else:
-		_handle_movement()
+		if Input.is_action_just_pressed("dash"):
+			try_dash()
+		if _dash_time_left > 0.0:
+			# 대시 중에는 이동 입력을 무시한다. 방향은 시작할 때 정해졌다.
+			velocity = _dash_direction * get_dash_speed()
+		else:
+			_handle_movement()
 	move_and_slide()
 
 	if Input.is_action_pressed("attack"):
 		try_attack()
+
+	# 고유 스킬은 사람이 직접 눌러야 발동한다(docs §4 [확정]: AI 는 스킬을 쓰지 않는다).
+	if Input.is_action_just_pressed("skill_q"):
+		try_use_skill(SkillData.InputSlot.Q)
+	if Input.is_action_just_pressed("skill_e"):
+		try_use_skill(SkillData.InputSlot.E)
+
+
+# ===== 동료 AI (Ally AI) =====
+#
+# 조종하지 않는 멤버가 스스로 하는 것은 **평타와 이동뿐**이다
+# (docs §4 [확정] "AI 수준 = 중간": 기본 행동은 스스로, 스킬은 사람이 잡아야 발동).
+# 스킬과 대시는 여기서 부르지 않는다.
+#
+# 왜 AI 가 평타를 쳐야 하는가: 설계가 그 위에 세워져 있다. 표식 충전은 §8.1 에서
+# **파티 전체의 평타**로 이뤄지고 원거리 스택도 평타 기반이다. 놓은 멤버가 가만히 있으면
+# 시너지 1단계가 조종 중인 1명분만 돈다.
+func _process_ally_ai(_delta: float) -> void:
+	if StatusEffectSystem.blocks_movement(self):
+		velocity = Vector2.ZERO
+	else:
+		velocity = _ai_velocity()
+	move_and_slide()
+
+	# 사거리 밖이면 try_attack() 이 대상을 못 찾아 스스로 아무 일도 하지 않는다.
+	# 쿨다운·기절 판정도 그 안에 있으므로 여기서 다시 검사하지 않는다.
+	try_attack()
+
+
+# AI 가 이번 틱에 가고 싶은 속도.
+#   교전 범위 안에 적이 있으면 -> 평타 사거리까지 접근하고, 들어오면 멈춘다.
+#   없으면 -> 조종 중인 멤버를 따라간다. 가까우면 멈춘다.
+#
+# 따라오기가 필요한 이유: 적이 없을 때 제자리에 서 있으면 파티가 흩어져,
+# 전환했을 때 그 멤버가 전장 밖에 있다. §4 의 실시간 전환이 성립하지 않는다.
+func _ai_velocity() -> Vector2:
+	var tuning := CombatConfig.tuning
+	var leader := _controlled_member_node()
+
+	var enemy := _ai_engage_target(leader)
+	if enemy != null:
+		var to_enemy: Vector2 = enemy.global_position - global_position
+		var distance := to_enemy.length()
+		# 사거리 안쪽에서 멈춘다. 경계에 딱 맞추면 붙었다 떨어지며 떤다.
+		if distance <= get_attack_range() * tuning.ally_ai_stop_range_ratio:
+			return Vector2.ZERO
+		return to_enemy.normalized() * get_move_speed()
+
+	if leader == null:
+		return Vector2.ZERO
+	var to_leader: Vector2 = leader.global_position - global_position
+	if to_leader.length() <= tuning.ally_ai_follow_distance:
+		return Vector2.ZERO
+	return to_leader.normalized() * get_move_speed()
+
+
+# 교전할 적. 없으면 null(그러면 조종 중인 멤버를 따라간다).
+#
+# **교전 여부는 조종 중인 멤버 기준으로 판정한다.** 내 위치를 기준으로 하면 내 옆의 적을
+# 쫓느라 조종자에게서 무한히 멀어진다 — 전환했을 때 남겨진 멤버가 근처 적에 붙은 채
+# 계속 뒤처지는 문제가 그것이었다.
+#
+# 조종자 기준으로 걸러 두면 파티가 조종자 주위 교전 범위 안에 머문다.
+# 조종자가 없으면(전멸 직전 등) 내 기준으로 판정한다 — 그때는 뭉칠 대상이 없다.
+#
+# 대상 선정은 **나에게 가장 가까운** 적이다. 조종자에게 가장 가까운 적을 고르면
+# 파티원 셋이 한 마리에 몰린다.
+func _ai_engage_target(leader: Node2D) -> Node:
+	var origin: Vector2 = global_position if leader == null else leader.global_position
+	var engage_range: float = CombatConfig.tuning.ally_ai_engage_range
+
+	var best: Node = null
+	var best_distance := INF
+	for enemy in GameManager.get_all_enemies():
+		if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive:
+			continue
+		if origin.distance_to(enemy.global_position) > engage_range:
+			continue
+		var distance := global_position.distance_to(enemy.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best = enemy
+	return best
+
+
+# 지금 조종 중인 파티원 노드. 그룹 이름의 출처는 PartySystem.MEMBER_GROUP 이다.
+func _controlled_member_node() -> Node2D:
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if node == self or not is_instance_valid(node):
+			continue
+		if node is Node2D and node.is_controlled():
+			return node as Node2D
+	return null
 
 
 # ===== 워크 애니메이션 (Walk animation) =====
@@ -222,7 +354,265 @@ func _update_walk_animation() -> void:
 
 func _handle_movement() -> void:
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	# 방향 입력이 없는 대시를 위해 마지막 이동 방향을 기억한다.
+	if direction != Vector2.ZERO:
+		_last_move_direction = direction.normalized()
 	velocity = direction * get_move_speed()
+
+
+# ===== 고유 스킬 (Unique skill) =====
+
+# 키 슬롯(Q·E)에 걸린 고유 스킬을 발동한다. 슬롯이 비어 있으면 아무 일도 하지 않는다.
+#
+# 이 스킬의 조작은 **누르기 두 번**이다:
+#   1회 — 자기와 가장 위험한 파티원에게 보호막을 두른다.
+#   2회 — 살아 있는 보호막을 그 즉시 전부 터뜨린다(보호막을 포기하고 타이밍을 얻는다).
+# 누르지 않아도 보호막이 깨지거나 지속시간이 끝나면 알아서 터진다.
+#
+# 슬롯 해석의 단일 출처는 CharacterData.get_skill_for_slot() 이다.
+func try_use_skill(slot: SkillData.InputSlot) -> bool:
+	if not is_alive or data == null:
+		return false
+	# 기절 등 CONTROL 효과가 스킬을 막으면 쓸 수 없다(평타·이동과 같은 규약).
+	if StatusEffectSystem.blocks_skill(self):
+		return false
+
+	var skill := data.get_skill_for_slot(slot)
+	if skill == null:
+		return false
+
+	# 같은 슬롯을 한 번 더 누르면 **살아 있는 보호막이 그 즉시 전부 터진다.**
+	# 보호막을 포기하는 대신 폭발 타이밍을 얻는 것이 이 스킬의 조작이다.
+	#
+	# **쿨타임 검사보다 먼저다.** 쿨타임이 막는 것은 보호막 생성이고,
+	# 이미 두른 보호막을 터뜨리는 것은 생성이 아니다.
+	if _detonate_shields_from(skill) > 0:
+		if EventBus:
+			EventBus.skill_used.emit(self, skill.skill_id)
+		return true
+
+	# 쿨타임 중에는 새로 만들지 못한다. 쿨타임은 **시전 시점**부터 돌았으므로
+	# 일찍 터뜨렸다면 남은 시간을 기다려야 한다.
+	if get_skill_cooldown_left(skill.skill_id) > 0.0:
+		return false
+
+	if skill.shield_percent > 0.0:
+		_cast_shield_skill(skill)
+	if skill.cooldown > 0.0:
+		_skill_cooldowns[skill.skill_id] = skill.cooldown
+	if EventBus:
+		EventBus.skill_used.emit(self, skill.skill_id)
+	return true
+
+
+# 이 스킬의 남은 쿨타임(초). 0 이면 지금 쓸 수 있다.
+func get_skill_cooldown_left(skill_id: StringName) -> float:
+	return maxf(float(_skill_cooldowns.get(skill_id, 0.0)), 0.0)
+
+
+# 스킬 쿨타임 한 틱. 스킬별로 따로 돈다 — Q 와 E 가 서로의 쿨타임을 공유하지 않는다.
+func _tick_skill_cooldowns(delta: float) -> void:
+	if _skill_cooldowns.is_empty():
+		return
+	for id in _skill_cooldowns.keys():
+		var left: float = float(_skill_cooldowns[id]) - delta
+		if left <= 0.0:
+			_skill_cooldowns.erase(id)
+		else:
+			_skill_cooldowns[id] = left
+
+
+# ===== 스킬 보호막 (Skill shield) =====
+
+# 시전: 자기 자신과 **파티에서 가장 체력이 낮은 파티원**에게 보호막을 두른다.
+#
+# "가장 체력이 낮은"은 **비율** 기준이다. 절대량으로 재면 최대 체력이 작은 멤버가
+# 만피여도 뽑히는데(1000 만피 < 1200 중 1100), 위험한 쪽을 지키는 스킬의 의도와 어긋난다.
+func _cast_shield_skill(skill: SkillData) -> void:
+	_apply_skill_shield(skill, self)
+	var ally := _lowest_health_ally()
+	if ally != null:
+		ally._apply_skill_shield(skill, self)
+
+
+# 자기를 뺀 파티원 중 체력 비율이 가장 낮은 쪽. 없으면 null.
+func _lowest_health_ally() -> Node:
+	var best: Node = null
+	var best_percent := INF
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if node == self or not is_instance_valid(node) or not node.is_alive:
+			continue
+		var percent: float = node.get_health_percent()
+		if percent < best_percent:
+			best_percent = percent
+			best = node
+	return best
+
+
+# 이 노드에 스킬 보호막을 씌운다. 한도(shield_max_percent)에 걸려 실제로 못 받은 만큼은
+# 스킬 몫으로 세지 않는다 — 없는 보호막이 깨지기를 기다리면 폭발이 나지 않는다.
+func _apply_skill_shield(skill: SkillData, caster: Node) -> void:
+	var amount := int(round(max_hp * skill.shield_percent))
+	if amount <= 0:
+		return
+
+	var before := _shield
+	_gain_shield(amount)
+	var gained := _shield - before
+	if gained <= 0:
+		return
+
+	_skill_shield = gained
+	_skill_shield_time_left = skill.shield_duration
+	_skill_shield_skill = skill
+	_skill_shield_caster = caster
+
+
+# 지속시간 한 틱. 시간이 다 되면 그 자리에서 터진다.
+func _tick_skill_shield(delta: float) -> void:
+	if _skill_shield_time_left <= 0.0:
+		return
+	_skill_shield_time_left -= delta
+	if _skill_shield_time_left <= 0.0:
+		_skill_shield_time_left = 0.0
+		_detonate_skill_shield()
+
+
+# 이 시전자가 준 보호막을 파티 전체에서 찾아 즉시 터뜨린다. 터진 개수를 반환한다.
+#
+# 자기 것만 보지 않는 이유: 자기 보호막이 먼저 깨져 이미 터졌더라도 파티원 쪽은
+# 아직 살아 있을 수 있다. 그때 한 번 더 누른 것은 "남은 것을 터뜨려라"다.
+func _detonate_shields_from(skill: SkillData) -> int:
+	var count := 0
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if not is_instance_valid(node):
+			continue
+		if node._skill_shield_caster != self or node._skill_shield_skill != skill:
+			continue
+		if node._skill_shield <= 0:
+			continue
+		node._detonate_skill_shield()
+		count += 1
+	return count
+
+
+# 이 노드에 걸린 스킬 보호막을 터뜨린다. 폭발은 **이 노드 자리**에서 난다
+# — 보호막이 2개면 폭발도 2번, 각자의 자리다.
+#
+# 남은 보호막은 사라진다. 깨져서 터질 때는 이미 0이라 뺄 것이 없고,
+# 만료·즉시 폭발로 터질 때는 남은 보호막을 대가로 지불하는 셈이다.
+func _detonate_skill_shield() -> void:
+	var skill := _skill_shield_skill
+	var caster := _skill_shield_caster
+	var remaining := _skill_shield
+
+	_shield = maxi(_shield - remaining, 0)
+	_skill_shield = 0
+	_skill_shield_time_left = 0.0
+	_skill_shield_skill = null
+	_skill_shield_caster = null
+
+	if skill == null or skill.aoe_radius <= 0.0:
+		return
+
+	# 위력은 **시전자**의 신앙심으로 스케일한다. 보호막을 두른 사람이 아니라 건 사람의 힘이다.
+	var boost := 1.0
+	if caster != null and is_instance_valid(caster):
+		boost = caster.get_stats().get_goddess_skill_boost()
+	var power := skill.get_effective_power(boost)
+	if power <= 0:
+		return
+
+	var origin := global_position
+	for enemy in GameManager.get_all_enemies():
+		if enemy == null or not enemy.is_alive:
+			continue
+		if origin.distance_to(enemy.global_position) > skill.aoe_radius:
+			continue
+		enemy.take_damage(power, caster)
+
+	if EventBus:
+		EventBus.skill_shield_burst.emit(self, skill.skill_id, origin, power)
+
+
+func get_skill_shield() -> int:
+	return _skill_shield
+
+
+func get_skill_shield_time_left() -> float:
+	return _skill_shield_time_left
+	return true
+
+
+# ===== 대시 (Dash) =====
+
+# 대시 타이머 한 틱. 충전은 쿨타임이 끝나는 순간 전부 돌아온다.
+func _tick_dash(delta: float) -> void:
+	if _dash_charges < 0:
+		_dash_charges = CombatConfig.tuning.dash_charges
+
+	if _dash_time_left > 0.0:
+		_dash_time_left = maxf(_dash_time_left - delta, 0.0)
+
+	if _dash_cooldown_left > 0.0:
+		_dash_cooldown_left -= delta
+		if _dash_cooldown_left <= 0.0:
+			_dash_cooldown_left = 0.0
+			_dash_charges = CombatConfig.tuning.dash_charges
+
+
+# 대시 속도. 이속 배수를 타지 않는다 — 회피 거리는 예측 가능해야 한다(CombatTuning 주석).
+func get_dash_speed() -> float:
+	var tuning := CombatConfig.tuning
+	return tuning.base_move_speed * tuning.dash_speed_multiplier
+
+
+func can_dash() -> bool:
+	if not is_alive:
+		return false
+	if _dash_charges <= 0:
+		return false
+	# 대시 중에 다시 대시할 수는 없다. 대시가 끝난 직후의 두 번째 대시는 된다.
+	if _dash_time_left > 0.0:
+		return false
+	return not StatusEffectSystem.blocks_movement(self)
+
+
+# 대시를 시작한다. 방향을 주지 않으면 지금 이동 입력 방향, 그것도 없으면
+# 마지막으로 움직인 방향으로 나간다.
+#
+# direction 인자를 둔 이유: 입력 없이도 호출해 검증할 수 있어야 한다.
+func try_dash(direction: Vector2 = Vector2.ZERO) -> bool:
+	if _dash_charges < 0:
+		_dash_charges = CombatConfig.tuning.dash_charges
+	if not can_dash():
+		return false
+
+	var dir := direction
+	if dir == Vector2.ZERO:
+		dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if dir == Vector2.ZERO:
+		dir = _last_move_direction
+
+	_dash_direction = dir.normalized()
+	_dash_time_left = CombatConfig.tuning.dash_duration
+	_dash_charges -= 1
+	if _dash_charges <= 0:
+		_dash_cooldown_left = CombatConfig.tuning.dash_cooldown
+	return true
+
+
+func is_dashing() -> bool:
+	return _dash_time_left > 0.0
+
+
+func get_dash_charges() -> int:
+	return maxi(_dash_charges, 0)
+
+
+func get_dash_cooldown_left() -> float:
+	return _dash_cooldown_left
+
 
 # 실제 이동 속도 = 기본 속도(CombatConfig) x 이속 배수(PlayerStats 버프 채널).
 # 원거리 스택 같은 효과가 이속 배수를 올리면 여기 자동 반영된다.
@@ -255,6 +645,15 @@ func try_attack() -> bool:
 
 	_attack_cooldown_left = get_attack_cooldown()
 
+	# 평타 발생을 먼저 센다. 처형으로 끝나거나 적을 죽인 평타도 "나간 평타"다.
+	_attack_swing_count += 1
+	_apply_attack_passives()
+
+	# 패시브 광역 피해가 대상을 먼저 죽일 수 있다.
+	if not is_instance_valid(target) or not target.is_alive:
+		_gain_stack()
+		return true
+
 	# 버퍼: 조건이 맞으면 피해 대신 처형한다.
 	if _try_execute(target):
 		_gain_stack()
@@ -282,6 +681,51 @@ func try_attack() -> bool:
 	return true
 
 
+# ===== 평타 패시브 (Basic-attack passives) =====
+#
+# 캐릭터 고유 스킬(SkillData) 중 every_n_attacks 가 설정된 것은 평타 주기로 발동한다.
+# 역할 메커니즘(아래)과 달리 **파티 구성과 무관하다** — 시너지가 아니라 캐릭터 개성이라
+# 혼자 있어도 작동한다(docs §3 티어2).
+#
+# 데이터가 없으면 아무 일도 하지 않으므로, 패시브를 저작하지 않은 캐릭터의 평타는 이전과 같다.
+func _apply_attack_passives() -> void:
+	if data == null:
+		return
+	for skill in data.skills:
+		if skill == null or skill.every_n_attacks <= 0:
+			continue
+		if _attack_swing_count % skill.every_n_attacks != 0:
+			continue
+		_fire_attack_passive(skill)
+
+
+# 회복하고, 실제로 회복한 양에 비례해 주변 적에게 광역 피해를 준다.
+#
+# 기준이 "최대 체력"이 아니라 "잃은 체력"이라 체력이 가득 차 있으면 회복이 0이고,
+# 광역 피해도 회복량에 비례하므로 함께 0이 된다. 몰릴수록 세지는 것이 의도다.
+func _fire_attack_passive(skill: SkillData) -> void:
+	var healed := 0
+	if skill.heal_missing_hp_percent > 0.0:
+		var missing: int = max_hp - hp
+		healed = int(round(missing * skill.heal_missing_hp_percent))
+		if healed > 0:
+			heal(healed)
+
+	if healed <= 0 or skill.heal_to_aoe_damage_percent <= 0.0 or skill.aoe_radius <= 0.0:
+		return
+
+	var amount := int(round(healed * skill.heal_to_aoe_damage_percent))
+	if amount <= 0:
+		return
+
+	for enemy in GameManager.get_all_enemies():
+		if enemy == null or not enemy.is_alive:
+			continue
+		if global_position.distance_to(enemy.global_position) > skill.aoe_radius:
+			continue
+		enemy.take_damage(amount, self)
+
+
 # ===== 역할 메커니즘 (Role Mechanics) =====
 # 메커니즘은 시너지 1단계가 곧 역할 정체성이라는 설계(docs §2)를 따른다.
 # 그래서 "이 캐릭터가 그 역할을 가졌는가" + "파티에서 그 역할 시너지가 켜졌는가"를 함께 본다.
@@ -297,6 +741,25 @@ var _stack: float = 0.0
 # 왜 별도 자원인가: 초과 회복분을 체력으로 되돌리면 "가득 찬 뒤"라는 조건이 무의미해진다.
 # docs §6 이 보호막을 HUD 미표시로 둔 것은 자원이 없었기 때문이고, 생겼으므로 표시한다.
 var _shield: int = 0
+
+# ----- 스킬 보호막 (Skill shield) -----
+# 고유 스킬이 준 보호막은 위 _shield 풀 안에 있지만, **그중 얼마가 이 스킬 몫인지**를
+# 따로 센다. 원거리 3단계가 준 보호막과 구분해야 하기 때문이다 —
+# 그쪽 보호막이 깎였다고 스킬 폭발이 나면 안 된다.
+#
+# 폭발 계기가 세 가지다: 깨짐(_skill_shield 가 0) / 만료(_skill_shield_time_left 가 0) /
+# 시전자가 같은 슬롯을 한 번 더 누름(즉시).
+var _skill_shield: int = 0
+var _skill_shield_time_left: float = 0.0
+var _skill_shield_skill: SkillData = null
+var _skill_shield_caster: Node = null
+
+# 스킬별 남은 쿨타임. skill_id(StringName) -> 남은 초.
+# 항목이 없으면 쿨타임이 없다는 뜻이다(다 돌면 지운다).
+#
+# 슬롯이 아니라 skill_id 로 키를 잡는 이유: 쿨타임은 스킬의 성질이라
+# 같은 스킬을 다른 슬롯으로 옮겨도 따라가야 한다.
+var _skill_cooldowns: Dictionary = {}
 
 # 이 멤버에게 해당 역할의 메커니즘이 활성인가.
 # 배타 규칙(#73)이 get_active_tiers()에 이미 반영되어 있으므로,
@@ -525,6 +988,13 @@ func take_damage(amount: int, source = null) -> int:
 	_shield -= absorbed
 	dealt -= absorbed
 
+	# 스킬 보호막이 이 피해로 깎였는지 본다. 0이 되면 **깨짐**이고 폭발 계기다.
+	# 원거리 3단계가 준 보호막만 깎인 경우에는 아무 일도 일어나지 않는다.
+	var skill_shield_broke := false
+	if _skill_shield > 0 and absorbed > 0:
+		_skill_shield = maxi(_skill_shield - absorbed, 0)
+		skill_shield_broke = _skill_shield <= 0
+
 	hp -= dealt
 	hp = max(hp, 0)
 
@@ -535,6 +1005,10 @@ func take_damage(amount: int, source = null) -> int:
 	# 탱커 3단계: 받은 피해에 비례해 공격자에게 되돌린다.
 	# 흡수분까지 포함한 양이 기준이다 — 보호막을 둘렀다고 반사가 약해질 이유가 없다.
 	_reflect_damage(source, dealt + absorbed)
+
+	# 보호막이 깨져서 나는 폭발. die() 가 노드를 정리하기 전에 처리한다.
+	if skill_shield_broke:
+		_detonate_skill_shield()
 
 	if hp <= 0:
 		die()
@@ -560,3 +1034,14 @@ func get_health_percent() -> float:
 	if max_hp == 0:
 		return 0.0
 	return float(hp) / float(max_hp)
+
+
+# ===== 체력 바 (Health bar) =====
+
+# 머리 위 체력 바를 붙인다. 씬이 아니라 코드로 붙이므로 새 캐릭터·새 적이 자동으로 얻는다.
+# hostile 이면 테두리가 빨강이 된다(적/아군 구분, #249).
+func _attach_health_bar(hostile: bool) -> void:
+	var bar := HealthBar.new()
+	bar.name = "HealthBar"
+	bar.hostile = hostile
+	add_child(bar)

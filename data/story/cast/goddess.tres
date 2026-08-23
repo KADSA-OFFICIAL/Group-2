@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="StoryCastData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://entities/story/StoryCastData.gd" id="1_cast"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/portraits/goddess.png" id="2_portrait"]
+
+[resource]
+script = ExtResource("1_cast")
+cast_id = &"goddess"
+display_name = "여신"
+tint = Color(1, 0.9, 0.55, 1)
+portrait = ExtResource("2_portrait")
+description = "스토리 화자(임시). 나중에 적(최종보스)으로 저작될 인물이다. EnemyData 로 저작되면 해석 순서상 그쪽이 먼저 잡히므로 이 파일을 지우면 된다 — 대본은 고칠 것이 없다(#202). 이름/개성 미정."

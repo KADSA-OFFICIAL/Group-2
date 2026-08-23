@@ -85,6 +85,13 @@ func _ready():
 	max_hp = get_stats().get_max_hp()
 	hp = max_hp
 
+	# 머리 위 체력 바. 적이므로 테두리가 빨강이다(#249).
+	# _apply_data() 뒤에 붙인다 — 바가 보이는 스프라이트에서 높이를 계산하기 때문이다.
+	var bar := HealthBar.new()
+	bar.name = "HealthBar"
+	bar.hostile = true
+	add_child(bar)
+
 # EnemyData가 설정된 경우에만 정의의 외형을 반영한다.
 # data가 없으면 씬에 저작된 값을 건드리지 않는다.
 #
@@ -205,7 +212,13 @@ func _resolve_target() -> Node2D:
 
 # 추적 대상으로 쓸 수 있는 노드인가.
 # 살아 있고 탐지 범위 안에 있어야 한다. 범위를 벗어나면 놓으므로 무한 추격이 되지 않는다.
-func _is_valid_target(node: Node) -> bool:
+#
+# **파라미터에 타입을 붙이지 않는다**(#245). _target 은 파티원 노드를 들고 있는데
+# 그 파티원이 죽으면 queue_free 로 해제된다. Node 로 타입을 박으면 해제된 객체가
+# 인자 타입 검사에서 걸려 아래 is_instance_valid() 가드에 **도달하지 못하고** 에러가 난다
+# ("argument 1 (previously freed) is not a subclass of the expected argument class").
+# 가드가 있는데도 에러가 나던 원인이 이것이다.
+func _is_valid_target(node) -> bool:
 	# 탐지 범위의 출처가 data이므로 data가 없으면 대상 판정 자체가 성립하지 않는다.
 	if data == null:
 		return false
