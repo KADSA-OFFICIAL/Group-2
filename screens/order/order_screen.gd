@@ -3,7 +3,7 @@ extends Control
 # 교단 화면 (메타 UI).
 #
 # 교단은 **교주(플레이어)와 스토리에서 합류한 인물들이 모여 있는 본거지**다.
-# 구조는 서브컬쳐 수집형 RPG 문법을 따른다: **좌 교주 카드 / 중앙 상징 / 우 명부**.
+# 구조는 서브컬쳐 수집형 RPG 문법을 따른다: **좌 교주 카드 / 중앙 본거지 뜰 / 우 명부**.
 #
 # 캐릭터 화면과 무엇이 다른가:
 #   캐릭터 화면 = 인물 **한 명의 상세**(스텟/스킬/장비).
@@ -99,20 +99,32 @@ func _build_leader_panel() -> Control:
 	return panel
 
 
-# ── 중앙: 교단 상징 ──
+# ── 중앙: 본거지 뜰 ──
+#
+# 예전에는 상징 아이콘 한 개와 이름뿐이었다. 교단은 "모여 있는 곳"인데 모여 있는
+# 그림이 없었고, 워크 시트가 들어온 인물들도 전투 밖에서는 쓰이지 않았다.
+# 이제 건물과 신도가 실제로 서 있는 뜰을 둔다(#254).
+#
+# 뜰이 무엇을 그리는지는 OrderYard 가 안다. 이 화면은 자리만 내준다.
 func _build_center() -> Control:
 	var center := VBoxContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	center.alignment = BoxContainer.ALIGNMENT_CENTER
-	center.add_theme_constant_override("separation", 10)
+	center.add_theme_constant_override("separation", 8)
 
-	var emblem := HUDKit.make_icon("icon_order", 180)
-	if emblem != null:
-		emblem.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		center.add_child(emblem)
+	var frame := PanelContainer.new()
+	frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	frame.add_theme_stylebox_override("panel", HUDKit.panel(0))
+	frame.clip_contents = true
+	center.add_child(frame)
 
-	var name_label := HUDKit.label(OrderSystem.ORDER_NAME, 30, HUDKit.text_1(), 700)
+	var yard := OrderYard.new()
+	yard.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	yard.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	frame.add_child(yard)
+
+	# 뜰 아래에 교단 이름과 교주 한 줄을 남긴다. 그림이 커진 만큼 글자는 작게 둔다.
+	var name_label := HUDKit.label(OrderSystem.ORDER_NAME, 22, HUDKit.text_1(), 700)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center.add_child(name_label)
 
