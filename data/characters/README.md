@@ -17,7 +17,7 @@
 | `buffer_pure.tres` | `buffer_pure` | 버퍼 (순혈) | 초록 |
 | `tank_buffer.tres` | `tank_buffer` | 탱커 + 버퍼 (겸직) | 청록 |
 | `ranged_tank.tres` | `ranged_tank` | 원거리딜러 + 탱커 (겸직) | 보라 |
-| `buffer_ranged.tres` | `buffer_ranged` | 버퍼 + 원거리딜러 (겸직) | 노랑 |
+| `seola.tres` | `seola` | 버퍼 + 원거리딜러 (겸직) | 연청 |
 
 **여기에 캐릭터를 더 추가하면 로스터 구조가 깨진다.** 시너지 조합 특성(§8.2)이 "6명 중 3명"을 전제로 계산되어 있다.
 
