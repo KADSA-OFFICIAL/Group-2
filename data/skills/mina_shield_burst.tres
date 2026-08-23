@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"mina_shield_burst"
+display_name = "보호막 폭발"
+description = "미나 고유 스킬. 자기 자신과 파티에서 가장 체력이 낮은 파티원에게 보호막을 준다. 그 보호막이 적의 공격으로 깨지거나 지속시간이 끝나면, 대상이 있던 자리에서 원형 범위로 광역 피해가 터진다. 지켜 준 것이 그대로 공격이 되는 구조다. 설계 §3 의 [확정 제약](고유 스킬 중 일부는 힐/보호막을 제공해야 한다)을 이 스킬이 충족한다 — 버퍼 3단계가 기대는 보호막 출처다. [이름 미정] — display_name 은 기능을 그대로 적은 임시 이름이다. 수치는 전부 [임시값]이며 발동 구현 후 실측으로 잡는다. 대상 선정과 폭발 조건은 아직 필드가 아니라 이 설명이 계약이다(SkillData 주석 참고)."
+base_power = 200
+scales_with_faith = true
+shield_percent = 0.15
+shield_duration = 6.0
+aoe_radius = 90.0
