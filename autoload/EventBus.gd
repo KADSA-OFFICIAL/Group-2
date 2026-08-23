@@ -63,3 +63,6 @@ signal mail_claimed(mail_id: int)
 # ----- 스킬 (Skill) -----
 # 조종 중인 멤버가 고유 스킬 키(Q·E)를 눌러 발동했다. 효과 구현·이펙트·HUD 가 이 신호를 듣는다.
 signal skill_used(user, skill_id: StringName)
+
+# 고유 스킬이 준 보호막이 터졌다(깨짐·만료·재입력). position 에서 반경 안의 적에게 power 피해.
+signal skill_shield_burst(target, skill_id: StringName, position: Vector2, power: int)
