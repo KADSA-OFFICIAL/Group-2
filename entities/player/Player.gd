@@ -203,13 +203,15 @@ func _physics_process(delta: float) -> void:
 # 입력 처리 한 틱. velocity를 정하고 필요하면 실제로 이동시킨다.
 # 외형 갱신과 분리해 둔 이유: 아래 조기 반환이 애니메이션 갱신까지 건너뛰면
 # 조종을 넘긴 멤버가 멈춘 뒤에도 걷는 모션이 남기 때문이다.
-func _process_control(_delta: float) -> void:
-	# 조종 중인 멤버만 입력을 받는다.
-	# 나머지는 이 단계에서 정지한다(AI는 후속 이슈).
-	if not is_controlled():
-		velocity = Vector2.ZERO
-		return
+func _process_control(delta: float) -> void:
+	if is_controlled():
+		_process_input(delta)
+	else:
+		_process_ally_ai(delta)
 
+
+# 사람이 잡고 있을 때. 이동·평타·대시·스킬이 모두 입력에서 나온다.
+func _process_input(_delta: float) -> void:
 	# 기절 등 CONTROL 효과가 이동을 막으면 움직이지 않는다.
 	if StatusEffectSystem.blocks_movement(self):
 		velocity = Vector2.ZERO
@@ -233,6 +235,93 @@ func _process_control(_delta: float) -> void:
 		try_use_skill(SkillData.InputSlot.Q)
 	if Input.is_action_just_pressed("skill_e"):
 		try_use_skill(SkillData.InputSlot.E)
+
+
+# ===== 동료 AI (Ally AI) =====
+#
+# 조종하지 않는 멤버가 스스로 하는 것은 **평타와 이동뿐**이다
+# (docs §4 [확정] "AI 수준 = 중간": 기본 행동은 스스로, 스킬은 사람이 잡아야 발동).
+# 스킬과 대시는 여기서 부르지 않는다.
+#
+# 왜 AI 가 평타를 쳐야 하는가: 설계가 그 위에 세워져 있다. 표식 충전은 §8.1 에서
+# **파티 전체의 평타**로 이뤄지고 원거리 스택도 평타 기반이다. 놓은 멤버가 가만히 있으면
+# 시너지 1단계가 조종 중인 1명분만 돈다.
+func _process_ally_ai(_delta: float) -> void:
+	if StatusEffectSystem.blocks_movement(self):
+		velocity = Vector2.ZERO
+	else:
+		velocity = _ai_velocity()
+	move_and_slide()
+
+	# 사거리 밖이면 try_attack() 이 대상을 못 찾아 스스로 아무 일도 하지 않는다.
+	# 쿨다운·기절 판정도 그 안에 있으므로 여기서 다시 검사하지 않는다.
+	try_attack()
+
+
+# AI 가 이번 틱에 가고 싶은 속도.
+#   교전 범위 안에 적이 있으면 -> 평타 사거리까지 접근하고, 들어오면 멈춘다.
+#   없으면 -> 조종 중인 멤버를 따라간다. 가까우면 멈춘다.
+#
+# 따라오기가 필요한 이유: 적이 없을 때 제자리에 서 있으면 파티가 흩어져,
+# 전환했을 때 그 멤버가 전장 밖에 있다. §4 의 실시간 전환이 성립하지 않는다.
+func _ai_velocity() -> Vector2:
+	var tuning := CombatConfig.tuning
+	var leader := _controlled_member_node()
+
+	var enemy := _ai_engage_target(leader)
+	if enemy != null:
+		var to_enemy: Vector2 = enemy.global_position - global_position
+		var distance := to_enemy.length()
+		# 사거리 안쪽에서 멈춘다. 경계에 딱 맞추면 붙었다 떨어지며 떤다.
+		if distance <= get_attack_range() * tuning.ally_ai_stop_range_ratio:
+			return Vector2.ZERO
+		return to_enemy.normalized() * get_move_speed()
+
+	if leader == null:
+		return Vector2.ZERO
+	var to_leader: Vector2 = leader.global_position - global_position
+	if to_leader.length() <= tuning.ally_ai_follow_distance:
+		return Vector2.ZERO
+	return to_leader.normalized() * get_move_speed()
+
+
+# 교전할 적. 없으면 null(그러면 조종 중인 멤버를 따라간다).
+#
+# **교전 여부는 조종 중인 멤버 기준으로 판정한다.** 내 위치를 기준으로 하면 내 옆의 적을
+# 쫓느라 조종자에게서 무한히 멀어진다 — 전환했을 때 남겨진 멤버가 근처 적에 붙은 채
+# 계속 뒤처지는 문제가 그것이었다.
+#
+# 조종자 기준으로 걸러 두면 파티가 조종자 주위 교전 범위 안에 머문다.
+# 조종자가 없으면(전멸 직전 등) 내 기준으로 판정한다 — 그때는 뭉칠 대상이 없다.
+#
+# 대상 선정은 **나에게 가장 가까운** 적이다. 조종자에게 가장 가까운 적을 고르면
+# 파티원 셋이 한 마리에 몰린다.
+func _ai_engage_target(leader: Node2D) -> Node:
+	var origin: Vector2 = global_position if leader == null else leader.global_position
+	var engage_range: float = CombatConfig.tuning.ally_ai_engage_range
+
+	var best: Node = null
+	var best_distance := INF
+	for enemy in GameManager.get_all_enemies():
+		if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive:
+			continue
+		if origin.distance_to(enemy.global_position) > engage_range:
+			continue
+		var distance := global_position.distance_to(enemy.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best = enemy
+	return best
+
+
+# 지금 조종 중인 파티원 노드. 그룹 이름의 출처는 PartySystem.MEMBER_GROUP 이다.
+func _controlled_member_node() -> Node2D:
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if node == self or not is_instance_valid(node):
+			continue
+		if node is Node2D and node.is_controlled():
+			return node as Node2D
+	return null
 
 
 # ===== 워크 애니메이션 (Walk animation) =====
