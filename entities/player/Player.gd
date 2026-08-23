@@ -266,24 +266,52 @@ func _process_ally_ai(_delta: float) -> void:
 # 전환했을 때 그 멤버가 전장 밖에 있다. §4 의 실시간 전환이 성립하지 않는다.
 func _ai_velocity() -> Vector2:
 	var tuning := CombatConfig.tuning
+	var leader := _controlled_member_node()
 
-	var enemy := GameManager.get_nearest_enemy(global_position)
-	if enemy != null and is_instance_valid(enemy) and enemy.is_alive:
+	var enemy := _ai_engage_target(leader)
+	if enemy != null:
 		var to_enemy: Vector2 = enemy.global_position - global_position
 		var distance := to_enemy.length()
-		if distance <= tuning.ally_ai_engage_range:
-			# 사거리 안쪽에서 멈춘다. 경계에 딱 맞추면 붙었다 떨어지며 떤다.
-			if distance <= get_attack_range() * tuning.ally_ai_stop_range_ratio:
-				return Vector2.ZERO
-			return to_enemy.normalized() * get_move_speed()
+		# 사거리 안쪽에서 멈춘다. 경계에 딱 맞추면 붙었다 떨어지며 떤다.
+		if distance <= get_attack_range() * tuning.ally_ai_stop_range_ratio:
+			return Vector2.ZERO
+		return to_enemy.normalized() * get_move_speed()
 
-	var leader := _controlled_member_node()
 	if leader == null:
 		return Vector2.ZERO
 	var to_leader: Vector2 = leader.global_position - global_position
 	if to_leader.length() <= tuning.ally_ai_follow_distance:
 		return Vector2.ZERO
 	return to_leader.normalized() * get_move_speed()
+
+
+# 교전할 적. 없으면 null(그러면 조종 중인 멤버를 따라간다).
+#
+# **교전 여부는 조종 중인 멤버 기준으로 판정한다.** 내 위치를 기준으로 하면 내 옆의 적을
+# 쫓느라 조종자에게서 무한히 멀어진다 — 전환했을 때 남겨진 멤버가 근처 적에 붙은 채
+# 계속 뒤처지는 문제가 그것이었다.
+#
+# 조종자 기준으로 걸러 두면 파티가 조종자 주위 교전 범위 안에 머문다.
+# 조종자가 없으면(전멸 직전 등) 내 기준으로 판정한다 — 그때는 뭉칠 대상이 없다.
+#
+# 대상 선정은 **나에게 가장 가까운** 적이다. 조종자에게 가장 가까운 적을 고르면
+# 파티원 셋이 한 마리에 몰린다.
+func _ai_engage_target(leader: Node2D) -> Node:
+	var origin: Vector2 = global_position if leader == null else leader.global_position
+	var engage_range: float = CombatConfig.tuning.ally_ai_engage_range
+
+	var best: Node = null
+	var best_distance := INF
+	for enemy in GameManager.get_all_enemies():
+		if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive:
+			continue
+		if origin.distance_to(enemy.global_position) > engage_range:
+			continue
+		var distance := global_position.distance_to(enemy.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best = enemy
+	return best
 
 
 # 지금 조종 중인 파티원 노드. 그룹 이름의 출처는 PartySystem.MEMBER_GROUP 이다.
