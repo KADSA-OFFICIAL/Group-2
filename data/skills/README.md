@@ -23,8 +23,26 @@
 | 스킬 | 캐릭터 | 힐/보호막 | 비고 |
 |---|---|---|---|
 | `mina_shield_burst.tres` | `mina` (탱커+버퍼) | **보호막** | 이 제약을 충족하는 스킬 |
+| `mina_attack_heal_burst.tres` | `mina` (탱커+버퍼) | **회복** | 평타 패시브 (아래) |
 
 나머지 5명의 고유 스킬은 미정이다(§3 [미정]).
+
+## 평타 패시브 (every_n_attacks)
+
+`every_n_attacks` 가 0 보다 크면 **플레이어가 쓰는 발동형 스킬이 아니라 평타 주기 패시브**다.
+`Player.try_attack()` 이 쿨다운을 소비한 직후 평타 횟수를 세고, 주기가 맞으면 발동한다.
+
+- **"발생" 기준이고 적중이 아니다.** 처형으로 끝난 평타와 적을 죽인 평타도 세어진다.
+  (지금은 사거리 안에 적이 없으면 평타 자체가 나가지 않아 발생 = 적중이다.)
+- 시너지가 아니라 캐릭터 개성(§3 티어2)이므로 **파티 구성과 무관하게 항상 작동한다.**
+- 패시브를 저작하지 않은 캐릭터의 평타는 이전과 완전히 같다 — 데이터가 없으면 아무 일도 하지 않는다.
+
+`heal_missing_hp_percent` 는 **최대 체력이 아니라 잃은 체력** 기준이다. 체력이 가득 차 있으면
+회복이 0이고, `heal_to_aoe_damage_percent` 가 회복량에 비례하므로 광역 피해도 0이 된다.
+몰릴수록 세지는 역전 장치인 것이 의도다.
+
+버퍼 3단계(`CombatTuning.heal_to_damage_percent`)와 발상이 같지만 **별개 채널**이다.
+그쪽은 파티 구성에 따라 켜지고 꺼지는 시너지고, 이쪽은 캐릭터에 붙어 항상 있다.
 
 ## 수치는 전부 [임시값]이다
 
@@ -35,6 +53,9 @@
 | `shield_percent` | 원거리 3단계 보호막 한도(`CombatTuning.shield_max_percent` = 0.3)의 절반 |
 | `aoe_radius` | 근접 공격 사거리(`EnemyData.attack_range` 기본값 45)의 2배 |
 | `base_power` | 선례 없음 — 발동 구현 후 조정 |
+| `every_n_attacks` | 3 — 사용자 확정 (임시값 아님) |
+| `heal_missing_hp_percent` | 0.2 — 잃은 체력의 1/5. 탱커 3단계 기절 회복(`stun_heal_percent` 0.05, 최대 체력 기준)과 다른 기준이라 직접 비교는 안 된다 |
+| `heal_to_aoe_damage_percent` | 0.5 — 버퍼 3단계 `heal_to_damage_percent` 와 같은 비율에서 출발 |
 
 `base_power` 는 `scales_with_faith` 가 켜져 있으면 `PlayerStats.get_goddess_skill_boost()`
 배수를 탄다. 신앙심이 높은 캐릭터의 스킬이 더 세지는 것이 이 필드의 목적이다.

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
@@ -7,6 +7,7 @@
 [ext_resource type="SpriteFrames" path="res://assets/sprites/characters/mina_walk_frames.tres" id="10_walk"]
 [ext_resource type="Script" path="res://entities/character/SkillData.gd" id="11_skilldef"]
 [ext_resource type="Resource" path="res://data/skills/mina_shield_burst.tres" id="12_skill"]
+[ext_resource type="Resource" path="res://data/skills/mina_attack_heal_burst.tres" id="13_passive"]
 
 [sub_resource type="Resource" id="PlayerStats_mina"]
 script = ExtResource("2_stats")
@@ -23,9 +24,9 @@ secondary_role = 3
 character_id = &"mina"
 display_name = "미나"
 playable = true
-description = "로스터의 겸직(탱커 + 버퍼) 슬롯. 플레이스홀더였던 tank_buffer 를 교체한 인물이다(#224). 스텟은 그 플레이스홀더의 값을 그대로 이어받은 [임시값]이다. 고유 스킬은 보호막 폭발(data/skills/mina_shield_burst.tres) — 버퍼 3단계가 기대는 보호막 출처다(#231). 개성 미정."
+description = "로스터의 겸직(탱커 + 버퍼) 슬롯. 플레이스홀더였던 tank_buffer 를 교체한 인물이다(#224). 스텟은 그 플레이스홀더의 값을 그대로 이어받은 [임시값]이다. 고유 스킬은 보호막 폭발(data/skills/mina_shield_burst.tres) — 버퍼 3단계가 기대는 보호막 출처다(#231). 평타는 근접이고, 평타 3회마다 잃은 체력 비례 회복 + 회복량 비례 광역 피해가 나가는 패시브를 갖는다(data/skills/mina_attack_heal_burst.tres, #233). 개성 미정."
 stats = SubResource("PlayerStats_mina")
-skills = Array[ExtResource("11_skilldef")]([ExtResource("12_skill")])
+skills = Array[ExtResource("11_skilldef")]([ExtResource("12_skill"), ExtResource("13_passive")])
 sprite_texture = ExtResource("9_shape")
 tint = Color(0.2, 0.8, 0.8, 1)
 sprite_scale = Vector2(2, 2)
