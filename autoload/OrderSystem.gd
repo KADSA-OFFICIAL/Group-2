@@ -23,6 +23,7 @@ const LEADER_TITLE := "교주"
 
 func _ready() -> void:
 	name = "OrderSystem"
+	_load_buildings()
 
 
 # ===== 조회 (Query) =====
@@ -45,6 +46,59 @@ func get_leader_title_line() -> String:
 
 # 교단에 모인 인원 수. 명부의 출처는 CharacterDatabase 다.
 # 스토리 인물·보스(playable = false)는 교단에 합류한 인원이 아니므로 세지 않는다 (#216).
+# ===== 본거지 건물 (Buildings) =====
+#
+# 왜 별도 레지스트리(autoload)를 만들지 않았나: 건물은 교단의 구성물이고 개수가 넷이다.
+# 조회하는 곳도 뜰 화면 하나뿐이라, 자기 도메인을 이미 가진 이 시스템이 들고 있는 편이
+# 출처가 하나로 남는다. 종류가 늘어 다른 화면도 묻기 시작하면 그때 떼어낸다.
+
+const BUILDING_DIR := "res://data/order/buildings"
+
+var _buildings: Array[OrderBuildingData] = []
+
+
+# 저작된 건물 전부. spot.y 오름차순(뒤 -> 앞)이라 그리는 쪽이 다시 정렬하지 않는다.
+func get_buildings() -> Array[OrderBuildingData]:
+	return _buildings
+
+
+func _load_buildings() -> void:
+	_buildings.clear()
+
+	var dir := DirAccess.open(BUILDING_DIR)
+	if dir == null:
+		# 아직 저작되지 않았을 수 있다(정상). 뜰은 빈 마당으로 열린다.
+		return
+
+	dir.list_dir_begin()
+	var file_name := dir.get_next()
+	while file_name != "":
+		if not dir.current_is_dir():
+			var clean := file_name.trim_suffix(".remap")
+			if clean.ends_with(".tres"):
+				_load_building(BUILDING_DIR.path_join(clean))
+		file_name = dir.get_next()
+	dir.list_dir_end()
+
+	# 뒤에 선 건물부터 그리도록 미리 정렬해 둔다.
+	_buildings.sort_custom(func(a, b): return a.spot.y < b.spot.y)
+
+
+func _load_building(path: String) -> void:
+	var res := load(path)
+	if not (res is OrderBuildingData):
+		push_warning("OrderSystem: OrderBuildingData 가 아닙니다(건너뜀): " + path)
+		return
+
+	var data: OrderBuildingData = res
+	var problems := data.validate()
+	if not problems.is_empty():
+		push_warning("OrderSystem: 유효하지 않은 건물(" + path + "): " + ", ".join(problems))
+		return
+
+	_buildings.append(data)
+
+
 func get_member_count() -> int:
 	return CharacterDatabase.get_playable_count()
 

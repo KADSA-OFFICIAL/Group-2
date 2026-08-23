@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="OrderBuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/order/OrderBuildingData.gd" id="1_building"]
+
+[resource]
+script = ExtResource("1_building")
+building_id = &"storage"
+display_name = "창고"
+description = "모아 온 재화를 쌓아 두는 곳."
+icon_name = "icon_storage"
+tint = Color(0.76, 0.70, 0.58, 1)
+spot = Vector2(0.84, 0.63)
+width_ratio = 0.18
+screen_path = "res://screens/storage/StorageScreen.tscn"
