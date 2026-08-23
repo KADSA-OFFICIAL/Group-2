@@ -191,6 +191,7 @@ func _physics_process(delta: float) -> void:
 	_decay_stack(delta)
 
 	_tick_dash(delta)
+	_tick_skill_shield(delta)
 
 	_process_control(delta)
 
@@ -269,9 +270,10 @@ func _handle_movement() -> void:
 
 # 키 슬롯(Q·E)에 걸린 고유 스킬을 발동한다. 슬롯이 비어 있으면 아무 일도 하지 않는다.
 #
-# **효과는 아직 구현되지 않았다.** 미나 보호막 폭발의 보호막 부여·깨짐 감지·원형 폭발은
-# 후속 이슈에서 이 자리에 붙는다(#231 Non-goal). 지금은 발동 사실만 신호로 알린다 —
-# 그래야 이펙트·HUD 가 붙을 자리가 생기고, 키가 살아 있는지 확인할 수 있다.
+# 이 스킬의 조작은 **누르기 두 번**이다:
+#   1회 — 자기와 가장 위험한 파티원에게 보호막을 두른다.
+#   2회 — 살아 있는 보호막을 그 즉시 전부 터뜨린다(보호막을 포기하고 타이밍을 얻는다).
+# 누르지 않아도 보호막이 깨지거나 지속시간이 끝나면 알아서 터진다.
 #
 # 슬롯 해석의 단일 출처는 CharacterData.get_skill_for_slot() 이다.
 func try_use_skill(slot: SkillData.InputSlot) -> bool:
@@ -285,8 +287,139 @@ func try_use_skill(slot: SkillData.InputSlot) -> bool:
 	if skill == null:
 		return false
 
+	# 같은 슬롯을 한 번 더 누르면 **살아 있는 보호막이 그 즉시 전부 터진다.**
+	# 보호막을 포기하는 대신 폭발 타이밍을 얻는 것이 이 스킬의 조작이다.
+	if _detonate_shields_from(skill) > 0:
+		if EventBus:
+			EventBus.skill_used.emit(self, skill.skill_id)
+		return true
+
+	if skill.shield_percent > 0.0:
+		_cast_shield_skill(skill)
 	if EventBus:
 		EventBus.skill_used.emit(self, skill.skill_id)
+	return true
+
+
+# ===== 스킬 보호막 (Skill shield) =====
+
+# 시전: 자기 자신과 **파티에서 가장 체력이 낮은 파티원**에게 보호막을 두른다.
+#
+# "가장 체력이 낮은"은 **비율** 기준이다. 절대량으로 재면 최대 체력이 작은 멤버가
+# 만피여도 뽑히는데(1000 만피 < 1200 중 1100), 위험한 쪽을 지키는 스킬의 의도와 어긋난다.
+func _cast_shield_skill(skill: SkillData) -> void:
+	_apply_skill_shield(skill, self)
+	var ally := _lowest_health_ally()
+	if ally != null:
+		ally._apply_skill_shield(skill, self)
+
+
+# 자기를 뺀 파티원 중 체력 비율이 가장 낮은 쪽. 없으면 null.
+func _lowest_health_ally() -> Node:
+	var best: Node = null
+	var best_percent := INF
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if node == self or not is_instance_valid(node) or not node.is_alive:
+			continue
+		var percent: float = node.get_health_percent()
+		if percent < best_percent:
+			best_percent = percent
+			best = node
+	return best
+
+
+# 이 노드에 스킬 보호막을 씌운다. 한도(shield_max_percent)에 걸려 실제로 못 받은 만큼은
+# 스킬 몫으로 세지 않는다 — 없는 보호막이 깨지기를 기다리면 폭발이 나지 않는다.
+func _apply_skill_shield(skill: SkillData, caster: Node) -> void:
+	var amount := int(round(max_hp * skill.shield_percent))
+	if amount <= 0:
+		return
+
+	var before := _shield
+	_gain_shield(amount)
+	var gained := _shield - before
+	if gained <= 0:
+		return
+
+	_skill_shield = gained
+	_skill_shield_time_left = skill.shield_duration
+	_skill_shield_skill = skill
+	_skill_shield_caster = caster
+
+
+# 지속시간 한 틱. 시간이 다 되면 그 자리에서 터진다.
+func _tick_skill_shield(delta: float) -> void:
+	if _skill_shield_time_left <= 0.0:
+		return
+	_skill_shield_time_left -= delta
+	if _skill_shield_time_left <= 0.0:
+		_skill_shield_time_left = 0.0
+		_detonate_skill_shield()
+
+
+# 이 시전자가 준 보호막을 파티 전체에서 찾아 즉시 터뜨린다. 터진 개수를 반환한다.
+#
+# 자기 것만 보지 않는 이유: 자기 보호막이 먼저 깨져 이미 터졌더라도 파티원 쪽은
+# 아직 살아 있을 수 있다. 그때 한 번 더 누른 것은 "남은 것을 터뜨려라"다.
+func _detonate_shields_from(skill: SkillData) -> int:
+	var count := 0
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if not is_instance_valid(node):
+			continue
+		if node._skill_shield_caster != self or node._skill_shield_skill != skill:
+			continue
+		if node._skill_shield <= 0:
+			continue
+		node._detonate_skill_shield()
+		count += 1
+	return count
+
+
+# 이 노드에 걸린 스킬 보호막을 터뜨린다. 폭발은 **이 노드 자리**에서 난다
+# — 보호막이 2개면 폭발도 2번, 각자의 자리다.
+#
+# 남은 보호막은 사라진다. 깨져서 터질 때는 이미 0이라 뺄 것이 없고,
+# 만료·즉시 폭발로 터질 때는 남은 보호막을 대가로 지불하는 셈이다.
+func _detonate_skill_shield() -> void:
+	var skill := _skill_shield_skill
+	var caster := _skill_shield_caster
+	var remaining := _skill_shield
+
+	_shield = maxi(_shield - remaining, 0)
+	_skill_shield = 0
+	_skill_shield_time_left = 0.0
+	_skill_shield_skill = null
+	_skill_shield_caster = null
+
+	if skill == null or skill.aoe_radius <= 0.0:
+		return
+
+	# 위력은 **시전자**의 신앙심으로 스케일한다. 보호막을 두른 사람이 아니라 건 사람의 힘이다.
+	var boost := 1.0
+	if caster != null and is_instance_valid(caster):
+		boost = caster.get_stats().get_goddess_skill_boost()
+	var power := skill.get_effective_power(boost)
+	if power <= 0:
+		return
+
+	var origin := global_position
+	for enemy in GameManager.get_all_enemies():
+		if enemy == null or not enemy.is_alive:
+			continue
+		if origin.distance_to(enemy.global_position) > skill.aoe_radius:
+			continue
+		enemy.take_damage(power, caster)
+
+	if EventBus:
+		EventBus.skill_shield_burst.emit(self, skill.skill_id, origin, power)
+
+
+func get_skill_shield() -> int:
+	return _skill_shield
+
+
+func get_skill_shield_time_left() -> float:
+	return _skill_shield_time_left
 	return true
 
 
@@ -487,6 +620,18 @@ var _stack: float = 0.0
 # 왜 별도 자원인가: 초과 회복분을 체력으로 되돌리면 "가득 찬 뒤"라는 조건이 무의미해진다.
 # docs §6 이 보호막을 HUD 미표시로 둔 것은 자원이 없었기 때문이고, 생겼으므로 표시한다.
 var _shield: int = 0
+
+# ----- 스킬 보호막 (Skill shield) -----
+# 고유 스킬이 준 보호막은 위 _shield 풀 안에 있지만, **그중 얼마가 이 스킬 몫인지**를
+# 따로 센다. 원거리 3단계가 준 보호막과 구분해야 하기 때문이다 —
+# 그쪽 보호막이 깎였다고 스킬 폭발이 나면 안 된다.
+#
+# 폭발 계기가 세 가지다: 깨짐(_skill_shield 가 0) / 만료(_skill_shield_time_left 가 0) /
+# 시전자가 같은 슬롯을 한 번 더 누름(즉시).
+var _skill_shield: int = 0
+var _skill_shield_time_left: float = 0.0
+var _skill_shield_skill: SkillData = null
+var _skill_shield_caster: Node = null
 
 # 이 멤버에게 해당 역할의 메커니즘이 활성인가.
 # 배타 규칙(#73)이 get_active_tiers()에 이미 반영되어 있으므로,
@@ -715,6 +860,13 @@ func take_damage(amount: int, source = null) -> int:
 	_shield -= absorbed
 	dealt -= absorbed
 
+	# 스킬 보호막이 이 피해로 깎였는지 본다. 0이 되면 **깨짐**이고 폭발 계기다.
+	# 원거리 3단계가 준 보호막만 깎인 경우에는 아무 일도 일어나지 않는다.
+	var skill_shield_broke := false
+	if _skill_shield > 0 and absorbed > 0:
+		_skill_shield = maxi(_skill_shield - absorbed, 0)
+		skill_shield_broke = _skill_shield <= 0
+
 	hp -= dealt
 	hp = max(hp, 0)
 
@@ -725,6 +877,10 @@ func take_damage(amount: int, source = null) -> int:
 	# 탱커 3단계: 받은 피해에 비례해 공격자에게 되돌린다.
 	# 흡수분까지 포함한 양이 기준이다 — 보호막을 둘렀다고 반사가 약해질 이유가 없다.
 	_reflect_damage(source, dealt + absorbed)
+
+	# 보호막이 깨져서 나는 폭발. die() 가 노드를 정리하기 전에 처리한다.
+	if skill_shield_broke:
+		_detonate_skill_shield()
 
 	if hp <= 0:
 		die()
