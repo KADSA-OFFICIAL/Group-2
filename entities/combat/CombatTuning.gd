@@ -42,6 +42,25 @@ class_name CombatTuning
 ## 충전을 다 쓴 뒤 전부 다시 채워지기까지의 시간(초).
 @export var dash_cooldown: float = 2.0
 
+# ===== 동료 AI (Ally AI) =====
+# 조종하지 않는 파티원 2명이 스스로 하는 기본 행동의 수치다(#247, docs §4).
+# **스킬과 대시는 AI가 쓰지 않는다** — 그것은 사람이 잡아야 하는 행동이다.
+@export_group("동료 AI")
+## 이 거리 안에 적이 있으면 교전한다. 없으면 조종 중인 멤버를 따라온다.
+##
+## 기본값을 적 탐지 범위(EnemyData.detection_range 600, #208)와 같게 두었다.
+## 적이 나를 보는 거리와 내가 적에게 붙는 거리가 같으면, 한쪽만 일방적으로
+## 끌려가거나 무한 추격이 되는 구간이 생기지 않는다.
+@export var ally_ai_engage_range: float = 600.0
+## 평타 사거리의 이 비율까지 접근하면 멈춘다.
+##
+## 1.0 이면 사거리 경계에서 붙었다 떨어지며 떤다. 조금 안쪽에서 멈춰 여유를 둔다.
+@export var ally_ai_stop_range_ratio: float = 0.9
+## 교전할 적이 없을 때 조종 중인 멤버에게서 이 거리 안이면 멈춘다.
+##
+## 이 값이 없으면 적이 없을 때 파티가 흩어져, 전환했을 때 그 멤버가 전장 밖에 있다.
+@export var ally_ai_follow_distance: float = 80.0
+
 # ===== 피해 공식 (Damage Formula) =====
 # 피해 = 공격력² / (공격력 + 방어력)   -- 구현은 PlayerStats.apply_defense()
 #
@@ -141,6 +160,9 @@ func get_summary() -> Dictionary:
 		"dash_speed_multiplier": dash_speed_multiplier,
 		"dash_duration": dash_duration,
 		"dash_cooldown": dash_cooldown,
+		"ally_ai_engage_range": ally_ai_engage_range,
+		"ally_ai_stop_range_ratio": ally_ai_stop_range_ratio,
+		"ally_ai_follow_distance": ally_ai_follow_distance,
 		"damage_min": damage_min,
 		"strength_to_phys_atk": strength_to_phys_atk,
 		"strength_to_phys_def": strength_to_phys_def,
@@ -192,6 +214,12 @@ func validate() -> Array[String]:
 		problems.append("dash_duration은 0보다 커야 합니다.")
 	if dash_cooldown <= 0.0:
 		problems.append("dash_cooldown은 0보다 커야 합니다.")
+	if ally_ai_engage_range <= 0.0:
+		problems.append("ally_ai_engage_range는 0보다 커야 합니다.")
+	if ally_ai_stop_range_ratio <= 0.0 or ally_ai_stop_range_ratio > 1.0:
+		problems.append("ally_ai_stop_range_ratio는 0보다 크고 1.0 이하여야 합니다.")
+	if ally_ai_follow_distance <= 0.0:
+		problems.append("ally_ai_follow_distance는 0보다 커야 합니다.")
 	if capture_hold_seconds <= 0.0:
 		problems.append("capture_hold_seconds는 0보다 커야 합니다.")
 
