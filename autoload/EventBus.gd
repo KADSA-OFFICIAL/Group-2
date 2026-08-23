@@ -59,3 +59,7 @@ signal equipment_granted(equipment_id: StringName, count: int)
 # ===== 우편 (Mail) =====
 signal mail_added(mail_id: int)
 signal mail_claimed(mail_id: int)
+
+# ----- 스킬 (Skill) -----
+# 조종 중인 멤버가 고유 스킬 키(Q·E)를 눌러 발동했다. 효과 구현·이펙트·HUD 가 이 신호를 듣는다.
+signal skill_used(user, skill_id: StringName)

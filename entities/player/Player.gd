@@ -226,6 +226,12 @@ func _process_control(_delta: float) -> void:
 	if Input.is_action_pressed("attack"):
 		try_attack()
 
+	# 고유 스킬은 사람이 직접 눌러야 발동한다(docs §4 [확정]: AI 는 스킬을 쓰지 않는다).
+	if Input.is_action_just_pressed("skill_q"):
+		try_use_skill(SkillData.InputSlot.Q)
+	if Input.is_action_just_pressed("skill_e"):
+		try_use_skill(SkillData.InputSlot.E)
+
 
 # ===== 워크 애니메이션 (Walk animation) =====
 
@@ -257,6 +263,31 @@ func _handle_movement() -> void:
 	if direction != Vector2.ZERO:
 		_last_move_direction = direction.normalized()
 	velocity = direction * get_move_speed()
+
+
+# ===== 고유 스킬 (Unique skill) =====
+
+# 키 슬롯(Q·E)에 걸린 고유 스킬을 발동한다. 슬롯이 비어 있으면 아무 일도 하지 않는다.
+#
+# **효과는 아직 구현되지 않았다.** 미나 보호막 폭발의 보호막 부여·깨짐 감지·원형 폭발은
+# 후속 이슈에서 이 자리에 붙는다(#231 Non-goal). 지금은 발동 사실만 신호로 알린다 —
+# 그래야 이펙트·HUD 가 붙을 자리가 생기고, 키가 살아 있는지 확인할 수 있다.
+#
+# 슬롯 해석의 단일 출처는 CharacterData.get_skill_for_slot() 이다.
+func try_use_skill(slot: SkillData.InputSlot) -> bool:
+	if not is_alive or data == null:
+		return false
+	# 기절 등 CONTROL 효과가 스킬을 막으면 쓸 수 없다(평타·이동과 같은 규약).
+	if StatusEffectSystem.blocks_skill(self):
+		return false
+
+	var skill := data.get_skill_for_slot(slot)
+	if skill == null:
+		return false
+
+	if EventBus:
+		EventBus.skill_used.emit(self, skill.skill_id)
+	return true
 
 
 # ===== 대시 (Dash) =====

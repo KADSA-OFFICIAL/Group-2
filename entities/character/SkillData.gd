@@ -42,6 +42,21 @@ class_name SkillData
 ## 근접 공격 사거리(EnemyData.attack_range 기본값 45)와 같은 픽셀 단위다.
 @export var aoe_radius: float = 0.0
 
+# ===== 입력 슬롯 (Input slot) =====
+#
+# 캐릭터마다 키로 쓰는 고유 스킬 슬롯이 **Q · E 두 개**다(#237, docs §4).
+#
+# 어느 키에 걸리는지는 **스킬 자신이 선언한다.** CharacterData.skills 는 배열이라 순서만
+# 있는데, 그 배열에는 키로 쓰지 않는 평타 패시브도 함께 들어 있어 순서로 슬롯을 정할 수 없다.
+enum InputSlot {
+	NONE,   # 키로 발동하지 않는다 (평타 패시브 등)
+	Q,
+	E,
+}
+
+## 이 스킬이 걸린 키 슬롯. 기본값 NONE 이라 기존 .tres 는 키에 걸리지 않는다.
+@export var input_slot: InputSlot = InputSlot.NONE
+
 # ===== 평타 트리거 (Basic-attack trigger) =====
 
 ## 평타 N회마다 발동한다. 0 이면 평타로 발동하지 않는다(플레이어가 직접 쓰는 발동형 스킬).
