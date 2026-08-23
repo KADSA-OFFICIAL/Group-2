@@ -36,6 +36,16 @@ class_name SkillData
 ## StatusEffectData 가 갖고 CombatTuning 이 갖지 않는 것과 같은 규약이다.
 @export var shield_duration: float = 0.0
 
+## 쿨타임(초). 0 이면 제한이 없다.
+##
+## **시전 시점부터** 돈다 — 즉시 폭발로 일찍 끝내도 남은 시간은 기다려야 한다.
+## 쿨타임이 막는 것은 "보호막 생성"이고, 이미 두른 보호막을 터뜨리는 것은 막지 않는다.
+##
+## 왜 CombatTuning 이 아니라 여기인가: 대시 쿨타임(#235)은 **전원 공용 메커니즘**이라
+## CombatTuning 이 갖지만, 스킬 쿨타임은 스킬마다 다른 **그 스킬 자신의 성질**이다
+## (상태 효과의 지속시간을 StatusEffectData 가 갖는 것과 같은 규약).
+@export var cooldown: float = 0.0
+
 # ===== 범위 (Area) =====
 
 ## 원형 광역 피해 반경(px). 0 이면 광역이 아니다.

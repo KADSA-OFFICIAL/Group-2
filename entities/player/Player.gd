@@ -192,6 +192,7 @@ func _physics_process(delta: float) -> void:
 
 	_tick_dash(delta)
 	_tick_skill_shield(delta)
+	_tick_skill_cooldowns(delta)
 
 	_process_control(delta)
 
@@ -289,16 +290,43 @@ func try_use_skill(slot: SkillData.InputSlot) -> bool:
 
 	# 같은 슬롯을 한 번 더 누르면 **살아 있는 보호막이 그 즉시 전부 터진다.**
 	# 보호막을 포기하는 대신 폭발 타이밍을 얻는 것이 이 스킬의 조작이다.
+	#
+	# **쿨타임 검사보다 먼저다.** 쿨타임이 막는 것은 보호막 생성이고,
+	# 이미 두른 보호막을 터뜨리는 것은 생성이 아니다.
 	if _detonate_shields_from(skill) > 0:
 		if EventBus:
 			EventBus.skill_used.emit(self, skill.skill_id)
 		return true
 
+	# 쿨타임 중에는 새로 만들지 못한다. 쿨타임은 **시전 시점**부터 돌았으므로
+	# 일찍 터뜨렸다면 남은 시간을 기다려야 한다.
+	if get_skill_cooldown_left(skill.skill_id) > 0.0:
+		return false
+
 	if skill.shield_percent > 0.0:
 		_cast_shield_skill(skill)
+	if skill.cooldown > 0.0:
+		_skill_cooldowns[skill.skill_id] = skill.cooldown
 	if EventBus:
 		EventBus.skill_used.emit(self, skill.skill_id)
 	return true
+
+
+# 이 스킬의 남은 쿨타임(초). 0 이면 지금 쓸 수 있다.
+func get_skill_cooldown_left(skill_id: StringName) -> float:
+	return maxf(float(_skill_cooldowns.get(skill_id, 0.0)), 0.0)
+
+
+# 스킬 쿨타임 한 틱. 스킬별로 따로 돈다 — Q 와 E 가 서로의 쿨타임을 공유하지 않는다.
+func _tick_skill_cooldowns(delta: float) -> void:
+	if _skill_cooldowns.is_empty():
+		return
+	for id in _skill_cooldowns.keys():
+		var left: float = float(_skill_cooldowns[id]) - delta
+		if left <= 0.0:
+			_skill_cooldowns.erase(id)
+		else:
+			_skill_cooldowns[id] = left
 
 
 # ===== 스킬 보호막 (Skill shield) =====
@@ -632,6 +660,13 @@ var _skill_shield: int = 0
 var _skill_shield_time_left: float = 0.0
 var _skill_shield_skill: SkillData = null
 var _skill_shield_caster: Node = null
+
+# 스킬별 남은 쿨타임. skill_id(StringName) -> 남은 초.
+# 항목이 없으면 쿨타임이 없다는 뜻이다(다 돌면 지운다).
+#
+# 슬롯이 아니라 skill_id 로 키를 잡는 이유: 쿨타임은 스킬의 성질이라
+# 같은 스킬을 다른 슬롯으로 옮겨도 따라가야 한다.
+var _skill_cooldowns: Dictionary = {}
 
 # 이 멤버에게 해당 역할의 메커니즘이 활성인가.
 # 배타 규칙(#73)이 get_active_tiers()에 이미 반영되어 있으므로,
