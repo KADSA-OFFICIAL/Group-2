@@ -153,7 +153,7 @@ func _build() -> void:
 
 
 # ── 일러스트 레이어 ──
-# portrait 가 있으면 화면을 채우고, 없으면 tint 색으로 은은하게 깐다.
+# portrait 가 있으면 세로에 맞춰 전신을 세우고, 없으면 tint 색으로 은은하게 깐다.
 # 아트 확정 전까지 도형 플레이스홀더를 쓰는 것은 docs §0 [확정] 사항이다.
 func _fill_art() -> void:
 	if not is_instance_valid(_art_layer):
@@ -165,18 +165,31 @@ func _fill_art() -> void:
 		return
 
 	# 어떤 초상을 쓸지는 PortraitSystem 이 정한다(캐릭터 화면에서 고른 값 > 저작 기본값).
+	# 초상이 있어도 그라데이션을 **먼저** 깐다 — 초상은 세로에 맞춰 세우므로 좌우가 남고,
+	# 그 자리가 비면 화면 배경색이 그대로 드러나 인물이 오려 붙인 것처럼 보인다.
+	_fill_art_gradient(character)
+
 	var portrait := PortraitSystem.get_portrait(character)
 	if portrait != null:
 		var art := TextureRect.new()
 		art.set_anchors_preset(Control.PRESET_FULL_RECT)
 		art.texture = portrait
 		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		# 화면을 꽉 채우되 비율은 유지한다(넘치는 부분은 잘린다).
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		# **꽉 채우지 않는다.** 초상은 세로로 길고(비율 0.557) 화면은 가로로 넓어서,
+		# COVERED 로 채우면 1920x1080 기준 1.4배로 확대되어 화면에 몸통만 남는다
+		# — 얼굴이 화면 위로 잘려 누구인지 알 수 없었다.
+		# 세로에 맞춰 전신이 들어오게 두고, 남는 좌우는 아래 그라데이션이 채운다.
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_art_layer.add_child(art)
+		# 초상이 섰으면 워터마크는 두지 않는다. 둘이 겹치면 배경이 시끄럽다.
 		return
 
+	_fill_art_mark(character)
+
+
+# 배경 그라데이션. 초상이 있든 없든 항상 깔린다.
+func _fill_art_gradient(character: CharacterData) -> void:
 	# 일러스트 자리. 파일이 들어오면 위 분기로 그대로 대체된다.
 	#
 	# 두 가지를 지킨다:
@@ -206,6 +219,9 @@ func _fill_art() -> void:
 	placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_art_layer.add_child(placeholder)
 
+
+# 역할 아이콘 워터마크.
+func _fill_art_mark(character: CharacterData) -> void:
 	# 그라데이션만 있으면 화면이 비어 보이고, 어느 캐릭터를 보고 있는지도 배경에서는
 	# 알 수 없다. 역할 아이콘을 워터마크로 크게 깐다.
 	#
