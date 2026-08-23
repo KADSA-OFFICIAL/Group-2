@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="OrderBuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/order/OrderBuildingData.gd" id="1_building"]
+
+[resource]
+script = ExtResource("1_building")
+building_id = &"sanctum"
+display_name = "성소"
+description = "트리아교의 본전. 지나온 이야기를 여기서 되짚는다."
+icon_name = "icon_story"
+tint = Color(0.80, 0.76, 0.66, 1)
+spot = Vector2(0.50, 0.48)
+width_ratio = 0.24
+screen_path = "res://screens/story/StoryScreen.tscn"

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="OrderBuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/order/OrderBuildingData.gd" id="1_building"]
+
+[resource]
+script = ExtResource("1_building")
+building_id = &"craft"
+display_name = "제조소"
+description = "재료를 두드려 장비를 만드는 곳. 교단의 대장간이다."
+icon_name = "icon_craft"
+tint = Color(0.82, 0.74, 0.58, 1)
+spot = Vector2(0.17, 0.63)
+width_ratio = 0.20
+screen_path = "res://screens/craft/CraftScreen.tscn"
