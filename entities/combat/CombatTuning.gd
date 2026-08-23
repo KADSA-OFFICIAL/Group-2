@@ -26,6 +26,22 @@ class_name CombatTuning
 ## 이동 기본 속도(px/s). 원거리 스택 이속이 여기에 곱해진다.
 @export var base_move_speed: float = 200.0
 
+# ===== 대시 (Dash) =====
+# 로스터 **전원 공용** 회피 조작이다(#235). 캐릭터별 차등은 두지 않았다.
+@export_group("대시")
+## 연속으로 쓸 수 있는 대시 횟수. 다 쓰면 dash_cooldown 이 돌고, 끝나면 이 수만큼 **함께** 복구된다.
+## (한 발씩 개별 재충전이 아니다 — "두 번 쓰면 쿨타임"이 확정 스펙이다.)
+@export var dash_charges: int = 2
+## 대시 속도 배수. 실제 속도 = base_move_speed x 이 값.
+##
+## 이속 배수(PlayerStats.get_move_speed_multiplier)를 **타지 않는다.** 회피 거리는
+## 예측 가능해야 하는데, 원거리 스택이 쌓일수록 대시가 멀리 나가면 거리 감각이 매번 달라진다.
+@export var dash_speed_multiplier: float = 4.0
+## 대시가 지속되는 시간(초). 대시 거리 = base_move_speed x dash_speed_multiplier x 이 값.
+@export var dash_duration: float = 0.15
+## 충전을 다 쓴 뒤 전부 다시 채워지기까지의 시간(초).
+@export var dash_cooldown: float = 2.0
+
 # ===== 피해 공식 (Damage Formula) =====
 # 피해 = 공격력² / (공격력 + 방어력)   -- 구현은 PlayerStats.apply_defense()
 #
@@ -121,6 +137,10 @@ func get_summary() -> Dictionary:
 	return {
 		"base_attack_cooldown": base_attack_cooldown,
 		"base_move_speed": base_move_speed,
+		"dash_charges": dash_charges,
+		"dash_speed_multiplier": dash_speed_multiplier,
+		"dash_duration": dash_duration,
+		"dash_cooldown": dash_cooldown,
 		"damage_min": damage_min,
 		"strength_to_phys_atk": strength_to_phys_atk,
 		"strength_to_phys_def": strength_to_phys_def,
@@ -164,6 +184,14 @@ func validate() -> Array[String]:
 		problems.append("base_attack_cooldown은 0보다 커야 합니다.")
 	if base_move_speed <= 0.0:
 		problems.append("base_move_speed는 0보다 커야 합니다.")
+	if dash_charges < 1:
+		problems.append("dash_charges는 1 이상이어야 합니다.")
+	if dash_speed_multiplier <= 1.0:
+		problems.append("dash_speed_multiplier가 1.0 이하면 대시가 평소 이동보다 느립니다.")
+	if dash_duration <= 0.0:
+		problems.append("dash_duration은 0보다 커야 합니다.")
+	if dash_cooldown <= 0.0:
+		problems.append("dash_cooldown은 0보다 커야 합니다.")
 	if capture_hold_seconds <= 0.0:
 		problems.append("capture_hold_seconds는 0보다 커야 합니다.")
 

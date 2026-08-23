@@ -35,6 +35,23 @@ var _attack_cooldown_left: float = 0.0
 # SkillData.every_n_attacks 패시브가 이 값을 본다(주기 판정이라 리셋하지 않는다).
 var _attack_swing_count: int = 0
 
+# ===== 대시 (Dash) =====
+# 로스터 전원 공용 회피 조작(#235). 수치는 CombatTuning 이 소유한다.
+#
+# 충전은 **다 쓴 뒤 한꺼번에** 돌아온다(한 발씩 개별 재충전이 아니다).
+# "두 번 쓰면 쿨타임이 돌아야 다시 쓸 수 있다"가 확정 스펙이라 그대로 옮겼다.
+
+## 남은 대시 횟수. 0 이 되면 _dash_cooldown_left 가 돌고, 끝나면 전부 복구된다.
+var _dash_charges: int = -1        # -1 = 아직 초기화 안 됨(_ready 에서 채운다)
+## 대시가 남은 시간(초). 0 보다 크면 지금 대시 중이다.
+var _dash_time_left: float = 0.0
+## 대시 진행 방향(정규화). 대시 중에는 입력을 무시하고 이 방향으로 나간다.
+var _dash_direction: Vector2 = Vector2.DOWN
+## 충전 재보급까지 남은 시간(초).
+var _dash_cooldown_left: float = 0.0
+## 마지막으로 실제 움직인 방향. 방향 입력 없이 대시했을 때 쓴다.
+var _last_move_direction: Vector2 = Vector2.DOWN
+
 @onready var sprite: Sprite2D = get_node_or_null("Sprite2D")
 @onready var collision_shape = get_node_or_null("CollisionShape2D")
 
@@ -173,6 +190,8 @@ func _physics_process(delta: float) -> void:
 
 	_decay_stack(delta)
 
+	_tick_dash(delta)
+
 	_process_control(delta)
 
 	# 조종 중이 아니어도(velocity가 계속 0) 호출한다. 그래야 정지 포즈로 고정된다.
@@ -192,8 +211,16 @@ func _process_control(_delta: float) -> void:
 	# 기절 등 CONTROL 효과가 이동을 막으면 움직이지 않는다.
 	if StatusEffectSystem.blocks_movement(self):
 		velocity = Vector2.ZERO
+		# 기절 등으로 이동이 막히면 진행 중인 대시도 끊는다.
+		_dash_time_left = 0.0
 	else:
-		_handle_movement()
+		if Input.is_action_just_pressed("dash"):
+			try_dash()
+		if _dash_time_left > 0.0:
+			# 대시 중에는 이동 입력을 무시한다. 방향은 시작할 때 정해졌다.
+			velocity = _dash_direction * get_dash_speed()
+		else:
+			_handle_movement()
 	move_and_slide()
 
 	if Input.is_action_pressed("attack"):
@@ -226,7 +253,81 @@ func _update_walk_animation() -> void:
 
 func _handle_movement() -> void:
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	# 방향 입력이 없는 대시를 위해 마지막 이동 방향을 기억한다.
+	if direction != Vector2.ZERO:
+		_last_move_direction = direction.normalized()
 	velocity = direction * get_move_speed()
+
+
+# ===== 대시 (Dash) =====
+
+# 대시 타이머 한 틱. 충전은 쿨타임이 끝나는 순간 전부 돌아온다.
+func _tick_dash(delta: float) -> void:
+	if _dash_charges < 0:
+		_dash_charges = CombatConfig.tuning.dash_charges
+
+	if _dash_time_left > 0.0:
+		_dash_time_left = maxf(_dash_time_left - delta, 0.0)
+
+	if _dash_cooldown_left > 0.0:
+		_dash_cooldown_left -= delta
+		if _dash_cooldown_left <= 0.0:
+			_dash_cooldown_left = 0.0
+			_dash_charges = CombatConfig.tuning.dash_charges
+
+
+# 대시 속도. 이속 배수를 타지 않는다 — 회피 거리는 예측 가능해야 한다(CombatTuning 주석).
+func get_dash_speed() -> float:
+	var tuning := CombatConfig.tuning
+	return tuning.base_move_speed * tuning.dash_speed_multiplier
+
+
+func can_dash() -> bool:
+	if not is_alive:
+		return false
+	if _dash_charges <= 0:
+		return false
+	# 대시 중에 다시 대시할 수는 없다. 대시가 끝난 직후의 두 번째 대시는 된다.
+	if _dash_time_left > 0.0:
+		return false
+	return not StatusEffectSystem.blocks_movement(self)
+
+
+# 대시를 시작한다. 방향을 주지 않으면 지금 이동 입력 방향, 그것도 없으면
+# 마지막으로 움직인 방향으로 나간다.
+#
+# direction 인자를 둔 이유: 입력 없이도 호출해 검증할 수 있어야 한다.
+func try_dash(direction: Vector2 = Vector2.ZERO) -> bool:
+	if _dash_charges < 0:
+		_dash_charges = CombatConfig.tuning.dash_charges
+	if not can_dash():
+		return false
+
+	var dir := direction
+	if dir == Vector2.ZERO:
+		dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if dir == Vector2.ZERO:
+		dir = _last_move_direction
+
+	_dash_direction = dir.normalized()
+	_dash_time_left = CombatConfig.tuning.dash_duration
+	_dash_charges -= 1
+	if _dash_charges <= 0:
+		_dash_cooldown_left = CombatConfig.tuning.dash_cooldown
+	return true
+
+
+func is_dashing() -> bool:
+	return _dash_time_left > 0.0
+
+
+func get_dash_charges() -> int:
+	return maxi(_dash_charges, 0)
+
+
+func get_dash_cooldown_left() -> float:
+	return _dash_cooldown_left
+
 
 # 실제 이동 속도 = 기본 속도(CombatConfig) x 이속 배수(PlayerStats 버프 채널).
 # 원거리 스택 같은 효과가 이속 배수를 올리면 여기 자동 반영된다.
