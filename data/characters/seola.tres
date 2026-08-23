@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://c3mw0ogq7drhf" path="res://assets/sprites/placeholder/shape_buffer.svg" id="9_shape"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/characters/seola_walk_frames.tres" id="10_walk"]
+
+[sub_resource type="Resource" id="PlayerStats_seola"]
+script = ExtResource("2_stats")
+hp = 900
+strength = 110
+defense = 80
+intelligence = 100
+faith = 130
+
+[resource]
+script = ExtResource("1_chardata")
+role = 2
+secondary_role = 2
+character_id = &"seola"
+display_name = "설아"
+description = "스토리 전용 인물(편성 불가). 워크 아트로 먼저 들어왔다. 포지션은 버퍼/원거리딜러이며 스텟은 [임시값]으로 같은 겸직인 buffer_ranged 를 기준으로 잡았다. playable 을 적지 않아 기본값 false 이므로 편성되지 않고, 따라서 시너지 역할 카운트에도 기여하지 않는다(#216). 개성/고유 스킬 미정."
+stats = SubResource("PlayerStats_seola")
+sprite_texture = ExtResource("9_shape")
+tint = Color(0.7, 0.85, 0.95, 1)
+sprite_scale = Vector2(2, 2)
+walk_frames = ExtResource("10_walk")
+walk_sprite_scale = Vector2(0.25, 0.25)
+walk_sprite_offset = Vector2(0, -155)
