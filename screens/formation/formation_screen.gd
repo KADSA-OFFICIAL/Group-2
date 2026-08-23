@@ -21,6 +21,21 @@ extends Control
 # 캐릭터 화면은 경로만 둔다. 그쪽도 이 화면을 참조하므로 서로 preload 하면 순환이 된다.
 const CHARACTERS_SCREEN_PATH := "res://screens/characters/CharactersScreen.tscn"
 
+# ===== 출격 모드 (Sortie mode) =====
+#
+# 이 화면은 두 곳에서 열린다:
+#   메타 메뉴  -> 편성만 바꾼다. 확정하면 화면을 닫는다.
+#   스테이지 선택 -> 이 파티로 **그 스테이지에 출격**한다(#243).
+#
+# 두 번째 파티 선택 화면을 따로 만들지 않은 이유: 로스터·파티·시너지를 읽는 UI 를
+# 두 벌 두면 한쪽만 고쳐지는 일이 생긴다(CLAUDE.md 기초 시스템 — 병렬 구현 금지).
+# 달라지는 것은 **확정 버튼이 무엇을 하는가** 하나뿐이라 그 지점만 분기한다.
+#
+# 스테이지를 언제 시작하는가: **확정한 뒤**다. 화면을 열 때 시작하면 뒤로 눌러
+# 돌아왔을 때 이미 전투가 시작되어 있다.
+var _sortie: bool = false
+var _sortie_stage_id: StringName = &""
+
 # 확정 전 임시 선택 (character_id). 순서가 곧 파티 순서다.
 var _selected: Array[StringName] = []
 
@@ -299,7 +314,12 @@ func _make_roster_card(id: StringName) -> Control:
 
 func _refresh_confirm() -> void:
 	var full: bool = _selected.size() == PartySystem.PARTY_SIZE
-	_confirm_button.text = "편성 확정  CONFIRM" if full else "%d명 더 선택" % (PartySystem.PARTY_SIZE - _selected.size())
+	if not full:
+		_confirm_button.text = "%d명 더 선택" % (PartySystem.PARTY_SIZE - _selected.size())
+	elif _sortie:
+		_confirm_button.text = "이 파티로 출격  SORTIE"
+	else:
+		_confirm_button.text = "편성 확정  CONFIRM"
 	_confirm_button.disabled = not full
 
 
@@ -316,10 +336,33 @@ func _on_card_pressed(id: StringName) -> void:
 	_refresh()
 
 
+# 출격 모드로 바꾼다. 스테이지 선택 화면이 push() 직후에 부른다.
+#
+# _ready() 가 이미 돌아 버튼이 만들어진 뒤이므로 문구를 다시 그린다.
+# stage_id 가 비어 있어도 출격 모드다 — 저작된 스테이지가 없을 때의 출격
+# (현재 전장으로 바로 들어가는 길)이 그 경우다.
+func set_sortie(stage_id: StringName = &"") -> void:
+	_sortie = true
+	_sortie_stage_id = stage_id
+	if _confirm_button != null:
+		_refresh_confirm()
+
+
 # 확정: PartySystem 이 유효성(인원/중복/존재 여부)을 검사하므로 여기서 다시 검사하지 않는다.
+#
+# 출격 모드면 파티를 반영한 **뒤에** 스테이지를 요청한다. 순서가 중요하다 —
+# 스테이지를 먼저 시작하면 전장이 이전 파티로 만들어진다.
 func _on_confirm_pressed() -> void:
-	if PartySystem.set_party(_selected):
+	if not PartySystem.set_party(_selected):
+		return
+
+	if not _sortie:
 		ScreenManager.pop()
+		return
+
+	if not String(_sortie_stage_id).is_empty():
+		StageSystem.request_stage(_sortie_stage_id)
+	ScreenManager.close_all()
 
 
 # ===== 조각 =====
