@@ -18,6 +18,8 @@ equip_magic_defense = 0
 
 [resource]
 script = ExtResource("1_chardata")
+role = 0
+secondary_role = 0
 character_id = &"shipduck"
 display_name = "Shipduck"
 playable = true
