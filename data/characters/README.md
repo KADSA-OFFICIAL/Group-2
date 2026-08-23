@@ -15,7 +15,7 @@
 | `shipduck.tres` | `shipduck` | 탱커 (순혈) | 파랑 |
 | `ranged_pure.tres` | `ranged_pure` | 원거리딜러 (순혈) | 빨강 |
 | `buffer_pure.tres` | `buffer_pure` | 버퍼 (순혈) | 초록 |
-| `tank_buffer.tres` | `tank_buffer` | 탱커 + 버퍼 (겸직) | 청록 |
+| `mina.tres` | `mina` | 탱커 + 버퍼 (겸직) | 청록 |
 | `ranged_tank.tres` | `ranged_tank` | 원거리딜러 + 탱커 (겸직) | 보라 |
 | `buffer_ranged.tres` | `buffer_ranged` | 버퍼 + 원거리딜러 (겸직) | 노랑 |
 
