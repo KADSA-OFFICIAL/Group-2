@@ -24,6 +24,9 @@ const SAVE_KEY := "portraits"
 # 초상 파일이 있는 곳. 여기 넣으면 목록에 자동으로 뜬다.
 const PORTRAIT_DIR := "res://assets/sprites/characters/portraits"
 
+# 초상별 얼굴 위치·크기 저작본. 없으면 화면이 자동 추정으로 떨어진다.
+const META_PATH := "res://data/portraits/portrait_meta.tres"
+
 # "초상 없음"을 고를 때 쓰는 값. 빈 문자열은 "선택 안 함"(저작 기본값 사용)과 구분해야 한다.
 const NONE_ID := &"__none__"
 
@@ -36,10 +39,14 @@ var _catalog: Dictionary = {}
 # character_id(String) -> portrait_id(String). 저장 스키마의 키가 문자열이라 String 으로 둔다.
 var _selection: Dictionary = {}
 
+# 얼굴 위치 저작본. 로드 실패해도 목록·선택은 그대로 동작해야 하므로 null 을 허용한다.
+var _meta: PortraitMeta = null
+
 
 func _ready() -> void:
 	name = "PortraitSystem"
 	_scan()
+	_meta = load(META_PATH) as PortraitMeta if ResourceLoader.exists(META_PATH) else null
 	SaveSystem.register_provider(SAVE_KEY, self)
 
 
@@ -93,6 +100,22 @@ func get_texture(portrait_id: StringName) -> Texture2D:
 	if not _catalog.has(portrait_id):
 		return null
 	return load(_catalog[portrait_id]) as Texture2D
+
+
+# ===== 얼굴 위치 (Head metrics) =====
+
+# 이 초상의 머리 범위(캔버스 대비 비율). 저작되지 않았으면 빈 Rect2.
+#
+# 텍스처로 묻는 이유: 화면 조각(HUDKit)은 초상 id 가 아니라 텍스처를 들고 있다.
+# 경로로 되짚어 id 를 찾는다 — 목록이 다섯 줄 규모라 비용이 문제되지 않는다.
+func get_head_rect(portrait: Texture2D) -> Rect2:
+	if portrait == null or _meta == null:
+		return Rect2()
+
+	var path := portrait.resource_path
+	if path.is_empty():
+		return Rect2()
+	return _meta.get_head_rect(StringName(path.get_file().get_basename()))
 
 
 # ===== 선택 (Selection) =====

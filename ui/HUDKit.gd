@@ -501,6 +501,31 @@ enum Framing {
 	FULL,  # 전신 전체. 상세 일러스트·스토리 무대처럼 그림 자체를 보여 주는 자리.
 }
 
+# ===== 얼굴 기준 크롭 (Face-anchored crops) =====
+#
+# 머리 크기를 기준으로 자른다. 저작된 머리 범위(data/portraits/portrait_meta.tres)가
+# 있으면 그 값을 쓰고, 없으면 아래 예전 규칙(경계상자 기준)으로 떨어진다.
+#
+# 왜 머리 기준인가: 같은 자리에 선 인물들의 **얼굴 크기가 같아야** 한 세트로 보인다.
+# 경계상자로 자르면 팔을 벌린 포즈만 몸이 많이 들어와 얼굴이 절반 크기가 된다
+# (실제로 파티 슬롯에서 그렇게 보였다).
+
+# 머리 정사각 크롭의 한 변 = 머리 높이 x 이 값. 1.0 이면 얼굴이 칸에 꽉 차 답답하다.
+const HEAD_CROP_HEADS: float = 1.7
+
+# 머리 정사각의 세로 중심을 머리 범위의 어디에 둘지(0=머리카락 꼭대기, 1=턱).
+# 정가운데(0.5)로 두면 머리카락이 절반을 차지해 얼굴이 아래로 밀린다.
+const HEAD_CROP_CENTER: float = 0.62
+
+# 상반신 크롭의 세로 = 머리 높이 x 이 값. 대략 머리 + 가슴까지다.
+#
+# 얼굴이 이 자리의 주인공이다. 3.4(허리까지)로 뒀더니 카드 안에서 얼굴이 다시 작아졌다.
+const BUST_CROP_HEADS: float = 2.6
+
+# 상반신 크롭에서 머리 위에 두는 여백 = 머리 높이 x 이 값.
+const BUST_TOP_MARGIN_HEADS: float = 0.25
+
+
 # 상반신 크롭의 가로세로비(가로 / 세로). 1 보다 작으므로 세로로 조금 길다.
 # 정사각으로 자르면 어깨에서 끊겨 답답하고, 더 길게 자르면 얼굴이 다시 작아진다.
 const BUST_CROP_ASPECT: float = 0.85
@@ -672,6 +697,32 @@ static func trimmed_texture(portrait: Texture2D) -> Texture2D:
 	_trimmed_textures[key] = result
 	return result
 
+# 저작된 머리 범위(픽셀). 없으면 size.y == 0 인 빈 Rect2.
+static func _head_rect_px(portrait: Texture2D) -> Rect2:
+	if portrait == null:
+		return Rect2()
+	var ratio := PortraitSystem.get_head_rect(portrait)
+	if ratio.size.y <= 0.0:
+		return Rect2()
+
+	var size := portrait.get_size()
+	return Rect2(ratio.position.x * size.x, ratio.position.y * size.y,
+		ratio.size.x * size.x, ratio.size.y * size.y)
+
+
+# 지정한 영역을 잘라 낸 텍스처. 원본 밖으로 나가지 않게 가둔다.
+static func _atlas_of(portrait: Texture2D, region: Rect2) -> Texture2D:
+	var size := portrait.get_size()
+	var clamped := region.intersection(Rect2(Vector2.ZERO, size))
+	if clamped.size.x <= 0.0 or clamped.size.y <= 0.0:
+		return portrait
+
+	var atlas := AtlasTexture.new()
+	atlas.atlas = portrait
+	atlas.region = clamped
+	return atlas
+
+
 static func head_texture(portrait: Texture2D) -> Texture2D:
 	if portrait == null:
 		return null
@@ -679,6 +730,17 @@ static func head_texture(portrait: Texture2D) -> Texture2D:
 	var key := portrait.get_rid().get_id()
 	if _head_textures.has(key):
 		return _head_textures[key]
+
+	# 저작된 머리 범위가 있으면 그것을 쓴다. 얼굴 중심으로 정사각을 잡는다.
+	var head := _head_rect_px(portrait)
+	if head.size.y > 0.0:
+		var side := head.size.y * HEAD_CROP_HEADS
+		var center_x := head.get_center().x
+		var center_y := head.position.y + head.size.y * HEAD_CROP_CENTER
+		var result_head := _atlas_of(portrait,
+			Rect2(center_x - side * 0.5, center_y - side * 0.5, side, side))
+		_head_textures[key] = result_head
+		return result_head
 
 	var result: Texture2D = portrait
 	var image := portrait.get_image()
@@ -719,6 +781,19 @@ static func bust_texture(portrait: Texture2D) -> Texture2D:
 	var key := portrait.get_rid().get_id()
 	if _bust_textures.has(key):
 		return _bust_textures[key]
+
+	# 저작된 머리 범위가 있으면 머리 크기로 자른다 — 인물마다 얼굴이 같은 크기로 선다.
+	var head := _head_rect_px(portrait)
+	if head.size.y > 0.0:
+		var bust_height := head.size.y * BUST_CROP_HEADS
+		var bust_width := bust_height * BUST_CROP_ASPECT
+		var center_x := head.get_center().x
+		var result_bust := _atlas_of(portrait, Rect2(
+			center_x - bust_width * 0.5,
+			head.position.y - head.size.y * BUST_TOP_MARGIN_HEADS,
+			bust_width, bust_height))
+		_bust_textures[key] = result_bust
+		return result_bust
 
 	var result: Texture2D = portrait
 	var image := portrait.get_image()
