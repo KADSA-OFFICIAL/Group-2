@@ -114,6 +114,22 @@ enum SecondaryRole {
 # 후속 이슈에서: level/exp 등 성장 필드, voice/portrait 등 외형 필드를 같은 방식으로 추가한다.
 
 
+# ===== 스킬 조회 (Skill Accessors) =====
+# "이 키 슬롯에 걸린 스킬이 무엇인가"의 단일 진입점이다.
+# 화면·입력 처리가 skills 배열을 각자 훑으면 슬롯 해석이 흩어진다(get_roles() 와 같은 이유).
+#
+# skills 에는 키로 쓰지 않는 평타 패시브(SkillData.every_n_attacks)도 들어 있으므로
+# 배열 순서가 아니라 각 스킬이 선언한 input_slot 으로 찾는다.
+
+func get_skill_for_slot(slot: SkillData.InputSlot) -> SkillData:
+	if slot == SkillData.InputSlot.NONE:
+		return null
+	for skill in skills:
+		if skill != null and skill.input_slot == slot:
+			return skill
+	return null
+
+
 # ===== 역할 조회 (Role Accessors) =====
 # 시너지 계산 등은 아래 헬퍼를 통해 역할을 읽는다.
 # role/secondary_role 필드를 각자 해석하면 겸직 처리가 흩어지므로, get_roles()를 단일 진입점으로 둔다.
