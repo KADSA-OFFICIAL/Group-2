@@ -106,6 +106,10 @@ func _ready() -> void:
 		EventBus.equipment_unequipped.connect(func(character_id, _slot): _sync_equipment_bonuses(character_id))
 	_refresh_control_visual()
 
+	# 머리 위 체력 바. 아군이라 테두리는 기본 윤곽선 색이다(#249).
+	# _apply_data() 뒤에 붙인다 — 바가 보이는 스프라이트에서 높이를 계산하기 때문이다.
+	_attach_health_bar(false)
+
 
 # CharacterData가 설정된 경우에만 정의의 외형을 반영한다.
 # 노드 name은 건드리지 않는다(씬 트리 식별자와 display_name은 별개).
@@ -1030,3 +1034,14 @@ func get_health_percent() -> float:
 	if max_hp == 0:
 		return 0.0
 	return float(hp) / float(max_hp)
+
+
+# ===== 체력 바 (Health bar) =====
+
+# 머리 위 체력 바를 붙인다. 씬이 아니라 코드로 붙이므로 새 캐릭터·새 적이 자동으로 얻는다.
+# hostile 이면 테두리가 빨강이 된다(적/아군 구분, #249).
+func _attach_health_bar(hostile: bool) -> void:
+	var bar := HealthBar.new()
+	bar.name = "HealthBar"
+	bar.hostile = hostile
+	add_child(bar)

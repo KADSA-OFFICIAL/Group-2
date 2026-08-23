@@ -85,6 +85,13 @@ func _ready():
 	max_hp = get_stats().get_max_hp()
 	hp = max_hp
 
+	# 머리 위 체력 바. 적이므로 테두리가 빨강이다(#249).
+	# _apply_data() 뒤에 붙인다 — 바가 보이는 스프라이트에서 높이를 계산하기 때문이다.
+	var bar := HealthBar.new()
+	bar.name = "HealthBar"
+	bar.hostile = true
+	add_child(bar)
+
 # EnemyData가 설정된 경우에만 정의의 외형을 반영한다.
 # data가 없으면 씬에 저작된 값을 건드리지 않는다.
 #

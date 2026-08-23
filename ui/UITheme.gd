@@ -99,6 +99,12 @@ const LINE := OUTLINE                  # 테두리
 const POSITIVE := Color("6F8A46")      # 상승 ▲
 const NEGATIVE := Color("B35C4C")      # 하락 ▼
 
+# 적을 아군과 구분하는 빨강. 체력 바 테두리에 쓴다(#249).
+#
+# NEGATIVE(B35C4C)보다 채도를 올렸다. NEGATIVE 는 "하락 ▼" 같은 정보용 색이라
+# 작은 테두리에서는 갈색으로 읽혀 "명확히 구분"이 되지 않는다.
+const HOSTILE := Color("C8402F")
+
 # ===== 분류색 (Category) =====
 # 역할·태그·등급처럼 **서로 구분되어야 하는** 항목에 쓴다.
 #
