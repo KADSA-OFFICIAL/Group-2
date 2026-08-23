@@ -6,6 +6,17 @@
 |---|---|
 | `buffer_pure_walk.png` | 4방향 x 3프레임 워크 시트 (셀 396x492, 시트 1188x1968) |
 | `buffer_pure_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+| `seola_walk.png` | 설아. 4방향 x 3프레임 워크 시트 (셀 356x448, 시트 1068x1792) |
+| `seola_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+| `mina_walk.png` | 미나. 4방향 x 3프레임 워크 시트 (셀 420x448, 시트 1260x1792) |
+| `mina_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+
+`seola_walk.png` 의 셀 안 발 기준선은 중심 기준 **+215** 다.
+`walk_sprite_scale = 0.25`, Player 충돌 캡슐 높이 30(F = 15) 이면
+`walk_sprite_offset.y = 15 / 0.25 - 215 = -155` 이고 화면 키는 432 x 0.25 = 108px 다.
+
+`mina_walk.png` 도 발 기준선 **+215**, 내용 높이 432 로 설아와 **같은 수치**다(셀 폭만 420 으로 넓다 — 정면 프레임의 머리카락이 더 퍼진다).
+그래서 오프셋 계산도 같다: `walk_sprite_offset.y = -155`, 화면 키 108px.
 
 ## 시트 규약
 
