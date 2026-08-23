@@ -31,11 +31,20 @@ enum Kind {
 #   "마을사람들" 과 "마을 사람들" 이 함께 있어 서로 다른 색으로 무대에 섰다.
 #   id 가 있으면 이름·초상·색이 한 출처에서 나오고, 이름을 바꿔도 대본을 고칠 필요가 없다.
 #
-# 해석 순서는 CharacterDatabase -> EnemyDatabase 다(#187).
-#   적도 대사를 한다. 스토리 전용 인물을 위한 별도 cast 리소스는 두지 않았다 —
-#   지금 대본의 화자는 로스터나 적으로 전부 표현되고, 쓰지 않는 세 번째 출처를
-#   미리 만들면 그쪽이 곧 정본처럼 굳는다. 군중처럼 어디에도 넣기 곤란한 인물이
-#   실제로 필요해지면 그때 만들어 이 순서 앞에 끼운다.
+# 해석 순서는 CharacterDatabase -> EnemyDatabase -> StoryCastDatabase 다(#187, #202).
+#   적도 대사를 한다. 셋째로 스토리 전용 화자(StoryCastData)가 온다.
+#
+#   **cast 가 맨 뒤인 것이 핵심이다.** 여신은 지금 cast 에서 해석되지만 나중에
+#   EnemyData 로 저작될 인물이다. cast 를 앞에 두면 그때 만든 EnemyData 를 cast 가
+#   가려 버린다. 맨 뒤에 두면 저작하는 순간 자동으로 적 쪽에서 해석되고, 대본도
+#   cast 도 고칠 것이 없다.
+#
+#   왜 cast 를 만들었나: 스토리 전용 인물을 CharacterData 로 저작하면 그 인물이
+#   플레이어 로스터의 일원이 되어 역할·스텟·장비 슬롯을 갖는다(#202). 편성만
+#   막는 것으로는 로스터를 순회하는 시스템들의 전제가 계속 깨진다.
+#
+#   군중처럼 정의를 둘 만큼 정체성이 없는 화자는 여전히 아무 곳에도 두지 않는다 —
+#   character_id 를 비우면 speaker 문자열이 그대로 이름이 된다.
 @export var character_id: StringName = &""
 
 @export_multiline var text: String = ""
@@ -95,6 +104,8 @@ func get_character() -> Resource:
 		return CharacterDatabase.get_character(character_id)
 	if EnemyDatabase.has_enemy(character_id):
 		return EnemyDatabase.get_enemy(character_id)
+	if StoryCastDatabase.has_cast(character_id):
+		return StoryCastDatabase.get_cast(character_id)
 	return null
 
 

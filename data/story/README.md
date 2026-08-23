@@ -6,6 +6,7 @@
 
 - 정의 스키마: [`entities/story/StoryChapterData.gd`](../../entities/story/StoryChapterData.gd)
 - 한 줄 스키마: [`entities/story/StoryLineData.gd`](../../entities/story/StoryLineData.gd)
+- 스토리 전용 화자: [`cast/`](cast) — 아래 "화자는 id 로 해석하고" 참고
 
 ## 대본은 세 가지로만 이루어진다
 
@@ -15,13 +16,31 @@
 | `DIALOGUE` 대사 | `주인공: 소꿉아..기다리고 있었어!` |
 | `BATTLE` 전투 | `전투 시작, 주인공이 이김` |
 
-## 화자는 문자열이다
+## 화자는 id 로 해석하고, 없으면 문자열로 떨어진다
 
-`speaker` 는 `CharacterData` 의 id 가 아니라 **표시 이름 문자열**이다.
-대본의 화자 중 상당수가 아직 로스터에 없거나(여신, 마을 사람들, 각종 수인)
-이름이 미정이다(`주인공`, `소꿉친구`, `???`).
+`speaker` 는 **표시 이름 문자열**이고 `character_id` 가 인물의 정체성이다.
+문자열이 정체성이면 오타가 곧 다른 인물이 된다(`마을사람들` / `마을 사람들` 이 서로 다른
+색으로 무대에 섰던 일이 실제로 있다). `character_id` 가 있으면 이름·초상·색이 한 출처에서
+나오고, 이름을 바꿔도 대본을 고칠 필요가 없다.
 
-로스터와의 연결이 정해지면 `character_id` 필드를 함께 두고 이 값은 표시용으로 남긴다.
+해석 순서는 세 출처다 (`StoryLineData.get_character()`):
+
+| 순서 | 출처 | 무엇 |
+|---|---|---|
+| 1 | `CharacterDatabase` | 플레이어 로스터 6명 (`data/characters`) |
+| 2 | `EnemyDatabase` | 적 (`data/enemies`) — 적도 대사를 한다 |
+| 3 | `StoryCastDatabase` | **스토리 전용 화자** (`data/story/cast`) |
+
+**cast 가 맨 뒤인 것이 중요하다.** 여신은 지금 cast 에서 해석되지만 나중에 적으로 저작될
+인물이다. 그때 `EnemyData` 를 만들면 2번에서 먼저 잡히므로 대본도 cast 도 고칠 것이 없다
+(cast 파일만 지우면 된다).
+
+스토리 전용 화자를 `CharacterData` 로 저작하면 **그 인물이 로스터의 일원이 되어 역할·스텟·
+장비 슬롯을 갖는다.** 그래서 `data/story/cast` 를 따로 둔다 (#202) — 정의 스키마는
+[`entities/story/StoryCastData.gd`](../../entities/story/StoryCastData.gd).
+
+`character_id` 를 비워 두는 것도 정상이다. 군중처럼 정의를 둘 만큼 정체성이 없는 화자
+(`마을 사람들`, `???`)는 `speaker` 문자열이 그대로 이름이 되고 화면은 이름 해시로 색을 고른다.
 
 ## 연출은 필드로 지시한다
 
