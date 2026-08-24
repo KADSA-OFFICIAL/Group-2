@@ -9,8 +9,9 @@ class_name Player
 #   - 이동/공격 수치: CombatConfig.tuning
 #   여기서 수치를 새로 만들지 않는다.
 #
-# 조종 여부는 PartySystem이 정한다. party_index가 조종 중일 때만 입력을 받는다.
-# 조종하지 않는 멤버는 이 단계에서 정지한다(AI는 후속 이슈).
+# 용어(#257): 직접 조작하는 캐릭터가 **플레이어**, 그 외 파티 캐릭터가 **아군 AI** 다.
+# 어느 쪽인지는 PartySystem 이 정한다. party_index 가 조작 중일 때만 입력을 받고,
+# 아니면 아래 "아군 AI" 절의 상태 기계가 그 노드를 굴린다.
 
 # 캐릭터 정의. 설정되면 스텟과 외형을 여기서 가져온다.
 # 비어 있으면 아래 stats를 쓰므로 기존 씬도 그대로 동작한다(하위 호환).
@@ -99,6 +100,10 @@ func _ready() -> void:
 
 	if EventBus:
 		EventBus.party_control_changed.connect(_on_control_changed)
+		# 아군 AI 의 전투 진입 신호. 플레이어가 적을 때리면 여기로 들어온다(#257).
+		EventBus.player_attacked.connect(_on_player_attacked)
+		# 플레이어가 맞은 것도 전투 신호다. 출처가 필요 없어 기존 damage_taken 을 그대로 쓴다(#257).
+		EventBus.damage_taken.connect(_on_damage_taken)
 		# 스텟을 사본으로 떼어 놓으면 정의 쪽 장착 변경이 더 이상 자동으로 닿지 않는다.
 		# (전에는 정의의 PlayerStats를 그대로 써서 우연히 반영되고 있었다.)
 		# 그래서 자기 캐릭터의 착탈만 골라 장비 채널을 다시 밀어 넣는다.
@@ -154,6 +159,11 @@ func is_controlled() -> bool:
 
 func _on_control_changed(_index: int) -> void:
 	_refresh_control_visual()
+	# 조작 주체가 바뀌었다. 이전 조작자의 자취를 새 아군 AI 가 이어 밟으면 대열이 엉뚱한 곳에 잡힌다(#257).
+	_trail.clear()
+	_trail_clock = 0.0
+	if is_controlled():
+		_exit_combat()
 
 
 # ===== 장비 (Equipment) =====
@@ -170,7 +180,7 @@ func _sync_equipment_bonuses(character_id: StringName) -> void:
 		bonuses["physical_defense"], bonuses["magic_defense"], bonuses["hp"]
 	)
 
-# 조종 중인 멤버를 시각적으로 구분한다. 밝기로만 표시한다.
+# 플레이어를 시각적으로 구분한다. 밝기로만 표시한다.
 #
 # 지금 화면에 보이는 노드에 걸어야 한다. 워크 시트를 쓰는 캐릭터는 Sprite2D가
 # 숨어 있으므로 거기에 modulate를 걸면 조종 표시가 아무 효과도 내지 않는다.
@@ -210,6 +220,8 @@ func _physics_process(delta: float) -> void:
 func _process_control(delta: float) -> void:
 	if is_controlled():
 		_process_input(delta)
+		# 아군 AI 가 딜레이를 두고 밟을 자취를 남긴다(#257).
+		_record_trail(delta)
 	else:
 		_process_ally_ai(delta)
 
@@ -231,101 +243,425 @@ func _process_input(_delta: float) -> void:
 			_handle_movement()
 	move_and_slide()
 
-	if Input.is_action_pressed("attack"):
-		try_attack()
-
-	# 고유 스킬은 사람이 직접 눌러야 발동한다(docs §4 [확정]: AI 는 스킬을 쓰지 않는다).
-	if Input.is_action_just_pressed("skill_q"):
-		try_use_skill(SkillData.InputSlot.Q)
-	if Input.is_action_just_pressed("skill_e"):
-		try_use_skill(SkillData.InputSlot.E)
-
-
-# ===== 동료 AI (Ally AI) =====
+# ===== 아군 AI (Ally AI) =====
 #
-# 조종하지 않는 멤버가 스스로 하는 것은 **평타와 이동뿐**이다
-# (docs §4 [확정] "AI 수준 = 중간": 기본 행동은 스스로, 스킬은 사람이 잡아야 발동).
-# 스킬과 대시는 여기서 부르지 않는다.
+# 직접 조작하는 캐릭터가 **플레이어**, 그 외 파티 캐릭터가 **아군 AI** 다(#257).
 #
-# 왜 AI 가 평타를 쳐야 하는가: 설계가 그 위에 세워져 있다. 표식 충전은 §8.1 에서
-# **파티 전체의 평타**로 이뤄지고 원거리 스택도 평타 기반이다. 놓은 멤버가 가만히 있으면
-# 시너지 1단계가 조종 중인 1명분만 돈다.
-func _process_ally_ai(_delta: float) -> void:
+# 아군 AI 는 두 상태를 오간다.
+#   비전투 — 플레이어 뒤 양옆으로 독수리 전형(V자)을 이루고, 플레이어의 자취를 딜레이만큼
+#            늦게 밟으며 따라 걷는다. **공격하지 않는다.**
+#   전투   — 타겟 하나를 잡고 **그 적만** 평타로 때린다.
+#
+# 스킬과 대시는 **어느 상태에서도** 쓰지 않는다(docs §4 [확정]: 사람이 잡아야 발동).
+#
+# 왜 아군 AI 가 평타를 쳐야 하는가: 설계가 그 위에 세워져 있다. 표식 충전은 §8.1 에서
+# **파티 전체의 평타**로 이뤄지고 원거리 스택도 평타 기반이다. 아군 AI 가 가만히 있으면
+# 시너지 1단계가 플레이어 1명분만 돈다.
+
+## 지금 전투 상태인가. **아군 AI 마다 따로** 관리한다 — 플레이어에게서 멀어진 쪽만 대열로 돌아간다.
+var _ai_in_combat: bool = false
+## 고정된 타겟. 비전투로 돌아가거나 이 적이 죽을 때까지 바뀌지 않는다(타겟 고정).
+## 예외는 아래 _tick_target_stuck() 의 안전장치 하나뿐이다.
+var _ai_target: Node = null
+## 플레이어가 마지막으로 때린 적. 내 타겟이 죽었을 때 넘겨받을 후보다. 광역 공격이면 null.
+var _ai_player_target: Node = null
+## 마지막 전투 신호(플레이어의 공격·피격 또는 나의 피격) 이후 지난 시간(초).
+## ally_ai_combat_timeout 을 넘기면 전투를 푼다.
+var _ai_idle_time: float = 0.0
+## 고정 타겟에 가까워지지 못한 채 흐른 시간(초). 벽 뒤나 도망치는 적을 붙잡고 있는 상태다.
+var _ai_target_stuck_time: float = 0.0
+## 직전에 잰 타겟까지의 거리. 이보다 줄어들면 "다가가는 중"으로 본다.
+var _ai_last_target_distance: float = INF
+
+## 타겟에 이만큼(px) 가까워져야 진전으로 친다. 0 으로 두면 미세한 흔들림도 진전으로 읽힌다.
+const AI_STUCK_PROGRESS_EPSILON := 4.0
+
+
+func _process_ally_ai(delta: float) -> void:
+	_update_ai_state(delta)
+
 	if StatusEffectSystem.blocks_movement(self):
 		velocity = Vector2.ZERO
 	else:
-		velocity = _ai_velocity()
+		velocity = _ai_velocity(delta)
 	move_and_slide()
 
-	# 사거리 밖이면 try_attack() 이 대상을 못 찾아 스스로 아무 일도 하지 않는다.
+	# 비전투에서는 때리지 않는다. 대열을 지키며 걷기만 한다.
+	# 전투 중이라도 사거리 밖이면 try_attack() 이 대상을 못 찾아 스스로 아무 일도 하지 않는다.
 	# 쿨다운·기절 판정도 그 안에 있으므로 여기서 다시 검사하지 않는다.
-	try_attack()
+	if _ai_in_combat:
+		try_attack()
 
 
-# AI 가 이번 틱에 가고 싶은 속도.
-#   교전 범위 안에 적이 있으면 -> 평타 사거리까지 접근하고, 들어오면 멈춘다.
-#   없으면 -> 조종 중인 멤버를 따라간다. 가까우면 멈춘다.
+# ----- 상태 전환 (State transitions) -----
 #
-# 따라오기가 필요한 이유: 적이 없을 때 제자리에 서 있으면 파티가 흩어져,
-# 전환했을 때 그 멤버가 전장 밖에 있다. §4 의 실시간 전환이 성립하지 않는다.
-func _ai_velocity() -> Vector2:
+# 비전투 -> 전투: 플레이어가 적을 공격했을 때, 플레이어가 맞았을 때, 내가 맞았을 때.
+# 전투 -> 비전투: 그 신호들이 ally_ai_combat_timeout 초 동안 없거나,
+#                 플레이어와의 거리가 ally_ai_leash_range 를 넘었을 때.
+func _update_ai_state(delta: float) -> void:
+	if not _ai_in_combat:
+		return
+
 	var tuning := CombatConfig.tuning
-	var leader := _controlled_member_node()
 
-	var enemy := _ai_engage_target(leader)
-	if enemy != null:
-		var to_enemy: Vector2 = enemy.global_position - global_position
-		var distance := to_enemy.length()
-		# 사거리 안쪽에서 멈춘다. 경계에 딱 맞추면 붙었다 떨어지며 떤다.
-		if distance <= get_attack_range() * tuning.ally_ai_stop_range_ratio:
-			return Vector2.ZERO
-		return to_enemy.normalized() * get_move_speed()
+	_ai_idle_time += delta
+	if _ai_idle_time >= tuning.ally_ai_combat_timeout:
+		_exit_combat()
+		return
 
-	if leader == null:
+	# 거리 판정은 아군 AI 개별이다. 플레이어가 혼자 앞서 가면 뒤처진 쪽부터 대열로 복귀한다.
+	var player := _player_node()
+	if player != null and global_position.distance_to(player.global_position) > tuning.ally_ai_leash_range:
+		_exit_combat()
+		return
+
+	# 타겟은 **죽었을 때만** 갈아탄다. 플레이어가 다른 적으로 옮겨 가도 따라가지 않는다.
+	if not _is_valid_enemy(_ai_target):
+		_set_ai_target(_ai_player_target if _is_valid_enemy(_ai_player_target) else _nearest_enemy_to_self())
+		if _ai_target == null:
+			_exit_combat()
+		return
+
+	_tick_target_stuck(delta)
+
+
+# 타겟 고정의 안전장치.
+#
+# 경로 탐색이 없어서 아군 AI 는 타겟을 향해 직선으로 미는 것밖에 못 한다. 그래서 벽 뒤에
+# 있거나 도망치는 적을 물고 있으면, 타겟이 죽지도 않고 사거리에 들어오지도 않아 락이 영영
+# 풀리지 않는다. 그 사이 자기를 때리는 다른 적은 무시한다.
+#
+# 그래서 "가까워지지 못한 채 ally_ai_target_stuck_time 초"를 실패로 보고 락을 푼다.
+# 갈아탈 다른 적이 없으면 같은 적으로 다시 시도한다 — 놓아 봐야 갈 곳이 없다.
+func _tick_target_stuck(delta: float) -> void:
+	var distance := global_position.distance_to(_ai_target.global_position)
+
+	# 사거리 안에 들어와 때리고 있으면 막힌 게 아니다.
+	if distance <= get_attack_range():
+		_ai_target_stuck_time = 0.0
+		_ai_last_target_distance = distance
+		return
+
+	if distance < _ai_last_target_distance - AI_STUCK_PROGRESS_EPSILON:
+		_ai_target_stuck_time = 0.0
+		_ai_last_target_distance = distance
+		return
+
+	_ai_target_stuck_time += delta
+	if _ai_target_stuck_time < CombatConfig.tuning.ally_ai_target_stuck_time:
+		return
+
+	var alternative := _nearest_enemy_to_self(_ai_target)
+	if alternative != null:
+		_set_ai_target(alternative)
+	else:
+		_ai_target_stuck_time = 0.0
+		_ai_last_target_distance = INF
+
+
+# 타겟을 갈아끼운다. 막힘 추적도 함께 초기화해야 새 타겟이 곧바로 막힌 것으로 읽히지 않는다.
+func _set_ai_target(target) -> void:
+	_ai_target = target
+	_ai_target_stuck_time = 0.0
+	_ai_last_target_distance = INF
+
+
+# 전투에 들어간다. **이미 전투 중이면 타겟을 바꾸지 않는다** — 그것이 타겟 고정 규칙이다.
+# 다만 전투 신호가 새로 왔으므로 이탈 타이머는 매번 되감는다.
+func _enter_combat(target) -> void:
+	_ai_idle_time = 0.0
+	if _ai_in_combat:
+		return
+	_ai_in_combat = true
+	# 노린 적이 없으면(광역 공격, 플레이어 피격) 나에게 가장 가까운 적을 잡는다.
+	_set_ai_target(target if _is_valid_enemy(target) else _nearest_enemy_to_self())
+
+
+func _exit_combat() -> void:
+	_ai_in_combat = false
+	_ai_player_target = null
+	_ai_idle_time = 0.0
+	_set_ai_target(null)
+
+
+# 전투 **진입**을 허용할 거리인가.
+#
+# 이탈 거리와 같은 값을 쓰면 경계에 선 아군 AI 가 신호를 받아 진입했다가 다음 틱에 거리
+# 때문에 이탈하기를 반복한다. 진입 문턱을 더 좁게 잡아 그 떨림을 없앤다(히스테리시스).
+func _can_engage_from_player() -> bool:
+	var player := _player_node()
+	if player == null:
+		return true
+	var tuning := CombatConfig.tuning
+	var limit: float = tuning.ally_ai_leash_range * tuning.ally_ai_engage_leash_ratio
+	return global_position.distance_to(player.global_position) <= limit
+
+
+# 플레이어가 적을 공격했다. 아군 AI 는 이것을 전투 신호로 삼는다.
+# target 이 null 이면 광역 공격이라 "플레이어가 노린 적"이 하나로 정해지지 않는다.
+func _on_player_attacked(attacker, target) -> void:
+	if attacker == self or not is_alive or is_controlled():
+		return
+	if not _can_engage_from_player():
+		return
+	_ai_player_target = target if _is_valid_enemy(target) else null
+	_enter_combat(_ai_player_target)
+
+
+# 누군가 피해를 입었다. **플레이어가 맞은 것**이면 그것도 전투 신호다.
+#
+# 왜 필요한가: 전투 이탈 조건이 "플레이어가 3초간 공격하지 않음" 하나뿐이면, 플레이어가
+# 적 패턴을 피하거나 자리를 잡느라 3초를 넘기는 순간 아군 AI 가 교전 한복판에서 등을 돌리고
+# 대열로 걸어간다. 맞고 있다는 것은 싸움이 끝나지 않았다는 뜻이다.
+#
+# damage_taken 은 출처(때린 적)를 싣지 않으므로 타겟은 각자 최근접 적으로 고른다.
+func _on_damage_taken(target, _damage: int, _position: Vector2) -> void:
+	if target == self or not is_alive or is_controlled():
+		return
+	if not (target is Node) or not target.has_method("is_controlled") or not target.is_controlled():
+		return
+	if not _can_engage_from_player():
+		return
+	_enter_combat(null)
+
+
+# 내가 적에게 맞았다. 비전투로 걷다 두들겨 맞고만 있지 않도록 때린 적을 잡고 반격한다.
+# 이미 전투 중이면 타이머만 되감긴다 — 계속 맞는 동안에는 전투가 풀리지 않는다.
+#
+# 여기만 진입 문턱이 이탈 거리(리쉬)와 같다. 맞고 있다는 것은 내 자리에서 벌어지는 일이라,
+# 플레이어와의 거리로 반격을 막을 이유가 없다.
+func _on_damaged_by(source) -> void:
+	if not is_alive or is_controlled():
+		return
+	if not _is_valid_enemy(source) or not GameManager.get_all_enemies().has(source):
+		return
+	_enter_combat(source)
+
+
+func is_ai_in_combat() -> bool:
+	return _ai_in_combat
+
+
+func get_ai_target() -> Node:
+	return _ai_target
+
+
+# ----- 이동 (Movement) -----
+
+func _ai_velocity(delta: float) -> Vector2:
+	if _ai_in_combat:
+		return _combat_velocity(delta)
+	return _formation_velocity(delta)
+
+
+# 목표 지점으로 향하는 속도. arrive 안이면 멈춘다.
+# 한 틱에 목표를 지나칠 만큼 빠르면 속도를 잘라 준다 — 지나쳤다 되돌아오면 떤다.
+func _seek(destination: Vector2, arrive_radius: float, delta: float, catchup: bool) -> Vector2:
+	var to_destination: Vector2 = destination - global_position
+	var distance := to_destination.length()
+	if distance <= arrive_radius:
 		return Vector2.ZERO
-	var to_leader: Vector2 = leader.global_position - global_position
-	if to_leader.length() <= tuning.ally_ai_follow_distance:
+
+	var speed := get_move_speed()
+	if catchup:
+		speed *= _catchup_multiplier(distance - arrive_radius)
+	if delta > 0.0:
+		speed = minf(speed, distance / delta)
+	return to_destination.normalized() * speed
+
+
+# 벌어진 거리에 **비례**하는 따라잡기 배수.
+#
+# 계단식("이 거리를 넘으면 몇 배")으로 두면 경계에서 속도가 툭 튀고, 문턱 바로 아래에서는
+# 영영 따라잡지 못한다(플레이어와 이동 속도가 같기 때문이다). 비례면 조금 벌어지면 조금,
+# 많이 벌어지면 많이 빨라진다.
+func _catchup_multiplier(gap: float) -> float:
+	var tuning := CombatConfig.tuning
+	if tuning.ally_ai_catchup_scale <= 0.0:
+		return 1.0
+	return clampf(1.0 + gap / tuning.ally_ai_catchup_scale, 1.0, tuning.ally_ai_catchup_max)
+
+
+# 전투: 고정 타겟 옆자리로 붙는다.
+func _combat_velocity(delta: float) -> Vector2:
+	if not _is_valid_enemy(_ai_target):
 		return Vector2.ZERO
-	return to_leader.normalized() * get_move_speed()
+	return _seek(_attack_stand_position(), CombatConfig.tuning.ally_ai_formation_arrive, delta, false)
 
 
-# 교전할 적. 없으면 null(그러면 조종 중인 멤버를 따라간다).
+# 타겟을 때릴 때 설 자리.
 #
-# **교전 여부는 조종 중인 멤버 기준으로 판정한다.** 내 위치를 기준으로 하면 내 옆의 적을
-# 쫓느라 조종자에게서 무한히 멀어진다 — 전환했을 때 남겨진 멤버가 근처 적에 붙은 채
-# 계속 뒤처지는 문제가 그것이었다.
+# 셋 다 타겟 중심으로 곧장 달려가면 같은 방향에서 한 점에 몰려 서로 밀치고, 뒤쪽 아군은
+# 앞쪽에 막혀 사거리 밖에 멈춘다. 그래서 **플레이어-타겟 축에서 좌우로 벌려** 세운다.
+# 축을 플레이어 기준으로 잡는 이유: 플레이어가 보는 쪽에서 함께 감싸야 포위 모양이 된다.
 #
-# 조종자 기준으로 걸러 두면 파티가 조종자 주위 교전 범위 안에 머문다.
-# 조종자가 없으면(전멸 직전 등) 내 기준으로 판정한다 — 그때는 뭉칠 대상이 없다.
+# 거리는 평타 사거리 x ally_ai_stop_range_ratio. 경계에 딱 맞추면 붙었다 떨어지며 떤다.
+func _attack_stand_position() -> Vector2:
+	var tuning := CombatConfig.tuning
+	var target_position: Vector2 = _ai_target.global_position
+
+	var player := _player_node()
+	var axis: Vector2 = Vector2.ZERO
+	if player != null:
+		axis = target_position - player.global_position
+	if axis == Vector2.ZERO:
+		axis = target_position - global_position
+	if axis == Vector2.ZERO:
+		axis = Vector2.DOWN
+	axis = axis.normalized()
+
+	var slot := _formation_slot()
+	var rank := float(slot / 2 + 1)
+	var side_sign := -1.0 if slot % 2 == 0 else 1.0
+	var angle := deg_to_rad(tuning.ally_ai_flank_angle) * rank * side_sign
+
+	# -axis = 타겟에서 플레이어 쪽. 거기서 좌우로 벌린 지점에 선다.
+	var stand_direction := (-axis).rotated(angle)
+	return target_position + stand_direction * (get_attack_range() * tuning.ally_ai_stop_range_ratio)
+
+
+# 비전투: 독수리 전형의 내 자리로 간다.
+func _formation_velocity(delta: float) -> Vector2:
+	var player := _player_node()
+	if player == null:
+		return Vector2.ZERO
+	return _seek(_formation_position(player), CombatConfig.tuning.ally_ai_formation_arrive, delta, true)
+
+
+# 독수리 전형에서 내가 설 자리.
 #
-# 대상 선정은 **나에게 가장 가까운** 적이다. 조종자에게 가장 가까운 적을 고르면
-# 파티원 셋이 한 마리에 몰린다.
-func _ai_engage_target(leader: Node2D) -> Node:
-	var origin: Vector2 = global_position if leader == null else leader.global_position
+# 기준점은 플레이어의 **지금** 위치가 아니라 ally_ai_follow_delay 초 전의 위치다.
+# 현재 위치를 바로 쫓으면 붙었다 떨어지는 추격이 되어 같이 걷는 느낌이 나지 않는다.
+# 지나간 자취를 늦게 밟으면 플레이어가 방향을 틀 때 대열도 한 박자 뒤에 따라 돈다.
+#
+# 앞뒤 기준도 그때의 진행 방향이다. 뒤 = 진행 방향의 반대.
+func _formation_position(player: Node2D) -> Vector2:
+	var tuning := CombatConfig.tuning
+	var sample: Dictionary = player.get_trail_sample(tuning.ally_ai_follow_delay)
+	var origin: Vector2 = sample["pos"]
+	var forward: Vector2 = sample["dir"]
+	if forward == Vector2.ZERO:
+		forward = Vector2.DOWN
+	forward = forward.normalized()
+
+	var slot := _formation_slot()
+	# 0,1 은 첫 줄, 2,3 은 그 뒤 줄. 짝수는 왼쪽 홀수는 오른쪽이라 V 자가 된다.
+	var rank := float(slot / 2 + 1)
+	var side_sign := -1.0 if slot % 2 == 0 else 1.0
+	var side: Vector2 = forward.orthogonal() * (tuning.ally_ai_formation_side * rank * side_sign)
+	return origin - forward * (tuning.ally_ai_formation_back * rank) + side
+
+
+# 대열에서 내 번호. 살아 있는 아군 AI 를 party_index 순으로 세어 정한다.
+# 인덱스 순이라 조작 대상이 바뀌어도 좌우가 서로 맞바뀌며 흔들리지 않는다.
+# 전투 진영(_attack_stand_position)도 같은 번호를 쓴다 — 대열에서 왼쪽이면 전투에서도 왼쪽이다.
+func _formation_slot() -> int:
+	var slot := 0
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if node == self or not is_instance_valid(node):
+			continue
+		if not node.is_alive or node.is_controlled():
+			continue
+		if party_index >= 0 and node.party_index >= 0 and node.party_index < party_index:
+			slot += 1
+	return slot
+
+
+# ----- 대상 판정 (Targeting) -----
+
+# 나에게 가장 가까운 적. 지도 반대편의 적까지 잡지 않도록 ally_ai_engage_range 로 자른다.
+# exclude 는 후보에서 뺀다 — 막힌 타겟을 다시 고르지 않기 위해서다.
+func _nearest_enemy_to_self(exclude = null) -> Node:
 	var engage_range: float = CombatConfig.tuning.ally_ai_engage_range
-
 	var best: Node = null
 	var best_distance := INF
 	for enemy in GameManager.get_all_enemies():
-		if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive:
-			continue
-		if origin.distance_to(enemy.global_position) > engage_range:
+		if not _is_valid_enemy(enemy) or enemy == exclude:
 			continue
 		var distance := global_position.distance_to(enemy.global_position)
-		if distance < best_distance:
-			best_distance = distance
-			best = enemy
+		if distance > engage_range or distance >= best_distance:
+			continue
+		best_distance = distance
+		best = enemy
 	return best
 
 
-# 지금 조종 중인 파티원 노드. 그룹 이름의 출처는 PartySystem.MEMBER_GROUP 이다.
-func _controlled_member_node() -> Node2D:
+# **파라미터에 타입을 붙이지 않는다**(#245). 들고 있던 적이 죽으면 queue_free 로 해제되는데,
+# Node 로 타입을 박으면 해제된 객체가 들어올 때 대입 단계에서 죽는다.
+func _is_valid_enemy(node) -> bool:
+	if node == null or not is_instance_valid(node):
+		return false
+	if not (node is Node):
+		return false
+	return "is_alive" in node and node.is_alive
+
+
+# 지금 조작 중인 플레이어 노드. 그룹 이름의 출처는 PartySystem.MEMBER_GROUP 이다.
+func _player_node() -> Node2D:
 	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
 		if node == self or not is_instance_valid(node):
 			continue
 		if node is Node2D and node.is_controlled():
 			return node as Node2D
 	return null
+
+
+# ===== 플레이어 자취 (Player trail) =====
+#
+# 아군 AI 가 "딜레이를 두고" 따라오려면 플레이어가 **지나간 자리**가 필요하다.
+# 그래서 조작 중일 때만 자기 위치와 진행 방향을 짧게 기록하고, 아군 AI 가 그것을 늦게 읽는다.
+
+## 자취를 들고 있는 시간(초). 추종 딜레이보다 넉넉해야 샘플이 모자라지 않는다.
+const TRAIL_HISTORY_SECONDS := 2.0
+
+## {"t": 시각, "pos": 위치, "dir": 진행 방향} 의 시간순 배열. 조작 중일 때만 쌓인다.
+var _trail: Array[Dictionary] = []
+## 자취 기록용 자체 시계(초).
+var _trail_clock: float = 0.0
+
+
+func _record_trail(delta: float) -> void:
+	_trail_clock += delta
+	_trail.append({"t": _trail_clock, "pos": global_position, "dir": _facing_direction()})
+	var cutoff := _trail_clock - TRAIL_HISTORY_SECONDS
+	while _trail.size() > 1 and float(_trail[0]["t"]) < cutoff:
+		_trail.pop_front()
+
+
+# delay 초 전의 내 위치와 진행 방향. 기록이 그만큼 없으면 가장 오래된 것을 준다.
+func get_trail_sample(delay: float) -> Dictionary:
+	if _trail.is_empty():
+		return {"pos": global_position, "dir": _facing_direction()}
+
+	var want: float = _trail_clock - maxf(delay, 0.0)
+	if want <= float(_trail[0]["t"]):
+		return {"pos": _trail[0]["pos"], "dir": _trail[0]["dir"]}
+
+	for i in range(_trail.size() - 1, -1, -1):
+		var sample: Dictionary = _trail[i]
+		if float(sample["t"]) > want:
+			continue
+		if i + 1 >= _trail.size():
+			return {"pos": sample["pos"], "dir": sample["dir"]}
+		# 두 샘플 사이를 보간한다. 프레임 단위로 끊어 읽으면 대열이 덜컥거린다.
+		var next_sample: Dictionary = _trail[i + 1]
+		var span: float = float(next_sample["t"]) - float(sample["t"])
+		var ratio: float = 0.0 if span <= 0.0 else (want - float(sample["t"])) / span
+		return {
+			"pos": (sample["pos"] as Vector2).lerp(next_sample["pos"], ratio),
+			"dir": sample["dir"],
+		}
+
+	return {"pos": _trail[0]["pos"], "dir": _trail[0]["dir"]}
+
+
+# 지금 바라보는 방향. 멈춰 있으면 마지막으로 움직인 방향을 쓴다.
+func _facing_direction() -> Vector2:
+	if velocity.length() > 0.01:
+		return velocity.normalized()
+	if _last_move_direction != Vector2.ZERO:
+		return _last_move_direction.normalized()
+	return Vector2.DOWN
 
 
 # ===== 워크 애니메이션 (Walk animation) =====
@@ -430,13 +766,13 @@ func _tick_skill_cooldowns(delta: float) -> void:
 # 만피여도 뽑히는데(1000 만피 < 1200 중 1100), 위험한 쪽을 지키는 스킬의 의도와 어긋난다.
 func _cast_shield_skill(skill: SkillData) -> void:
 	_apply_skill_shield(skill, self)
-	var ally := _lowest_health_ally()
+	var ally := _lowest_health_party_member()
 	if ally != null:
 		ally._apply_skill_shield(skill, self)
 
 
 # 자기를 뺀 파티원 중 체력 비율이 가장 낮은 쪽. 없으면 null.
-func _lowest_health_ally() -> Node:
+func _lowest_health_party_member() -> Node:
 	var best: Node = null
 	var best_percent := INF
 	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
@@ -530,6 +866,10 @@ func _detonate_skill_shield() -> void:
 		if origin.distance_to(enemy.global_position) > skill.aoe_radius:
 			continue
 		enemy.take_damage(power, caster)
+
+	# 보호막 폭발도 광역 공격이다. 시전자가 플레이어일 때만 아군 AI 에게 알린다(#257).
+	if caster != null and is_instance_valid(caster) and caster.is_controlled() and EventBus:
+		EventBus.player_attacked.emit(caster, null)
 
 	if EventBus:
 		EventBus.skill_shield_burst.emit(self, skill.skill_id, origin, power)
@@ -645,6 +985,10 @@ func try_attack() -> bool:
 
 	_attack_cooldown_left = get_attack_cooldown()
 
+	# 아군 AI 가 "플레이어가 지금 때리는 적"을 알아야 한다(#257).
+	if is_controlled() and EventBus:
+		EventBus.player_attacked.emit(self, target)
+
 	# 평타 발생을 먼저 센다. 처형으로 끝나거나 적을 죽인 평타도 "나간 평타"다.
 	_attack_swing_count += 1
 	_apply_attack_passives()
@@ -724,6 +1068,10 @@ func _fire_attack_passive(skill: SkillData) -> void:
 		if global_position.distance_to(enemy.global_position) > skill.aoe_radius:
 			continue
 		enemy.take_damage(amount, self)
+
+	# 광역 패시브에는 노린 대상이 하나로 없다. 아군 AI 는 이 신호에서 최근접 적을 스스로 고른다(#257).
+	if is_controlled() and EventBus:
+		EventBus.player_attacked.emit(self, null)
 
 
 # ===== 역할 메커니즘 (Role Mechanics) =====
@@ -954,6 +1302,13 @@ func can_execute(target) -> bool:
 # 사거리 안에서 가장 가까운 살아있는 적을 찾는다.
 # 적 목록은 GameManager가 단일 출처다.
 func _find_attack_target() -> Node:
+	# 아군 AI 는 **고정 타겟만** 때린다(#257). 지나가다 사거리에 들어온 다른 적은 건드리지
+	# 않는다 — 그래야 파티 화력이 플레이어가 잡은 적 하나에 모인다.
+	if not is_controlled() and _ai_in_combat:
+		if _is_valid_enemy(_ai_target) and global_position.distance_to(_ai_target.global_position) <= get_attack_range():
+			return _ai_target
+		return null
+
 	var nearest := GameManager.get_nearest_enemy(global_position)
 	if nearest == null:
 		return null
@@ -1005,6 +1360,9 @@ func take_damage(amount: int, source = null) -> int:
 	# 탱커 3단계: 받은 피해에 비례해 공격자에게 되돌린다.
 	# 흡수분까지 포함한 양이 기준이다 — 보호막을 둘렀다고 반사가 약해질 이유가 없다.
 	_reflect_damage(source, dealt + absorbed)
+
+	# 비전투로 걷던 아군 AI 는 맞으면 반격한다(#257).
+	_on_damaged_by(source)
 
 	# 보호막이 깨져서 나는 폭발. die() 가 노드를 정리하기 전에 처리한다.
 	if skill_shield_broke:
