@@ -380,7 +380,7 @@ func _update_party() -> void:
 		var node := _member_node(index)
 		var controlled := PartySystem.is_controlled(index)
 
-		# 조종 중인 멤버를 카드 테두리로 강조한다(HUDKit의 선택 표시 규칙).
+		# 플레이어를 카드 테두리로 강조한다(HUDKit의 선택 표시 규칙).
 		(row["panel"] as PanelContainer).add_theme_stylebox_override("panel", HUDKit.card_overlay(controlled))
 		(row["name"] as Label).add_theme_color_override(
 			"font_color", HUDKit.text_1() if controlled else HUDKit.text_3())
@@ -451,7 +451,7 @@ func _nearest_marked_enemy(from: Node) -> Node:
 	return nearest
 
 
-# 스택은 조종 중인 멤버가 원거리 메커니즘을 쓸 수 있을 때만 의미가 있다.
+# 스택은 플레이어가 원거리 메커니즘을 쓸 수 있을 때만 의미가 있다.
 func _update_stack(controlled: Node) -> void:
 	if _stack_row == null:
 		return

@@ -9,6 +9,11 @@ signal player_died
 signal damage_taken(target, damage, position)
 @warning_ignore("unused_signal")
 signal healing_applied(target, amount)
+@warning_ignore("unused_signal")
+# 플레이어(직접 조작하는 캐릭터)가 적을 공격했다. 아군 AI 의 전투 진입 신호다(#257).
+# target 이 null 이면 광역 공격이라 노린 적이 하나로 정해지지 않는다는 뜻이다 —
+# 그때 아군 AI 는 자기에게 가장 가까운 적을 스스로 고른다.
+signal player_attacked(attacker, target)
 
 # Game state signals
 @warning_ignore("unused_signal")
@@ -61,7 +66,7 @@ signal mail_added(mail_id: int)
 signal mail_claimed(mail_id: int)
 
 # ----- 스킬 (Skill) -----
-# 조종 중인 멤버가 고유 스킬 키(Q·E)를 눌러 발동했다. 효과 구현·이펙트·HUD 가 이 신호를 듣는다.
+# 플레이어가 고유 스킬 키(Q·E)를 눌러 발동했다. 효과 구현·이펙트·HUD 가 이 신호를 듣는다.
 signal skill_used(user, skill_id: StringName)
 
 # 고유 스킬이 준 보호막이 터졌다(깨짐·만료·재입력). position 에서 반경 안의 적에게 power 피해.
