@@ -90,12 +90,33 @@ class_name CombatTuning
 ## 값을 키울수록 대열이 한 박자 늦게 따라 돈다.
 @export var ally_ai_follow_delay: float = 0.35
 ## 자기 자리에서 이 거리(px) 이상 벌어졌을 때만 따라잡기 속도를 쓴다.
-@export var ally_ai_catchup_distance: float = 200.0
-## 따라잡기 속도 배수.
+## 대열에서 벌어진 거리에 **비례**해 걷는 속도를 올린다. 이 거리(px)마다 배수가 1.0 씩 붙는다.
 ##
-## 필요한 이유: 아군 AI 의 이동 속도는 플레이어와 같다. 전투에서 멀리 떨어져 나온 뒤
-## 같은 속도로 걸으면 플레이어가 계속 걷는 한 영영 대열에 복귀하지 못한다.
-@export var ally_ai_catchup_multiplier: float = 1.6
+## 필요한 이유: 아군 AI 의 이동 속도는 플레이어와 같다. 대시로 벌어지거나 전투에서 멀리
+## 떨어져 나온 뒤 같은 속도로 걸으면, 플레이어가 계속 걷는 한 영영 대열에 복귀하지 못한다.
+##
+## 비례로 두는 이유: "이 거리를 넘으면 몇 배" 식으로 켜고 끄면 경계에서 속도가 툭 튄다.
+@export var ally_ai_catchup_scale: float = 200.0
+## 따라잡기 속도 배수의 상한. 너무 높으면 순간이동하듯 붙어 같이 걷는 느낌이 깨진다.
+@export var ally_ai_catchup_max: float = 2.5
+
+# ----- 전투 진영 (Combat spacing) -----
+
+## 전투에서 타겟에 붙을 때 **플레이어-타겟 축에서 좌우로 벌어지는 각도**(도).
+##
+## 0 이면 아군 AI 둘이 플레이어와 같은 방향에서 한 점으로 몰려 서로 밀치고, 뒤쪽 아군은
+## 앞쪽에 막혀 사거리 밖에 멈춘다. 좌우로 벌려 세워 셋이 타겟을 감싸게 한다.
+@export var ally_ai_flank_angle: float = 40.0
+## 고정 타겟에 이 시간(초) 동안 **가까워지지 못하면** 락을 풀고 다른 적으로 갈아탄다.
+##
+## 경로 탐색이 없어서 벽 뒤나 도망치는 적을 향해 직선으로 밀기만 하기 때문에 필요하다.
+## 갈아탈 다른 적이 없으면 같은 적으로 다시 시도한다.
+@export var ally_ai_target_stuck_time: float = 2.0
+## 전투 **진입**은 플레이어와 (ally_ai_leash_range x 이 비율) 안에 있을 때만 허용한다.
+##
+## 이탈 거리와 진입 거리를 같게 두면 경계에서 진입과 이탈이 매 틱 번갈아 일어난다.
+## 진입 문턱을 더 좁게 잡아 그 떨림을 없앤다(히스테리시스).
+@export var ally_ai_engage_leash_ratio: float = 0.75
 
 # ===== 피해 공식 (Damage Formula) =====
 # 피해 = 공격력² / (공격력 + 방어력)   -- 구현은 PlayerStats.apply_defense()
@@ -204,8 +225,11 @@ func get_summary() -> Dictionary:
 		"ally_ai_formation_side": ally_ai_formation_side,
 		"ally_ai_formation_arrive": ally_ai_formation_arrive,
 		"ally_ai_follow_delay": ally_ai_follow_delay,
-		"ally_ai_catchup_distance": ally_ai_catchup_distance,
-		"ally_ai_catchup_multiplier": ally_ai_catchup_multiplier,
+		"ally_ai_catchup_scale": ally_ai_catchup_scale,
+		"ally_ai_catchup_max": ally_ai_catchup_max,
+		"ally_ai_flank_angle": ally_ai_flank_angle,
+		"ally_ai_target_stuck_time": ally_ai_target_stuck_time,
+		"ally_ai_engage_leash_ratio": ally_ai_engage_leash_ratio,
 		"damage_min": damage_min,
 		"strength_to_phys_atk": strength_to_phys_atk,
 		"strength_to_phys_def": strength_to_phys_def,
@@ -271,10 +295,16 @@ func validate() -> Array[String]:
 		problems.append("ally_ai_formation_arrive는 0보다 커야 합니다.")
 	if ally_ai_follow_delay < 0.0:
 		problems.append("ally_ai_follow_delay는 0 이상이어야 합니다.")
-	if ally_ai_catchup_distance <= 0.0:
-		problems.append("ally_ai_catchup_distance는 0보다 커야 합니다.")
-	if ally_ai_catchup_multiplier < 1.0:
-		problems.append("ally_ai_catchup_multiplier는 1.0 이상이어야 합니다.")
+	if ally_ai_catchup_scale <= 0.0:
+		problems.append("ally_ai_catchup_scale은 0보다 커야 합니다.")
+	if ally_ai_catchup_max < 1.0:
+		problems.append("ally_ai_catchup_max는 1.0 이상이어야 합니다.")
+	if ally_ai_flank_angle < 0.0 or ally_ai_flank_angle >= 90.0:
+		problems.append("ally_ai_flank_angle은 0 이상 90 미만이어야 합니다.")
+	if ally_ai_target_stuck_time <= 0.0:
+		problems.append("ally_ai_target_stuck_time은 0보다 커야 합니다.")
+	if ally_ai_engage_leash_ratio <= 0.0 or ally_ai_engage_leash_ratio > 1.0:
+		problems.append("ally_ai_engage_leash_ratio는 0보다 크고 1.0 이하여야 합니다.")
 	if capture_hold_seconds <= 0.0:
 		problems.append("capture_hold_seconds는 0보다 커야 합니다.")
 
