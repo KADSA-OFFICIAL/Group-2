@@ -87,6 +87,31 @@ enum SecondaryRole {
 
 ## 파티원 평타 1회당 차는 양.
 @export var skill_gauge_gain_per_attack: int = 0
+# ===== 평타 (Basic attack) =====
+#
+# 평타가 **근접 즉시타격인가 원거리 투사체인가**는 캐릭터의 성질이다(미나는 근접, 태희는 원거리).
+# 역할(RANGED_DEALER)로 판단하지 않는다 — 역할은 시너지 카운트를 위한 분류이고, 겸직도 있어서
+# "원거리 역할을 가졌으니 평타도 원거리"가 성립하지 않는다.
+#
+# 기본값 0 은 지금까지의 근접 즉시타격이라, 이 필드를 적지 않은 기존 .tres 는 그대로 돈다.
+
+## 평타 투사체의 속도(px/s). 0 이면 **근접 즉시타격**이다(사거리 안이면 그 자리에서 명중).
+@export var basic_attack_projectile_speed: float = 0.0
+
+## 평타 투사체가 날아가는 최대 거리(px). basic_attack_projectile_speed 가 0 이면 쓰지 않는다.
+@export var basic_attack_projectile_range: float = 0.0
+
+## 평타 사거리(px). 0 이면 씬의 AttackArea2D 위치에서 구한다(지금까지의 동작).
+##
+## 원거리 평타는 씬 노드보다 훨씬 멀리 닿아야 하는데, 그 거리를 씬에서 주면 캐릭터마다
+## Player.tscn 을 복제해야 한다. 사거리는 캐릭터 정의가 갖는 편이 옳다.
+@export var basic_attack_range: float = 0.0
+
+
+# 이 캐릭터의 평타가 날아가는 투사체인가.
+func has_projectile_basic_attack() -> bool:
+	return basic_attack_projectile_speed > 0.0
+
 # ===== 외형 (Appearance) =====
 @export var sprite_texture: Texture2D = null
 ## 흰색 도형 플레이스홀더를 칠하는 색이다. 아래 walk_frames(실제 아트)에는 입히지 않는다
@@ -316,6 +341,12 @@ func validate() -> Array[String]:
 		problems.append("skill_gauge_max가 있으면 skill_gauge_gain_per_attack도 0보다 커야 합니다.")
 	if skill_gauge_max == 0 and skill_gauge_gain_per_attack != 0:
 		problems.append("skill_gauge_max가 0인데 skill_gauge_gain_per_attack이 설정되어 있습니다.")
+
+	# 투사체 평타는 날아갈 거리가 있어야 한다. 0 이면 발사되자마자 사라진다.
+	if basic_attack_projectile_speed > 0.0 and basic_attack_projectile_range <= 0.0:
+		problems.append("basic_attack_projectile_speed가 있으면 basic_attack_projectile_range도 0보다 커야 합니다.")
+	if basic_attack_projectile_speed < 0.0 or basic_attack_projectile_range < 0.0 or basic_attack_range < 0.0:
+		problems.append("basic_attack_* 값은 0 이상이어야 합니다.")
 
 	# 워크 시트를 지정했다면 네 방향이 모두 있어야 한다.
 	# 하나라도 빠지면 그 방향으로 이동할 때 재생할 애니메이션이 없어 외형이 멈춘다.

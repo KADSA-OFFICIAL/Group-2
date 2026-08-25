@@ -140,6 +140,92 @@ enum InputSlot {
 @export var heal_to_aoe_damage_percent: float = 0.0
 
 
+# ===== 평타 광역 (Basic-attack AoE) =====
+
+## 평타 패시브가 내는 광역 피해 = **시전자 물리 공격력 x 이 비율**. 0 이면 이 채널을 쓰지 않는다.
+##
+## 왜 heal_to_aoe_damage_percent 와 따로인가: 그쪽은 **회복량**에서 피해가 나오므로
+## 체력이 가득 차 있으면 0 이 되는 역전 장치다(미나). 이쪽은 회복과 무관하게 항상 같은
+## 비율로 나가는 딜링 채널이다. 한 필드로 뭉치면 "무엇에 비례하는가"가 데이터에서 사라진다.
+##
+## 비율이라 공격력 스케일이 바뀌어도 유지된다(mark_burst_damage_multiplier 와 같은 규약).
+## aoe_radius 와 함께 쓴다 — 반경이 0 이면 때릴 범위가 없어 아무 일도 하지 않는다.
+@export var attack_aoe_power_percent: float = 0.0
+
+## 이 평타 패시브가 터지는 광역을 **평타 투사체의 착탄 지점**에서 낼 것인가.
+##
+## false 면 시전자 발밑에서 터진다(미나의 3타 회복 폭발). true 면 날아간 탄이 멈춘 자리에서
+## 터진다(태희의 4타 광역) — 원거리 캐릭터의 광역이 자기 발밑에서 나면 사거리의 의미가 없다.
+##
+## 시전자가 투사체 평타를 쓰지 않으면(CharacterData.basic_attack_projectile_speed == 0)
+## 이 값이 true 여도 발밑에서 난다. 날아갈 탄이 없기 때문이다.
+@export var aoe_at_projectile_impact: bool = false
+
+# ===== 평타 체인 (Basic-attack chain) =====
+#
+# 시전하면 **일정 시간 동안** 시전자의 평타 투사체가 맞은 뒤 다음 적에게 튕긴다.
+# 즉발 피해가 아니라 **평타를 강화하는 창(window)** 이라, 이 스킬의 값어치는 그 창 안에
+# 평타를 몇 번 넣느냐로 정해진다 — 공속(원거리 스택)이 그대로 이 스킬의 세기가 된다.
+
+## 체인이 유지되는 시간(초). 0 이면 체인 스킬이 아니다.
+@export var chain_duration: float = 0.0
+
+## 첫 명중 뒤 **추가로** 튕겨 맞히는 적 수. 3 이면 최대 4체(첫 대상 + 3)를 때린다.
+##
+## "추가"인 이유: 첫 명중은 체인이 없어도 일어난다. 이 값이 세는 것은 스킬이 만들어 낸 몫이다.
+@export var chain_bounces: int = 0
+
+## 튕길 다음 적을 찾는 반경(px). 이 안에 **아직 맞지 않은** 적이 없으면 거기서 끝난다.
+@export var chain_range: float = 0.0
+
+## 튕긴 타격의 피해 비율. 0.6 이면 튕길 때마다 직전 타격의 60%.
+##
+## **누적**이다(0.6 -> 0.36 -> 0.216). 감쇠가 없으면 창 안의 화력이 그대로 몇 배가 된다.
+@export var chain_damage_percent: float = 1.0
+
+# ===== 시전 시간 (Cast time) =====
+
+## 누른 뒤 실제로 나가기까지 걸리는 시간(초). 0 이면 즉발이다.
+##
+## **공격속도 배수로 나뉜다** — 실제 시전 시간 = cast_time / 공속 배수.
+## 원거리 1단계 스택이 공속을 올리면 캐스트도 함께 짧아진다. 캐스트 중은 무방비이므로
+## 이 연동이 "평타를 쳐서 쌓은 것이 곧 안전"이 되게 하는 장치다.
+##
+## 캐스트 중에는 평타가 나가지 않는다. 이동은 막지 않는다 — 이 프로젝트에는 이동 봉인을
+## 스킬이 자기 자신에게 거는 통로가 없고, 있는 것처럼 흉내 내면 상태 효과와 출처가 갈린다.
+@export var cast_time: float = 0.0
+
+# ===== 직선 범위 (Beam) =====
+#
+# 원형(aoe_radius)이 아니라 **바라보는 방향으로 뻗는 직사각형**으로 때린다.
+# 관통이다 — 앞의 적이 막아 주지 않는다.
+
+## 빔이 뻗는 길이(px). 0 이면 빔이 아니다.
+@export var beam_length: float = 0.0
+
+## 빔의 폭(px). 진행축에서 좌우로 이 값의 **절반**씩 벌어진 띠 안이 판정 범위다.
+@export var beam_width: float = 0.0
+
+# ===== 현재 체력 비례 피해 (Current-HP damage) =====
+
+## 맞은 적의 **현재 체력 x 이 비율**을 base_power 에 더해 때린다. 0 이면 쓰지 않는다.
+##
+## 대상마다 피해가 다르다 — 체력이 많이 남은 적일수록 많이 아프다. 뒤집으면 깎일수록
+## 덜 아프므로 **마무리는 못 한다**. 그래서 base_power 를 최소 보장치로 함께 둔다.
+##
+## 방어력은 기존 규약대로 대상의 take_damage() -> PlayerStats.apply_defense() 가 적용한다.
+## 여기서 방어를 무시하지 않는다 — 피해 공식의 단일 출처를 우회하지 않기 위해서다.
+@export var current_hp_damage_percent: float = 0.0
+
+# ===== 평타 쿨감 (Cooldown reduction on attack) =====
+
+## 시전자가 평타를 **1회** 낼 때마다 이 스킬의 남은 쿨타임에서 빼는 시간(초).
+## 0 이면 시간으로만 줄어든다(기본).
+##
+## 평타 **발생** 기준이다(every_n_attacks 와 같은 규약). 빗나간 탄도 쿨감을 준다 —
+## 명중 기준이면 탄이 날아가는 동안 쿨타임이 멈춘 것처럼 보여 인과가 흐려진다.
+@export var cooldown_reduction_per_attack: float = 0.0
+
 # ===== 아직 필드가 아닌 것 (Not fields yet) =====
 #
 # **대상 선정**(누구에게 주는가)은 필드로 두지 않았다. 저작된 스킬이 적어 표본 하나로
@@ -180,3 +266,35 @@ func grants_shield() -> bool:
 # 받는 쪽의 최대 체력과도, 총량 한도와도 무관하다(#261). 이 값이 그대로 들어간다.
 func get_effective_shield(gauge_ratio: float = 0.0) -> int:
 	return shield_base + int(round(clampf(gauge_ratio, 0.0, 1.0) * float(shield_gauge_bonus)))
+
+
+# 이 스킬이 평타에 체인을 거는가.
+func chains_basic_attacks() -> bool:
+	return chain_duration > 0.0 and chain_bounces > 0
+
+
+# 이 스킬이 직선 범위(빔)로 때리는가.
+func is_beam() -> bool:
+	return beam_length > 0.0 and beam_width > 0.0
+
+
+# 공속 배수를 반영한 실제 시전 시간(초). 0 이면 즉발이다.
+#
+# 배수가 0 이하로 들어오면(버그성 입력) 나누지 않고 기본값을 돌려준다 —
+# Player.get_attack_cooldown() 이 같은 상황을 처리하는 방식과 같은 규약이다.
+func get_cast_time(attack_speed_multiplier: float = 1.0) -> float:
+	if cast_time <= 0.0:
+		return 0.0
+	if attack_speed_multiplier <= 0.0:
+		return cast_time
+	return cast_time / attack_speed_multiplier
+
+
+# 대상 하나에게 넣을 피해. 최소 보장치(base_power, 신앙심 강화 적용) + 현재 체력 비례분.
+#
+# 방어력은 여기서 적용하지 않는다. 대상의 take_damage() 가 한다(피해 공식 단일 출처).
+func get_damage_against(target_current_hp: int, faith_boost: float = 1.0) -> int:
+	var total := float(get_effective_power(faith_boost))
+	if current_hp_damage_percent > 0.0:
+		total += maxf(float(target_current_hp), 0.0) * current_hp_damage_percent
+	return int(round(total))
