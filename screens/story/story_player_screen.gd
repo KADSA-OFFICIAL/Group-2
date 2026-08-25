@@ -121,6 +121,11 @@ var _shake_tween: Tween
 
 var _shake_layer: Control
 var _background: TextureRect
+## 진행 중인 장면 전환 오버레이. 항상 0 또는 1개다(#270).
+var _scene_overlay: TextureRect = null
+## 화면이 **도달할** 배경. 페이드 중에는 _background.texture 가 아직 이전 배경이라,
+## "지금 향하는 배경"의 단일 출처가 따로 필요하다(#270).
+var _target_background: Texture2D = null
 var _stage: Control
 var _blackout: ColorRect
 var _dialogue_box: PanelContainer
@@ -516,12 +521,24 @@ func _apply_chapter_background() -> void:
 func _set_background(texture: Texture2D, fade: bool) -> void:
 	if texture == null or _background == null:
 		return
-	if _background.texture == texture:
+
+	# **base 가 아니라 "도달할 배경"과 비교한다**(#270).
+	# 페이드가 도는 동안 _background.texture 는 아직 이전 배경이라, base 와 비교하면
+	# 지금 향하는 그 배경을 다시 지시했을 때 전환이 통째로 버려진다
+	# (3장: 숲으로 가는 도중 빠르게 넘기면 부락으로 돌아오지 못하고 숲에 남았다).
+	if _target_background == texture:
 		return
+
+	_cancel_scene_fade()
+	_target_background = texture
 
 	# 저작된 배경은 그림이다. 늘려 채우면 비율이 망가지므로 잘라서 채운다.
 	# 그라데이션은 어느 쪽이든 같아 보이므로 규칙을 하나로 둔다.
 	_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+
+	# 버린 전환 덕분에 이미 그 배경일 수 있다. 그러면 페이드할 것이 없다.
+	if _background.texture == texture:
+		return
 
 	if not fade:
 		_background.texture = texture
@@ -537,12 +554,15 @@ func _set_background(texture: Texture2D, fade: bool) -> void:
 	# 겹치는 장도 같은 흐림을 써야 한다. 안 그러면 전환하는 동안만 선명해졌다 흐려진다.
 	overlay.material = _make_blur_material()
 	_background.add_child(overlay)
+	_scene_overlay = overlay
 
 	var tween := overlay.create_tween()
 	tween.tween_property(overlay, "modulate:a", 1.0, SCENE_FADE_TIME)
 	# 다 떠오르면 아래 배경을 바꾸고 겹친 장을 치운다. 남겨 두면 장면마다 쌓인다.
 	tween.tween_callback(func():
 		_background.texture = texture
+		if _scene_overlay == overlay:
+			_scene_overlay = null
 		overlay.queue_free())
 
 
@@ -552,6 +572,17 @@ func _make_blur_material() -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = BACKGROUND_BLUR
 	return material
+
+# 진행 중이던 장면 전환을 **적용하지 않고** 버린다.
+#
+# 왜 적용하지 않는가: 플레이어가 그 줄을 이미 지나쳤다. 뒤늦게 그 배경을 한 번 번쩍
+# 보여 주면 건너뛴 장면이 잔상처럼 튀어나온다. 새 지시가 왔으면 그쪽으로 바로 간다.
+#
+# 버리지 않으면 나중에 끝나는 트윈의 콜백이 base 를 **건너뛴 배경**으로 되돌린다.
+func _cancel_scene_fade() -> void:
+	if _scene_overlay != null and is_instance_valid(_scene_overlay):
+		_scene_overlay.queue_free()
+	_scene_overlay = null
 
 
 # ===== 인물 =====

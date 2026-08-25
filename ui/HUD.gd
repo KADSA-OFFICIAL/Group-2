@@ -7,15 +7,16 @@ class_name HUD
 #   - 파티 3인 카드: 이름/역할/HP, 조종 중인 1명 강조, 전환 키(1/2/3)
 #   - 역할 메커니즘 상태: 표식 게이지 / 원거리 스택 / 처형 가능
 #   - 역할군 시너지: 카운트와 활성 단계 (2카운트 비활성이 드러나야 한다)
+#   - 고유 스킬 Q·E: 남은 쿨타임 / 시전 중 / 걸린 창
 #
-# 아직 표시하지 않는 것: 보호막(자원 없음), 점령 게이지(스테이지 타입 미구현),
-#   스킬 쿨다운(스킬 없음).
+# 아직 표시하지 않는 것: 보호막(자원 없음), 점령 게이지(스테이지 타입 미구현).
 #
 # 값의 출처:
 #   파티/조종  -> PartySystem
 #   시너지     -> SynergySystem
 #   표식       -> StatusEffectSystem
 #   스택       -> Player.get_stack_count()
+#   스킬       -> Player.get_skill_cooldown_left() / is_casting() / is_chain_window_open()
 #   수치       -> CombatConfig.tuning
 #   색·아이콘  -> UITheme / HUDKit
 # 여기서 계산하거나 색을 새로 만들지 않는다. 읽어서 그리기만 한다.
@@ -46,6 +47,13 @@ var _gauge_fill: ColorRect
 var _gauge_track: Control
 var _execute_row: Control
 
+# 고유 스킬 쿨타임(#263). 스킬을 저작한 캐릭터를 잡았을 때만 보인다.
+var _skill_panel: PanelContainer
+var _skill_q_row: Control
+var _skill_q_label: Label
+var _skill_e_row: Control
+var _skill_e_label: Label
+
 # 적 패널: 종류(enemy_id)별 한 줄. 줄은 종류 구성이 바뀔 때만 다시 만든다.
 var _enemy_panel: PanelContainer
 var _enemy_body: VBoxContainer
@@ -73,6 +81,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	_update_party()
 	_update_mechanics()
+	_update_skills()
 	_update_synergy()
 	_update_enemies()
 
@@ -114,8 +123,32 @@ func _build() -> void:
 
 	left.add_child(_build_party_panel())
 	left.add_child(_build_mechanics_panel())
+	left.add_child(_build_skill_panel())
 	right.add_child(_build_synergy_panel())
 	right.add_child(_build_enemy_panel())
+
+
+# 고유 스킬 판(#263). Q·E 의 남은 쿨타임과 지금 걸린 상태를 보여 준다.
+#
+# 왜 역할 판과 나누는가: 역할 판은 **시너지가 제공하는 것**(표식·스택·처형)이라 파티 구성으로
+# 켜지고 꺼진다. 스킬은 **캐릭터 개성**이라 혼자 있어도 있다(docs §3 티어2). 한 판에 섞으면
+# 무엇이 편성으로 바뀌는 값인지가 화면에서 사라진다.
+#
+# 스킬을 저작하지 않은 캐릭터를 잡으면 두 줄이 모두 숨고 판째로 사라진다.
+func _build_skill_panel() -> PanelContainer:
+	var panel := HUDKit.make_panel("스킬", "SKILL", 10, true)
+	var body := HUDKit.body_of(panel)
+
+	_skill_q_row = _make_icon_row("icon_battle", "Q", "")
+	_skill_q_label = _skill_q_row.get_meta("value")
+	body.add_child(_skill_q_row)
+
+	_skill_e_row = _make_icon_row("icon_battle", "E", "")
+	_skill_e_label = _skill_e_row.get_meta("value")
+	body.add_child(_skill_e_row)
+
+	_skill_panel = panel
+	return panel
 
 
 func _build_party_panel() -> PanelContainer:
@@ -519,6 +552,67 @@ func _update_gauge(controlled: Node) -> void:
 	var maximum: int = controlled.get_skill_gauge_max()
 	_gauge_label.text = "%d/%d" % [value, maximum]
 	_set_meter(_gauge_track, _gauge_fill, controlled.get_skill_gauge_ratio())
+
+
+# ===== 고유 스킬 (Unique skills) =====
+
+# Q·E 슬롯의 상태를 한 줄씩 보여 준다(#263).
+#
+# 값의 출처는 전부 조종 중인 Player 노드다. 여기서 쿨타임을 세지 않는다.
+func _update_skills() -> void:
+	if _skill_panel == null:
+		return
+
+	var controlled := _controlled_node()
+	_update_skill_slot(controlled, SkillData.InputSlot.Q, _skill_q_row, _skill_q_label)
+	_update_skill_slot(controlled, SkillData.InputSlot.E, _skill_e_row, _skill_e_label)
+
+	_skill_panel.visible = (
+		(_skill_q_row != null and _skill_q_row.visible)
+		or (_skill_e_row != null and _skill_e_row.visible))
+
+
+# 한 슬롯의 줄. 슬롯이 비어 있으면 그 줄을 숨긴다.
+#
+# 표시 우선순위: 시전 중 > 걸린 창 > 쿨타임 > 준비됨.
+# 지금 벌어지는 일이 남은 시간보다 먼저 보여야 한다.
+func _update_skill_slot(controlled: Node, slot: int, row: Control, label: Label) -> void:
+	if row == null:
+		return
+
+	var skill := _skill_in_slot(controlled, slot)
+	if skill == null:
+		row.visible = false
+		return
+
+	row.visible = true
+	label.text = _skill_status_text(controlled, skill)
+
+
+# 조종 중인 캐릭터의 이 슬롯에 걸린 스킬. 슬롯 해석의 출처는 CharacterData 다.
+func _skill_in_slot(controlled: Node, slot: int) -> SkillData:
+	if controlled == null:
+		return null
+	var character = controlled.get("data")
+	if character == null:
+		return null
+	return character.get_skill_for_slot(slot)
+
+
+func _skill_status_text(controlled: Node, skill: SkillData) -> String:
+	# 시전 중: 이 스킬이 지금 캐스트되고 있으면 남은 캐스트를 보여 준다.
+	# 캐스트는 공속으로 짧아지므로(#263) 여기 숫자가 강화의 결과이기도 하다.
+	if controlled.is_casting() and controlled._cast_skill == skill:
+		return "시전 %.1f" % controlled.get_cast_time_left()
+
+	# 평타 체인 창이 이 스킬로 열려 있으면 남은 창을 보여 준다.
+	if controlled.is_chain_window_open() and controlled._chain_skill == skill:
+		return "체인 %.1f" % controlled.get_chain_time_left()
+
+	var cooldown_left: float = controlled.get_skill_cooldown_left(skill.skill_id)
+	if cooldown_left > 0.0:
+		return "%.1f" % cooldown_left
+	return "준비"
 
 
 # 처형은 버퍼를 조종 중이고 조건을 만족한 적이 있을 때만 뜬다.
