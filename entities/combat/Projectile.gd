@@ -191,9 +191,17 @@ func _try_chain() -> bool:
 	damage = maxi(damage, 1)
 
 	velocity = (next.global_position - global_position).normalized() * velocity.length()
-	# 튕긴 탄은 남은 사거리 제한을 다시 받지 않는다. 사거리는 "발사에서 얼마나 멀리
-	# 날아가는가"의 값이고, 체인은 그 다음 단계다.
-	max_distance = 0.0
+	# 사거리 예산을 **다시 준다**(#274).
+	#
+	# 발사 기준의 남은 거리를 그대로 이어 쓰면 멀리서 쏜 탄은 튕기자마자 사라진다.
+	# 그렇다고 0 으로 두면(예전) 빗나간 탄을 치우는 유일한 경로가 꺼져,
+	# 대상이 죽거나 비켜난 탄이 화면 밖으로 영원히 날아간다.
+	#
+	# chain_range 만큼이면 충분하다 — 대상은 방금 그 안에서 골랐고, 유도하지 않으므로
+	# 그 거리 안에 닿지 못했으면 빗나간 것이다(태희 기준 탄속 620px/s 로 220px 는 0.35초,
+	# 그 사이 적이 움직이는 거리는 25~40px 이라 정상 체인은 여유 있게 닿는다).
+	_travelled = 0.0
+	max_distance = chain_range
 	return true
 
 
