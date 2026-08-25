@@ -49,6 +49,15 @@ enum Kind {
 
 @export_multiline var text: String = ""
 
+# 이 줄부터 배경을 바꾼다. 비어 있으면 이전 배경이 그대로 이어진다.
+#
+# 왜 줄에 두는가: 한 챕터 안에서 장면이 옮겨 간다(교실 -> 골목 -> 산길).
+# 챕터에 하나만 두면 그 이동을 표현할 수 없고, 그렇다고 챕터를 쪼개면
+# 목록이 장면 수만큼 늘어난다.
+#
+# 연출(emotion / screen_effect)과 같은 규약이다 — **대본이 지시하고 화면은 따른다.**
+@export var background: Texture2D = null
+
 # BATTLE 일 때 어느 스테이지로 갈지. 비어 있으면 "전투가 있다"는 표시만 한다.
 # 스테이지 정의의 출처는 StageDatabase 다(여기서 전투를 정의하지 않는다).
 @export var stage_id: StringName = &""

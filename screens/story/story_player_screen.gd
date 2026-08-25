@@ -85,6 +85,10 @@ const BLACKOUT_TIME := 0.45
 # ===== 챕터 타이틀 / 장면 페이드 (#137) =====
 # 전체 길이가 2초를 넘지 않게 잡는다. 두 번째부터는 기다리고 싶지 않은 구간이라
 # 언제든 눌러서 건너뛸 수 있다.
+# 장면(배경)이 바뀔 때 새 배경이 떠오르는 시간.
+# 타이틀 페이드보다 짧다 — 대사가 이미 나와 있는데 배경만 오래 넘어가면 대사를 가린다.
+const SCENE_FADE_TIME := 0.35
+
 const TITLE_FADE_IN := 0.45
 const TITLE_HOLD := 0.85
 const TITLE_FADE_OUT := 0.40
@@ -480,8 +484,12 @@ func _build_end_card() -> void:
 
 # ===== 배경 =====
 
-# 챕터마다 다른 배경을 준다. 실제 배경 아트가 들어오면 이 함수만 갈아 끼우면 된다.
+# 챕터의 기본 배경을 건다. 저작된 배경이 없으면 챕터 번호로 만든 그라데이션이다.
 func _apply_chapter_background() -> void:
+	if _chapter != null and _chapter.background != null:
+		_set_background(_chapter.background, false)
+		return
+
 	var number: int = _chapter.number if _chapter != null else 1
 	var base: Color = FIGURE_COLORS[(number * 2) % FIGURE_COLORS.size()]
 
@@ -493,7 +501,42 @@ func _apply_chapter_background() -> void:
 	texture.gradient = gradient
 	texture.fill_from = Vector2(0.0, 0.0)
 	texture.fill_to = Vector2(0.0, 1.0)
-	_background.texture = texture
+	_set_background(texture, false)
+
+
+# 배경을 바꾼다. fade 면 새 배경이 겹쳐 떠오른다(장면 전환).
+#
+# 왜 겹쳐서 바꾸는가: 텍스처를 그 자리에서 갈아 끼우면 한 프레임 만에 장면이 튄다.
+# 앞에 한 장을 더 얹어 알파만 올리면 같은 자리에서 자연스럽게 넘어간다.
+func _set_background(texture: Texture2D, fade: bool) -> void:
+	if texture == null or _background == null:
+		return
+	if _background.texture == texture:
+		return
+
+	# 저작된 배경은 그림이다. 늘려 채우면 비율이 망가지므로 잘라서 채운다.
+	# 그라데이션은 어느 쪽이든 같아 보이므로 규칙을 하나로 둔다.
+	_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+
+	if not fade:
+		_background.texture = texture
+		return
+
+	var overlay := TextureRect.new()
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.texture = texture
+	overlay.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	overlay.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.modulate.a = 0.0
+	_background.add_child(overlay)
+
+	var tween := overlay.create_tween()
+	tween.tween_property(overlay, "modulate:a", 1.0, SCENE_FADE_TIME)
+	# 다 떠오르면 아래 배경을 바꾸고 겹친 장을 치운다. 남겨 두면 장면마다 쌓인다.
+	tween.tween_callback(func():
+		_background.texture = texture
+		overlay.queue_free())
 
 
 # ===== 인물 =====
@@ -872,6 +915,10 @@ func _show_line() -> void:
 				Color(UITheme.CREAM.r, UITheme.CREAM.g, UITheme.CREAM.b, 0.78))
 			_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			_update_stage(null)
+
+	# 대본이 장면 전환을 지시했으면 여기서 배경이 바뀐다.
+	if line.background != null:
+		_set_background(line.background, true)
 
 	_apply_screen_effect(line)
 	_text_label.text = text

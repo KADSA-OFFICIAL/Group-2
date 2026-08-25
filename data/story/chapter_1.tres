@@ -1,7 +1,9 @@
-[gd_resource type="Resource" script_class="StoryChapterData" load_steps=34 format=3]
+[gd_resource type="Resource" script_class="StoryChapterData" load_steps=36 format=3]
 
 [ext_resource type="Script" path="res://entities/story/StoryChapterData.gd" id="1"]
 [ext_resource type="Script" path="res://entities/story/StoryLineData.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/forest.png" id="91_bg_forest"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/city_night.png" id="90_bg_city"]
 
 [sub_resource type="Resource" id="L0"]
 script = ExtResource("2")
@@ -108,6 +110,7 @@ stage_id = &""
 
 [sub_resource type="Resource" id="L14"]
 script = ExtResource("2")
+background = ExtResource("91_bg_forest")
 kind = 0
 speaker = ""
 text = "주인공 소꿉이를 꼬시기 위한 삼각근 성장을 위해 등산(등산길 주변에 보이는 낙석주의 표지판)을 하러 간다."
@@ -233,6 +236,7 @@ screen_effect = 1
 
 [resource]
 script = ExtResource("1")
+background = ExtResource("90_bg_city")
 chapter_id = &"chapter_1"
 number = 1
 title = "고백, 그리고 슴베찌르개"
