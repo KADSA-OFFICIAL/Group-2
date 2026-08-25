@@ -25,7 +25,8 @@ func _ready() -> void:
 
 
 func _build() -> void:
-	add_child(HUDKit.make_backdrop())
+	# 뜰에서 창고(storage)로 들어온 화면이다 — 그 건물의 장면을 배경으로 깐다(#287).
+	add_child(HUDKit.make_backdrop(HUDKit.load_backdrop("storage")))
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
