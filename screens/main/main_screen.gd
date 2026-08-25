@@ -24,7 +24,7 @@ extends Control
 #
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
 #   재화        -> CurrencySystem (주요 재화 목록도 CurrencySystem 이 정한다)
-#   대표 캐릭터 -> PartySystem (조종 중인 멤버)
+#   대표 캐릭터 -> PartySystem (플레이어가 조작 중인 멤버)
 #   캐릭터      -> CharacterData (표시 이름/역할/외형 tint/portrait)
 #   색·치수     -> UITheme
 #
@@ -580,7 +580,7 @@ func _on_currency_changed(currency_type: String, _amount: int, new_balance: int)
 		label.text = _comma(new_balance)
 
 
-# 대표 캐릭터 = 지금 조종 중인 멤버. 없으면 첫 멤버.
+# 대표 캐릭터 = 지금 플레이어가 조작 중인 멤버. 없으면 첫 멤버.
 func _featured_character() -> CharacterData:
 	var controlled := PartySystem.get_controlled_member()
 	if controlled != null:

@@ -19,11 +19,11 @@ equip_magic_defense = 0
 [resource]
 script = ExtResource("1_chardata")
 role = 0
-secondary_role = 0
+secondary_role = 3
 character_id = &"shipduck"
 display_name = "Shipduck"
 playable = true
-description = "기본 플레이어 캐릭터."
+description = "기본 플레이어 캐릭터. 로스터의 겸직(탱커 + 버퍼) 슬롯이다(#259) — 원래 순혈 탱커였는데 미나가 단일 탱커로 바뀌면서 자리를 맞바꿨다. docs §1.1 의 \"순혈 3 + 겸직 3\" 구성을 지키기 위한 재배치이고, 스텟·외형은 건드리지 않았다. 고유 스킬 미정."
 stats = SubResource("PlayerStats_shipduck")
 sprite_texture = ExtResource("9_shape")
 portrait = ExtResource("10_portrait")

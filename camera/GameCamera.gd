@@ -1,7 +1,7 @@
 extends Camera2D
 class_name GameCamera
 
-# 전장 카메라. **지금 조작 중인 파티원**을 따라간다.
+# 전장 카메라. **플레이어**(직접 조작하는 캐릭터)를 따라간다.
 #
 # 단일 출처 원칙:
 #   누가 조작 대상인가는 PartySystem 이 정한다. 카메라는 그 판정을 다시 하지 않고
@@ -61,7 +61,7 @@ func _physics_process(delta: float) -> void:
 	global_position = global_position.lerp(player.global_position, weight)
 
 
-# 조작 중인 파티원을 찾는다. snap 이면 찾은 즉시 그 위치로 붙인다.
+# 플레이어 노드를 찾는다. snap 이면 찾은 즉시 그 위치로 붙인다.
 #
 # 처음 잡을 때와 대상을 잃었다 다시 잡을 때는 스냅한다 — 그 경우 카메라가 엉뚱한
 # 곳에 있어서, 부드럽게 가면 화면이 한참 미끄러진다.

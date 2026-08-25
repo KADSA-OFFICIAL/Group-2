@@ -2,7 +2,7 @@ extends Node
 
 # 파티 구성의 단일 출처 (autoload).
 #
-# 책임: 로스터에서 뽑은 파티 멤버 목록과 "지금 조종 중인 멤버"를 보유한다.
+# 책임: 로스터에서 뽑은 파티 멤버 목록과 "지금 플레이어가 조작 중인 멤버"를 보유한다.
 #
 # 단일 출처 원칙:
 #   - 캐릭터 정의는 CharacterDatabase에서 가져온다. 여기서 캐릭터를 재정의하지 않는다.
@@ -14,7 +14,7 @@ extends Node
 # [확정] 파티는 3명이다 (docs §1).
 const PARTY_SIZE: int = 3
 
-# 조종 중인 멤버가 없음을 뜻하는 인덱스.
+# 플레이어가 조작 중인 멤버가 없음을 뜻하는 인덱스.
 const NO_CONTROL: int = -1
 
 # 파티 멤버 씬 노드가 등록되는 그룹 이름. **이 상수가 그룹 이름의 단일 출처다.**
@@ -30,7 +30,7 @@ const MEMBER_GROUP := &"party_member"
 # 파티 멤버 (CharacterData). 최대 PARTY_SIZE명.
 var _members: Array[CharacterData] = []
 
-# 현재 조종 중인 멤버의 인덱스. 파티가 비면 NO_CONTROL.
+# 현재 플레이어가 조작 중인 멤버의 인덱스. 파티가 비면 NO_CONTROL.
 var _controlled_index: int = NO_CONTROL
 
 
@@ -42,7 +42,7 @@ func _ready() -> void:
 	name = "PartySystem"
 	# 저장 스키마의 편성 부분은 이 시스템이 소유한다(SaveSystem은 내부를 모른다).
 	SaveSystem.register_provider(SAVE_KEY, self)
-	# 조종 중인 멤버가 죽으면 조종을 넘겨야 한다(#245).
+	# 플레이어가 조작 중인 멤버가 죽으면 조종을 넘겨야 한다(#245).
 	# 이 시스템이 듣는 이유: "누구를 조종 중인가"의 소유자가 여기이기 때문이다.
 	EventBus.player_died.connect(_on_member_died)
 
@@ -129,7 +129,7 @@ func has_character(character_id: StringName) -> bool:
 func get_controlled_index() -> int:
 	return _controlled_index
 
-# 현재 조종 중인 멤버. 없으면 null.
+# 현재 플레이어가 조작 중인 멤버. 없으면 null.
 func get_controlled_member() -> CharacterData:
 	return get_member(_controlled_index)
 
@@ -163,7 +163,7 @@ func switch_to(index: int) -> bool:
 # 파티 도메인의 지식이라 MEMBER_GROUP 이 여기 있고, 그 상수로 조회만 한다.
 # (노드를 들고 있으면 스테이지가 다시 만들 때마다 무효 참조가 생긴다.)
 
-# 파티원이 죽었다. 조종 중이던 멤버였다면 살아 있는 멤버로 넘긴다.
+# 파티원이 죽었다. 플레이어가 잡고 있던 멤버였다면 살아 있는 멤버로 넘긴다.
 #
 # 전멸이면 NO_CONTROL 로 두고 알린다. 승패 판정은 여기서 하지 않는다 — 전장(Stage)의 몫이다.
 func _on_member_died() -> void:
