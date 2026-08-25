@@ -345,7 +345,7 @@ func _fire_projectile(damage: int, effect_id: StringName) -> void:
 # 실제로 들어간 피해(방어 적용 후)를 반환한다.
 # 피흡처럼 "준 피해에 비례하는" 효과가 그 값을 알아야 한다 — 공격력으로 계산하면
 # 방어력 높은 적을 때릴 때 실제보다 크게 회복된다.
-func take_damage(amount: int, _source = null) -> int:
+func take_damage(amount: int, source = null) -> int:
 	if not is_alive:
 		return 0
 
@@ -357,6 +357,17 @@ func take_damage(amount: int, _source = null) -> int:
 
 	if EventBus:
 		EventBus.damage_taken.emit(self, dealt, global_position)
+
+	# 피해를 **준 쪽**에 실제로 들어간 양을 알린다(#276).
+	#
+	# 왜 여기인가: "준 모든 피해를 흡혈한다"는 평타·스킬·광역을 가리지 않는다. 그 전부를
+	# 훑으려면 피해를 내는 자리마다 같은 코드를 붙여야 하는데, 피해가 **들어오는** 곳은
+	# 여기 하나다. 한 곳에서 알리면 새 피해 경로가 생겨도 자동으로 포함된다.
+	#
+	# 평타 한정 피흡(원거리 3단계)은 여기로 오지 않는다 — 그쪽은 "평타로 준 피해"가 계약이라
+	# Player._resolve_attack_hit() 이 계속 갖는다. 두 채널은 별개다.
+	if source != null and is_instance_valid(source) and source.has_method("on_damage_dealt"):
+		source.on_damage_dealt(dealt)
 
 	if hp <= 0:
 		die()

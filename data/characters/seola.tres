@@ -1,27 +1,33 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 [ext_resource type="Texture2D" uid="uid://c3mw0ogq7drhf" path="res://assets/sprites/placeholder/shape_buffer.svg" id="9_shape"]
 [ext_resource type="SpriteFrames" path="res://assets/sprites/characters/seola_walk_frames.tres" id="10_walk"]
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="11_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/seola_triage.tres" id="12_passive"]
+[ext_resource type="Resource" path="res://data/skills/seola_wave.tres" id="13_wave"]
+[ext_resource type="Resource" path="res://data/skills/seola_empower.tres" id="14_empower"]
 
 [sub_resource type="Resource" id="PlayerStats_seola"]
 script = ExtResource("2_stats")
-hp = 900
-strength = 110
-defense = 80
+hp = 1000
+strength = 80
+defense = 100
 intelligence = 100
-faith = 130
+faith = 160
 
 [resource]
 script = ExtResource("1_chardata")
 role = 2
-secondary_role = 2
+secondary_role = 0
 character_id = &"seola"
 display_name = "설아"
 playable = true
-description = "로스터의 겸직(버퍼 + 원거리딜러) 슬롯. 플레이스홀더였던 buffer_ranged 를 교체한 인물이다(#220). 스텟은 그 플레이스홀더의 값을 그대로 이어받은 [임시값]이다. 개성/고유 스킬 미정."
+description = "로스터의 **순혈 버퍼** 슬롯(#276). 원래는 겸직(버퍼+원거리)이었고, 그 자리는 플레이스홀더 buffer_ranged 가 다시 이어받았다. 스텟은 이 슬롯을 들고 있던 플레이스홀더 buffer_pure 의 값을 그대로 물려받은 [임시값]이다(신앙심 160 으로 로스터에서 가장 높다 — 스킬 강화 배수를 가장 크게 받는다). 평타는 **히트스캔 원거리**다: 태희처럼 탄이 날아가지 않고 사거리 안이면 즉시 맞는다. 탄이 없으므로 조준(#264)과 무관하게 최근접 자동 타겟이고, 커서는 외형 방향만 바꾼다. 고유 스킬 셋은 전부 **파티를 살리는 쪽**으로 맞물려 있다. 평타 패시브 = 3타 응급처치(data/skills/seola_triage.tres): 평타 3회마다 체력 비율이 가장 낮은 아군(자기 포함)을 회복. Q = 퍼지는 파동(data/skills/seola_wave.tres): 원이 실제로 퍼져 나가며 적에게 피해, 아군에게 회복. E = 고양(data/skills/seola_empower.tres): 파티 전원에게 3초간 모든 피해 흡혈 + 평타 처형 부여. 리듬은 평타(꾸준한 유지) -> Q(한 번에 크게 회복 + 광역) -> E(짧고 강한 공세 창)다. 설아는 스스로 딜을 내기보다 파티 전체의 지속력과 마무리를 여는 캐릭터다. 게이지는 갖지 않는다 — 그 자원은 미나의 개성이다(#259). 개성 미정."
 stats = SubResource("PlayerStats_seola")
+skills = Array[ExtResource("11_skilldef")]([ExtResource("12_passive"), ExtResource("13_wave"), ExtResource("14_empower")])
+basic_attack_range = 360.0
 sprite_texture = ExtResource("9_shape")
 tint = Color(0.7, 0.85, 0.95, 1)
 sprite_scale = Vector2(2, 2)
