@@ -52,6 +52,46 @@ class_name SkillData
 ## 근접 공격 사거리(EnemyData.attack_range 기본값 45)와 같은 픽셀 단위다.
 @export var aoe_radius: float = 0.0
 
+
+# ===== 투사체 (Projectile) =====
+#
+# 0 이면 투사체가 아니다 — 그 자리에서 즉시 발동하는 스킬이다.
+# 투사체 스킬은 **적에 닿으면 그 자리에서**, 아무것도 맞히지 못하면 **최대 사거리에서** 터진다.
+# 빗나가도 아무 일이 없으면 조준을 요구하는 대가만 있고 보상이 없기 때문이다.
+#
+# 실제 비행·명중 판정은 Projectile 이 한다. 여기 있는 것은 그 값의 출처다.
+
+## 투사체 속도(px/s). 0 이면 투사체 스킬이 아니다.
+@export var projectile_speed: float = 0.0
+
+## 최대 비행 거리(px). 이만큼 날아가면 그 자리에서 터진다.
+@export var projectile_range: float = 0.0
+
+# ===== 부여 효과 (Applied effect) =====
+
+## 맞은 대상에게 걸 상태 효과 id. 비어 있으면 피해만 준다.
+## 효과의 정의(지속시간·봉인 범위 등)는 StatusEffectData 가 소유한다 — 여기서 다시 적지 않는다.
+@export var apply_effect_id: StringName = &""
+
+# ===== 게이지 연동 (Skill gauge) =====
+#
+# 게이지를 가진 캐릭터(CharacterData.skill_gauge_max > 0)의 스킬은 게이지에 비례해 세진다.
+# **무엇이 세지는가는 스킬마다 다르다.** 그래서 하나의 "게이지 보너스" 필드로 뭉치지 않고
+# 대상 수치별로 나눠 두었다 — 어느 값이 커지는지가 데이터에서 바로 보여야 한다.
+#
+# 계산 규약: 최종값 = 기본값 x (1 + 게이지비율 x 보너스비율). 게이지가 0 이면 기본값 그대로다.
+
+## 게이지가 가득일 때 aoe_radius 가 늘어나는 비율. 1.0 이면 반경 2배.
+@export var gauge_radius_bonus_percent: float = 0.0
+
+## 게이지가 가득일 때 shield_percent 가 늘어나는 비율. 1.0 이면 보호막 2배.
+@export var gauge_shield_bonus_percent: float = 0.0
+
+## 시전하면 게이지를 **전량** 소모하는가.
+##
+## 전량인 이유: 스킬 세기가 게이지에 비례하므로, 남겨 두는 선택지를 주면 "언제 터뜨릴까"라는
+## 판단 하나가 "얼마나 남길까"까지 갈라져 리듬이 흐려진다. 게이지 0 에서도 최소 성능으로 나간다.
+@export var consumes_gauge: bool = false
 # ===== 입력 슬롯 (Input slot) =====
 #
 # 캐릭터마다 키로 쓰는 고유 스킬 슬롯이 **Q · E 두 개**다(#237, docs §4).
@@ -112,3 +152,18 @@ func get_effective_power(faith_boost: float = 1.0) -> int:
 	if not scales_with_faith:
 		return base_power
 	return int(round(base_power * faith_boost))
+
+# 이 스킬이 날아가는 투사체인가.
+func is_projectile() -> bool:
+	return projectile_speed > 0.0
+
+
+# 게이지 비율(0.0~1.0)을 반영한 최종 광역 반경.
+# 게이지가 없는 캐릭터는 0.0 이 들어와 기본 반경 그대로다.
+func get_effective_radius(gauge_ratio: float = 0.0) -> float:
+	return aoe_radius * (1.0 + clampf(gauge_ratio, 0.0, 1.0) * gauge_radius_bonus_percent)
+
+
+# 게이지 비율(0.0~1.0)을 반영한 최종 보호막 비율(대상 최대 체력 대비).
+func get_effective_shield_percent(gauge_ratio: float = 0.0) -> float:
+	return shield_percent * (1.0 + clampf(gauge_ratio, 0.0, 1.0) * gauge_shield_bonus_percent)

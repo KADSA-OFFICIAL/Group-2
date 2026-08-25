@@ -696,6 +696,102 @@ func _handle_movement() -> void:
 	velocity = direction * get_move_speed()
 
 
+
+
+# ===== 스킬 게이지 (Skill gauge) =====
+#
+# 캐릭터 개성 자원이다(#259). 지금은 미나만 갖는다.
+#
+# 정의(상한·충전량)는 CharacterData 가 소유하고, **지금 얼마나 찼는지**는 이 노드가 소유한다.
+# 정의(.tres)는 로스터가 공유하는 읽기 전용 데이터라, 거기에 현재값을 두면 스테이지를 다시
+# 열어도 이전 판의 게이지가 남는다(스텟 사본을 노드가 갖는 것과 같은 이유다).
+#
+# 충전은 **파티 전체의 평타**로 이뤄진다 — 아군 AI 가 친 평타도 센다. 표식 충전(docs §8.1)과
+# 같은 규약이다. 시간으로는 줄지 않는다. 쓸 때만 사라진다.
+
+## 지금 찬 게이지. 게이지가 없는 캐릭터는 계속 0 이다.
+var _skill_gauge: int = 0
+
+## 투사체 스킬이 쓰는 탄. 적 탄과 같은 씬을 쓴다(비행·명중 코드를 두 벌 두지 않는다).
+const PROJECTILE_SCENE := preload("res://entities/combat/Projectile.tscn")
+## 투사체 스킬의 명중 판정 반경(px). 방울이 적을 스치기만 해도 터지지 않을 만큼만 둔다.
+const PROJECTILE_HIT_RADIUS := 14.0
+
+
+func has_skill_gauge() -> bool:
+	return data != null and data.has_skill_gauge()
+
+
+func get_skill_gauge() -> int:
+	return _skill_gauge
+
+
+func get_skill_gauge_max() -> int:
+	return data.skill_gauge_max if data != null else 0
+
+
+# 0.0 ~ 1.0. 스킬 세기 스케일의 입력이다.
+func get_skill_gauge_ratio() -> float:
+	var maximum := get_skill_gauge_max()
+	if maximum <= 0:
+		return 0.0
+	return clampf(float(_skill_gauge) / float(maximum), 0.0, 1.0)
+
+
+# 게이지를 채운다. 상한을 넘지 않는다.
+func add_skill_gauge(amount: int) -> void:
+	if not has_skill_gauge() or amount <= 0:
+		return
+	_skill_gauge = mini(_skill_gauge + amount, get_skill_gauge_max())
+
+
+# 평타 한 번이 파티의 게이지 보유자 전원을 채운다. 친 본인도 포함이다.
+#
+# 왜 파티 전체인가: "아군과 자신이 평타를 치면 찬다"가 스펙이다. 미나를 놓고 다른 캐릭터를
+# 잡고 있어도 게이지가 도는 것이 이 자원의 성질이라, 친 사람 것만 채우면 안 된다.
+func _charge_party_skill_gauges() -> void:
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if not is_instance_valid(node) or not node.is_alive:
+			continue
+		if not node.has_skill_gauge():
+			continue
+		node.add_skill_gauge(node.data.skill_gauge_gain_per_attack)
+
+
+# 스킬이 게이지를 먹는다면 **전량** 소모한다. 소모하기 전의 비율을 돌려주는데,
+# 그 값이 이번 시전의 세기가 된다.
+func _consume_skill_gauge(skill: SkillData) -> float:
+	var ratio := get_skill_gauge_ratio()
+	if skill.consumes_gauge:
+		_skill_gauge = 0
+	return ratio
+
+
+# 투사체 스킬을 쏜다. 조준 UI 가 없으므로 **지금 바라보는 방향**으로 나간다.
+#
+# 반경을 여기서 정해 실어 보낸다: 게이지는 쏜 사람의 자원이고, 날아가는 탄은 그 뒤의
+# 게이지 변화를 알 필요가 없다(피해량을 발사한 쪽이 정해 보내는 것과 같은 규약).
+func _cast_projectile_skill(skill: SkillData, gauge_ratio: float) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+
+	var projectile = PROJECTILE_SCENE.instantiate()
+	host.add_child(projectile)
+	projectile.global_position = global_position
+	projectile.setup(
+		_facing_direction(),
+		skill.projectile_speed,
+		skill.get_effective_power(get_stats().get_goddess_skill_boost()),
+		self,
+		skill.projectile_range,
+		PROJECTILE_HIT_RADIUS,
+		skill.apply_effect_id,
+		data.tint if data != null else Color.WHITE,
+		true,
+		skill.get_effective_radius(gauge_ratio)
+	)
+
 # ===== 고유 스킬 (Unique skill) =====
 
 # 키 슬롯(Q·E)에 걸린 고유 스킬을 발동한다. 슬롯이 비어 있으면 아무 일도 하지 않는다.
@@ -732,8 +828,14 @@ func try_use_skill(slot: SkillData.InputSlot) -> bool:
 	if get_skill_cooldown_left(skill.skill_id) > 0.0:
 		return false
 
+	# 게이지는 **발동이 확정된 뒤** 소모한다. 쿨타임에 막혀 아무 일도 없었는데 자원만
+	# 사라지면 안 된다. 소모하기 전의 비율이 그대로 이번 시전의 세기가 된다(#259).
+	var gauge_ratio := _consume_skill_gauge(skill)
+
+	if skill.is_projectile():
+		_cast_projectile_skill(skill, gauge_ratio)
 	if skill.shield_percent > 0.0:
-		_cast_shield_skill(skill)
+		_cast_shield_skill(skill, gauge_ratio)
 	if skill.cooldown > 0.0:
 		_skill_cooldowns[skill.skill_id] = skill.cooldown
 	if EventBus:
@@ -764,11 +866,11 @@ func _tick_skill_cooldowns(delta: float) -> void:
 #
 # "가장 체력이 낮은"은 **비율** 기준이다. 절대량으로 재면 최대 체력이 작은 멤버가
 # 만피여도 뽑히는데(1000 만피 < 1200 중 1100), 위험한 쪽을 지키는 스킬의 의도와 어긋난다.
-func _cast_shield_skill(skill: SkillData) -> void:
-	_apply_skill_shield(skill, self)
+func _cast_shield_skill(skill: SkillData, gauge_ratio: float = 0.0) -> void:
+	_apply_skill_shield(skill, self, gauge_ratio)
 	var ally := _lowest_health_party_member()
 	if ally != null:
-		ally._apply_skill_shield(skill, self)
+		ally._apply_skill_shield(skill, self, gauge_ratio)
 
 
 # 자기를 뺀 파티원 중 체력 비율이 가장 낮은 쪽. 없으면 null.
@@ -787,8 +889,8 @@ func _lowest_health_party_member() -> Node:
 
 # 이 노드에 스킬 보호막을 씌운다. 한도(shield_max_percent)에 걸려 실제로 못 받은 만큼은
 # 스킬 몫으로 세지 않는다 — 없는 보호막이 깨지기를 기다리면 폭발이 나지 않는다.
-func _apply_skill_shield(skill: SkillData, caster: Node) -> void:
-	var amount := int(round(max_hp * skill.shield_percent))
+func _apply_skill_shield(skill: SkillData, caster: Node, gauge_ratio: float = 0.0) -> void:
+	var amount := int(round(max_hp * skill.get_effective_shield_percent(gauge_ratio)))
 	if amount <= 0:
 		return
 
@@ -991,6 +1093,9 @@ func try_attack() -> bool:
 
 	# 평타 발생을 먼저 센다. 처형으로 끝나거나 적을 죽인 평타도 "나간 평타"다.
 	_attack_swing_count += 1
+
+	# 파티 전체의 평타가 게이지를 채운다(#259). 표식 충전과 같은 규약이다.
+	_charge_party_skill_gauges()
 	_apply_attack_passives()
 
 	# 패시브 광역 피해가 대상을 먼저 죽일 수 있다.

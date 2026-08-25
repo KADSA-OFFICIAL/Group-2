@@ -38,6 +38,12 @@ var _stack_row: Control
 var _stack_label: Label
 var _stack_fill: ColorRect
 var _stack_track: Control
+
+# 미나 같은 캐릭터 개성 자원(#259). 게이지를 가진 캐릭터를 잡았을 때만 보인다.
+var _gauge_row: Control
+var _gauge_label: Label
+var _gauge_fill: ColorRect
+var _gauge_track: Control
 var _execute_row: Control
 
 # 적 패널: 종류(enemy_id)별 한 줄. 줄은 종류 구성이 바뀔 때만 다시 만든다.
@@ -127,8 +133,19 @@ func _build_mechanics_panel() -> PanelContainer:
 	_mark_label = _mark_row.get_meta("value")
 	body.add_child(_mark_row)
 
-	_stack_row = _build_stack_row()
+	var stack_meter := _build_meter_row("icon_stack", "스택")
+	_stack_row = stack_meter["row"]
+	_stack_label = stack_meter["label"]
+	_stack_track = stack_meter["track"]
+	_stack_fill = stack_meter["fill"]
 	body.add_child(_stack_row)
+
+	var gauge_meter := _build_meter_row("icon_stack", "게이지")
+	_gauge_row = gauge_meter["row"]
+	_gauge_label = gauge_meter["label"]
+	_gauge_track = gauge_meter["track"]
+	_gauge_fill = gauge_meter["fill"]
+	body.add_child(_gauge_row)
 
 	_execute_row = _make_icon_row("icon_execute", "처형 가능", "")
 	body.add_child(_execute_row)
@@ -137,26 +154,38 @@ func _build_mechanics_panel() -> PanelContainer:
 	return panel
 
 
-# 스택은 숫자만으로는 "차고 빠지는 것"이 안 보인다. 가는 게이지를 함께 둔다.
-func _build_stack_row() -> Control:
+# 스택·게이지는 숫자만으로는 "차고 빠지는 것"이 안 보인다. 가는 미터를 함께 둔다.
+#
+# 두 줄이 같은 모양이라 만드는 코드를 하나로 둔다. 노드 참조는 딕셔너리로 돌려주고,
+# 부르는 쪽이 자기 필드에 담는다(GDScript 에 출력 인자가 없다).
+func _build_meter_row(icon_name: String, title_ko: String) -> Dictionary:
 	var row := VBoxContainer.new()
 	row.add_theme_constant_override("separation", 3)
 
-	var top := _make_icon_row("icon_stack", "스택", "")
-	_stack_label = top.get_meta("value")
+	var top := _make_icon_row(icon_name, title_ko, "")
 	row.add_child(top)
 
-	_stack_track = PanelContainer.new()
-	_stack_track.add_theme_stylebox_override("panel", HUDKit.inset(0))
-	_stack_track.custom_minimum_size = Vector2(120, 6)
-	row.add_child(_stack_track)
+	var track := PanelContainer.new()
+	track.add_theme_stylebox_override("panel", HUDKit.inset(0))
+	track.custom_minimum_size = Vector2(120, 6)
+	row.add_child(track)
 
-	_stack_fill = ColorRect.new()
-	_stack_fill.color = UITheme.ACCENT  # 면을 칠하는 것이라 원본 앰버가 맞다
-	_stack_fill.custom_minimum_size = Vector2(0, 6)
-	_stack_track.add_child(_stack_fill)
+	var fill := ColorRect.new()
+	fill.color = UITheme.ACCENT  # 면을 칠하는 것이라 원본 앰버가 맞다
+	fill.custom_minimum_size = Vector2(0, 6)
+	track.add_child(fill)
 
-	return row
+	return {"row": row, "label": top.get_meta("value"), "track": track, "fill": fill}
+
+
+# 미터 채움. 트랙 폭에 비례해 늘린다.
+func _set_meter(track: Control, fill: ColorRect, ratio: float) -> void:
+	var track_width: float = track.size.x
+	if track_width <= 0.0:
+		track_width = track.custom_minimum_size.x
+	var width: float = track_width * clampf(ratio, 0.0, 1.0)
+	fill.custom_minimum_size = Vector2(width, 6)
+	fill.size = Vector2(width, 6)
 
 
 # 아이콘 + 라벨 + 값 한 줄. 값 라벨은 meta["value"]로 꺼낸다.
@@ -405,6 +434,7 @@ func _update_mechanics() -> void:
 
 	_update_mark(controlled)
 	_update_stack(controlled)
+	_update_gauge(controlled)
 	_update_execute(controlled)
 
 	# 세 줄이 전부 숨었으면 제목만 남은 빈 판이 전장을 가린다. 판째로 숨긴다.
@@ -412,6 +442,7 @@ func _update_mechanics() -> void:
 		_mechanics_panel.visible = (
 			(_mark_row != null and _mark_row.visible)
 			or (_stack_row != null and _stack_row.visible)
+			or (_gauge_row != null and _gauge_row.visible)
 			or (_execute_row != null and _execute_row.visible))
 
 
@@ -469,13 +500,25 @@ func _update_stack(controlled: Node) -> void:
 	var maximum: int = CombatConfig.tuning.stack_max
 	_stack_label.text = "%d/%d" % [count, maximum]
 
-	# 게이지 채움. 트랙 폭에 비례해 늘린다.
-	var ratio := 0.0 if maximum <= 0 else clampf(float(count) / float(maximum), 0.0, 1.0)
-	var track_width: float = _stack_track.size.x
-	if track_width <= 0.0:
-		track_width = _stack_track.custom_minimum_size.x
-	_stack_fill.custom_minimum_size = Vector2(track_width * ratio, 6)
-	_stack_fill.size = Vector2(track_width * ratio, 6)
+	var ratio := 0.0 if maximum <= 0 else float(count) / float(maximum)
+	_set_meter(_stack_track, _stack_fill, ratio)
+
+
+# 캐릭터 개성 게이지(#259). 지금은 미나만 갖는다.
+# 게이지를 쓰는 스킬이 게이지 양에 비례해 세지므로, 보이지 않으면 조작할 수 없는 자원이다.
+func _update_gauge(controlled: Node) -> void:
+	if _gauge_row == null:
+		return
+
+	if controlled == null or not controlled.has_method("has_skill_gauge") or not controlled.has_skill_gauge():
+		_gauge_row.visible = false
+		return
+
+	_gauge_row.visible = true
+	var value: int = controlled.get_skill_gauge()
+	var maximum: int = controlled.get_skill_gauge_max()
+	_gauge_label.text = "%d/%d" % [value, maximum]
+	_set_meter(_gauge_track, _gauge_fill, controlled.get_skill_gauge_ratio())
 
 
 # 처형은 버퍼를 조종 중이고 조건을 만족한 적이 있을 때만 뜬다.
