@@ -207,6 +207,9 @@ func _physics_process(delta: float) -> void:
 	_tick_dash(delta)
 	_tick_skill_shield(delta)
 	_tick_skill_cooldowns(delta)
+	# 캐스트와 체인 창은 조종 여부와 무관하게 돈다. 조종을 넘겨도 걸린 것은 계속 흐른다(#263).
+	_tick_cast(delta)
+	_tick_chain_window(delta)
 
 	_process_control(delta)
 
@@ -716,6 +719,8 @@ var _skill_gauge: int = 0
 const PROJECTILE_SCENE := preload("res://entities/combat/Projectile.tscn")
 ## 투사체 스킬의 명중 판정 반경(px). 방울이 적을 스치기만 해도 터지지 않을 만큼만 둔다.
 const PROJECTILE_HIT_RADIUS := 14.0
+## 직선 범위 스킬이 지나간 자리를 잠깐 그리는 표시. 판정은 하지 않는다(#263).
+const BEAM_EFFECT_SCENE := preload("res://entities/combat/BeamEffect.tscn")
 
 
 func has_skill_gauge() -> bool:
@@ -832,15 +837,197 @@ func try_use_skill(slot: SkillData.InputSlot) -> bool:
 	# 사라지면 안 된다. 소모하기 전의 비율이 그대로 이번 시전의 세기가 된다(#259).
 	var gauge_ratio := _consume_skill_gauge(skill)
 
-	if skill.is_projectile():
-		_cast_projectile_skill(skill, gauge_ratio)
-	if skill.grants_shield():
-		_cast_shield_skill(skill, gauge_ratio)
+	# 쿨타임은 **누른 시점**부터 돈다. 캐스트가 끝난 뒤부터 돌면 캐스트를 공속으로 당길수록
+	# 다음 시전까지의 총 대기가 길어져, 강화가 손해가 되는 역전이 생긴다.
 	if skill.cooldown > 0.0:
 		_skill_cooldowns[skill.skill_id] = skill.cooldown
 	if EventBus:
 		EventBus.skill_used.emit(self, skill.skill_id)
+
+	# 시전 시간이 있으면 지금 나가지 않는다. 캐스트가 끝나야 효과가 터진다(#263).
+	if skill.cast_time > 0.0:
+		_begin_cast(skill, gauge_ratio)
+		return true
+
+	_fire_skill_effects(skill, gauge_ratio)
 	return true
+
+
+# ===== 시전 시간 (Cast) =====
+#
+# 누른 뒤 실제로 나가기까지 기다리는 스킬이 있다(태희 E, #263).
+# 실제 대기 시간은 **공속 배수로 나뉜다** — 평타를 쳐서 쌓은 것(원거리 스택)이 그대로
+# 캐스트를 당긴다. 캐스트 중에는 평타가 나가지 않으므로, 그 짧아진 시간이 곧 안전이다.
+#
+# 캐스트가 걸린 뒤 죽거나 기절하면 캐스트는 취소된다. 쿨타임과 게이지는 돌려주지 않는다
+# — 둘 다 "누른 것"의 비용이고, 이미 눌렀기 때문이다.
+
+## 캐스트가 끝나기까지 남은 시간(초). 0 이면 캐스트 중이 아니다.
+var _cast_time_left: float = 0.0
+## 지금 캐스트 중인 스킬.
+var _cast_skill: SkillData = null
+## 누른 시점의 게이지 비율. 캐스트가 끝났을 때의 세기다(게이지는 누를 때 이미 소모됐다).
+var _cast_gauge_ratio: float = 0.0
+
+
+func _begin_cast(skill: SkillData, gauge_ratio: float) -> void:
+	_cast_skill = skill
+	_cast_gauge_ratio = gauge_ratio
+	_cast_time_left = skill.get_cast_time(get_stats().get_attack_speed_multiplier())
+
+
+# 지금 스킬을 시전 중인가.
+func is_casting() -> bool:
+	return _cast_time_left > 0.0
+
+
+# 남은 시전 시간(초).
+func get_cast_time_left() -> float:
+	return maxf(_cast_time_left, 0.0)
+
+
+func _tick_cast(delta: float) -> void:
+	if _cast_time_left <= 0.0:
+		return
+
+	# 기절 등 CONTROL 효과가 스킬을 막으면 캐스트가 끊긴다(평타·이동과 같은 규약).
+	if not is_alive or StatusEffectSystem.blocks_skill(self):
+		_cancel_cast()
+		return
+
+	_cast_time_left -= delta
+	if _cast_time_left > 0.0:
+		return
+
+	var skill := _cast_skill
+	var ratio := _cast_gauge_ratio
+	_cancel_cast()
+	if skill != null:
+		_fire_skill_effects(skill, ratio)
+
+
+func _cancel_cast() -> void:
+	_cast_time_left = 0.0
+	_cast_skill = null
+	_cast_gauge_ratio = 0.0
+
+
+# 스킬이 실제로 하는 일. 즉발 스킬은 누른 즉시, 캐스트 스킬은 캐스트가 끝났을 때 여기로 온다.
+#
+# 한 스킬이 여러 채널을 가질 수 있으므로 else 로 묶지 않는다(미나 E 는 보호막만, 미나 Q 는
+# 투사체만, 태희 Q 는 체인 창만 연다).
+func _fire_skill_effects(skill: SkillData, gauge_ratio: float) -> void:
+	if skill.is_projectile():
+		_cast_projectile_skill(skill, gauge_ratio)
+	if skill.grants_shield():
+		_cast_shield_skill(skill, gauge_ratio)
+	if skill.is_beam():
+		_cast_beam_skill(skill)
+	if skill.chains_basic_attacks():
+		_open_chain_window(skill)
+
+
+# ===== 평타 체인 창 (Chain window) =====
+#
+# 일정 시간 동안 평타 투사체가 다음 적으로 튕긴다(태희 Q, #263).
+# 즉발 피해가 아니라 **평타를 강화하는 창**이라, 창 안에 평타를 몇 번 넣느냐가 곧 값어치다.
+
+## 체인 창이 남은 시간(초). 0 이면 평타는 단일 대상 그대로다.
+var _chain_time_left: float = 0.0
+## 창을 연 스킬. 튕김 횟수·사거리·감쇠의 출처다.
+var _chain_skill: SkillData = null
+
+
+func _open_chain_window(skill: SkillData) -> void:
+	_chain_skill = skill
+	# 겹쳐 쓰면 남은 시간이 **갱신**된다(누적이 아니다). 누적이면 쿨타임이 짧아졌을 때
+	# 창이 영원히 닫히지 않는 구간이 생긴다.
+	_chain_time_left = skill.chain_duration
+
+
+func _tick_chain_window(delta: float) -> void:
+	if _chain_time_left <= 0.0:
+		return
+	_chain_time_left -= delta
+	if _chain_time_left <= 0.0:
+		_chain_time_left = 0.0
+		_chain_skill = null
+
+
+# 지금 평타가 튕기는가. HUD/검증이 읽는다.
+func is_chain_window_open() -> bool:
+	return _chain_time_left > 0.0
+
+
+# 체인 창이 남은 시간(초).
+func get_chain_time_left() -> float:
+	return maxf(_chain_time_left, 0.0)
+
+
+# ===== 직선 범위 스킬 (Beam) =====
+
+# 바라보는 방향으로 뻗는 직사각형 안의 적 **전체**를 관통해 때린다(태희 E, #263).
+#
+# 피해는 대상마다 다르다 — SkillData.get_damage_against() 가 그 적의 **현재 체력**을 보고
+# 정한다. 방어 적용은 대상의 take_damage() 가 하므로 여기서 피해 공식을 다시 쓰지 않는다.
+#
+# 평타가 아니므로 처형·피흡·표식은 걸리지 않는다. 그 셋은 평타의 규칙이다(_resolve_attack_hit).
+func _cast_beam_skill(skill: SkillData) -> void:
+	var origin := global_position
+	var forward := _facing_direction()
+	var side_axis := Vector2(-forward.y, forward.x)
+	var half_width: float = skill.beam_width * 0.5
+	var boost := get_stats().get_goddess_skill_boost()
+
+	for enemy in GameManager.get_all_enemies():
+		if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive:
+			continue
+		var relative: Vector2 = enemy.global_position - origin
+		var along: float = relative.dot(forward)
+		# 등 뒤와 사거리 밖은 제외한다.
+		if along < 0.0 or along > skill.beam_length:
+			continue
+		if absf(relative.dot(side_axis)) > half_width:
+			continue
+		enemy.take_damage(skill.get_damage_against(enemy.hp, boost), self)
+
+	_spawn_beam_effect(origin, forward, skill)
+
+	# 빔에는 노린 대상이 하나로 없다. 아군 AI 는 최근접 적을 스스로 고른다(#257).
+	if is_controlled() and EventBus:
+		EventBus.player_attacked.emit(self, null)
+
+
+# 빔이 지나간 자리를 잠깐 그린다. 아트가 없어 도형이다(투사체·적 플레이스홀더와 같은 규약).
+func _spawn_beam_effect(origin: Vector2, forward: Vector2, skill: SkillData) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+	var effect := BEAM_EFFECT_SCENE.instantiate()
+	host.add_child(effect)
+	effect.global_position = origin
+	effect.setup(forward, skill.beam_length, skill.beam_width, data.tint if data != null else Color.WHITE)
+
+
+# ===== 평타 쿨감 (Cooldown reduction on attack) =====
+
+# 평타 1회가 스킬 쿨타임을 줄인다(태희 E, #263).
+#
+# 대상은 cooldown_reduction_per_attack 을 선언한 스킬뿐이다. 선언하지 않은 스킬은
+# 지금까지처럼 시간으로만 줄어든다.
+func _reduce_skill_cooldowns_on_attack() -> void:
+	if data == null or _skill_cooldowns.is_empty():
+		return
+	for skill in data.skills:
+		if skill == null or skill.cooldown_reduction_per_attack <= 0.0:
+			continue
+		if not _skill_cooldowns.has(skill.skill_id):
+			continue
+		var left: float = float(_skill_cooldowns[skill.skill_id]) - skill.cooldown_reduction_per_attack
+		if left <= 0.0:
+			_skill_cooldowns.erase(skill.skill_id)
+		else:
+			_skill_cooldowns[skill.skill_id] = left
 
 
 # 이 스킬의 남은 쿨타임(초). 0 이면 지금 쓸 수 있다.
@@ -1072,13 +1259,19 @@ func get_attack_cooldown() -> float:
 
 func can_attack() -> bool:
 	# 기절 등 CONTROL 효과가 평타를 막으면 공격할 수 없다.
-	return is_alive and _attack_cooldown_left <= 0.0 and not StatusEffectSystem.blocks_attack(self)
+	# 스킬 캐스트 중에도 평타는 나가지 않는다 — 시전 시간이 이 스킬의 대가다(#263).
+	return is_alive and _attack_cooldown_left <= 0.0 and _cast_time_left <= 0.0 \
+		and not StatusEffectSystem.blocks_attack(self)
 
 # 사거리 안의 적에게 평타를 넣는다. 쿨다운 중이면 아무것도 하지 않는다.
 # 피해량은 PlayerStats.get_physical_attack(), 방어 적용은 대상의 apply_defense()가 한다.
 #
 # 평타는 역할 메커니즘(§8.1 시너지 1단계)이 걸리는 지점이기도 하다.
 # 순서: 처형 판정 -> 피해 -> 표식 부여 -> 표식 충전 -> 스택 축적
+#
+# 평타는 **근접 즉시타격**과 **원거리 투사체** 두 갈래다(#263). 어느 쪽인지는 캐릭터 정의가
+# 정한다(CharacterData.basic_attack_projectile_speed). 갈라지는 것은 "언제·누구에게 닿는가"
+# 뿐이고, 닿았을 때 무슨 일이 일어나는지는 _resolve_attack_hit() 한 곳이 갖는다.
 func try_attack() -> bool:
 	if not can_attack():
 		return false
@@ -1098,27 +1291,53 @@ func try_attack() -> bool:
 
 	# 파티 전체의 평타가 게이지를 채운다(#259). 표식 충전과 같은 규약이다.
 	_charge_party_skill_gauges()
-	_apply_attack_passives()
+
+	# 평타로 줄어드는 스킬 쿨타임(#263). 발생 기준이라 빗나간 탄도 쿨감을 준다.
+	_reduce_skill_cooldowns_on_attack()
+
+	# 이번 평타의 패시브 중 **날아가는 탄에 실려야** 하는 것을 먼저 떼어 낸다.
+	# 나머지는 지금 이 자리에서 터진다.
+	var impact_passive := _projectile_impact_passive()
+	_apply_attack_passives(impact_passive)
+
+	# 원거리 평타: 탄을 쏘고 끝난다. 피해·처형·피흡·표식은 탄이 닿았을 때 걸린다.
+	if data != null and data.has_projectile_basic_attack():
+		_fire_basic_attack_projectile(target, impact_passive)
+		_gain_stack()
+		return true
 
 	# 패시브 광역 피해가 대상을 먼저 죽일 수 있다.
 	if not is_instance_valid(target) or not target.is_alive:
 		_gain_stack()
 		return true
 
+	_resolve_attack_hit(target, get_stats().get_physical_attack())
+	_gain_stack()
+	return true
+
+
+# 평타가 대상에 **닿았을 때** 일어나는 일 전부. 근접 즉시타격과 원거리 탄이 함께 쓴다.
+#
+# 여기가 평타 규칙의 단일 출처다. 투사체 쪽이 이 순서를 흉내 내면 두 벌이 되어
+# 한쪽만 고쳐지는 순간이 온다(Projectile.on_hit 주석과 같은 이유).
+#
+# 순서: 처형 -> 피해 -> 피흡 -> 표식 부여 -> 표식 충전.
+func _resolve_attack_hit(target: Node, damage: int) -> void:
+	if not is_instance_valid(target) or not target.is_alive:
+		return
+
 	# 버퍼: 조건이 맞으면 피해 대신 처형한다.
 	if _try_execute(target):
-		_gain_stack()
-		return true
+		return
 
-	var dealt: int = target.take_damage(get_stats().get_physical_attack(), self)
+	var dealt: int = target.take_damage(damage, self)
 
 	# 원거리 3단계: 실제로 준 피해에 비례해 회복한다(죽인 타격도 포함이다).
 	_apply_lifesteal(dealt)
 
 	# 대상이 이 평타로 죽었으면 이후 처리를 하지 않는다.
 	if not is_instance_valid(target) or not target.is_alive:
-		_gain_stack()
-		return true
+		return
 
 	# 탱커: 표식을 부여한다(이미 있으면 StatusEffectData의 중첩 규칙대로).
 	if _is_role_active(CharacterData.Role.TANK):
@@ -1127,9 +1346,51 @@ func try_attack() -> bool:
 	# 표식 충전은 **파티 전체**의 평타로 이뤄진다(탱커 본인만이 아니다).
 	_charge_mark(target)
 
-	# 원거리: 스택을 쌓는다.
-	_gain_stack()
-	return true
+
+# 평타 투사체를 쏜다.
+#
+# 방향은 **잡은 대상 쪽**이다. 스킬 투사체(_cast_projectile_skill)가 바라보는 방향으로 나가는
+# 것과 다른데, 평타는 조준 조작이 아니라 "사거리 안의 적을 친다"이기 때문이다. 유도는 하지
+# 않으므로 발사 뒤 적이 움직이면 여전히 빗나간다.
+#
+# impact_passive 가 있으면 그 탄은 착탄 지점에서 광역으로 터진다(태희 4타, #263).
+# 광역 위력은 **시전자 물리 공격력 x attack_aoe_power_percent** 이며 반경 안 전원에게 들어간다.
+func _fire_basic_attack_projectile(target: Node, impact_passive: SkillData = null) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+
+	var damage := get_stats().get_physical_attack()
+	var radius := 0.0
+	if impact_passive != null and impact_passive.aoe_radius > 0.0 and impact_passive.attack_aoe_power_percent > 0.0:
+		radius = impact_passive.aoe_radius
+		damage = int(round(float(damage) * impact_passive.attack_aoe_power_percent))
+
+	var projectile = PROJECTILE_SCENE.instantiate()
+	host.add_child(projectile)
+	projectile.global_position = global_position
+	projectile.setup(
+		(target.global_position - global_position),
+		data.basic_attack_projectile_speed,
+		damage,
+		self,
+		data.basic_attack_projectile_range,
+		PROJECTILE_HIT_RADIUS,
+		&"",
+		data.tint,
+		true,
+		radius
+	)
+	# 닿았을 때의 처리는 평타 규칙(위)이 갖는다. 탄은 "언제·누구에게"까지만 정한다.
+	projectile.on_hit = _resolve_attack_hit
+
+	# 체인 창(태희 Q)이 열려 있으면 이 탄은 맞은 뒤 다음 적으로 튕긴다.
+	if _chain_time_left > 0.0 and _chain_skill != null:
+		projectile.setup_chain(
+			_chain_skill.chain_bounces,
+			_chain_skill.chain_range,
+			_chain_skill.chain_damage_percent
+		)
 
 
 # ===== 평타 패시브 (Basic-attack passives) =====
@@ -1139,21 +1400,42 @@ func try_attack() -> bool:
 # 혼자 있어도 작동한다(docs §3 티어2).
 #
 # 데이터가 없으면 아무 일도 하지 않으므로, 패시브를 저작하지 않은 캐릭터의 평타는 이전과 같다.
-func _apply_attack_passives() -> void:
+func _apply_attack_passives(skip: SkillData = null) -> void:
 	if data == null:
 		return
 	for skill in data.skills:
-		if skill == null or skill.every_n_attacks <= 0:
+		if skill == null or skill == skip or skill.every_n_attacks <= 0:
 			continue
 		if _attack_swing_count % skill.every_n_attacks != 0:
 			continue
 		_fire_attack_passive(skill)
 
 
-# 회복하고, 실제로 회복한 양에 비례해 주변 적에게 광역 피해를 준다.
+# 이번 평타에서 발동할 패시브 중 **투사체 착탄 지점**에서 터져야 하는 것. 없으면 null.
 #
-# 기준이 "최대 체력"이 아니라 "잃은 체력"이라 체력이 가득 차 있으면 회복이 0이고,
-# 광역 피해도 회복량에 비례하므로 함께 0이 된다. 몰릴수록 세지는 것이 의도다.
+# 원거리 캐릭터의 광역이 자기 발밑에서 나면 사거리의 의미가 없다. 그래서 이 패시브만
+# 지금 터뜨리지 않고 떼어 두었다가 탄에 실어 보낸다.
+# 근접 캐릭터에게는 실을 탄이 없으므로 항상 null 이다(그쪽은 발밑에서 그대로 터진다).
+func _projectile_impact_passive() -> SkillData:
+	if data == null or not data.has_projectile_basic_attack():
+		return null
+	for skill in data.skills:
+		if skill == null or skill.every_n_attacks <= 0 or not skill.aoe_at_projectile_impact:
+			continue
+		if _attack_swing_count % skill.every_n_attacks != 0:
+			continue
+		return skill
+	return null
+
+
+# 평타 패시브 한 번. 두 채널이 있고, 한 스킬이 둘 다 가질 수도 있다.
+#
+#   ① 회복 + 회복량 비례 광역(미나) — 체력이 가득 차 있으면 회복이 0이고 광역도 0이다.
+#      기준이 "최대 체력"이 아니라 "잃은 체력"이라 몰릴수록 세지는 역전 장치가 된다.
+#   ② 공격력 비례 광역(태희) — 회복과 무관하게 항상 같은 비율로 나간다.
+#
+# ② 는 aoe_at_projectile_impact 가 켜져 있고 시전자가 투사체 평타를 쓰면 여기까지 오지
+# 않는다. 그 경우는 탄이 착탄 지점에서 터뜨린다(_fire_basic_attack_projectile).
 func _fire_attack_passive(skill: SkillData) -> void:
 	var healed := 0
 	if skill.heal_missing_hp_percent > 0.0:
@@ -1162,11 +1444,13 @@ func _fire_attack_passive(skill: SkillData) -> void:
 		if healed > 0:
 			heal(healed)
 
-	if healed <= 0 or skill.heal_to_aoe_damage_percent <= 0.0 or skill.aoe_radius <= 0.0:
-		return
+	var amount := 0
+	if healed > 0 and skill.heal_to_aoe_damage_percent > 0.0:
+		amount += int(round(healed * skill.heal_to_aoe_damage_percent))
+	if skill.attack_aoe_power_percent > 0.0:
+		amount += int(round(get_stats().get_physical_attack() * skill.attack_aoe_power_percent))
 
-	var amount := int(round(healed * skill.heal_to_aoe_damage_percent))
-	if amount <= 0:
+	if amount <= 0 or skill.aoe_radius <= 0.0:
 		return
 
 	for enemy in GameManager.get_all_enemies():
@@ -1426,9 +1710,13 @@ func _find_attack_target() -> Node:
 		return null
 	return nearest
 
-# 평타 사거리. 씬의 AttackArea2D 위치를 기준으로 삼는다.
-# (역할별 사거리 차등은 후속 과제.)
+# 평타 사거리.
+#
+# 캐릭터 정의가 값을 갖고 있으면 그쪽이 우선이다(원거리 평타는 씬 노드보다 훨씬 멀리 닿는다).
+# 없으면 지금까지처럼 씬의 AttackArea2D 위치를 기준으로 삼는다.
 func get_attack_range() -> float:
+	if data != null and data.basic_attack_range > 0.0:
+		return data.basic_attack_range
 	var area := get_node_or_null("AttackArea2D")
 	if area is Node2D:
 		return maxf(area.position.length(), 1.0) * 2.0

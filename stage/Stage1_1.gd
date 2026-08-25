@@ -49,9 +49,12 @@ func load_room() -> void:
 	_begin_judging()
 
 # 파티가 비어 있을 때 쓰는 기본 편성.
-# 순혈 3명이라 각 역할이 1카운트씩 되어 세 시너지가 모두 1단계로 켜진다.
+#
+# 역할 카운트는 탱커 1 / 원거리 1 / 버퍼 2 다(shipduck 이 탱커+버퍼 겸직이므로).
+# 1카운트는 1단계가 켜지고 2카운트는 비활성이라, 이 편성에서는 탱커·원거리 1단계만 켜진다.
+# 원거리 자리는 #263 에서 순혈 원거리 슬롯을 이어받은 taehee 다(플레이스홀더 ranged_pure 대체).
 # (편성 UI가 생기면 이 기본값 대신 플레이어 선택을 쓴다.)
-const DEFAULT_PARTY := [&"shipduck", &"ranged_pure", &"buffer_pure"]
+const DEFAULT_PARTY := [&"shipduck", &"taehee", &"buffer_pure"]
 
 # 파티 멤버를 스폰한다.
 # 캐릭터 정의는 PartySystem(-> CharacterDatabase)이 출처이며 여기서 재정의하지 않는다.
