@@ -107,7 +107,7 @@
 | `aoe_at_projectile_impact` | 그 광역을 시전자 발밑이 아니라 **탄이 멈춘 자리**에서 터뜨린다. 원거리 캐릭터의 광역이 발밑에서 나면 사거리의 의미가 없다 |
 | `chain_duration` / `chain_bounces` / `chain_range` / `chain_damage_percent` | 일정 시간 동안 평타 투사체가 다음 적으로 튕긴다. 감쇠는 **누적**이다(0.6 → 0.36 → 0.216) — 없으면 창이 열린 동안 화력이 그대로 몇 배가 된다 |
 | `cast_time` | 누른 뒤 기다리는 시간. **공속 배수로 나뉜다**(`cast_time / 공속`). 캐스트 중에는 평타가 나가지 않으므로, 짧아진 시간이 곧 안전이다 |
-| `beam_length` / `beam_width` | 원형이 아니라 바라보는 방향으로 뻗는 **직사각형 관통**. 앞의 적이 막아 주지 않는다 |
+| `beam_length` / `beam_width` | 원형이 아니라 **조준 방향**으로 뻗는 **직사각형 관통**. 앞의 적이 막아 주지 않는다. 방향의 출처는 `Player.get_aim_direction()`(#264) |
 | `current_hp_damage_percent` | 맞은 적의 **현재 체력** 비례 피해. 대상마다 다르고, 깎일수록 덜 아프므로 마무리는 못 한다 — `base_power` 가 그 하한이다 |
 | `cooldown_reduction_per_attack` | 평타 1회가 이 스킬의 남은 쿨타임을 줄인다. `every_n_attacks` 와 같은 **발생 기준**이라 빗나간 탄도 준다 |
 

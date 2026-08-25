@@ -246,6 +246,27 @@ func _process_input(_delta: float) -> void:
 			_handle_movement()
 	move_and_slide()
 
+	_process_combat_input()
+
+
+# 평타·스킬 입력(#264). 이동과 나눠 둔 이유: 위쪽은 대시 중에 입력을 무시하는 구간이 있는데,
+# 공격은 그 구간에도 계속 받아야 한다(대시하며 쏘는 것이 이 게임의 회피 조작이다).
+#
+# 차단(기절 등)은 여기서 보지 않는다. can_attack() 과 try_use_skill() 이 이미 CONTROL 효과를
+# 확인하므로, 여기서 한 번 더 보면 차단 규칙의 출처가 두 곳이 된다.
+func _process_combat_input() -> void:
+	# **누르고 있으면** 쿨다운이 도는 대로 반복해 나간다. 연타를 강요하지 않는다 —
+	# 평타는 쿨다운이 리듬을 정하는 행동이라, 입력이 그 리듬보다 빨라도 얻는 것이 없다.
+	if Input.is_action_pressed("attack"):
+		try_attack()
+
+	# 스킬은 **누른 순간** 1회다. 홀드로 반복하면 쿨타임이 도는 즉시 저절로 나가,
+	# "언제 쓸까"라는 판단이 사라진다.
+	if Input.is_action_just_pressed("skill_q"):
+		try_use_skill(SkillData.InputSlot.Q)
+	if Input.is_action_just_pressed("skill_e"):
+		try_use_skill(SkillData.InputSlot.E)
+
 # ===== 아군 AI (Ally AI) =====
 #
 # 직접 조작하는 캐릭터가 **플레이어**, 그 외 파티 캐릭터가 **아군 AI** 다(#257).
@@ -658,7 +679,10 @@ func get_trail_sample(delay: float) -> Dictionary:
 	return {"pos": _trail[0]["pos"], "dir": _trail[0]["dir"]}
 
 
-# 지금 바라보는 방향. 멈춰 있으면 마지막으로 움직인 방향을 쓴다.
+# 이 몸이 향해 움직인 방향. 멈춰 있으면 마지막으로 움직인 방향을 쓴다.
+#
+# **조준이 아니다.** 사람이 어디를 가리키는지는 get_aim_direction() 이 답한다(#264).
+# 이쪽은 아군 AI 와 대열 자취도 함께 쓰는 값이라, 커서를 섞으면 그쪽까지 끌려간다.
 func _facing_direction() -> Vector2:
 	if velocity.length() > 0.01:
 		return velocity.normalized()
@@ -667,26 +691,74 @@ func _facing_direction() -> Vector2:
 	return Vector2.DOWN
 
 
+# ===== 조준 (Aim) =====
+#
+# 발사 방향의 출처다(#264). **조종 중인 캐릭터만** 마우스로 조준한다.
+#
+# 왜 _facing_direction() 을 대체하지 않고 위에 얹는가:
+#   _facing_direction() 은 "이 몸이 어디를 향해 움직였는가"이고 아군 AI 와 적도 같은 뜻으로 쓴다.
+#   조준은 "사람이 어디를 가리키고 있는가"라 마우스가 있는 한 명에게만 있다. 둘은 다른 질문이고,
+#   하나로 합치면 아군 AI 의 방향이 조종 중인 사람의 커서에 끌려간다.
+
+## 마우스가 캐릭터와 이보다 가까우면 방향을 만들 수 없다고 본다(px).
+## 0 과 정확히 비교하면 커서가 몸에 겹칠 때 정규화가 0 벡터를 뱉는다.
+const AIM_DEADZONE := 1.0
+
+
+# 이 캐릭터가 지금 쏘는 방향(단위 벡터).
+#
+# 조종 중이면 커서 쪽, 아니면 지금까지와 같은 진행 방향이다.
+# get_global_mouse_position() 이 카메라 변환을 이미 반영하므로 여기서 다시 계산하지 않는다.
+func get_aim_direction() -> Vector2:
+	if is_controlled():
+		var to_cursor := get_global_mouse_position() - global_position
+		if to_cursor.length() > AIM_DEADZONE:
+			return to_cursor.normalized()
+	return _facing_direction()
+
+
+# 지금 마우스로 조준하고 있는가. 외형·검증이 읽는다.
+func is_aiming() -> bool:
+	return is_controlled()
+
+
 # ===== 워크 애니메이션 (Walk animation) =====
 
-# 지금 속도에 맞는 방향 애니메이션을 재생한다. 멈춰 있으면 정지 포즈로 고정한다.
+# 지금 향한 방향의 애니메이션을 재생한다. 멈춰 있으면 정지 포즈로 고정한다.
 # 시트가 없는 캐릭터는 _anim_sprite가 null이라 아무 일도 하지 않는다.
 #
-# 방향 판정과 멈춤 임계값의 출처는 WalkAnimation이다(적과 같은 규약을 쓴다).
+# 방향의 출처가 둘이다(#264):
+#   조종 중  -> **조준 방향**. 서서 커서만 돌려도 몸이 따라 돈다. 어디를 쏘는지가 보여야 한다.
+#   아군 AI  -> 진행 방향. 마우스가 없으므로 지금까지와 같다.
+#
+# 4방향 시트라 스트레이프(옆걸음) 모션이 없다. 커서를 등지고 걸으면 게걸음처럼 보이는데,
+# 조준과 몸이 어긋나는 쪽이 더 읽기 어려워서 이쪽을 택했다.
+#
+# 애니메이션 이름과 멈춤 임계값의 출처는 WalkAnimation이다(적과 같은 규약을 쓴다).
 func _update_walk_animation() -> void:
 	if _anim_sprite == null:
 		return
 
-	if not WalkAnimation.is_walking(velocity):
+	var walking := WalkAnimation.is_walking(velocity)
+
+	# 어느 애니메이션을 향할 것인가. 아군 AI 가 멈춰 있으면 지금 것을 그대로 둔다
+	# — 멈출 때마다 정면으로 홱 돌아보면 어색하기 때문이다(기존 동작).
+	var anim := _anim_sprite.animation
+	if is_aiming():
+		anim = WalkAnimation.animation_for(get_aim_direction())
+	elif walking:
+		anim = WalkAnimation.animation_for(velocity)
+
+	if not walking:
 		# 멈추면 재생을 세우고 정지 포즈(0번 프레임)로 고정한다.
-		# animation은 그대로 두어 마지막으로 향했던 방향을 유지한다
-		# — 멈출 때마다 정면으로 홱 돌아보면 어색하기 때문이다.
+		# 방향은 위에서 정해진 값을 쓰므로, 조종 중이면 서 있어도 커서를 계속 따라본다.
+		if _anim_sprite.animation != anim:
+			_anim_sprite.animation = anim
 		if _anim_sprite.is_playing():
 			_anim_sprite.stop()
-			_anim_sprite.frame = 0
+		_anim_sprite.frame = 0
 		return
 
-	var anim := WalkAnimation.animation_for(velocity)
 	if _anim_sprite.animation != anim or not _anim_sprite.is_playing():
 		_anim_sprite.play(anim)
 
@@ -772,7 +844,8 @@ func _consume_skill_gauge(skill: SkillData) -> float:
 	return ratio
 
 
-# 투사체 스킬을 쏜다. 조준 UI 가 없으므로 **지금 바라보는 방향**으로 나간다.
+# 투사체 스킬을 쏜다. **커서로 조준한 방향**으로 나간다(#264).
+# 조종 중이 아니면 진행 방향으로 되돌아가지만, 아군 AI 는 스킬을 쓰지 않으므로 실제로는 커서다.
 #
 # 반경을 여기서 정해 실어 보낸다: 게이지는 쏜 사람의 자원이고, 날아가는 탄은 그 뒤의
 # 게이지 변화를 알 필요가 없다(피해량을 발사한 쪽이 정해 보내는 것과 같은 규약).
@@ -785,7 +858,7 @@ func _cast_projectile_skill(skill: SkillData, gauge_ratio: float) -> void:
 	host.add_child(projectile)
 	projectile.global_position = global_position
 	projectile.setup(
-		_facing_direction(),
+		get_aim_direction(),
 		skill.projectile_speed,
 		skill.get_effective_power(get_stats().get_goddess_skill_boost()),
 		self,
@@ -966,7 +1039,7 @@ func get_chain_time_left() -> float:
 
 # ===== 직선 범위 스킬 (Beam) =====
 
-# 바라보는 방향으로 뻗는 직사각형 안의 적 **전체**를 관통해 때린다(태희 E, #263).
+# **커서로 조준한 방향**으로 뻗는 직사각형 안의 적 **전체**를 관통해 때린다(태희 E, #263 · 조준 #264).
 #
 # 피해는 대상마다 다르다 — SkillData.get_damage_against() 가 그 적의 **현재 체력**을 보고
 # 정한다. 방어 적용은 대상의 take_damage() 가 하므로 여기서 피해 공식을 다시 쓰지 않는다.
@@ -974,7 +1047,7 @@ func get_chain_time_left() -> float:
 # 평타가 아니므로 처형·피흡·표식은 걸리지 않는다. 그 셋은 평타의 규칙이다(_resolve_attack_hit).
 func _cast_beam_skill(skill: SkillData) -> void:
 	var origin := global_position
-	var forward := _facing_direction()
+	var forward := get_aim_direction()
 	var side_axis := Vector2(-forward.y, forward.x)
 	var half_width: float = skill.beam_width * 0.5
 	var boost := get_stats().get_goddess_skill_boost()
@@ -1263,7 +1336,7 @@ func can_attack() -> bool:
 	return is_alive and _attack_cooldown_left <= 0.0 and _cast_time_left <= 0.0 \
 		and not StatusEffectSystem.blocks_attack(self)
 
-# 사거리 안의 적에게 평타를 넣는다. 쿨다운 중이면 아무것도 하지 않는다.
+# 평타를 낸다. 쿨다운 중이면 아무것도 하지 않는다.
 # 피해량은 PlayerStats.get_physical_attack(), 방어 적용은 대상의 apply_defense()가 한다.
 #
 # 평타는 역할 메커니즘(§8.1 시너지 1단계)이 걸리는 지점이기도 하다.
@@ -1272,21 +1345,33 @@ func can_attack() -> bool:
 # 평타는 **근접 즉시타격**과 **원거리 투사체** 두 갈래다(#263). 어느 쪽인지는 캐릭터 정의가
 # 정한다(CharacterData.basic_attack_projectile_speed). 갈라지는 것은 "언제·누구에게 닿는가"
 # 뿐이고, 닿았을 때 무슨 일이 일어나는지는 _resolve_attack_hit() 한 곳이 갖는다.
+#
+# **조준 발사**(#264): 사람이 잡은 원거리 캐릭터는 사거리 안에 적이 없어도 커서 쪽으로 쏜다.
+# 조준이 있다는 것은 빗나갈 수 있다는 뜻이고, 맞을 때만 나가면 조준이 장식이 된다.
+# 근접과 아군 AI 는 지금까지대로 사거리 안에 적이 있어야 평타가 나간다.
 func try_attack() -> bool:
 	if not can_attack():
 		return false
 
+	var aimed := _uses_aimed_fire()
 	var target := _find_attack_target()
-	if target == null:
+	if target == null and not aimed:
 		return false
 
 	_attack_cooldown_left = get_attack_cooldown()
 
 	# 아군 AI 가 "플레이어가 지금 때리는 적"을 알아야 한다(#257).
+	#
+	# 조준 발사에서는 이 값이 **커서 아래 적이 아니라 플레이어에게 가장 가까운 적**이다.
+	# 커서 쪽 적을 골라 보내지 않는 이유: 탄이 유도되지 않으므로 "노린 적"이 확정되지 않는데,
+	# 추정으로 하나를 집으면 아군 화력이 플레이어가 실제로 맞히는 적과 어긋난다.
+	# 가까운 적을 함께 치는 편이 조준의 자유와 충돌하지 않는다.
+	# 사거리 안에 적이 없으면 null 이고, 아군 AI 는 그때 자기 최근접 적을 스스로 고른다.
 	if is_controlled() and EventBus:
 		EventBus.player_attacked.emit(self, target)
 
 	# 평타 발생을 먼저 센다. 처형으로 끝나거나 적을 죽인 평타도 "나간 평타"다.
+	# 빗나갈 수 있게 된 뒤에도 이 기준은 그대로다 — 패시브·쿨감의 계약이 "발생"이기 때문이다.
 	_attack_swing_count += 1
 
 	# 파티 전체의 평타가 게이지를 채운다(#259). 표식 충전과 같은 규약이다.
@@ -1314,6 +1399,15 @@ func try_attack() -> bool:
 	_resolve_attack_hit(target, get_stats().get_physical_attack())
 	_gain_stack()
 	return true
+
+
+# 이번 평타가 **커서 조준**으로 나가는가(#264).
+#
+# 셋이 모두 맞아야 한다: 사람이 잡고 있고(마우스가 있다), 캐릭터가 투사체 평타를 쓰며,
+# 그 탄이 날아가 맞을 수 있다. 근접은 조준해도 닿는 거리가 그대로라 대상 판정을 바꾸지 않는다
+# — 근접에 각도 판정을 새로 넣지 않는 것이 확정 스펙이다(#264).
+func _uses_aimed_fire() -> bool:
+	return is_controlled() and data != null and data.has_projectile_basic_attack()
 
 
 # 평타가 대상에 **닿았을 때** 일어나는 일 전부. 근접 즉시타격과 원거리 탄이 함께 쓴다.
@@ -1349,15 +1443,20 @@ func _resolve_attack_hit(target: Node, damage: int) -> void:
 
 # 평타 투사체를 쏜다.
 #
-# 방향은 **잡은 대상 쪽**이다. 스킬 투사체(_cast_projectile_skill)가 바라보는 방향으로 나가는
-# 것과 다른데, 평타는 조준 조작이 아니라 "사거리 안의 적을 친다"이기 때문이다. 유도는 하지
-# 않으므로 발사 뒤 적이 움직이면 여전히 빗나간다.
+# 방향은 두 갈래다(#264):
+#   사람이 잡았으면 **커서 쪽**(get_aim_direction). 노린 적이 없어도 그 방향으로 나간다.
+#   아군 AI 면 **잡은 타겟 쪽**. 마우스가 없으므로 조준할 것이 없다.
+# 어느 쪽이든 유도하지 않는다 — 발사 뒤 적이 움직이면 빗나간다.
 #
 # impact_passive 가 있으면 그 탄은 착탄 지점에서 광역으로 터진다(태희 4타, #263).
 # 광역 위력은 **시전자 물리 공격력 x attack_aoe_power_percent** 이며 반경 안 전원에게 들어간다.
 func _fire_basic_attack_projectile(target: Node, impact_passive: SkillData = null) -> void:
 	var host := get_parent()
 	if host == null:
+		return
+
+	var direction := _basic_attack_direction(target)
+	if direction == Vector2.ZERO:
 		return
 
 	var damage := get_stats().get_physical_attack()
@@ -1370,7 +1469,7 @@ func _fire_basic_attack_projectile(target: Node, impact_passive: SkillData = nul
 	host.add_child(projectile)
 	projectile.global_position = global_position
 	projectile.setup(
-		(target.global_position - global_position),
+		direction,
 		data.basic_attack_projectile_speed,
 		damage,
 		self,
@@ -1391,6 +1490,16 @@ func _fire_basic_attack_projectile(target: Node, impact_passive: SkillData = nul
 			_chain_skill.chain_range,
 			_chain_skill.chain_damage_percent
 		)
+
+
+# 평타 탄이 나갈 방향. 조준이 켜져 있으면 커서 쪽, 아니면 타겟 쪽이다.
+# 둘 다 없으면 0 벡터를 돌려주고, 부르는 쪽이 발사를 접는다.
+func _basic_attack_direction(target: Node) -> Vector2:
+	if _uses_aimed_fire():
+		return get_aim_direction()
+	if is_instance_valid(target):
+		return target.global_position - global_position
+	return Vector2.ZERO
 
 
 # ===== 평타 패시브 (Basic-attack passives) =====
