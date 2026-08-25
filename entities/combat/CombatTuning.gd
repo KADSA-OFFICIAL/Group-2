@@ -189,8 +189,6 @@ class_name CombatTuning
 @export var lifesteal_percent: float = 0.15
 ## 체력이 가득 찬 뒤의 초과 회복분 중 보호막으로 전환되는 비율.
 @export var overheal_to_shield_percent: float = 0.5
-## 보호막 한도(최대 체력 대비 비율). 이 이상은 쌓이지 않는다.
-@export var shield_max_percent: float = 0.3
 
 # ===== 버퍼 1단계 · 처형 =====
 @export_group("버퍼 1단계 (처형)")
@@ -251,7 +249,6 @@ func get_summary() -> Dictionary:
 		"stack_decay_per_sec_uncontrolled": stack_decay_per_sec_uncontrolled,
 		"lifesteal_percent": lifesteal_percent,
 		"overheal_to_shield_percent": overheal_to_shield_percent,
-		"shield_max_percent": shield_max_percent,
 		"execute_hp_percent": execute_hp_percent,
 		"heal_to_damage_percent": heal_to_damage_percent,
 		"capture_hold_seconds": capture_hold_seconds,
@@ -320,7 +317,6 @@ func validate() -> Array[String]:
 		"stun_heal_percent": stun_heal_percent,
 		"lifesteal_percent": lifesteal_percent,
 		"overheal_to_shield_percent": overheal_to_shield_percent,
-		"shield_max_percent": shield_max_percent,
 		"execute_hp_percent": execute_hp_percent,
 		"heal_to_damage_percent": heal_to_damage_percent,
 	}

@@ -30,8 +30,7 @@ class_name SkillData
 # "얼마나 모아서 쓸까"라는 판단과 실제 보호막 양이 어긋난다.
 # 대가: 절대량이라 스텟 스케일이 바뀌면 같이 조정해야 한다(비율 값과 달리 자동으로 따라오지 않는다).
 #
-# 받는 쪽 한도(CombatTuning.shield_max_percent)는 그대로 걸린다 — 그쪽은 "한 캐릭터가 두를 수
-# 있는 총량"의 규칙이라 이 스킬의 성질이 아니다.
+# 받는 쪽 총량 한도는 없다(#261 에서 제거). 여기 적힌 값이 그대로 들어간다.
 
 ## 게이지가 0 일 때 주는 보호막(절대값). 이 스킬의 **최소 보장치**다.
 ## 0 이면서 shield_gauge_bonus 도 0 이면 보호막을 주지 않는 스킬이다.
@@ -178,6 +177,6 @@ func grants_shield() -> bool:
 
 
 # 게이지 비율(0.0~1.0)을 반영한 최종 보호막량(절대값).
-# 받는 쪽의 최대 체력과 무관하다 — 한도(shield_max_percent)는 Player 가 씌울 때 건다.
+# 받는 쪽의 최대 체력과도, 총량 한도와도 무관하다(#261). 이 값이 그대로 들어간다.
 func get_effective_shield(gauge_ratio: float = 0.0) -> int:
 	return shield_base + int(round(clampf(gauge_ratio, 0.0, 1.0) * float(shield_gauge_bonus)))

@@ -887,8 +887,10 @@ func _lowest_health_party_member() -> Node:
 	return best
 
 
-# 이 노드에 스킬 보호막을 씌운다. 한도(shield_max_percent)에 걸려 실제로 못 받은 만큼은
-# 스킬 몫으로 세지 않는다 — 없는 보호막이 깨지기를 기다리면 폭발이 나지 않는다.
+# 이 노드에 스킬 보호막을 씌운다.
+#
+# 실제로 들어간 만큼만 스킬 몫으로 센다. 총량 한도는 없어졌지만(#261) 이 계산은 남겨 둔다 —
+# 없는 보호막이 깨지기를 기다리면 폭발이 나지 않으므로, "실제로 걸린 양"이 계약이다.
 func _apply_skill_shield(skill: SkillData, caster: Node, gauge_ratio: float = 0.0) -> void:
 	var amount := skill.get_effective_shield(gauge_ratio)
 	if amount <= 0:
@@ -1368,8 +1370,9 @@ func _apply_lifesteal(damage_dealt: int) -> void:
 func _gain_shield(amount: int) -> void:
 	if amount <= 0:
 		return
-	var limit := int(round(max_hp * CombatConfig.tuning.shield_max_percent))
-	_shield = mini(_shield + amount, limit)
+	# 총량 한도가 없다(#261). 예전에는 최대 체력 비례로 잘랐는데, 절대값으로 주는 보호막이
+	# 받는 대상에 따라 조용히 잘려 스킬 밸런스가 남의 체력에 묶였다.
+	_shield += amount
 
 
 # 현재 보호막(표시·판정용).

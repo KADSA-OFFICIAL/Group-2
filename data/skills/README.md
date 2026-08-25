@@ -92,7 +92,7 @@
 
 | 값 | 기준 |
 |---|---|
-| `shield_percent` | 원거리 3단계 보호막 한도(`CombatTuning.shield_max_percent` = 0.3)의 절반 |
+| `shield_base` / `shield_gauge_bonus` | 절대값. 게이지 0 에서 100, 가득에서 250. 총량 한도는 없다(#261) |
 | `aoe_radius` | 근접 공격 사거리(`EnemyData.attack_range` 기본값 45)의 2배 |
 | `base_power` | 선례 없음 — 발동 구현 후 조정 |
 | `every_n_attacks` | 3 — 사용자 확정 (임시값 아님) |
