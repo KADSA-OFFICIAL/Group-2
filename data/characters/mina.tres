@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
@@ -9,6 +9,7 @@
 [ext_resource type="Resource" path="res://data/skills/mina_shield_burst.tres" id="12_skill"]
 [ext_resource type="Resource" path="res://data/skills/mina_attack_heal_burst.tres" id="13_passive"]
 [ext_resource type="Resource" path="res://data/skills/mina_bubble_trap.tres" id="14_bubble"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/portraits/mina.png" id="20_portrait"]
 
 [sub_resource type="Resource" id="PlayerStats_mina"]
 script = ExtResource("2_stats")
@@ -31,6 +32,7 @@ skills = Array[ExtResource("11_skilldef")]([ExtResource("12_skill"), ExtResource
 skill_gauge_max = 100
 skill_gauge_gain_per_attack = 2
 sprite_texture = ExtResource("9_shape")
+portrait = ExtResource("20_portrait")
 tint = Color(0.2, 0.8, 0.8, 1)
 sprite_scale = Vector2(2, 2)
 walk_frames = ExtResource("10_walk")
