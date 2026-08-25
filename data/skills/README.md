@@ -54,7 +54,7 @@
 
 - 계산: `최종값 = 기본값 x (1 + 게이지비율 x 보너스비율)`. 게이지 0 이면 기본값 그대로다.
 - 어느 수치가 커지는지는 스킬마다 다르므로 필드를 나눠 두었다.
-  `gauge_radius_bonus_percent`(반경) / `gauge_shield_bonus_percent`(보호막량).
+  `gauge_radius_bonus_percent`(반경, 비율 가산) / `shield_gauge_bonus`(보호막, 절대값 가산).
 - `consumes_gauge = true` 면 시전 시 게이지를 **전량** 소모한다.
   게이지 상한·충전량은 `CharacterData` 가 소유한다 — 캐릭터 개성이라 `CombatTuning` 이 아니다.
 
@@ -108,7 +108,7 @@
 
 | 입력 | 결과 |
 |---|---|
-| `E` 1회 | 자기 자신 + **체력 비율이 가장 낮은 파티원**에게 `max_hp x shield_percent` 보호막 |
+| `E` 1회 | 자기 자신 + **체력 비율이 가장 낮은 파티원**에게 `shield_base + 게이지비율 x shield_gauge_bonus` 보호막 (대상 최대 체력과 무관한 절대값) |
 | `E` 2회 | 살아 있는 보호막을 **그 즉시 전부** 터뜨린다 (보호막을 포기하고 타이밍을 얻는다) |
 
 보호막 지속시간은 **3초**, 쿨타임은 **6초**이고 **시전 시점부터** 돈다.

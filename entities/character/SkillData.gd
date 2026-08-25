@@ -23,12 +23,23 @@ class_name SkillData
 # 버퍼 3단계가 "제공한 힐/보호막 양에 비례한 추가 피해"이고, 문서에 있는 다른 보호막
 # 출처(원거리 3단계)는 §8.2 상 버퍼 3단계와 동시에 켜질 수 없기 때문이다.
 #
-# 왜 절대량이 아니라 비율인가: 대상의 최대 체력이 서로 다르고 성장(PlayerProfile)으로
-# 계속 오른다. 비율이면 스케일이 바뀌어도 의미가 유지된다 — CombatTuning 의
-# shield_max_percent / stun_heal_percent 와 같은 규약이다.
+# **대상의 최대 체력에 비례하지 않는다**(#259). 보호막 양 = shield_base + 게이지비율 x shield_gauge_bonus.
+#
+# 왜 절대량인가: 이 보호막은 **시전자의 자원(게이지)에서 나오는 것**이지 받는 사람의 그릇에서
+# 나오는 것이 아니다. 비율로 두면 같은 게이지를 써도 체력 큰 대상에게 걸릴 때만 두꺼워져,
+# "얼마나 모아서 쓸까"라는 판단과 실제 보호막 양이 어긋난다.
+# 대가: 절대량이라 스텟 스케일이 바뀌면 같이 조정해야 한다(비율 값과 달리 자동으로 따라오지 않는다).
+#
+# 받는 쪽 한도(CombatTuning.shield_max_percent)는 그대로 걸린다 — 그쪽은 "한 캐릭터가 두를 수
+# 있는 총량"의 규칙이라 이 스킬의 성질이 아니다.
 
-## 부여하는 보호막량 (대상 최대 체력 대비 비율). 0 이면 보호막을 주지 않는 스킬이다.
-@export var shield_percent: float = 0.0
+## 게이지가 0 일 때 주는 보호막(절대값). 이 스킬의 **최소 보장치**다.
+## 0 이면서 shield_gauge_bonus 도 0 이면 보호막을 주지 않는 스킬이다.
+@export var shield_base: int = 0
+
+## 게이지가 가득일 때 shield_base 에 **더해지는** 보호막(절대값).
+## 게이지 절반이면 이 값의 절반이 더해진다.
+@export var shield_gauge_bonus: int = 0
 
 ## 보호막 지속시간(초). 0 이면 시간으로는 사라지지 않는다(피해로만 깎인다).
 ##
@@ -83,9 +94,6 @@ class_name SkillData
 
 ## 게이지가 가득일 때 aoe_radius 가 늘어나는 비율. 1.0 이면 반경 2배.
 @export var gauge_radius_bonus_percent: float = 0.0
-
-## 게이지가 가득일 때 shield_percent 가 늘어나는 비율. 1.0 이면 보호막 2배.
-@export var gauge_shield_bonus_percent: float = 0.0
 
 ## 시전하면 게이지를 **전량** 소모하는가.
 ##
@@ -164,6 +172,12 @@ func get_effective_radius(gauge_ratio: float = 0.0) -> float:
 	return aoe_radius * (1.0 + clampf(gauge_ratio, 0.0, 1.0) * gauge_radius_bonus_percent)
 
 
-# 게이지 비율(0.0~1.0)을 반영한 최종 보호막 비율(대상 최대 체력 대비).
-func get_effective_shield_percent(gauge_ratio: float = 0.0) -> float:
-	return shield_percent * (1.0 + clampf(gauge_ratio, 0.0, 1.0) * gauge_shield_bonus_percent)
+# 이 스킬이 보호막을 주는가.
+func grants_shield() -> bool:
+	return shield_base > 0 or shield_gauge_bonus > 0
+
+
+# 게이지 비율(0.0~1.0)을 반영한 최종 보호막량(절대값).
+# 받는 쪽의 최대 체력과 무관하다 — 한도(shield_max_percent)는 Player 가 씌울 때 건다.
+func get_effective_shield(gauge_ratio: float = 0.0) -> int:
+	return shield_base + int(round(clampf(gauge_ratio, 0.0, 1.0) * float(shield_gauge_bonus)))

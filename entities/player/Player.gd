@@ -834,7 +834,7 @@ func try_use_skill(slot: SkillData.InputSlot) -> bool:
 
 	if skill.is_projectile():
 		_cast_projectile_skill(skill, gauge_ratio)
-	if skill.shield_percent > 0.0:
+	if skill.grants_shield():
 		_cast_shield_skill(skill, gauge_ratio)
 	if skill.cooldown > 0.0:
 		_skill_cooldowns[skill.skill_id] = skill.cooldown
@@ -890,7 +890,7 @@ func _lowest_health_party_member() -> Node:
 # 이 노드에 스킬 보호막을 씌운다. 한도(shield_max_percent)에 걸려 실제로 못 받은 만큼은
 # 스킬 몫으로 세지 않는다 — 없는 보호막이 깨지기를 기다리면 폭발이 나지 않는다.
 func _apply_skill_shield(skill: SkillData, caster: Node, gauge_ratio: float = 0.0) -> void:
-	var amount := int(round(max_hp * skill.get_effective_shield_percent(gauge_ratio)))
+	var amount := skill.get_effective_shield(gauge_ratio)
 	if amount <= 0:
 		return
 

@@ -111,7 +111,8 @@
   E 의 **두 번째 누르기(즉시 폭발)는 게이지를 소모하지 않는다** — 소모는 보호막 생성의 비용이다.
 - **연동**: Q 는 **범위**가, E 는 **보호막량**이 게이지에 비례해 커진다.
   계산은 `기본값 x (1 + 게이지비율 x 보너스비율)`이고, 보너스비율은 스킬이 소유한다
-  (`gauge_radius_bonus_percent` / `gauge_shield_bonus_percent`).
+  Q 는 비율 가산(`gauge_radius_bonus_percent`), E 는 절대값 가산(`shield_gauge_bonus`)이다.
+  E 의 보호막은 **대상의 최대 체력에 비례하지 않는다** — 최소 보장치(`shield_base`) 위에 게이지만큼 더해진다.
 - **수치 출처**: 상한·충전량은 `CharacterData`(캐릭터 개성이라 CombatTuning 이 아니다),
   스킬 스케일은 각 `SkillData` 다. 전부 [임시값].
 - 아군 AI 는 스킬을 쓰지 않으므로(§4 [확정]), 미나를 놓아 두면 게이지는 쌓이기만 한다.
