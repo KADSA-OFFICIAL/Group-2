@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="StoryChapterData" load_steps=44 format=3]
+[gd_resource type="Resource" script_class="StoryChapterData" load_steps=45 format=3]
 
 [ext_resource type="Script" path="res://entities/story/StoryChapterData.gd" id="1"]
 [ext_resource type="Script" path="res://entities/story/StoryLineData.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/village.png" id="90_bg_village"]
 
 [sub_resource type="Resource" id="L0"]
 script = ExtResource("2")
@@ -302,6 +303,7 @@ stage_id = &""
 
 [resource]
 script = ExtResource("1")
+background = ExtResource("90_bg_village")
 chapter_id = &"chapter_2"
 number = 2
 title = "불타는 마을"

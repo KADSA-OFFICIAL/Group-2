@@ -13,6 +13,14 @@ class_name StoryChapterData
 @export var title: String = ""
 @export_multiline var summary: String = ""
 
+# ===== 배경 (Background) =====
+#
+# 이 챕터의 기본 배경. 비어 있으면 화면이 챕터 번호로 만든 그라데이션을 깐다
+# (아트가 없던 시절의 대체물이며, 배경이 저작되면 쓰이지 않는다).
+#
+# 장면이 도중에 바뀌면 그 줄에 StoryLineData.background 를 지정한다 — 그 줄부터 바뀐다.
+@export var background: Texture2D = null
+
 # ===== 대본 =====
 @export var lines: Array[StoryLineData] = []
 
