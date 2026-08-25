@@ -70,6 +70,23 @@ enum SecondaryRole {
 # ===== 스킬 (Skills) =====
 @export var skills: Array[SkillData] = []
 
+
+# ===== 스킬 게이지 (Skill gauge) =====
+#
+# 이 캐릭터가 **전투 중 쌓아 쓰는 자원**을 갖는가. 0 이면 게이지가 없다(대부분의 캐릭터).
+#
+# 왜 CharacterData 인가: 게이지는 캐릭터 개성이다. 역할 메커니즘(원거리 스택)처럼 파티
+# 구성으로 켜지고 꺼지는 것이 아니라 그 인물이 항상 갖는 것이라, 수치의 출처가 CombatTuning
+# (전원 공용) 이 아니라 캐릭터 정의다. 스킬 두 개가 같은 게이지를 나눠 쓰므로 SkillData 도 아니다.
+#
+# 충전 규약: **파티 전체의 평타**가 채운다(자기 평타 포함). 표식 충전(docs §8.1)과 같은 규약이다.
+# 시간으로 줄지 않는다 — 쓸 때만 사라진다.
+
+## 게이지 상한. 0 이면 이 캐릭터는 게이지를 갖지 않는다.
+@export var skill_gauge_max: int = 0
+
+## 파티원 평타 1회당 차는 양.
+@export var skill_gauge_gain_per_attack: int = 0
 # ===== 외형 (Appearance) =====
 @export var sprite_texture: Texture2D = null
 ## 흰색 도형 플레이스홀더를 칠하는 색이다. 아래 walk_frames(실제 아트)에는 입히지 않는다
@@ -128,6 +145,11 @@ func get_skill_for_slot(slot: SkillData.InputSlot) -> SkillData:
 		if skill != null and skill.input_slot == slot:
 			return skill
 	return null
+
+
+# 이 캐릭터가 스킬 게이지를 갖는가.
+func has_skill_gauge() -> bool:
+	return skill_gauge_max > 0
 
 
 # ===== 역할 조회 (Role Accessors) =====
@@ -286,6 +308,14 @@ func validate() -> Array[String]:
 	# 겸직인데 주 역할과 같으면 카운트가 중복되므로 데이터 오류다.
 	if secondary_role != SecondaryRole.NONE and get_secondary_role_as_role() == role:
 		problems.append("secondary_role이 주 역할과 같습니다: " + get_role_name())
+
+	# 게이지를 가진 캐릭터는 충전량도 있어야 한다. 충전량이 0이면 영원히 0인 자원이 된다.
+	if skill_gauge_max < 0:
+		problems.append("skill_gauge_max는 0 이상이어야 합니다.")
+	if skill_gauge_max > 0 and skill_gauge_gain_per_attack <= 0:
+		problems.append("skill_gauge_max가 있으면 skill_gauge_gain_per_attack도 0보다 커야 합니다.")
+	if skill_gauge_max == 0 and skill_gauge_gain_per_attack != 0:
+		problems.append("skill_gauge_max가 0인데 skill_gauge_gain_per_attack이 설정되어 있습니다.")
 
 	# 워크 시트를 지정했다면 네 방향이 모두 있어야 한다.
 	# 하나라도 빠지면 그 방향으로 이동할 때 재생할 애니메이션이 없어 외형이 멈춘다.

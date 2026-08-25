@@ -12,10 +12,10 @@
 
 | 파일 | character_id | 역할 | 색 |
 |---|---|---|---|
-| `shipduck.tres` | `shipduck` | 탱커 (순혈) | 파랑 |
+| `shipduck.tres` | `shipduck` | 탱커 + 버퍼 (겸직) | 파랑 |
 | `ranged_pure.tres` | `ranged_pure` | 원거리딜러 (순혈) | 빨강 |
 | `buffer_pure.tres` | `buffer_pure` | 버퍼 (순혈) | 초록 |
-| `mina.tres` | `mina` | 탱커 + 버퍼 (겸직) | 청록 |
+| `mina.tres` | `mina` | 탱커 (순혈) | 청록 |
 | `taehee.tres` | `taehee` | 원거리딜러 + 탱커 (겸직) | 보라 |
 | `seola.tres` | `seola` | 버퍼 + 원거리딜러 (겸직) | 연청 |
 
@@ -49,7 +49,11 @@
 
 ## 현재 상태: 플레이스홀더
 
-**`shipduck`을 제외한 5명은 역할 구성만 채운 플레이스홀더다.**
+**`shipduck`·`mina`·`taehee`·`seola` 를 제외한 2명(`ranged_pure`, `buffer_pure`)은 역할 구성만 채운 플레이스홀더다.**
+
+> 미나와 shipduck 의 역할은 #259 에서 맞바꿨다 — 미나가 순혈 탱커, shipduck 이 겸직(탱커+버퍼)이다.
+> 미나는 로스터에서 유일하게 **스킬 게이지**(`skill_gauge_max` / `skill_gauge_gain_per_attack`)를 갖는다.
+> 파티 전체의 평타가 채우고, 고유 스킬 둘이 게이지에 비례해 세지며 시전 시 전량 소모한다.
 
 - **이름·개성·설정은 미정**이라 표시 이름을 역할로 두었다. 임의로 짓지 않았다.
 - **스텟은 `PlayerStats` 기본값**이다. 캐릭터별 밸런스는 미정이다.

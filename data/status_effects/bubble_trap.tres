@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 1
+stacking = 0
+max_stacks = 1
+effect_id = &"bubble_trap"
+display_name = "방울 가둠"
+description = "미나의 Q(방울)에 맞은 적이 방울에 갇힌다. 이동만 막히고 공격은 막지 않는다 — 근접 적은 사실상 무력화되지만 원거리 적은 계속 쏘므로, 파티가 자리를 잡는 시간을 벌 뿐 완전 정지는 아니다. CC이므로 디버프로 취급되며 버퍼 처형의 조건을 만족시킨다. 지속시간은 [임시값]이다(#259)."
+is_debuff = true
+duration = 1.5
+blocks_movement = true
+blocks_attack = false
+blocks_skill = false

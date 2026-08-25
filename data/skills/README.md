@@ -22,8 +22,9 @@
 
 | 스킬 | 캐릭터 | 힐/보호막 | 비고 |
 |---|---|---|---|
-| `mina_shield_burst.tres` | `mina` (탱커+버퍼) | **보호막** | 이 제약을 충족하는 스킬 |
-| `mina_attack_heal_burst.tres` | `mina` (탱커+버퍼) | **회복** | 평타 패시브 (아래) |
+| `mina_shield_burst.tres` | `mina` (탱커) | **보호막** | 이 제약을 충족하는 스킬. 게이지에 비례해 보호막이 두꺼워진다(#259) |
+| `mina_attack_heal_burst.tres` | `mina` (탱커) | **회복** | 평타 패시브 (아래) |
+| `mina_bubble_trap.tres` | `mina` (탱커) | — | 투사체 + 착탄 광역 + 이동 봉인. 게이지에 비례해 범위가 커진다(#259) |
 
 나머지 5명의 고유 스킬은 미정이다(§3 [미정]).
 
@@ -43,7 +44,30 @@
 
 | 캐릭터 | `Q` | `E` |
 |---|---|---|
-| `mina` | (비어 있음) | `mina_shield_burst` |
+| `mina` | `mina_bubble_trap` | `mina_shield_burst` |
+
+
+## 스킬 게이지 연동 (#259)
+
+게이지를 가진 캐릭터(`CharacterData.skill_gauge_max > 0`, 지금은 미나뿐)의 스킬은
+게이지에 비례해 세진다.
+
+- 계산: `최종값 = 기본값 x (1 + 게이지비율 x 보너스비율)`. 게이지 0 이면 기본값 그대로다.
+- 어느 수치가 커지는지는 스킬마다 다르므로 필드를 나눠 두었다.
+  `gauge_radius_bonus_percent`(반경, 비율 가산) / `shield_gauge_bonus`(보호막, 절대값 가산).
+- `consumes_gauge = true` 면 시전 시 게이지를 **전량** 소모한다.
+  게이지 상한·충전량은 `CharacterData` 가 소유한다 — 캐릭터 개성이라 `CombatTuning` 이 아니다.
+
+## 투사체 스킬 (projectile_speed / projectile_range)
+
+`projectile_speed` 가 0 보다 크면 그 자리에서 즉시 발동하지 않고 **탄을 날린다**.
+비행·명중 판정은 `Projectile` 이 하며, 적 탄과 같은 씬을 쓴다(코드를 두 벌 두지 않는다).
+
+- 적에 닿으면 그 자리에서, 아무것도 못 맞히면 **최대 사거리에서** 터진다.
+  빗나가도 아무 일이 없으면 조준을 요구하는 대가만 있고 보상이 없다.
+- `aoe_radius` 가 있으면 착탄 지점 반경 안의 **모두**에게 들어간다.
+- `apply_effect_id` 가 있으면 살아남은 대상에게 그 상태 효과를 건다.
+  효과의 정의(지속시간·봉인 범위)는 `StatusEffectData` 가 소유한다.
 
 ## 평타 패시브 (every_n_attacks)
 
@@ -68,7 +92,7 @@
 
 | 값 | 기준 |
 |---|---|
-| `shield_percent` | 원거리 3단계 보호막 한도(`CombatTuning.shield_max_percent` = 0.3)의 절반 |
+| `shield_base` / `shield_gauge_bonus` | 절대값. 게이지 0 에서 100, 가득에서 250. 총량 한도는 없다(#261) |
 | `aoe_radius` | 근접 공격 사거리(`EnemyData.attack_range` 기본값 45)의 2배 |
 | `base_power` | 선례 없음 — 발동 구현 후 조정 |
 | `every_n_attacks` | 3 — 사용자 확정 (임시값 아님) |
@@ -84,7 +108,7 @@
 
 | 입력 | 결과 |
 |---|---|
-| `E` 1회 | 자기 자신 + **체력 비율이 가장 낮은 파티원**에게 `max_hp x shield_percent` 보호막 |
+| `E` 1회 | 자기 자신 + **체력 비율이 가장 낮은 파티원**에게 `shield_base + 게이지비율 x shield_gauge_bonus` 보호막 (대상 최대 체력과 무관한 절대값) |
 | `E` 2회 | 살아 있는 보호막을 **그 즉시 전부** 터뜨린다 (보호막을 포기하고 타이밍을 얻는다) |
 
 보호막 지속시간은 **3초**, 쿨타임은 **6초**이고 **시전 시점부터** 돈다.
