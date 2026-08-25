@@ -85,6 +85,10 @@ const BLACKOUT_TIME := 0.45
 # ===== 챕터 타이틀 / 장면 페이드 (#137) =====
 # 전체 길이가 2초를 넘지 않게 잡는다. 두 번째부터는 기다리고 싶지 않은 구간이라
 # 언제든 눌러서 건너뛸 수 있다.
+# 배경을 살짝 흐리게 하는 셰이더. 인물·대사 상자가 앞에 서도록 배경을 한 단계 뒤로 민다.
+# 세기는 이 파일의 blur_radius 기본값(텍셀)이 정한다.
+const BACKGROUND_BLUR := preload("res://screens/story/background_blur.gdshader")
+
 # 장면(배경)이 바뀔 때 새 배경이 떠오르는 시간.
 # 타이틀 페이드보다 짧다 — 대사가 이미 나와 있는데 배경만 오래 넘어가면 대사를 가린다.
 const SCENE_FADE_TIME := 0.35
@@ -247,6 +251,7 @@ func _build() -> void:
 	_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_background.stretch_mode = TextureRect.STRETCH_SCALE
 	_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_background.material = _make_blur_material()
 	_shake_layer.add_child(_background)
 
 	# 인물이 서는 자리. 컨테이너가 아니라 맨 Control 이라 자식 위치를 우리가 정한다.
@@ -529,6 +534,8 @@ func _set_background(texture: Texture2D, fade: bool) -> void:
 	overlay.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.modulate.a = 0.0
+	# 겹치는 장도 같은 흐림을 써야 한다. 안 그러면 전환하는 동안만 선명해졌다 흐려진다.
+	overlay.material = _make_blur_material()
 	_background.add_child(overlay)
 
 	var tween := overlay.create_tween()
@@ -537,6 +544,14 @@ func _set_background(texture: Texture2D, fade: bool) -> void:
 	tween.tween_callback(func():
 		_background.texture = texture
 		overlay.queue_free())
+
+
+# 배경용 흐림 머티리얼. 배경 노드와 전환용 겹침 장이 각자 하나씩 갖는다
+# (머티리얼을 공유하면 한쪽 uniform 을 바꿀 때 다른 쪽도 함께 바뀐다).
+func _make_blur_material() -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = BACKGROUND_BLUR
+	return material
 
 
 # ===== 인물 =====
