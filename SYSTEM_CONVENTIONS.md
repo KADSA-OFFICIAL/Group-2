@@ -25,6 +25,7 @@
 | CharacterData | `entities/character/CharacterData.gd` | 캐릭터 정의(이름/스텟/스킬/외형/장비) (Resource) | 캐릭터 정의 |
 | SkillData | `entities/character/SkillData.gd` | 스킬 데이터 정의 (Resource) | 스킬 정의 |
 | EquipmentData | `entities/equipment/EquipmentData.gd` | 장비 정의(슬롯/스텟보너스/제작비용) (Resource) | 장비 정의 |
+| MusicSystem | `autoload/MusicSystem.gd` | 배경음악 재생(한 번에 한 곡, 페이드) | 재생 중인 트랙 |
 
 > 새 autoload/시스템을 추가하면 **이 표에 한 줄 추가**한다.
 
