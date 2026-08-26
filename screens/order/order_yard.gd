@@ -33,9 +33,26 @@ const RIDGE_FAR_HEIGHT: float = 0.085
 const RIDGE_NEAR_HEIGHT: float = 0.055
 const RIDGE_SEGMENTS: int = 48
 
-# 다져진 마당. 건물이 모인 가운데가 밟혀서 풀이 없어진 자리다.
-const PLAZA_CENTER := Vector2(0.5, 0.72)
-const PLAZA_RADIUS := Vector2(0.42, 0.20)
+# ===== 원근 광장 (#319) =====
+#
+# 바닥을 사다리꼴로 깐다. 안쪽이 좁고 앞이 넓어야 "서 있는 곳"으로 보인다.
+# 직사각 색면은 아무리 칠해도 위에서 내려다본 지도로 읽힌다.
+
+# 광장의 안쪽 끝(위)과 바깥 끝(아래). 세로 비율이다.
+const PLAZA_FAR_Y: float = 0.56
+const PLAZA_NEAR_Y: float = 1.02      # 화면 아래로 조금 넘겨 잘리게 둔다
+
+# 각 끝에서 가운데로부터의 반폭(뜰 가로 대비). 안쪽이 훨씬 좁다 = 원근.
+const PLAZA_FAR_HALF: float = 0.22
+const PLAZA_NEAR_HALF: float = 0.64
+
+# 돌 이음매. 세로줄은 소실점으로 모이고, 가로줄은 멀수록 촘촘해진다.
+const PAVE_COLUMNS: int = 9
+const PAVE_ROWS: int = 7
+
+# 지평선 뒤 마을. 뜰이 마을 한가운데라는 것을 보여 준다.
+const VILLAGE_ROOFS: int = 13
+const VILLAGE_HEIGHT: float = 0.115
 
 # 그림자. 바닥에 눕는 타원이라 세로가 훨씬 납작하다.
 const SHADOW_SEGMENTS: int = 20
@@ -49,6 +66,28 @@ const BUILDING_SHADOW_WIDTH: float = 0.62
 # 신도 그림자 폭(신도 그림 폭 대비).
 const MEMBER_SHADOW_WIDTH: float = 0.52
 
+# ===== 건물 하나씩 보기 (#319) =====
+#
+# 한 번에 한 채만 세운다. 넷을 늘어놓으면 건물이 뜰 폭의 0.2 밖에 안 되어
+# 아무리 잘 그려도 자세히 볼 수 없고, 넷이 늘 다 보이므로 "옮겨 다닌다"는
+# 감각이 없다 — 이동이 아니라 선택이 된다.
+
+# 초점 건물이 서는 자리(발바닥 가운데)와 폭. 광장 안쪽 끝에 세운다.
+const FEATURE_SPOT := Vector2(0.5, 0.66)
+const FEATURE_WIDTH: float = 0.40
+
+# 저작된 width_ratio 를 상대 크기로만 쓴다. 이 값이 기준(=1.0배)이다.
+# 성소(0.24)는 조금 크게, 창고(0.18)는 조금 작게 선다 — 데이터가 잡은
+# 건물 간 크기 차이를 버리지 않는다.
+const FEATURE_WIDTH_BASE: float = 0.21
+
+# 좌우 이동 화살표.
+const ARROW_SIZE := Vector2(34, 52)
+
+# 아래 건물 탭.
+const TAB_HEIGHT: float = 34.0
+const TAB_MARGIN: float = 8.0
+
 # 건물 플레이스홀더의 집 모양 비율.
 const ROOF_RATIO: float = 0.34        # 전체 높이 중 지붕이 차지하는 몫
 const EAVES_RATIO: float = 0.07       # 처마가 벽 밖으로 나온 폭
@@ -59,12 +98,12 @@ const DOOR_HEIGHT_RATIO: float = 0.42
 # 데이터가 잡은 구도가 무너진다(data/order/README.md 의 width_ratio 가 정본이다).
 const MEMBER_DEPTH_MIN: float = 0.82
 
-# 인물이 걸어 다닐 수 있는 세로 범위(비율).
+# 인물이 걸어 다닐 수 있는 세로 범위(비율). 광장 사다리꼴 안이다(#319).
 # 하늘 위를 걸으면 안 되고, 맨 아래는 발이 잘리므로 조금 띄운다.
 # 건물이 선 자리를 피해 앞마당에서만 걷는다. 인물이 건물 위로 겹쳐 지나가면
 # 어느 쪽이 앞인지 알 수 없어 그림이 뭉개진다.
-const WALK_TOP: float = 0.80
-const WALK_BOTTOM: float = 0.95
+const WALK_TOP: float = 0.70
+const WALK_BOTTOM: float = 0.94
 
 # 인물 이동 속도(뜰 가로 대비 초당 비율). 전투가 아니라 산책이라 느리다.
 const WANDER_SPEED: float = 0.05
@@ -77,10 +116,10 @@ const REST_MIN: float = 0.8
 const REST_MAX: float = 3.0
 
 # 인물 그림 높이(뜰 세로 대비). 워크 시트 원본이 커서 여기서 줄인다.
-const MEMBER_HEIGHT: float = 0.14
+const MEMBER_HEIGHT: float = 0.17
 
 # 워크 시트가 없는 인물이 쓰는 도형 높이(뜰 세로 대비).
-const SHAPE_HEIGHT: float = 0.09
+const SHAPE_HEIGHT: float = 0.11
 
 
 # 뜰을 돌아다니는 사람 하나.
@@ -97,6 +136,8 @@ class Wanderer:
 var _scenery: Control         # 하늘·땅·능선·마당을 직접 그리는 층
 var _shadows: Control         # 건물·신도의 바닥 그림자
 var _yard_layer: Control      # 건물·인물이 올라가는 자리
+var _tabs: HBoxContainer      # 아래 건물 탭
+var _focused: int = 0         # 지금 보고 있는 건물 (OrderSystem.get_buildings() 의 색인)
 var _members: Array = []      # Wanderer
 var _rng := RandomNumberGenerator.new()
 
@@ -136,6 +177,8 @@ func _build() -> void:
 
 	_spawn_buildings()
 	_spawn_members()
+	_build_navigation()
+	_focus(0)
 	_layout()
 
 
@@ -165,13 +208,92 @@ func _draw_scenery() -> void:
 	var ground_near := UITheme.TAN_DEEP.lerp(UITheme.SAGE, 0.16)
 	_draw_gradient(_scenery, Rect2(0.0, horizon, w, h - horizon), ground_far, ground_near)
 
-	# 다져진 마당. 건물이 모인 가운데는 밟혀서 흙이 드러난다.
-	# 테두리를 그리지 않는다 — 선이 있으면 땅이 아니라 판으로 보인다.
-	var plaza := UITheme.TAN_DEEP.lerp(UITheme.TAN, 0.55)
-	plaza.a = 0.55
-	_scenery.draw_colored_polygon(
-		_ellipse(Vector2(w * PLAZA_CENTER.x, h * PLAZA_CENTER.y),
-			w * PLAZA_RADIUS.x, h * PLAZA_RADIUS.y, 36), plaza)
+	# 지평선 뒤 마을 지붕. 뜰이 벌판이 아니라 마을 한가운데라는 것을 보여 준다.
+	_draw_village(w, h, horizon)
+
+	# 돌바닥 광장. 안쪽이 좁은 사다리꼴이라 서 있는 곳으로 읽힌다.
+	_draw_plaza(w, h)
+
+
+# 지평선에 늘어선 마을 지붕. 삼각형 몇 개면 충분하다 — 이 크기에서 더 그리면 얼룩이 된다.
+func _draw_village(w: float, h: float, horizon: float) -> void:
+	var roof := UITheme.SAGE.lerp(UITheme.OUTLINE, 0.30).lerp(UITheme.CREAM, 0.30)
+	var wall := UITheme.TAN_DEEP.lerp(UITheme.CREAM, 0.42)
+	var unit := w / float(VILLAGE_ROOFS)
+	for i in VILLAGE_ROOFS:
+		var cx := unit * (float(i) + 0.5)
+		# 높이를 흔들어 규칙적으로 보이지 않게 한다.
+		var tall := 0.55 + 0.45 * absf(sin(float(i) * 2.7))
+		var height := h * VILLAGE_HEIGHT * tall
+		var half := unit * 0.42
+		# 벽
+		_scenery.draw_rect(Rect2(cx - half * 0.72, horizon - height * 0.45,
+			half * 1.44, height * 0.45), wall)
+		# 지붕
+		_scenery.draw_colored_polygon(PackedVector2Array([
+			Vector2(cx, horizon - height),
+			Vector2(cx + half, horizon - height * 0.45),
+			Vector2(cx - half, horizon - height * 0.45),
+		]), roof)
+
+
+# 광장 사다리꼴 한 변의 가운데에서의 반폭. y 는 뜰 세로 비율이다.
+func _plaza_half(y_ratio: float) -> float:
+	var t := clampf((y_ratio - PLAZA_FAR_Y) / maxf(PLAZA_NEAR_Y - PLAZA_FAR_Y, 0.001), 0.0, 1.0)
+	return lerpf(PLAZA_FAR_HALF, PLAZA_NEAR_HALF, t)
+
+
+# 돌바닥. 세로 이음매는 소실점으로 모이고, 가로 이음매는 멀수록 촘촘해진다.
+# 이 둘이 원근을 만든다 — 격자를 균등하게 그리면 바닥이 다시 평면으로 보인다.
+func _draw_plaza(w: float, h: float) -> void:
+	var far_y := h * PLAZA_FAR_Y
+	var near_y := h * PLAZA_NEAR_Y
+	var far_half := w * PLAZA_FAR_HALF
+	var near_half := w * PLAZA_NEAR_HALF
+	var cx := w * 0.5
+
+	var stone := UITheme.STONE_GRAY.lerp(UITheme.TAN, 0.42)
+	var stone_far := stone.lerp(UITheme.CREAM, 0.30)
+
+	var quad := PackedVector2Array([
+		Vector2(cx - far_half, far_y), Vector2(cx + far_half, far_y),
+		Vector2(cx + near_half, near_y), Vector2(cx - near_half, near_y),
+	])
+	_scenery.draw_colored_polygon(quad, stone)
+
+	# 안쪽을 옅게 덮어 대기 원근을 준다.
+	var haze := stone_far
+	haze.a = 0.30
+	_scenery.draw_colored_polygon(PackedVector2Array([
+		Vector2(cx - far_half, far_y), Vector2(cx + far_half, far_y),
+		Vector2(cx + lerpf(far_half, near_half, 0.35), lerpf(far_y, near_y, 0.35)),
+		Vector2(cx - lerpf(far_half, near_half, 0.35), lerpf(far_y, near_y, 0.35)),
+	]), haze)
+
+	var seam := UITheme.OUTLINE
+	seam.a = 0.16
+	var width := maxf(w * 0.0025, 1.0)
+
+	# 세로 이음매 — 소실점으로 모인다.
+	for i in range(1, PAVE_COLUMNS):
+		var t := float(i) / float(PAVE_COLUMNS) * 2.0 - 1.0
+		_scenery.draw_line(Vector2(cx + far_half * t, far_y),
+			Vector2(cx + near_half * t, near_y), seam, width)
+
+	# 가로 이음매 — 간격이 멀수록 좁아진다(t 를 제곱해 앞쪽을 벌린다).
+	for i in range(1, PAVE_ROWS):
+		var t := float(i) / float(PAVE_ROWS)
+		var y := lerpf(far_y, near_y, t * t)
+		var half := lerpf(far_half, near_half, t * t)
+		_scenery.draw_line(Vector2(cx - half, y), Vector2(cx + half, y), seam, width)
+
+	# 광장 가장자리. 잔디와 만나는 선만 살짝 준다.
+	var rim := UITheme.OUTLINE
+	rim.a = 0.22
+	_scenery.draw_polyline(PackedVector2Array([
+		Vector2(cx - near_half, near_y), Vector2(cx - far_half, far_y),
+		Vector2(cx + far_half, far_y), Vector2(cx + near_half, near_y),
+	]), rim, maxf(w * 0.004, 1.5))
 
 
 # 건물과 신도의 바닥 그림자. 이것이 없으면 전부 배경 위에 떠 있는 스티커로 보인다.
@@ -180,11 +302,12 @@ func _draw_shadows() -> void:
 		return
 
 	for child in _yard_layer.get_children():
-		if not child.has_meta("building"):
+		if not child.has_meta("building") or not (child as Control).visible:
 			continue
-		var building: OrderBuildingData = child.get_meta("building")
-		var foot := Vector2(size.x * building.spot.x, size.y * building.spot.y)
-		_draw_shadow(foot, size.x * building.width_ratio * BUILDING_SHADOW_WIDTH, building.spot.y)
+		var holder: Control = child
+		var foot := Vector2(holder.position.x + holder.size.x * 0.5,
+			holder.position.y + holder.size.y)
+		_draw_shadow(foot, holder.size.x * BUILDING_SHADOW_WIDTH, FEATURE_SPOT.y)
 
 	for walker in _members:
 		var node: Node2D = walker.node
@@ -635,6 +758,97 @@ func _draw_granary(on: CanvasItem, w: float, h: float, p: Dictionary) -> void:
 	_jars(on, Vector2(w * 0.06, h), w * 0.10, 2, p, edge)
 
 
+# 좌우 화살표와 아래 건물 탭. 뜰 안에 둔다 — OrderScreen 의 3단 레이아웃은 건드리지 않는다.
+func _build_navigation() -> void:
+	var buildings := OrderSystem.get_buildings()
+	if buildings.size() <= 1:
+		return
+
+	_tabs = HBoxContainer.new()
+	_tabs.add_theme_constant_override("separation", 6)
+	_tabs.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_tabs.offset_top = -(TAB_HEIGHT + TAB_MARGIN)
+	_tabs.offset_bottom = -TAB_MARGIN
+	_tabs.offset_left = TAB_MARGIN
+	_tabs.offset_right = -TAB_MARGIN
+	_tabs.alignment = BoxContainer.ALIGNMENT_CENTER
+	add_child(_tabs)
+
+	for i in buildings.size():
+		var building: OrderBuildingData = buildings[i]
+		var tab := Button.new()
+		tab.text = building.display_name
+		tab.custom_minimum_size = Vector2(0, TAB_HEIGHT)
+		tab.focus_mode = Control.FOCUS_NONE
+		tab.add_theme_font_size_override("font_size", HUDKit.SIZE_CAPTION)
+		tab.add_theme_font_override("font", HUDKit.weight_font(0.4))
+		var tab_icon := HUDKit.load_icon(building.icon_name)
+		if tab_icon != null:
+			tab.icon = tab_icon
+			tab.expand_icon = true
+			tab.add_theme_constant_override("icon_max_width", 18)
+		tab.pressed.connect(_focus.bind(i))
+		_tabs.add_child(tab)
+
+	_add_arrow(-1, Control.PRESET_CENTER_LEFT)
+	_add_arrow(1, Control.PRESET_CENTER_RIGHT)
+
+
+func _add_arrow(step: int, preset: int) -> void:
+	var arrow := Button.new()
+	arrow.text = "<" if step < 0 else ">"
+	arrow.focus_mode = Control.FOCUS_NONE
+	arrow.custom_minimum_size = ARROW_SIZE
+	arrow.size = ARROW_SIZE
+	arrow.add_theme_font_size_override("font_size", HUDKit.SIZE_VALUE)
+	arrow.add_theme_font_override("font", HUDKit.weight_font(0.6))
+	arrow.add_theme_color_override("font_color", HUDKit.text_1())
+	arrow.add_theme_color_override("font_hover_color", HUDKit.text_1())
+	arrow.add_theme_stylebox_override("normal", HUDKit.ghost())
+	arrow.add_theme_stylebox_override("hover", HUDKit.ghost_hover())
+	arrow.add_theme_stylebox_override("pressed", HUDKit.ghost_pressed())
+	arrow.set_anchors_preset(preset)
+	arrow.offset_left = 6.0 if step < 0 else -(ARROW_SIZE.x + 6.0)
+	arrow.offset_right = arrow.offset_left + ARROW_SIZE.x
+	arrow.offset_top = -ARROW_SIZE.y * 0.5
+	arrow.offset_bottom = ARROW_SIZE.y * 0.5
+	arrow.pressed.connect(_step_focus.bind(step))
+	add_child(arrow)
+
+
+func _step_focus(step: int) -> void:
+	var count := OrderSystem.get_buildings().size()
+	if count <= 0:
+		return
+	# 끝에서 반대쪽으로 넘어간다. 막다른 끝이 있으면 눌러도 아무 일이 없어 고장으로 보인다.
+	_focus((_focused + step + count) % count)
+
+
+func _focus(index: int) -> void:
+	var buildings := OrderSystem.get_buildings()
+	if index < 0 or index >= buildings.size():
+		return
+	_focused = index
+
+	var i := 0
+	for child in _yard_layer.get_children():
+		if not child.has_meta("building"):
+			continue
+		(child as Control).visible = i == _focused
+		i += 1
+
+	if _tabs != null:
+		for t in _tabs.get_children():
+			var tab: Button = t
+			var on := tab.get_index() == _focused
+			tab.add_theme_stylebox_override("normal",
+				HUDKit.card(true) if on else HUDKit.ghost())
+			tab.add_theme_color_override("font_color",
+				HUDKit.text_on_accent() if on else HUDKit.text_2())
+
+	_layout()
+
+
 func _on_building_pressed(building: OrderBuildingData) -> void:
 	# 화면을 여는 주체는 화면이다. 데이터가 가리키는 경로를 열기만 한다.
 	var scene := load(building.screen_path) as PackedScene
@@ -680,8 +894,13 @@ func _make_wanderer(character: CharacterData) -> Wanderer:
 	return walker
 
 
+# 신도가 갈 자리 하나. **광장 안**에서만 고른다(#319).
+# 사다리꼴을 무시하고 가로로 균등하게 뽑으면 안쪽에서 잔디 위를 걷는다.
 func _random_spot() -> Vector2:
-	return Vector2(_rng.randf_range(0.07, 0.93), _rng.randf_range(WALK_TOP, WALK_BOTTOM))
+	var y := _rng.randf_range(WALK_TOP, WALK_BOTTOM)
+	# 발이 광장 밖으로 나가지 않게 가장자리를 조금 물린다.
+	var half := _plaza_half(y) * 0.88
+	return Vector2(0.5 + _rng.randf_range(-half, half), y)
 
 
 func _process(delta: float) -> void:
@@ -741,6 +960,10 @@ func _layout() -> void:
 		_shadows.queue_redraw()
 
 
+# 초점 건물 하나만 광장 안쪽에 세운다(#319).
+#
+# 저작된 spot 은 쓰지 않는다 — 자리는 이제 광장이 정한다. 다만 width_ratio 는
+# **건물 간 상대 크기**로 계속 쓴다(성소가 창고보다 크다는 저작 의도를 버리지 않는다).
 func _layout_buildings() -> void:
 	for child in _yard_layer.get_children():
 		if not child.has_meta("building"):
@@ -748,8 +971,11 @@ func _layout_buildings() -> void:
 
 		var building: OrderBuildingData = child.get_meta("building")
 		var holder: Control = child
+		if not holder.visible:
+			continue
 
-		var width: float = size.x * building.width_ratio
+		var relative: float = building.width_ratio / FEATURE_WIDTH_BASE
+		var width: float = size.x * FEATURE_WIDTH * relative
 		# 높이는 그림 비율이 정한다. 그림이 없으면 정사각에 가깝게 둔다.
 		var ratio := 1.15
 		if building.art != null:
@@ -760,10 +986,9 @@ func _layout_buildings() -> void:
 
 		holder.size = Vector2(width, height)
 		_fit_placeholder_icon(holder, width)
-		# spot 은 **바닥 가운데**다. 건물은 그 위로 선다.
 		holder.position = Vector2(
-			size.x * building.spot.x - width * 0.5,
-			size.y * building.spot.y - height)
+			size.x * FEATURE_SPOT.x - width * 0.5,
+			size.y * FEATURE_SPOT.y - height)
 
 
 # 플레이스홀더 아이콘 여백. 건물 폭에 비례해 아이콘이 커진다.
