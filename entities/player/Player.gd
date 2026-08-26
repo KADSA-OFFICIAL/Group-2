@@ -1976,6 +1976,10 @@ func take_damage(amount: int, source = null) -> int:
 	_shield -= absorbed
 	dealt -= absorbed
 
+	# 남은 체력보다 큰 피해는 넘치는 만큼 버려진다(EnemyBase 와 같은 규약).
+	# 자르지 않으면 아래 반사가 실제로 들어간 피해보다 크게 나간다.
+	dealt = mini(dealt, hp)
+
 	# 스킬 보호막이 이 피해로 깎였는지 본다. 0이 되면 **깨짐**이고 폭발 계기다.
 	# 원거리 3단계가 준 보호막만 깎인 경우에는 아무 일도 일어나지 않는다.
 	var skill_shield_broke := false
@@ -1984,7 +1988,6 @@ func take_damage(amount: int, source = null) -> int:
 		skill_shield_broke = _skill_shield <= 0
 
 	hp -= dealt
-	hp = max(hp, 0)
 
 	if EventBus:
 		# 흡수분도 "맞은 양"이다. 화면에 뜨는 숫자가 실제 타격과 어긋나면 안 된다.
