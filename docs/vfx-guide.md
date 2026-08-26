@@ -18,11 +18,16 @@
   자리를 0.18초 그리고 사라진다(#263). **판정을 하지 않는 순수 연출 노드**의 선례다.
 - [`entities/combat/Projectile.gd`](../entities/combat/Projectile.gd) `_draw()` — 원 + 외곽선
   도형 탄.
+- [`entities/combat/ChainArc.gd`](../entities/combat/ChainArc.gd) — 태희 Q 의 탄이 다음 적으로
+  튕긴 것을 0.22초 그리고 사라진다(#329). 탄이 방향만 틀고 같은 노드를 재사용해서
+  "튕겼다"는 사건이 화면에 없던 것을 채운다. 굵기가 한쪽으로 좁아져 넘어간 방향이 읽힌다.
 - [`entities/ui/HealthBar.gd`](../entities/ui/HealthBar.gd) — 머리 위 체력 바.
 
 **없다:**
 
-- 피해 숫자, 히트 플래시, 착탄 표시, 보호막 껍질, 상태 이상 표시, 화면 흔들림.
+- 착탄 표시, 보호막 껍질, 화면 흔들림.
+- 처형 연출, `empowered`(설아 E) 표시 — 둘 다 일어난 것이 화면에 전혀 안 보인다.
+- 체인 **감쇠** 표시. 튕길수록 피해가 주는데(`chain_damage_percent`) 선 모양은 매번 같다(#329 Non-goals).
 - 게이지를 **전장에서** 읽을 표시. 지금은 HUD 미터로만 보인다.
 
 아래 §1 의 규약 중 세 줄은 새로 만든 것이 아니라 `BeamEffect` 에 이미 코드로 굳어 있던
