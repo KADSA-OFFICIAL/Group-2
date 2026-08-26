@@ -1152,6 +1152,10 @@ static func body_of(panel_node: PanelContainer) -> VBoxContainer:
 const HOVER_SCALE := 1.03       # 호버 확대율
 const HOVER_TIME := 0.09
 
+# 호버 확대가 좌우로 삐져나오는 양(px). 목록 폭 약 300px 에 HOVER_SCALE 1.03 이면
+# 한쪽에 4.5px 다. 폭이 조금 달라져도 덮이도록 6 으로 둔다. hover_safe() 가 쓴다.
+const HOVER_INSET := 6.0
+
 
 # scale 의 기준점을 노드 가운데로 옮긴다.
 #
@@ -1177,6 +1181,29 @@ static func _on_pivot_resize(node: Control) -> void:
 # trigger 는 마우스를 실제로 받는 노드다. 카드는 클릭을 받으려고 전면에 투명 Button 을
 # 얹는 구조라, 카드 자신은 마우스 신호를 받지 못한다. 그래서 신호는 버튼에서 듣고
 # 크기는 카드에 준다.
+# 호버 확대가 잘리지 않게 목록에 좌우 여백을 준다.
+#
+# 왜 필요한가 (실제 겪은 문제):
+#   카드는 ScrollContainer 안에서 가로를 꽉 채운다(SIZE_EXPAND_FILL). 그 상태로
+#   hover_lift 가 HOVER_SCALE(1.03) 만큼 키우면 카드가 스크롤 뷰포트보다 넓어지고,
+#   ScrollContainer 는 스크롤을 위해 반드시 잘라내므로 **좌우 모서리가 납작하게
+#   썰린다.** 스토리 챕터 목록에서 312px 카드가 321px 가 되어 양쪽 4.7px 씩 잘렸다.
+#
+#   확대율을 낮추는 것은 해결이 아니라 은폐다. 카드가 커질 자리를 미리 비워 둔다.
+#
+# 스크롤 안에 넣을 목록을 이 함수로 감싸서 add_child 한다.
+static func hover_safe(content: Control) -> MarginContainer:
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pad.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# 확대분의 절반이 한쪽으로 삐져나온다. 넉넉하게 한 픽셀 더 준다.
+	var inset := int(ceil(HOVER_INSET))
+	pad.add_theme_constant_override("margin_left", inset)
+	pad.add_theme_constant_override("margin_right", inset)
+	pad.add_child(content)
+	return pad
+
+
 static func hover_lift(target: Control, trigger: Control = null) -> void:
 	if target == null:
 		return

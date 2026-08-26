@@ -105,7 +105,7 @@ func _build_roster_panel() -> Control:
 	_roster_grid.add_theme_constant_override("h_separation", 8)
 	_roster_grid.add_theme_constant_override("v_separation", 8)
 	_roster_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_roster_grid)
+	scroll.add_child(HUDKit.hover_safe(_roster_grid))
 	return panel
 
 
