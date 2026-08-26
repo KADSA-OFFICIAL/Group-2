@@ -10,6 +10,9 @@
 > - **[임시값]**: 프로토타입/구현 편의를 위한 임의 값. 밸런싱 대상.
 >
 > 관련 규칙: [SYSTEM_CONVENTIONS.md](../SYSTEM_CONVENTIONS.md), [CLAUDE.md](../CLAUDE.md)의 "기초 시스템" 절.
+>
+> 관련 문서: [vfx-guide.md](vfx-guide.md) — 전투 이펙트(연출) 규약. 이 문서는 전투 규칙과
+> 수치를 정하고, 그것을 **어떻게 보여 줄 것인가**는 그쪽이 정한다.
 
 ---
 
