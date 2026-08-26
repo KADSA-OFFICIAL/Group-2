@@ -84,6 +84,9 @@ var _chain_hit: Array = []
 
 var _travelled: float = 0.0
 
+## 튕김 표시(#329). 탄이 다음 대상으로 넘어갈 때 한 장씩 놓는다.
+const CHAIN_ARC_SCENE := preload("res://entities/combat/ChainArc.tscn")
+
 
 # 발사 직후 한 번 호출한다. direction 은 정규화하지 않아도 된다.
 #
@@ -184,6 +187,13 @@ func _try_chain() -> bool:
 		return false
 
 	chain_left -= 1
+
+	# 튕긴 것이 화면에 보이게 한다(#329). 판정은 위에서 이미 끝났고 이 노드는 그리기만 한다.
+	#
+	# 부모를 **탄의 부모**(전장)로 둔다 — 탄의 자식으로 붙이면 탄이 곧바로 다음 대상으로
+	# 날아가므로 선이 탄을 따라다닌다(vfx-guide §1.7).
+	_spawn_chain_arc(next.global_position)
+
 	damage = int(round(float(damage) * chain_damage_percent))
 	# 감쇠가 피해를 0 으로 만들면 튕겨도 아무 일이 없다. 최소 1 은 남긴다
 	# (피해 하한의 정본은 CombatTuning.damage_min 이지만, 여기서 정하는 것은
@@ -203,6 +213,16 @@ func _try_chain() -> bool:
 	_travelled = 0.0
 	max_distance = chain_range
 	return true
+
+
+# 튕김 표시를 전장에 놓는다. 부모가 없으면(트리 밖) 아무 일도 하지 않는다.
+func _spawn_chain_arc(to_global: Vector2) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+	var arc := CHAIN_ARC_SCENE.instantiate()
+	host.add_child(arc)
+	arc.setup(global_position, to_global, color)
 
 
 # 아직 맞지 않은 가장 가까운 대상. chain_range 밖은 보지 않는다.

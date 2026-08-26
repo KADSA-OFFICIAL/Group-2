@@ -1070,6 +1070,9 @@ func _cast_self_effect(skill: SkillData) -> void:
 ## 퍼지는 원형 파동. 판정이 시간에 따라 커진다(#276). BeamEffect 와 달리 **연출이 아니라 판정**이다.
 const SHOCKWAVE_SCENE := preload("res://entities/combat/Shockwave.tscn")
 
+## 처형 표식(#331). 처형이 성사된 자리에 한 장 놓는다.
+const EXECUTE_MARK_SCENE := preload("res://entities/combat/ExecuteMark.tscn")
+
 
 # 파동을 놓는다. 시전자 자리에서 바깥으로 퍼지며 적에게 피해를, 아군에게 회복을 준다.
 #
@@ -2060,9 +2063,28 @@ func _try_execute(target: Node) -> bool:
 	if not can_execute(target):
 		return false
 
+	# 처형이 성사됐다는 표식을 그 자리에 남긴다(#331).
+	#
+	# take_damage **전에** 놓는다 — 그 호출이 대상을 죽여 queue_free() 하므로 뒤에서는
+	# global_position 을 믿고 읽을 수 없다.
+	_spawn_execute_mark(target.global_position)
+
 	# 남은 체력을 확실히 넘기는 피해를 넣어 방어력에 막히지 않게 한다.
 	target.take_damage(target.max_hp * 100, self)
 	return true
+
+
+# 처형 표식을 전장에 놓는다.
+#
+# 부모가 **대상이 아니라 전장**이어야 한다(vfx-guide §1.7). 대상은 이 직후 사라지므로
+# 자식으로 붙이면 표식도 함께 사라져 아무것도 보이지 않는다.
+func _spawn_execute_mark(at_global: Vector2) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+	var mark := EXECUTE_MARK_SCENE.instantiate()
+	host.add_child(mark)
+	mark.setup(at_global, UITheme.HOSTILE)
 
 # 대상이 처형 가능한 체력인가. HUD 표시에도 쓸 수 있도록 분리한다.
 func can_execute(target) -> bool:
