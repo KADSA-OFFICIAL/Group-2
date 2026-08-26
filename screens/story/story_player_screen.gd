@@ -82,6 +82,21 @@ const SHAKE_TIME := 0.34
 const SHAKE_STRENGTH := 14.0
 const BLACKOUT_TIME := 0.45
 
+# 백색 섬광(#307). 암전보다 훨씬 짧다 — 번쩍이는 것은 순간이어야 충격으로 읽히고,
+# 길게 밝으면 화면이 하얗게 비어 있는 시간이 된다.
+const FLASH_TIME := 0.30
+const FLASH_ALPHA := 0.78
+
+# 배경 느린 드리프트(#307). 대사가 길게 이어질 때 배경이 한 픽셀도 안 움직이면
+# 정지 화면처럼 보인다. 아주 느리게 확대·이동해 화면이 살아 있게 둔다.
+#
+# 확대 배율이 1 보다 큰 것은 **가장자리를 감추기 위해서**다. 1.0 에서 밀면 배경 밖의
+# 빈 자리가 드러난다. 미리 조금 키워 두고 그 여유 안에서만 움직인다.
+const BG_DRIFT_SCALE_MIN := 1.04
+const BG_DRIFT_SCALE_MAX := 1.09
+const BG_DRIFT_PERIOD := 26.0        # 초. 한 번 숨쉬는 데 걸리는 시간
+const BG_DRIFT_PAN := 0.22           # 화면 크기 대비 이동 폭. 여유 안에 들어가야 한다
+
 # ===== 챕터 타이틀 / 장면 페이드 (#137) =====
 # 전체 길이가 2초를 넘지 않게 잡는다. 두 번째부터는 기다리고 싶지 않은 구간이라
 # 언제든 눌러서 건너뛸 수 있다.
@@ -128,6 +143,8 @@ var _scene_overlay: TextureRect = null
 var _target_background: Texture2D = null
 var _stage: Control
 var _blackout: ColorRect
+var _flash: ColorRect
+var _drift_time: float = 0.0
 var _dialogue_box: PanelContainer
 var _name_plate: Control
 var _name_label: Label
@@ -271,6 +288,15 @@ func _build() -> void:
 	_blackout.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_blackout.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_blackout)
+
+	# 섬광용 흰 판. 암전과 같은 층(인물 위, 대사 상자 아래)이라 번쩍이는 중에도
+	# 대사가 읽힌다. 암전과 노드를 나눈 이유는 색이 반대라 한 노드로 겹쳐 쓰면
+	# 둘이 동시에 걸릴 때 서로의 색을 덮어쓰기 때문이다.
+	_flash = ColorRect.new()
+	_flash.color = Color(1, 1, 1, 0)
+	_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_flash)
 
 	_build_dialogue()
 
@@ -899,6 +925,43 @@ func _blackout_flash() -> void:
 	tween.tween_property(_blackout, "color:a", 0.0, BLACKOUT_TIME * 0.55).set_delay(0.15)
 
 
+# 백색 섬광. 짧게 밝아졌다 사라진다.
+#
+# 올라가는 시간을 내려오는 시간보다 훨씬 짧게 둔다. 대칭으로 만들면 "번쩍"이 아니라
+# 화면이 밝아졌다 어두워지는 것으로 보인다.
+func _flash_burst() -> void:
+	var tween := _flash.create_tween()
+	tween.tween_property(_flash, "color:a", FLASH_ALPHA, FLASH_TIME * 0.16)
+	tween.tween_property(_flash, "color:a", 0.0, FLASH_TIME * 0.84)
+
+
+# 배경을 아주 느리게 확대·이동한다. **대본이 지시하지 않는다** — 줄마다 적을 것이
+# 아니라 화면에 항상 걸려 있는 바탕 연출이다.
+#
+# 확대 기준점(pivot)을 움직여서 이동을 만든다. position 을 건드리지 않는 이유는
+# 이 노드가 앵커로 화면에 맞춰져 있어서, 위치를 직접 잡으면 레이아웃과 싸운다.
+func _drift_background(delta: float) -> void:
+	if _background == null or _background.texture == null:
+		return
+	var size := _background.size
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+
+	_drift_time += delta
+	var wave := 0.5 + 0.5 * sin(TAU * _drift_time / BG_DRIFT_PERIOD)
+	var zoom := lerpf(BG_DRIFT_SCALE_MIN, BG_DRIFT_SCALE_MAX, wave)
+
+	# 가로세로 주기를 서로 어긋난 값으로 둔다. 같은 주기면 대각선으로만 왕복해
+	# 궤적이 눈에 보인다.
+	var pan := Vector2(
+		sin(TAU * _drift_time / (BG_DRIFT_PERIOD * 1.37)),
+		cos(TAU * _drift_time / (BG_DRIFT_PERIOD * 1.91))
+	) * size * BG_DRIFT_PAN
+
+	_background.pivot_offset = size * 0.5 + pan
+	_background.scale = Vector2(zoom, zoom)
+
+
 # 대본이 지시한 화면 연출을 건다.
 #
 # 전투 줄은 따로 지시하지 않아도 흔들린다 — 그건 본문 추측이 아니라 **줄 종류**가
@@ -910,6 +973,8 @@ func _apply_screen_effect(line: StoryLineData) -> void:
 			_blackout_flash()
 		StoryLineData.ScreenEffect.SHAKE:
 			_shake()
+		StoryLineData.ScreenEffect.FLASH:
+			_flash_burst()
 		_:
 			if line.kind == StoryLineData.Kind.BATTLE:
 				_shake()
@@ -978,6 +1043,10 @@ func _line_text(line: StoryLineData) -> String:
 
 
 func _process(delta: float) -> void:
+	# 배경 드리프트는 아래 가드보다 먼저 돈다. 타이틀 카드가 떠 있는 동안에도,
+	# 다 읽고 멈춰 있는 동안에도 배경은 계속 움직여야 정지 화면으로 안 보인다.
+	_drift_background(delta)
+
 	# 타이틀이 도는 동안에는 타자기를 세워 둔다.
 	# 막 뒤에서 이미 다 찍혀 있으면 장면이 열렸을 때 첫 줄을 놓친다.
 	if _chapter == null or _end_card.visible or _intro_active or _closing:

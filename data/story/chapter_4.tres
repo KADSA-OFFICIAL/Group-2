@@ -145,6 +145,7 @@ script = ExtResource("2")
 kind = 0
 speaker = ""
 text = "마을사람들을 무시한채 익룡수인들은 소꿉친구만 낚아채간다."
+screen_effect = 3
 stage_id = &""
 
 [sub_resource type="Resource" id="L19"]

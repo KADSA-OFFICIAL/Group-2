@@ -95,7 +95,14 @@ enum ScreenEffect {
 	NONE,
 	BLACKOUT,   # 암전 — 어두워졌다 돌아온다
 	SHAKE,      # 흔들림 — 충격·전투
+	FLASH,      # 백색 섬광 — 타격·낚아챔 같은 순간의 충격(#307)
 }
+
+# FLASH 를 맨 뒤에 붙인 이유: enum 값은 .tres 에 **숫자로** 저작된다.
+# 중간에 끼우면 이미 저작된 챕터의 screen_effect 숫자가 통째로 다른 연출이 된다.
+#
+# BLACKOUT 과 뜻이 다르다. 암전은 챕터 1 에서 **정신을 잃는** 장면에 쓰는 어두운
+# 연출이라 "맞았다 / 낚아채였다" 같은 타격 순간에 쓰면 뜻이 어긋난다.
 
 @export var screen_effect: ScreenEffect = ScreenEffect.NONE
 
