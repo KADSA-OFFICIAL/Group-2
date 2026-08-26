@@ -81,6 +81,10 @@ const FEATURE_WIDTH: float = 0.40
 # 건물 간 크기 차이를 버리지 않는다.
 const FEATURE_WIDTH_BASE: float = 0.21
 
+# 건물 높이의 상한(발 자리까지의 높이 대비). 1.0 이면 지붕이 뜰 맨 위에 딱 닿는다.
+# 조금 남겨 두어 지붕 위에 하늘이 보이게 한다 — 꽉 차면 건물이 아니라 벽으로 읽힌다.
+const FEATURE_MAX_HEIGHT: float = 0.94
+
 # 좌우 이동 화살표.
 const ARROW_SIZE := Vector2(34, 52)
 
@@ -99,11 +103,15 @@ const DOOR_HEIGHT_RATIO: float = 0.42
 const MEMBER_DEPTH_MIN: float = 0.82
 
 # 인물이 걸어 다닐 수 있는 세로 범위(비율). 광장 사다리꼴 안이다(#319).
+#
+# 아래 끝은 **탭 바를 피한다.** _tabs 는 뜰 맨 아래 TAB_HEIGHT+TAB_MARGIN(42px)을 차지하고
+# _yard_layer 보다 뒤에 붙어 위에 그려지므로, 걷는 자리가 거기까지 내려가면 신도 발밑이
+# 탭에 가린다(뜰 세로 700px 미만이면 겹친다 — 실측 549px 에서 9px, 429px 에서 16px).
 # 하늘 위를 걸으면 안 되고, 맨 아래는 발이 잘리므로 조금 띄운다.
 # 건물이 선 자리를 피해 앞마당에서만 걷는다. 인물이 건물 위로 겹쳐 지나가면
 # 어느 쪽이 앞인지 알 수 없어 그림이 뭉개진다.
 const WALK_TOP: float = 0.70
-const WALK_BOTTOM: float = 0.94
+const WALK_BOTTOM: float = 0.86
 
 # 인물 이동 속도(뜰 가로 대비 초당 비율). 전투가 아니라 산책이라 느리다.
 const WANDER_SPEED: float = 0.05
@@ -834,7 +842,17 @@ func _focus(index: int) -> void:
 	for child in _yard_layer.get_children():
 		if not child.has_meta("building"):
 			continue
-		(child as Control).visible = i == _focused
+		var holder: Control = child
+		var on := i == _focused
+		# 숨기기 전에 호버 확대를 되돌린다.
+		#
+		# hover_lift 는 mouse_exited 에서 원래 크기로 돌아가는데, 마우스가 건물 위에 있는
+		# 채로 visible=false 가 되면 그 신호가 오지 않는다. 그러면 건물이 1.03 배로 커진
+		# 채 굳어 다시 보일 때까지 남고, _draw_shadows 는 scale 이 반영되지 않은
+		# holder.size 로 그림자를 그려 그림자와 건물 폭이 어긋난다.
+		if not on:
+			holder.scale = Vector2.ONE
+		holder.visible = on
 		i += 1
 
 	if _tabs != null:
@@ -983,6 +1001,20 @@ func _layout_buildings() -> void:
 			if art_size.x > 0.0:
 				ratio = art_size.y / art_size.x
 		var height: float = width * ratio
+
+		# 세로가 모자라면 **가로까지 같이 줄인다**.
+		#
+		# 폭은 뜰 가로에서, 자리는 뜰 세로에서 나온다. 뜰이 가로로 길어지면 폭을 따라
+		# 커진 높이가 발 자리(FEATURE_SPOT.y)보다 높아져 지붕이 뜰 위로 넘친다.
+		# 이 화면은 clip_contents 라 넘친 만큼 **조용히 잘린다** — 경고도 에러도 없다.
+		# (실측: 뜰 924x549 에서 top=-123px, 1884x549 에서 -628px)
+		#
+		# 높이만 깎으면 건물이 납작해지므로 비율을 지키려고 폭도 같은 배로 줄인다.
+		var headroom: float = size.y * FEATURE_SPOT.y * FEATURE_MAX_HEIGHT
+		if height > headroom and height > 0.0:
+			var shrink: float = headroom / height
+			width *= shrink
+			height = headroom
 
 		holder.size = Vector2(width, height)
 		_fit_placeholder_icon(holder, width)
