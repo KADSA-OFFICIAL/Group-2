@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 5
+stacking = 0
+max_stacks = 1
+effect_id = &"taunt"
+display_name = "도발"
+description = "하랑 Q 가 반경 안 적 전원에게 거는 강제 대상 지정(#328). 걸린 동안 그 적은 **도발을 건 대상만** 공격한다 — 지금 붙어 싸우던 대상도, 거리도 무시하고 그쪽으로 온다(EnemyBase._resolve_target). **탐지 범위를 무시하는 것이 요점이다**: 사거리 안에서만 듣는 도발은 이미 오고 있던 적에게는 아무 일도 하지 않는 것과 같고, 도발의 값어치는 멀리 있는 적을 끌어오는 것이다. 도발한 하랑이 죽으면 조회가 null 로 떨어져 적은 지금까지의 대상 선정으로 돌아간다 — 적이 시체를 향해 계속 걸어가지 않는다. 공속 +200% 는 이 효과가 담지 않고 동반 효과 taunt_frenzy 가 갖는다: 한 StatusEffectData 의 kind 는 하나이고, 수치 변경은 STAT_MOD 의 일이다. is_debuff = true 다 — 적에게 걸리는 불리한 상태이므로 버퍼 처형(디버프 조건)이 이것을 세는 것이 맞다. 동반된 공속 증가는 적에게 유리하지만, 그것은 별개 효과이고 그쪽이 is_debuff = false 다. 중첩은 REFRESH — 하랑이 둘일 수 없는 로스터에서 세기 누적은 의미가 없고, 겹쳐 눌러 지속시간만 갱신되는 것이 의도다. 지속시간 7초는 [확정 스펙]이다."
+is_debuff = true
+duration = 7.0
+also_apply_effect_id = &"taunt_frenzy"

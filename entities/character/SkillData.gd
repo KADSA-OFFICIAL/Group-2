@@ -62,6 +62,25 @@ class_name SkillData
 ## 근접 공격 사거리(EnemyData.attack_range 기본값 45)와 같은 픽셀 단위다.
 @export var aoe_radius: float = 0.0
 
+# ===== 즉발 광역 (Instant AoE) =====
+#
+# 시전한 **그 순간 시전자 자리에서** 원형으로 때리는 채널(#328).
+#
+# 왜 aoe_radius 를 쓰지 않는가: 그 필드는 이미 **다른 것에 붙어 있는 반경**이다 —
+# 투사체가 터질 반경(미나 Q)이거나 평타 패시브가 낼 반경(태희 4타)이다. 같은 필드로
+# "그냥 지금 여기서 터진다"까지 겸하게 하면, 반경이 0 이 아닌 스킬이 무엇을 하는지
+# 다른 필드를 다 봐야 알게 된다. 빔(beam_*)과 파동(wave_*)이 각자 반경을 가진 것과 같은 규약이다.
+#
+# 파동(wave_*)과 다른 점: 파동은 판정이 시간에 따라 퍼져서 **달려서 피할 수 있다.**
+# 이쪽은 누른 순간 반경 안이 전부 맞는다. 도발처럼 "지금 당장 끌어와야" 값어치가 있는
+# 스킬은 피할 수 있으면 안 된다.
+#
+# 적에게 들어가는 것: base_power 피해(0 이면 피해 없음)와 apply_effect_id 상태 효과.
+# 피해가 0 이고 효과만 있는 스킬도 정상이다 — 하랑 Q 가 그렇다.
+
+## 즉발 광역 반경(px). 0 이면 이 채널을 쓰지 않는다.
+@export var instant_aoe_radius: float = 0.0
+
 
 # ===== 투사체 (Projectile) =====
 #
@@ -183,6 +202,41 @@ enum InputSlot {
 ## **누적**이다(0.6 -> 0.36 -> 0.216). 감쇠가 없으면 창 안의 화력이 그대로 몇 배가 된다.
 @export var chain_damage_percent: float = 1.0
 
+# ===== 평타 변형 창 (Basic-attack override window) =====
+#
+# 시전하면 **일정 시간 동안 평타 자체가 다른 평타로 바뀐다**(#328).
+#
+# 체인 창(chain_*)과 나눠 둔 이유: 체인은 평타에 **얹는다** — 대상도, 피해 공식도,
+# 단일 대상이라는 성질도 그대로이고 맞은 뒤 튕김이 추가될 뿐이다. 이쪽은 평타를
+# **갈아치운다** — 단일 대상이 광역이 되고, 피해 공식이 공격력에서 대상 최대 체력으로 바뀐다.
+# 한 창으로 뭉치면 "평타가 지금 무엇인가"를 창 종류가 아니라 필드 조합으로 추측하게 된다.
+#
+# 창이 열려 있는 동안에도 평타의 나머지 규칙(처형 -> 피해 -> 피흡 -> 표식)은 그대로다.
+# 반경 안 적 **하나하나가** 평타를 한 번 맞은 것으로 처리된다 — 그래서 표식도 전원에게 붙는다.
+#
+# 겹쳐 쓰면 남은 시간이 **갱신**된다(체인 창과 같은 규약).
+
+## 평타가 바뀌어 있는 시간(초). 0 이면 이 채널을 쓰지 않는다.
+@export var attack_override_duration: float = 0.0
+
+## 바뀐 평타가 때리는 반경(px). 0 이면 창이 열려도 광역이 되지 않는다.
+##
+## instant_aoe_radius 와 따로인 이유: 그쪽은 **스킬을 누른 순간 한 번** 터지는 범위이고,
+## 이쪽은 창이 열린 동안 **평타마다** 나가는 범위다. 근접 평타의 사거리를 넓히는 값이라
+## 즉발 광역보다 작게 잡는 것이 보통이다.
+@export var attack_override_aoe_radius: float = 0.0
+
+## 바뀐 평타의 피해 = **맞은 적의 최대 체력 x 이 비율**. 0 이면 공격력 그대로다.
+##
+## current_hp_damage_percent(태희 E)와 다른 축이다. 그쪽은 **현재** 체력 비례라 깎일수록
+## 약해지고 마무리를 못 한다. 이쪽은 **최대** 체력 비례라 체력이 얼마 남았든 같은 값이 들어간다
+## — 큰 적에게 강하고, 마무리도 할 수 있다.
+##
+## 방어력은 그대로 받는다(대상의 take_damage -> apply_defense). 여기서 우회하지 않는 것은
+## current_hp_damage_percent 와 같은 규약이다 — 피해 공식의 단일 출처를 지킨다.
+## 그래서 이 비율은 **방어 적용 전** 값이라는 것을 염두에 두고 저작한다.
+@export var attack_override_max_hp_percent: float = 0.0
+
 # ===== 시전 시간 (Cast time) =====
 
 ## 누른 뒤 실제로 나가기까지 걸리는 시간(초). 0 이면 즉발이다.
@@ -269,6 +323,33 @@ enum InputSlot {
 ## 효과의 정의(지속시간·부여하는 행동)는 StatusEffectData 가 소유한다 — 여기서 다시 적지 않는다.
 @export var party_effect_id: StringName = &""
 
+# ===== 자기 효과 부여 (Self effect) =====
+
+## 시전하면 **시전자 자신에게만** 걸 상태 효과 id. 비어 있으면 걸지 않는다(#328).
+##
+## party_effect_id 와 나눠 둔 이유: 그쪽은 파티 전원에게 가는 **파티 버프**다(설아 E).
+## 이쪽은 자기만 강해지고 자기만 대가를 치르는 **자기 강화**다(하랑 E — 공속과 흡혈을 얻고
+## 그 대가로 자기 체력이 탄다). 한 필드로 뭉치면 "누가 이득을 보고 누가 대가를 치르는가"가
+## 데이터에서 사라진다. 실제로 하랑 E 를 파티 전원에게 걸면 파티가 전멸한다.
+##
+## 종류가 섞인 상태(공속 + 흡혈 + 지속 피해)는 효과 하나로 담지 않는다 —
+## StatusEffectData.also_apply_effect_id 로 이어 붙인 첫 효과 id 만 여기 적는다.
+@export var self_effect_id: StringName = &""
+
+# ===== 시전 조건 (Cast condition) =====
+
+## 시전자의 체력 비율이 **이 값 미만일 때만** 시전할 수 있다. 0 이면 조건이 없다(#328).
+##
+## 0.3 이면 체력 30% 미만에서만 나간다. 조건에 걸리면 **쿨타임도 게이지도 소모하지 않는다**
+## — 아무 일도 일어나지 않았기 때문이다(쿨타임 중 시전과 같은 처리다).
+##
+## 왜 쿨타임과 따로인가: 쿨타임은 "얼마나 자주"이고 이것은 "언제"다. 몰린 순간에만 쓸 수 있는
+## 역전기는 쿨타임을 아무리 길게 잡아도 표현되지 않는다.
+##
+## 조건을 **비율**로 두는 이유: 절대 체력으로 두면 성장·장비로 최대 체력이 오를 때마다
+## 조건이 사실상 느슨해진다(SkillData.heal_missing_hp_percent 와 같은 규약).
+@export var require_hp_below_percent: float = 0.0
+
 # ===== 아직 필드가 아닌 것 (Not fields yet) =====
 #
 # **대상 선정**(누구에게 주는가)은 필드로 두지 않았다. 저작된 스킬이 적어 표본 하나로
@@ -346,6 +427,44 @@ func get_damage_against(target_current_hp: int, faith_boost: float = 1.0) -> int
 # 이 스킬이 퍼지는 파동인가.
 func is_wave() -> bool:
 	return wave_radius > 0.0 and wave_speed > 0.0
+
+
+# 이 스킬이 시전 자리에서 즉발 광역으로 때리는가(#328).
+#
+# 반경만 본다. 피해가 0 이고 상태 효과만 거는 스킬도 이 채널을 쓴다(하랑 Q).
+func is_instant_aoe() -> bool:
+	return instant_aoe_radius > 0.0
+
+
+# 이 스킬이 평타를 일정 시간 다른 평타로 바꾸는가(#328).
+#
+# 지속시간만으로는 부족하다 — 바꿔 놓고 아무것도 달라지지 않으면 창을 열 이유가 없다.
+# 그래서 "무엇으로 바뀌는가"(광역 반경 또는 최대체력 비례 피해)가 하나라도 있어야 한다.
+func overrides_basic_attack() -> bool:
+	if attack_override_duration <= 0.0:
+		return false
+	return attack_override_aoe_radius > 0.0 or attack_override_max_hp_percent > 0.0
+
+
+# 시전자가 지금 이 스킬을 쓸 수 있는 체력인가(#328).
+#
+# 조건이 없으면(0) 언제나 true 다. 최대 체력이 0 인 비정상 상태에서는 막는다 —
+# 0 으로 나누지 않고, "체력이 없는데 역전기가 나가는" 쪽보다 안전하다.
+func meets_hp_condition(current_hp: int, max_hp_value: int) -> bool:
+	if require_hp_below_percent <= 0.0:
+		return true
+	if max_hp_value <= 0:
+		return false
+	return float(current_hp) / float(max_hp_value) < require_hp_below_percent
+
+
+# 바뀐 평타가 이 적에게 넣을 피해. 비율이 0 이면 공격력을 그대로 쓰라는 뜻이라 0 을 돌려준다.
+#
+# 방어력은 여기서 적용하지 않는다. 대상의 take_damage() 가 한다(get_damage_against 와 같은 규약).
+func get_attack_override_damage(target_max_hp: int) -> int:
+	if attack_override_max_hp_percent <= 0.0:
+		return 0
+	return int(round(maxf(float(target_max_hp), 0.0) * attack_override_max_hp_percent))
 
 
 # 이 스킬이 아군을 회복시키는가.
