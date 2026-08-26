@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"gangji_field"
+display_name = "원형 지대"
+description = "강지 고유 스킬(Q, #334). 시전한 **자리에 5초 동안 원형 지대**(AuraZone)를 남긴다. 지대 안에 있는 아군은 gangji_zone(data/status_effects/gangji_zone.tres)을 받아 공속이 오르고 받는 피해가 줄어든다. 나가면 **그 즉시** 풀리고 다시 들어오면 다시 걸린다 — 지속시간에 맡기지 않고 지대가 직접 걸고 푼다. 지대는 **시전 자리에 고정된다**(강지를 따라다니지 않는다). 따라다니면 강지는 항상 안에 있어서 '안에 있는가'라는 판단이 사라지고, 어디에 깔지 고르는 조작도 없어진다 — 서 있을 곳을 고르는 것이 이 스킬이다. 앞의 범위 채널들과 성질이 다르다: 즉발 광역(하랑 Q)은 누른 순간 한 번, 파동(설아 Q)은 퍼지고 지나가면 끝, 지대는 **머문다.** 그래서 값어치가 '맞혔는가'가 아니라 '아군이 거기 서 있는가'다. 적에게는 아무 일도 하지 않는다 — base_power 0 이고 피해 채널이 없다. 지속시간·효과 내용은 **효과 리소스가 소유한다**(stun 지속시간을 stun.tres 가 갖는 것과 같은 규약). 조준하지 않는다: 원은 방향이 없다. 반경 200·쿨타임 16 초는 [임시값]이다 — 반경은 하랑 Q 도발(260)보다 좁고 미나 Q 착탄 광역(70)보다 훨씬 넓게, 파티 셋이 함께 설 수 있는 크기로 잡았다."
+base_power = 0
+scales_with_faith = false
+cooldown = 16.0
+aura_duration = 5.0
+aura_radius = 200.0
+aura_effect_id = &"gangji_zone"
+input_slot = 1

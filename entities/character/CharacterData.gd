@@ -37,7 +37,7 @@ enum SecondaryRole {
 @export var secondary_role: SecondaryRole = SecondaryRole.NONE
 
 # ===== 식별 (Identity) =====
-@export var character_id: StringName = &""   # 고유 식별자 (예: &"shipduck")
+@export var character_id: StringName = &""   # 고유 식별자 (예: &"gangji")
 @export var display_name: String = ""         # 화면 표시 이름
 @export_multiline var description: String = ""
 

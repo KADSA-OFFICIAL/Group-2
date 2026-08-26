@@ -77,7 +77,8 @@ enum Stacking {
 #
 # 키는 PlayerStats.set_buff_bonuses()가 받는 이름을 쓴다:
 #   가산: physical_attack, magic_attack, physical_defense, magic_defense, max_hp
-#   배율: physical_attack, magic_attack, physical_defense, magic_defense, attack_speed, move_speed
+#   배율: physical_attack, magic_attack, physical_defense, magic_defense, attack_speed, move_speed,
+#         damage_taken (#334 — 받는 피해 배율의 변화분. -0.25 면 25% 감소)
 # 배율은 0.2 = +20%, -0.2 = -20% 로 해석한다(0 = 변화 없음).
 @export var stat_flat: Dictionary = {}
 @export var stat_percent: Dictionary = {}
@@ -139,6 +140,20 @@ enum Stacking {
 ## 체력 임계치(CombatTuning.execute_hp_percent)는 그대로 지킨다 — 그것은 처형의 정의이지
 ## 조건이 아니다.
 @export var grants_execute: bool = false
+
+## 이 효과가 걸린 동안, 대상이 **무적**인가(#334).
+##
+## 무적은 받는 피해가 0 이 되는 것이다 — 방어력·보호막을 거치기 **전에** 막힌다.
+## 그래서 보호막이 깎이지 않고, 지속 피해(PERIODIC)도 들어가지 않고, 반사도 일어나지 않는다.
+## 판정은 대상의 take_damage() 맨 앞에서 한다.
+##
+## 왜 "받는 피해 -100%"(stat_percent 의 damage_taken)가 아닌가:
+## 그 채널은 최소 피해(CombatTuning.damage_min)를 지키므로 1 은 계속 들어간다. 그것이
+## 의도다 — 감소는 아무리 쌓여도 무적이 되지 않아야 한다. 무적은 감소의 극단이 아니라
+## **별개의 상태**이므로 통로를 따로 둔다. 그래야 "감소를 몇 개 겹치면 무적"이 되지 않는다.
+##
+## 스텟이 아니라 EMPOWER 인 이유는 이 섹션 머리말과 같다 — 숫자가 아니라 분기다.
+@export var grants_invulnerable: bool = false
 
 # ===== TAUNT payload =====
 #
@@ -243,7 +258,7 @@ func validate() -> Array[String]:
 			if stat_flat.is_empty() and stat_percent.is_empty():
 				problems.append("STAT_MOD인데 stat_flat/stat_percent가 모두 비어 있습니다.")
 		Kind.EMPOWER:
-			if grants_lifesteal_percent <= 0.0 and not grants_execute:
+			if grants_lifesteal_percent <= 0.0 and not grants_execute and not grants_invulnerable:
 				problems.append("EMPOWER인데 부여하는 행동이 하나도 없습니다.")
 
 	if grants_lifesteal_percent < 0.0:

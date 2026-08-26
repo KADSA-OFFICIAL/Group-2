@@ -81,6 +81,37 @@ class_name SkillData
 ## 즉발 광역 반경(px). 0 이면 이 채널을 쓰지 않는다.
 @export var instant_aoe_radius: float = 0.0
 
+# ===== 지대 (Aura zone) =====
+#
+# 시전 자리에 **일정 시간 남아 있는 원형 지대**를 놓는다(#334).
+#
+# 앞의 세 범위 채널과 무엇이 다른가:
+#   즉발 광역(instant_aoe_radius) — 누른 순간 한 번. 판정이 그때 끝난다.
+#   파동(wave_*)              — 판정이 퍼져 나간다. 지나가면 끝난다.
+#   지대(aura_*)              — **그 자리에 머문다.** 안에 있는 동안만 효과가 걸린다.
+#
+# 그래서 이 채널의 값어치는 "맞혔는가"가 아니라 **"아군이 거기 서 있는가"** 다.
+# 들어오면 걸리고 나가면 그 즉시 풀린다 — 머문 시간이 곧 이득이다.
+#
+# 지대는 시전 **자리에 고정**된다(시전자를 따라다니지 않는다). 따라다니면 시전자는 항상
+# 안에 있어서 "안에 있는가"라는 판단이 시전자에게만 사라지고, 지대를 깔 위치를 고르는
+# 조작도 없어진다. 서 있을 곳을 고르는 것이 이 스킬이다.
+#
+# 적에게는 아무 일도 하지 않는다. 피해를 주는 지대가 필요해지면 그때 채널을 더한다 —
+# 지금 스펙에 없는 것을 미리 만들면 쓰이지 않는 분기가 남는다.
+
+## 지대가 남아 있는 시간(초). 0 이면 지대 스킬이 아니다.
+@export var aura_duration: float = 0.0
+
+## 지대의 반경(px). 0 이면 지대 스킬이 아니다.
+@export var aura_radius: float = 0.0
+
+## 지대 안 아군에게 걸 상태 효과 id. 비어 있으면 지대가 아무 일도 하지 않는다.
+##
+## 효과의 내용(공속·받는 피해 감소 등)과 지속시간은 **효과 리소스가 소유한다.**
+## 다만 지대가 나갈 때 직접 풀어 주므로, 이 효과의 duration 은 지대 수명의 보험이다.
+@export var aura_effect_id: StringName = &""
+
 
 # ===== 투사체 (Projectile) =====
 #
@@ -179,6 +210,20 @@ enum InputSlot {
 ## 시전자가 투사체 평타를 쓰지 않으면(CharacterData.basic_attack_projectile_speed == 0)
 ## 이 값이 true 여도 발밑에서 난다. 날아갈 탄이 없기 때문이다.
 @export var aoe_at_projectile_impact: bool = false
+
+## 평타로 **실제로 들어간 피해** 대비 아군 회복 비율. 0 이면 이 채널을 쓰지 않는다(#334).
+##
+## 대상은 **체력 비율이 가장 낮은 아군**이다(시전자 자신도 후보다) — ally_heal 과 같은 선정 규칙이다.
+##
+## **`every_n_attacks` 주기가 아니라 평타 1회마다** 나간다. 그래서 발동 지점이
+## `_apply_attack_passives()`(주기 패시브)가 아니라 `_resolve_attack_hit()`(평타가 닿은 자리)다.
+## 기준이 "발생"이 아니라 **"실제로 들어간 피해"** 이므로 닿아야만 나간다 — 빗나간 탄은
+## 회복시키지 않는다. 원거리 3단계 피흡이 같은 자리에서 같은 기준을 쓴다.
+##
+## ally_heal(절대값)과 왜 다른가: 그쪽은 스킬이 주는 고정량이라 시전자의 화력과 무관하다.
+## 이쪽은 **때린 만큼 살린다** — 강지가 딜을 넣지 않으면 파티가 회복되지 않는다는 것이 의도다.
+## 그래서 비율이고, 신앙심 강화(scales_with_faith)를 타지 않는다. 피해가 이미 스텟을 거쳐 나온 값이다.
+@export var attack_damage_to_ally_heal_percent: float = 0.0
 
 # ===== 평타 체인 (Basic-attack chain) =====
 #
@@ -336,6 +381,21 @@ enum InputSlot {
 ## StatusEffectData.also_apply_effect_id 로 이어 붙인 첫 효과 id 만 여기 적는다.
 @export var self_effect_id: StringName = &""
 
+# ===== 아군 1명 효과 부여 (Single-ally effect) =====
+
+## 시전하면 **아군 한 명**에게 걸 상태 효과 id. 비어 있으면 걸지 않는다(#334).
+##
+## 대상은 **체력 비율이 가장 낮은 아군**이다(시전자 자신도 후보다).
+## ally_heal(설아 3타 회복)이 쓰는 것과 같은 선정 규칙이라 여기서 다시 만들지 않는다.
+##
+## party_effect_id·self_effect_id 와 나눠 둔 이유는 그 둘이 서로 나뉜 이유와 같다 —
+## **누구에게 걸리는가**가 데이터에서 보여야 한다. 셋의 대상은 각각 파티 전원 / 자기 / 아군 하나다.
+## 강지 E 의 무적을 파티 전원에게 걸면 그것은 다른 스킬이 된다.
+##
+## 조준을 요구하지 않는다: 이 프로젝트에는 아직 대상 선정 프레임워크가 없고(이 파일 맨 아래
+## "아직 필드가 아닌 것" 참고), 표본이 적은 상태에서 만들면 한 캐릭터 기준으로 굳는다.
+@export var ally_effect_id: StringName = &""
+
 # ===== 시전 조건 (Cast condition) =====
 
 ## 시전자의 체력 비율이 **이 값 미만일 때만** 시전할 수 있다. 0 이면 조건이 없다(#328).
@@ -427,6 +487,29 @@ func get_damage_against(target_current_hp: int, faith_boost: float = 1.0) -> int
 # 이 스킬이 퍼지는 파동인가.
 func is_wave() -> bool:
 	return wave_radius > 0.0 and wave_speed > 0.0
+
+
+# 이 스킬이 지대를 놓는가(#334).
+#
+# 셋이 모두 있어야 한다: 시간, 반경, 걸 효과. 하나라도 없으면 놓을 이유가 없다 —
+# 효과가 없는 지대는 그림이고, 시간이나 반경이 0 이면 아무도 그 안에 있을 수 없다.
+func creates_aura() -> bool:
+	return aura_duration > 0.0 and aura_radius > 0.0 and aura_effect_id != &""
+
+
+# 이 스킬이 평타로 아군을 회복시키는가(#334).
+func heals_ally_on_attack() -> bool:
+	return attack_damage_to_ally_heal_percent > 0.0
+
+
+# 평타로 들어간 피해에 대해 아군에게 줄 회복량(#334).
+#
+# 신앙심 강화를 타지 않는다 — 피해가 이미 시전자 스텟을 거쳐 나온 값이라
+# 여기서 다시 곱하면 같은 스텟이 두 번 실린다.
+func get_ally_heal_from_damage(damage_dealt: int) -> int:
+	if attack_damage_to_ally_heal_percent <= 0.0 or damage_dealt <= 0:
+		return 0
+	return int(round(float(damage_dealt) * attack_damage_to_ally_heal_percent))
 
 
 # 이 스킬이 시전 자리에서 즉발 광역으로 때리는가(#328).

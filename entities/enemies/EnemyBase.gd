@@ -390,6 +390,9 @@ func take_damage(amount: int, source = null, ignore_defense: bool = false) -> in
 	# 처형은 방어력에 막히지 않으려고 max_hp x 100 을 넣는데, 체력 240 남은 적을 처형하면
 	# dealt 가 24만으로 잡혀 흡혈 50 퍼센트가 12만을 회복시킨다(만피 회복).
 	var raw: int = amount if ignore_defense else get_stats().apply_defense(amount)
+	# 받는 피해 감소(#334). 채널이 PlayerStats 공용이므로 적에게도 그대로 걸린다 —
+	# 지금 적에게 이 값을 넣는 효과는 없지만, 넣으면 동작해야 한다.
+	raw = get_stats().apply_damage_taken(raw)
 	var dealt: int = mini(raw, hp)
 	hp -= dealt
 

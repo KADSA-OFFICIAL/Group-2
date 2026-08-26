@@ -63,6 +63,18 @@ var growth_multiplier: float = 1.0
 @export var buff_attack_speed_percent: float = 0.0
 @export var buff_move_speed_percent: float = 0.0
 
+## **받는 피해** 배율의 변화분(#334). -0.25 면 받는 피해가 25% 줄고, +0.25 면 25% 늘어난다.
+##
+## 방어력(buff_physical_defense_percent)과 왜 따로인가: 피해 공식이 `raw^2/(raw+def)` 라
+## 방어력을 올려도 **"받는 피해 몇 퍼센트 감소"가 되지 않는다.** 같은 방어력 증가가 원피해
+## 크기에 따라 전혀 다른 감소율을 낸다 — 작은 타격은 크게 깎이고 큰 타격은 덜 깎인다.
+## 강지 Q 처럼 "받는 피해가 감소한다"가 스펙인 효과는 그 스펙대로 표현되어야 한다.
+##
+## 적용 지점은 대상의 take_damage() 이며 **방어력 적용 뒤**다. 방어를 무시하는 피해
+## (StatusEffectData.tick_ignores_defense)에도 이 감소는 걸린다 — 무시 대상은 방어력이고
+## 이 채널은 별개다.
+@export var buff_damage_taken_percent: float = 0.0
+
 # ===== 기여 계수 (Contribution Coefficients) =====
 # 계수의 출처는 CombatTuning(data/combat/combat_tuning.tres)이다.
 # PlayerStats는 값을 소유하지 않고 읽기만 하므로, 계수를 여기서 다시 정의하지 않는다.
@@ -207,6 +219,30 @@ func apply_defense(raw_damage: int) -> int:
 	return maxi(int(round(reduced)), t.damage_min)
 
 
+# 받는 피해 배율. 1.0 = 변화 없음, 0.75 = 받는 피해 25% 감소(#334).
+#
+# 방어력과 왜 다른 통로인가는 buff_damage_taken_percent 주석에 있다 —
+# 방어 공식이 비선형이라 "받는 피해 N% 감소"를 방어력으로 표현할 수 없다.
+func get_damage_taken_multiplier() -> float:
+	return _buff_multiplier(buff_damage_taken_percent)
+
+
+# 방어력이 적용된 피해에 **받는 피해 배율**까지 반영한 최종 피해(#334).
+#
+# 방어와 나눠 둔 이유: 방어를 무시하는 피해(StatusEffectData.tick_ignores_defense)도
+# 이 감소는 받아야 한다. 한 함수로 뭉치면 방어를 건너뛸 때 감소까지 함께 사라진다.
+#
+# 최소 피해(damage_min)는 여기서도 지킨다 — 감소로 0 이 되면 무적과 구분되지 않는다.
+# 무적은 별개 통로(StatusEffectData.grants_invulnerable)가 담당한다.
+func apply_damage_taken(damage: int) -> int:
+	if damage <= 0:
+		return damage
+	var multiplier := get_damage_taken_multiplier()
+	if is_equal_approx(multiplier, 1.0):
+		return damage
+	return maxi(int(round(float(damage) * multiplier)), get_tuning().damage_min)
+
+
 # ===== 성장 (Growth) =====
 
 # 삼각근 Lv.의 스텟 배수를 갱신한다 (PlayerProfile 이 호출).
@@ -256,6 +292,7 @@ func set_buff_bonuses(flat: Dictionary = {}, percent: Dictionary = {}) -> void:
 	buff_magic_defense_percent = float(percent.get("magic_defense", 0.0))
 	buff_attack_speed_percent = float(percent.get("attack_speed", 0.0))
 	buff_move_speed_percent = float(percent.get("move_speed", 0.0))
+	buff_damage_taken_percent = float(percent.get("damage_taken", 0.0))
 
 # 모든 버프/디버프 보너스를 해제한다 (상태 효과가 전부 사라졌을 때).
 func clear_buff_bonuses() -> void:
@@ -275,4 +312,5 @@ func get_derived_summary() -> Dictionary:
 		"goddess_skill_boost": get_goddess_skill_boost(),
 		"attack_speed_multiplier": get_attack_speed_multiplier(),
 		"move_speed_multiplier": get_move_speed_multiplier(),
+		"damage_taken_multiplier": get_damage_taken_multiplier(),
 	}

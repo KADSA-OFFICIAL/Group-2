@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 0
+stacking = 0
+max_stacks = 1
+effect_id = &"gangji_zone"
+display_name = "지대"
+description = "강지 Q 의 지대(AuraZone) 안에 서 있는 아군이 받는 버프(#334). 공속 +50%, **받는 피해 -25%**. 받는 피해 감소를 방어력(physical_defense)이 아니라 damage_taken 채널로 쓰는 이유: 피해 공식이 raw^2/(raw+def) 라 방어력을 올려도 '받는 피해 몇 퍼센트 감소'가 되지 않는다 — 같은 방어력 증가가 작은 타격은 크게, 큰 타격은 적게 깎는다. 스펙이 '받는 피해가 감소'이므로 그 스펙대로 표현했다(PlayerStats.buff_damage_taken_percent). 지속시간 5.0 은 지대 수명과 같지만 **시간으로 만료되는 것을 기대하지 않는다** — 지대가 아군이 밖으로 나가는 순간 직접 remove() 하고, 지대 자신이 사라질 때도 _exit_tree 에서 푼다. 이 값은 그 두 경로가 모두 실패했을 때의 보험이다. '안에 있는 동안만'이라는 계약을 지속시간에 맡기면 지대를 벗어나고도 버프가 따라다닌다. is_debuff = false — 아군에게 걸리는 버프다(디버프로 세면 버퍼 처형 조건을 아군이 만족시킨다, empowered.tres 와 같은 판단). 중첩은 REFRESH: 강지가 둘일 수 없고, 지대 둘이 겹치면 세기가 누적되는 것보다 갱신되는 편이 예측 가능하다. 수치는 [임시값]이다."
+is_debuff = false
+duration = 5.0
+stat_percent = {
+"attack_speed": 0.5,
+"damage_taken": -0.25
+}
