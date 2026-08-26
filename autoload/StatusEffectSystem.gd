@@ -56,8 +56,20 @@ func _ready() -> void:
 # 대상에게 효과를 건다. 성공하면 true.
 # 이미 걸려 있으면 StatusEffectData.stacking 규칙대로 처리한다.
 func apply(target: Node, effect_id: StringName, source: Node = null) -> bool:
+	return _apply_chain(target, effect_id, source, {})
+
+
+# apply() 의 실제 몸통. visited 는 동반 효과 연쇄에서 순환을 끊기 위한 것이다(#328).
+#
+# 왜 순환을 끊어야 하는가: also_apply_effect_id 는 저작 데이터이므로 A -> B -> A 로 적힐 수 있다.
+# 막지 않으면 스택이 터진다. 이미 이번 연쇄에서 건 효과는 다시 걸지 않는다 — 같은 효과를
+# 두 번 거는 것은 중첩 규칙(REFRESH/STACK_INTENSITY)이 다룰 일이고, 그것은 **다음** 시전의 몫이다.
+func _apply_chain(target: Node, effect_id: StringName, source: Node, visited: Dictionary) -> bool:
 	if not _is_valid_target(target):
 		return false
+	if visited.has(effect_id):
+		return false
+	visited[effect_id] = true
 
 	var data := StatusEffectDatabase.get_effect(effect_id)
 	if data == null:
@@ -69,6 +81,9 @@ func apply(target: Node, effect_id: StringName, source: Node = null) -> bool:
 		var existing: _Instance = effects[effect_id]
 		match data.stacking:
 			StatusEffectData.Stacking.IGNORE:
+				# 자기 자신은 무시됐지만 동반 효과는 따라가야 한다 — 셋 중 하나만 IGNORE 라고
+				# 나머지 둘이 걸리지 않으면, 겹쳐 쓸 때 상태가 조각난다.
+				_apply_companion(target, data, source, visited)
 				return false
 			StatusEffectData.Stacking.REFRESH:
 				existing.time_left = data.duration
@@ -76,13 +91,22 @@ func apply(target: Node, effect_id: StringName, source: Node = null) -> bool:
 				existing.stacks = mini(existing.stacks + 1, data.get_max_stacks())
 				existing.time_left = data.duration
 		_sync_stat_mods(target)
+		_apply_companion(target, data, source, visited)
 		return true
 
 	effects[effect_id] = _Instance.new(data, source)
 	_watch_target(target)
 	_sync_stat_mods(target)
 	EventBus.status_effect_applied.emit(target, effect_id)
+	_apply_companion(target, data, source, visited)
 	return true
+
+
+# 함께 걸리는 효과를 이어서 건다. 없으면 아무 일도 하지 않는다.
+func _apply_companion(target: Node, data: StatusEffectData, source: Node, visited: Dictionary) -> void:
+	if data.also_apply_effect_id == &"":
+		return
+	_apply_chain(target, data.also_apply_effect_id, source, visited)
 
 
 # 대상이 트리에서 빠질 때(죽어서 queue_free 되는 등) 그 대상의 효과를 정리한다.
@@ -263,8 +287,20 @@ func _apply_periodic(target: Node, inst: _Instance) -> void:
 	var amount_damage := inst.data.tick_damage * inst.stacks
 	var amount_heal := inst.data.tick_heal * inst.stacks
 
+	# 최대 체력 비례분(#328). 절대값과 **더한다** — 두 채널을 함께 쓰는 효과가 있어도 된다.
+	# 대상의 그릇을 물어보는 것이므로 여기서 계산한다(효과는 비율만 안다).
+	if inst.data.tick_max_hp_percent > 0.0:
+		var stats := _stats_of(target)
+		if stats != null:
+			amount_damage += int(round(float(stats.get_max_hp()) * inst.data.tick_max_hp_percent)) * inst.stacks
+
 	if amount_damage > 0 and target.has_method("take_damage"):
-		target.take_damage(amount_damage, inst.source)
+		# 방어 무시가 켜져 있으면 세 번째 인자로 알린다. 옛 시그니처(2 인자)만 가진 대상이
+		# 있을 수 있어 무시하지 않는 경우에는 지금까지처럼 2 인자로 부른다.
+		if inst.data.tick_ignores_defense:
+			target.take_damage(amount_damage, inst.source, true)
+		else:
+			target.take_damage(amount_damage, inst.source)
 	if amount_heal > 0 and target.has_method("heal"):
 		target.heal(amount_heal)
 
@@ -373,6 +409,41 @@ func get_granted_lifesteal(target) -> float:
 			continue
 		total += maxf(inst.data.grants_lifesteal_percent, 0.0)
 	return total
+
+
+# ===== TAUNT 조회 (#328) =====
+
+# 지금 이 대상이 **강제로 공격해야 하는** 상대. 도발이 걸려 있지 않으면 null.
+#
+# 여러 도발이 겹치면 **가장 나중에 걸린 것**이 이긴다. 사전순이나 최초 것이 이기면
+# 방금 도발한 탱커가 아무 일도 하지 못하는 순간이 생긴다 — 도발은 "지금 나를 봐"라는
+# 조작이므로 마지막 조작이 유효해야 한다.
+#
+# 주체가 이미 죽어 해제됐으면 null 이다(효과는 남아 있어도 끌 대상이 없다).
+# 그때 부르는 쪽은 지금까지의 대상 선정으로 돌아간다 — 도발한 탱커가 죽었는데 적이
+# 아무도 공격하지 않고 서 있으면 안 된다.
+func get_taunt_source(target) -> Node:
+	if not _active.has(target):
+		return null
+
+	var newest: Node = null
+	var newest_time := -1.0
+	for effect_id in _active[target]:
+		var inst: _Instance = _active[target][effect_id]
+		if inst.data.kind != StatusEffectData.Kind.TAUNT:
+			continue
+		if inst.source == null or not is_instance_valid(inst.source):
+			continue
+		# 무한 도발은 남은 시간으로 비교할 수 없으므로 최우선으로 본다.
+		# (validate() 가 막고 있지만 저작이 어긋난 데이터에서도 죽지 않게 둔다.)
+		if inst.data.is_permanent():
+			return inst.source
+		# 남은 시간이 가장 긴 것이 가장 나중에 걸린 것이다 — 지속시간이 같은 도발끼리는
+		# 이 비교가 곧 "누가 마지막으로 걸었나"다.
+		if inst.time_left > newest_time:
+			newest = inst.source
+			newest_time = inst.time_left
+	return newest
 
 
 # 걸려 있는 EMPOWER 효과 중 하나라도 처형을 부여하는가.

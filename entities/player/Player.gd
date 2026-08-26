@@ -210,6 +210,9 @@ func _physics_process(delta: float) -> void:
 	# 캐스트와 체인 창은 조종 여부와 무관하게 돈다. 조종을 넘겨도 걸린 것은 계속 흐른다(#263).
 	_tick_cast(delta)
 	_tick_chain_window(delta)
+	# 평타 변형 창도 같다(#328) — 조종을 넘겨도 7초는 7초다. 아군 AI 가 된 하랑도
+	# 그 동안 광역 평타를 낸다(효과는 StatusEffectSystem 이 따로 돌린다).
+	_tick_attack_override_window(delta)
 
 	_process_control(delta)
 
@@ -906,6 +909,14 @@ func try_use_skill(slot: SkillData.InputSlot) -> bool:
 	if get_skill_cooldown_left(skill.skill_id) > 0.0:
 		return false
 
+	# 체력 조건(#328). 몰린 순간에만 쓸 수 있는 역전기가 있다(하랑 E).
+	#
+	# 쿨타임 **뒤**, 게이지 소모 **앞**에 둔다: 조건에 걸린 것은 "아무 일도 일어나지 않은 것"이라
+	# 자원을 가져가면 안 된다(쿨타임 검사와 같은 처리). 조건을 쿨타임보다 먼저 보든 나중에 보든
+	# 결과는 같지만, 자원을 만지기 전에 모든 게이트를 지나는 순서가 읽기 쉽다.
+	if not skill.meets_hp_condition(hp, max_hp):
+		return false
+
 	# 게이지는 **발동이 확정된 뒤** 소모한다. 쿨타임에 막혀 아무 일도 없었는데 자원만
 	# 사라지면 안 된다. 소모하기 전의 비율이 그대로 이번 시전의 세기가 된다(#259).
 	var gauge_ratio := _consume_skill_gauge(skill)
@@ -1002,6 +1013,56 @@ func _fire_skill_effects(skill: SkillData, gauge_ratio: float) -> void:
 		_cast_wave_skill(skill)
 	if skill.party_effect_id != &"":
 		_cast_party_effect(skill)
+	if skill.is_instant_aoe():
+		_cast_instant_aoe(skill)
+	if skill.self_effect_id != &"":
+		_cast_self_effect(skill)
+	if skill.overrides_basic_attack():
+		_open_attack_override_window(skill)
+
+
+# ===== 즉발 광역 (Instant AoE) =====
+
+# 시전한 자리에서 원형으로 즉시 때린다(#328). 피해와 상태 효과 둘 다 선택이다 —
+# 피해가 0 이고 효과만 거는 스킬도 정상이다(하랑 Q 의 광역 도발).
+#
+# 파동(_cast_wave_skill)과 달리 판정이 지금 끝난다. 그래서 달려서 피할 수 없다.
+func _cast_instant_aoe(skill: SkillData) -> void:
+	var damage := skill.get_effective_power(get_stats().get_goddess_skill_boost())
+	var hit_any := false
+
+	for enemy in GameManager.get_all_enemies():
+		if enemy == null or not enemy.is_alive:
+			continue
+		if global_position.distance_to(enemy.global_position) > skill.instant_aoe_radius:
+			continue
+
+		hit_any = true
+		if damage > 0:
+			enemy.take_damage(damage, self)
+			# 피해로 죽었으면 효과를 걸지 않는다(EnemyBase.try_attack 과 같은 규약).
+			if not is_instance_valid(enemy) or not enemy.is_alive:
+				continue
+		if skill.apply_effect_id != &"":
+			StatusEffectSystem.apply(enemy, skill.apply_effect_id, self)
+
+	# 노린 대상이 하나로 없다. 아군 AI 는 이 신호에서 최근접 적을 스스로 고른다(#257).
+	if hit_any and is_controlled() and EventBus:
+		EventBus.player_attacked.emit(self, null)
+
+
+# ===== 자기 효과 부여 (Self effect) =====
+
+# 시전자 자신에게만 상태 효과를 건다(#328).
+#
+# _cast_party_effect 와 나눠 둔 이유는 SkillData.self_effect_id 주석에 있다 —
+# 이쪽은 자기만 이득을 보고 자기만 대가를 치른다.
+#
+# source 를 자기 자신으로 넘긴다: 이 효과의 출처는 자기 시전이고, 지속 피해가
+# 되돌아올 때 "누가 넣은 피해인가"가 자기여야 한다. 자기 반사(_reflect_damage)와
+# 아군 AI 반격(_on_damaged_by)은 둘 다 source == self 를 이미 걸러 낸다.
+func _cast_self_effect(skill: SkillData) -> void:
+	StatusEffectSystem.apply(self, skill.self_effect_id, self)
 
 
 # ===== 파동 (Shockwave) =====
@@ -1120,6 +1181,73 @@ func is_chain_window_open() -> bool:
 # 체인 창이 남은 시간(초).
 func get_chain_time_left() -> float:
 	return maxf(_chain_time_left, 0.0)
+
+
+# ===== 평타 변형 창 (Attack override window) =====
+#
+# 일정 시간 동안 평타 **자체가** 다른 평타가 된다(하랑 E, #328).
+# 체인 창과 나란히 두었지만 성질이 다르다 — 체인은 평타에 얹고, 이쪽은 평타를 갈아치운다.
+# 자세한 구분은 SkillData.attack_override_duration 주석에 있다.
+
+## 변형 창이 남은 시간(초). 0 이면 평타는 원래대로다.
+var _attack_override_time_left: float = 0.0
+## 창을 연 스킬. 반경과 피해 공식의 출처다.
+var _attack_override_skill: SkillData = null
+
+
+func _open_attack_override_window(skill: SkillData) -> void:
+	_attack_override_skill = skill
+	# 겹쳐 쓰면 남은 시간이 **갱신**된다(체인 창과 같은 규약).
+	_attack_override_time_left = skill.attack_override_duration
+
+
+func _tick_attack_override_window(delta: float) -> void:
+	if _attack_override_time_left <= 0.0:
+		return
+	_attack_override_time_left -= delta
+	if _attack_override_time_left <= 0.0:
+		_attack_override_time_left = 0.0
+		_attack_override_skill = null
+
+
+# 지금 평타가 바뀌어 있는가. HUD/검증이 읽는다.
+func is_attack_override_open() -> bool:
+	return _attack_override_time_left > 0.0 and _attack_override_skill != null
+
+
+# 변형 창이 남은 시간(초).
+func get_attack_override_time_left() -> float:
+	return maxf(_attack_override_time_left, 0.0)
+
+
+# 바뀐 평타 한 번. 반경 안 적 **전원**을 평타 규칙(_resolve_attack_hit)에 통과시킨다.
+#
+# 적마다 피해를 따로 계산한다 — 최대 체력 비례이므로 큰 적이 더 많이 아프다.
+# 비율이 저작되지 않았으면(0) 공격력 그대로다. 광역화만 하고 피해 공식은 그대로 두는
+# 창도 있을 수 있기 때문이다.
+#
+# 처형·피흡·표식이 전원에게 각각 적용된다: 이 창의 계약이 "평타가 광역이 된다"이고,
+# 광역이 된 평타는 맞은 적 하나하나에게 평타를 넣은 것이다.
+#
+# 반환: 한 명이라도 때렸으면 true.
+func _resolve_override_attack(skill: SkillData) -> bool:
+	var base := get_stats().get_physical_attack()
+	var hit_any := false
+
+	# 순회 중 적이 죽어(queue_free) 목록이 흔들릴 수 있으므로 사본을 돈다.
+	for enemy in GameManager.get_all_enemies().duplicate():
+		if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive:
+			continue
+		if global_position.distance_to(enemy.global_position) > skill.attack_override_aoe_radius:
+			continue
+
+		var damage := skill.get_attack_override_damage(enemy.max_hp)
+		if damage <= 0:
+			damage = base
+		_resolve_attack_hit(enemy, damage)
+		hit_any = true
+
+	return hit_any
 
 
 # ===== 직선 범위 스킬 (Beam) =====
@@ -1440,7 +1568,15 @@ func try_attack() -> bool:
 
 	var aimed := _uses_aimed_fire()
 	var target := _find_attack_target()
-	if target == null and not aimed:
+
+	# 평타 변형 창(#328)이 열려 있으면 **변형된 평타의 반경**이 곧 사거리다.
+	# 그 반경이 평타 사거리보다 넓을 수 있어서, 대상 판정을 따로 본다 —
+	# 그러지 않으면 반경 안에 적이 있는데도 "사거리 안에 적이 없다"고 평타가 나가지 않는다.
+	var override_skill: SkillData = _attack_override_skill if is_attack_override_open() else null
+	if override_skill != null and not _has_enemy_within(override_skill.attack_override_aoe_radius):
+		override_skill = null
+
+	if target == null and not aimed and override_skill == null:
 		return false
 
 	_attack_cooldown_left = get_attack_cooldown()
@@ -1469,6 +1605,14 @@ func try_attack() -> bool:
 	# 나머지는 지금 이 자리에서 터진다.
 	var impact_passive := _projectile_impact_passive()
 	_apply_attack_passives(impact_passive)
+
+	# 평타 변형 창(#328): 이번 평타는 원래 평타가 아니라 **광역 근접 평타**로 나간다.
+	# 투사체 평타를 쓰는 캐릭터에게도 이 창이 열리면 근접 광역이 된다 — 창의 계약이
+	# "평타를 갈아치운다"이므로, 원래 평타의 성질(탄이 날아간다)까지 대체된다.
+	if override_skill != null:
+		_resolve_override_attack(override_skill)
+		_gain_stack()
+		return true
 
 	# 원거리 평타: 탄을 쏘고 끝난다. 피해·처형·피흡·표식은 탄이 닿았을 때 걸린다.
 	if data != null and data.has_projectile_basic_attack():
@@ -1947,6 +2091,21 @@ func _find_attack_target() -> Node:
 		return null
 	return nearest
 
+# 이 반경 안에 살아 있는 적이 하나라도 있는가(#328).
+#
+# 평타 변형 창이 "이번 평타가 나갈 수 있는가"를 판단할 때 쓴다. 대상을 하나 고르지 않는 이유:
+# 변형된 평타는 반경 안 전원을 때리므로 고를 대상이 없다. 있는지만 알면 된다.
+func _has_enemy_within(radius: float) -> bool:
+	if radius <= 0.0:
+		return false
+	for enemy in GameManager.get_all_enemies():
+		if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive:
+			continue
+		if global_position.distance_to(enemy.global_position) <= radius:
+			return true
+	return false
+
+
 # 평타 사거리.
 #
 # 캐릭터 정의가 값을 갖고 있으면 그쪽이 우선이다(원거리 평타는 씬 노드보다 훨씬 멀리 닿는다).
@@ -1964,12 +2123,17 @@ func get_attack_range() -> float:
 
 # 실제로 들어간 피해(방어·보호막 적용 후 체력에서 깎인 양)를 반환한다.
 # 적 쪽(EnemyBase.take_damage)과 같은 규약이다.
-func take_damage(amount: int, source = null) -> int:
+#
+# ignore_defense: 방어력을 적용하지 않는다(#328). **보호막은 그대로 받아 낸다** — 무시하는
+# 것은 방어력뿐이다. 지금 이 통로를 쓰는 것은 하랑 E 의 자기 피해뿐이며, 그 이유는
+# StatusEffectData.tick_ignores_defense 주석에 있다(방어 공식이 작은 피해를 크게 깎아
+# "체력을 태워 화력을 얻는다"는 거래가 방어력 스텟에 따라 흔들린다).
+func take_damage(amount: int, source = null, ignore_defense: bool = false) -> int:
 	if not is_alive:
 		return 0
 
 	# 방어력 적용. 피해 공식은 PlayerStats.apply_defense()가 단일 출처다.
-	var dealt: int = get_stats().apply_defense(amount)
+	var dealt: int = amount if ignore_defense else get_stats().apply_defense(amount)
 
 	# 보호막이 먼저 받아 낸다. 남은 만큼만 체력이 깎인다.
 	var absorbed: int = mini(_shield, dealt)

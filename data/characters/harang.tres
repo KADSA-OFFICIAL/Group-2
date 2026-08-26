@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
@@ -6,6 +6,9 @@
 [ext_resource type="Texture2D" uid="uid://c3mw0ogq7drhf" path="res://assets/sprites/placeholder/shape_buffer.svg" id="9_shape"]
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/portraits/harang.png" id="10_portrait"]
 [ext_resource type="SpriteFrames" path="res://assets/sprites/characters/buffer_pure_walk_frames.tres" id="10_walk"]
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="11_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/harang_taunt.tres" id="12_taunt"]
+[ext_resource type="Resource" path="res://data/skills/harang_rampage.tres" id="13_rampage"]
 
 [sub_resource type="Resource" id="PlayerStats_harang"]
 script = ExtResource("2_stats")
@@ -17,12 +20,13 @@ faith = 130
 
 [resource]
 script = ExtResource("1_chardata")
-role = 2
-secondary_role = 2
+role = 0
+secondary_role = 3
 character_id = &"harang"
 display_name = "하랑"
+skills = Array[ExtResource("11_skilldef")]([ExtResource("12_taunt"), ExtResource("13_rampage")])
 playable = true
-description = "로스터의 겸직(버퍼 + 원거리딜러) 슬롯(#315). 플레이스홀더였던 buffer_ranged 를 교체한 인물이다 — 태희가 ranged_tank 를(#228), 설아가 buffer_ranged 를(#220) 교체한 것과 같은 방식이다. 스텟(900/110/80/신앙130)은 그 플레이스홀더의 값을 그대로 이어받은 [임시값]이며, 원래는 설아가 이 자리에서 쓰던 값이다(설아는 #276 에서 순혈 버퍼로 옮겼다). **아트는 원래 이 인물의 것이다**: 이름이 정해지지 않은 채 초상과 워크 시트가 먼저 들어와 buffer_pure -> buffer_ranged 를 거쳐 자리를 옮겨 다녔고, 이번에 이름이 붙었다. 그래서 워크 시트 파일 이름이 buffer_pure_walk.png 로 남아 있다 — 재임포트와 UID 갱신이 따라붙는 변경이라 파일명은 바꾸지 않았다(assets/sprites/characters/README.md 참고). 초상은 girl_green.png 에서 전용 아트 harang.png 로 교체했다. 평타는 근접 즉시타격이다(basic_attack_* 미지정). 겸직이므로 버퍼·원거리딜러 두 역할 카운트에 각각 기여한다. 개성/고유 스킬 미정 — 확정된 것은 미나(#259)·태희(#263)·설아(#276) 셋뿐이다."
+description = "로스터의 겸직(탱커 + 버퍼) 슬롯(#328). #315 에서는 겸직 버퍼/원거리였고, 이번에 탱커/버퍼로 옮겼다 — 그러면서 그 자리에 있던 shipduck 을 버퍼/원거리로 맞바꿨다. 맞바꾼 이유: 하랑만 옮기면 겸직 조합이 shipduck 과 겹쳐 로스터 역할 카운트가 탱커 4 / 버퍼 3 / 원거리 2 가 되고, 설계 §8.2 가 전제한 '원거리 3카운트 파티'를 만들 수 없어 원거리 3단계 시너지가 영구히 죽는다. #259(미나↔shipduck)·#263(태희)에서 쓴 것과 같은 슬롯 맞바꿈이다. 스텟(900/110/80/신앙130)은 이전 슬롯에서 그대로 들고 왔다 — [임시값]이다. **주의**: 탱커 성향인데 체력 900 이 로스터 최저이고, E 가 7초에 최대 체력의 49% 를 태우므로 밸런싱에서 함께 봐야 한다. 고유 스킬 둘(#328): Q = 광역 도발(data/skills/harang_taunt.tres) — 즉발 원형으로 주변 적을 전부 자신에게 묶고, 그 적들은 7초간 공속 +200% 가 된다. E = 폭주(data/skills/harang_rampage.tres) — 체력 30% 미만에서만, 7초간 평타가 적 최대체력 비례 광역 근접 평타로 바뀌고 공속 +200% · 모든 피해 50% 흡혈을 얻는 대신 1초마다 자기 최대 체력 7% 를 잃는다. 둘이 한 몸이다: Q 로 맞아서 체력을 30% 아래로 떨어뜨린 뒤 E 로 되찾는 것이 이 캐릭터의 리듬이다. 평타는 근접 즉시타격이다(basic_attack_* 미지정). 겸직이므로 탱커·버퍼 두 역할 카운트에 각각 기여한다. **아트는 원래 이 인물의 것이다**: 이름이 정해지지 않은 채 초상과 워크 시트가 먼저 들어와 buffer_pure -> buffer_ranged 를 거쳐 자리를 옮겨 다녔고, #315 에서 이름이 붙었다. 그래서 워크 시트 파일 이름이 buffer_pure_walk.png 로 남아 있다 — 재임포트와 UID 갱신이 따라붙는 변경이라 파일명은 바꾸지 않았다(assets/sprites/characters/README.md 참고). 도형 플레이스홀더(shape_buffer)와 tint 는 이전 역할 그대로 두었다 — 워크 시트가 있어 전투에서는 도형이 숨고(Player 가 AnimatedSprite2D 로 그린다), 메타 화면 스와치에만 쓰인다. 역할 색을 다시 고르는 것은 이 이슈의 범위가 아니다. "
 stats = SubResource("PlayerStats_harang")
 sprite_texture = ExtResource("9_shape")
 portrait = ExtResource("10_portrait")

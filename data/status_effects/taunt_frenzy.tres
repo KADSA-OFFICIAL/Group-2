@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 0
+stacking = 0
+max_stacks = 1
+effect_id = &"taunt_frenzy"
+display_name = "격앙"
+description = "도발(taunt)에 함께 걸리는 공속 증가(#328). 도발당한 적은 7초 동안 **공속 +200%**(배수 3.0)로 하랑을 때린다 — 도발이 일방적인 이득이 아니라 거래가 되게 하는 대가다. 하랑은 적을 자기 쪽으로 모으는 대신 그 7초 동안 세 배로 맞는다. taunt 와 따로 있는 이유: kind 가 하나뿐이라 강제 대상 지정(TAUNT)과 스텟 변경(STAT_MOD)을 한 효과에 담을 수 없다. taunt.also_apply_effect_id 가 둘을 묶는다. is_debuff = false 다 — 적에게 **유리한** 상태이므로 디버프로 세면 버퍼 처형 조건이 잘못 만족된다(empowered.tres 와 같은 판단). 적의 공속은 EnemyBase.get_attack_cooldown() 이 unit x 버프 배수로 읽으므로 이 값이 그대로 반영되고, EnemyBase 가 개체별 _runtime_stats 사본을 쓰기 때문에 같은 종류의 다른 적에게 번지지 않는다. 지속시간 7초와 +200% 는 [확정 스펙]이다."
+is_debuff = false
+duration = 7.0
+stat_percent = {
+"attack_speed": 2.0
+}

@@ -18,12 +18,12 @@ equip_magic_defense = 0
 
 [resource]
 script = ExtResource("1_chardata")
-role = 0
-secondary_role = 3
+role = 2
+secondary_role = 2
 character_id = &"shipduck"
 display_name = "Shipduck"
 playable = true
-description = "기본 플레이어 캐릭터. 로스터의 겸직(탱커 + 버퍼) 슬롯이다(#259) — 원래 순혈 탱커였는데 미나가 단일 탱커로 바뀌면서 자리를 맞바꿨다. docs §1.1 의 \"순혈 3 + 겸직 3\" 구성을 지키기 위한 재배치이고, 스텟·외형은 건드리지 않았다. 고유 스킬 미정."
+description = "기본 플레이어 캐릭터. 로스터의 겸직(버퍼 + 원거리딜러) 슬롯이다(#328) — #259 에서 겸직 탱커/버퍼를 받았다가, 하랑이 탱커/버퍼로 오면서 다시 자리를 맞바꿨다. 맞바꾼 이유: 하랑만 옮기면 겸직 조합이 겹쳐 로스터 역할 카운트가 탱커 4 / 버퍼 3 / 원거리 2 가 되고, 설계 §8.2 가 전제한 \"원거리 3카운트 파티\"를 만들 수 없어 원거리 3단계 시너지가 영구히 죽는다. docs §1.1 의 \"순혈 3 + 겸직 3\" 과 3/3/3 카운트를 지키기 위한 재배치이고, #259 때와 마찬가지로 **스텟·외형·스킬은 건드리지 않았다** — 도형 플레이스홀더가 shape_tank 로 남아 있는 것도 그래서다(역할 색·도형을 다시 고르는 것은 이 이슈의 범위가 아니다). 평타는 근접 즉시타격이다. 고유 스킬 미정."
 stats = SubResource("PlayerStats_shipduck")
 sprite_texture = ExtResource("9_shape")
 portrait = ExtResource("10_portrait")

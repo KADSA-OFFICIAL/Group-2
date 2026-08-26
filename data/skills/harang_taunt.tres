@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"harang_taunt"
+display_name = "광역 도발"
+description = "하랑 고유 스킬(Q, #328). 하랑 자리에서 **즉발 원형**으로 반경 안 적 전원에게 taunt(data/status_effects/taunt.tres)를 건다. 피해는 없다 — base_power = 0 이다. 이 스킬은 스스로 피해를 내지 않고 **적이 누구를 때리는지**를 바꾼다(설아 E 가 파티가 내는 피해를 바꾸는 것과 같은 종류의 스킬이다). 파동(wave_*)이 아니라 즉발 광역(instant_aoe_radius)인 이유: 파동은 판정이 퍼져서 달려 피할 수 있는데, 도발은 '지금 당장 끌어와야' 값어치가 있다. 걸린 적은 7초 동안 하랑만 공격하고 그 대신 **공속 +200%** 가 된다(동반 효과 taunt_frenzy) — 적을 모으는 대신 세 배로 맞는 거래다. 지속시간·공속 증가는 **효과 리소스가 소유한다**(stun 지속시간을 stun.tres 가 갖는 것과 같은 규약). 조준하지 않는다: 원은 방향이 없고 대상이 '반경 안 전원'으로 이미 정해져 있다. scales_with_faith 는 피해가 0 이라 의미가 없어 꺼 두었다. 반경 260 과 쿨타임 14 초는 [임시값]이다 — 반경은 미나 Q 착탄 광역(70)보다 훨씬 넓고 설아 Q 파동(720)보다 좁게, '주변을 끌어오는' 크기로 잡았다."
+base_power = 0
+scales_with_faith = false
+cooldown = 14.0
+instant_aoe_radius = 260.0
+apply_effect_id = &"taunt"
+input_slot = 1

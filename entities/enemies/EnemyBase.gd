@@ -204,10 +204,37 @@ func _update_walk_animation() -> void:
 # 추적 대상을 결정한다.
 # 지금 대상이 아직 유효하면 유지하고(대상이 매 프레임 바뀌어 떠는 것을 막는다),
 # 아니면 가장 가까운 파티 멤버를 새로 고른다.
+#
+# 도발(#328)이 걸려 있으면 그 무엇보다 먼저다 — 지금 붙어 싸우던 대상도, 거리도 무시하고
+# 도발한 쪽으로 간다. 그것이 도발의 정의다.
 func _resolve_target() -> Node2D:
+	var taunter := _taunt_target()
+	if taunter != null:
+		return taunter
 	if _is_valid_target(_target):
 		return _target
 	return _find_nearest_party_member()
+
+
+# 도발이 강제하는 대상. 없으면 null.
+#
+# _is_valid_target() 을 쓰지 않는다: 그 함수는 **탐지 범위 안**인지도 보는데, 도발은
+# 범위를 무시하는 것이 요점이다. 탐지 범위 안에서만 듣는 도발은 이미 오고 있던 적에게는
+# 아무 일도 하지 않는 것과 같다.
+#
+# 살아 있는지는 그대로 본다 — 죽은 대상을 향해 계속 걸어가면 적이 멈추지 않는다.
+# 그 경우 null 을 돌려주므로 지금까지의 대상 선정으로 돌아간다.
+func _taunt_target() -> Node2D:
+	var source := StatusEffectSystem.get_taunt_source(self)
+	if source == null or not is_instance_valid(source):
+		return null
+	var member := source as Node2D
+	if member == null:
+		return null
+	var alive = member.get("is_alive")
+	if alive != null and not bool(alive):
+		return null
+	return member
 
 
 # 추적 대상으로 쓸 수 있는 노드인가.
@@ -345,7 +372,12 @@ func _fire_projectile(damage: int, effect_id: StringName) -> void:
 # 실제로 들어간 피해(방어 적용 후)를 반환한다.
 # 피흡처럼 "준 피해에 비례하는" 효과가 그 값을 알아야 한다 — 공격력으로 계산하면
 # 방어력 높은 적을 때릴 때 실제보다 크게 회복된다.
-func take_damage(amount: int, source = null) -> int:
+#
+# ignore_defense: 방어력을 적용하지 않는다(#328). 기본은 false 다 — 방어 공식을 우회하는 것은
+# 예외이며, 지금 이 통로를 쓰는 것은 "대가로 내는 자기 피해"(StatusEffectData.tick_ignores_defense)
+# 하나뿐이다. 적에게 이 값이 true 로 들어오는 경우는 아직 없지만, 시그니처는 Player 와 맞춰 둔다
+# — 상태 효과 틱은 대상이 적인지 파티원인지 가리지 않고 같은 코드로 부른다.
+func take_damage(amount: int, source = null, ignore_defense: bool = false) -> int:
 	if not is_alive:
 		return 0
 
@@ -357,7 +389,8 @@ func take_damage(amount: int, source = null) -> int:
 	# 자르지 않으면 "준 피해에 비례하는" 효과가 전부 부풀어 오른다. 처형이 대표적이다 —
 	# 처형은 방어력에 막히지 않으려고 max_hp x 100 을 넣는데, 체력 240 남은 적을 처형하면
 	# dealt 가 24만으로 잡혀 흡혈 50 퍼센트가 12만을 회복시킨다(만피 회복).
-	var dealt: int = mini(get_stats().apply_defense(amount), hp)
+	var raw: int = amount if ignore_defense else get_stats().apply_defense(amount)
+	var dealt: int = mini(raw, hp)
 	hp -= dealt
 
 	if EventBus:
