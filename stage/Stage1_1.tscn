@@ -1,6 +1,11 @@
-[gd_scene load_steps=2 format=3 uid="uid://d87uv8f6k3n8"]
+[gd_scene load_steps=7 format=3 uid="uid://d87uv8f6k3n8"]
 
 [ext_resource type="Script" path="res://stage/Stage1_1.gd" id="1_stage"]
+[ext_resource type="PackedScene" path="res://entities/combat/CombatDebugLayer.tscn" id="2_debug"]
+[ext_resource type="PackedScene" path="res://entities/combat/DamageNumberSpawner.tscn" id="3_damage_numbers"]
+[ext_resource type="PackedScene" path="res://entities/combat/HitFlash.tscn" id="4_hit_flash"]
+[ext_resource type="PackedScene" path="res://entities/combat/StatusRing.tscn" id="5_status_ring"]
+[ext_resource type="PackedScene" path="res://entities/combat/GaugeRingSpawner.tscn" id="6_gauge_ring"]
 
 [node name="Stage1_1" type="Node2D"]
 script = ExtResource("1_stage")
@@ -16,3 +21,12 @@ color = Color(0.2, 0.2, 0.2, 1)
 
 [node name="Room1" type="Node2D" parent="."]
 
+[node name="CombatDebugLayer" parent="." instance=ExtResource("2_debug")]
+
+[node name="DamageNumberSpawner" parent="." instance=ExtResource("3_damage_numbers")]
+
+[node name="HitFlash" parent="." instance=ExtResource("4_hit_flash")]
+
+[node name="StatusRing" parent="." instance=ExtResource("5_status_ring")]
+
+[node name="GaugeRingSpawner" parent="." instance=ExtResource("6_gauge_ring")]

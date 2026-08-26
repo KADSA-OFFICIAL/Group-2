@@ -7,6 +7,7 @@ script = ExtResource("1_building")
 building_id = &"storage"
 display_name = "창고"
 description = "모아 온 재화를 쌓아 두는 곳."
+silhouette = 4
 icon_name = "icon_storage"
 tint = Color(0.76, 0.70, 0.58, 1)
 spot = Vector2(0.84, 0.63)

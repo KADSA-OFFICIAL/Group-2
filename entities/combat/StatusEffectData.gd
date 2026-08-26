@@ -22,6 +22,7 @@ enum Kind {
 	CONTROL,    # 행동 제약 (기절/속박/침묵 등 CC)
 	PERIODIC,   # 지속 피해/회복 (DoT/HoT)
 	GAUGE,      # 카운터/게이지 누적 (버퍼 표식 등)
+	EMPOWER,    # 전투 행동 부여 (흡혈/처형 등) — 스텟이 아니라 "할 수 있는 일"이 바뀐다
 }
 
 # 기본값 STAT_MOD: 누락 시 안전하게 로드되도록 첫 값을 기본으로 둔다.
@@ -71,6 +72,28 @@ enum Stacking {
 @export var tick_interval: float = 1.0   # 틱 간격(초). 0 이하는 적용 시 1.0으로 간주한다.
 @export var tick_damage: int = 0         # 틱당 피해 (양수)
 @export var tick_heal: int = 0           # 틱당 회복 (양수)
+
+# ===== EMPOWER payload =====
+#
+# "무엇을 할 수 있게 되는가"를 부여한다(#276). 스텟(STAT_MOD)과 나눈 이유:
+# 흡혈과 처형은 숫자가 아니라 **행동 규칙**이다. PlayerStats 에 채널이 없고, 있어서도 안 된다
+# — 스텟은 값이고 이쪽은 분기다.
+#
+# 부여받은 쪽(Player)이 매 판정마다 이 효과가 걸려 있는지 물어본다.
+# 효과가 스스로 무언가를 하지 않는다 — 지속시간이 끝나면 조회가 0/false 로 돌아갈 뿐이다.
+
+## 이 효과가 걸린 동안, 대상이 **준 모든 피해** 중 회복되는 비율. 0 이면 흡혈을 주지 않는다.
+##
+## **평타만이 아니다.** 스킬·광역 패시브로 준 피해까지 전부 포함한다 — 원거리 3단계 시너지의
+## 피흡(CombatTuning.lifesteal_percent, 평타 한정)과 **별개 채널**이라 둘 다 켜지면 함께 걸린다.
+@export var grants_lifesteal_percent: float = 0.0
+
+## 이 효과가 걸린 동안, 대상이 **평타로 처형**할 수 있는가.
+##
+## 켜져 있으면 버퍼 1단계 시너지가 꺼져 있어도, 대상에게 디버프가 없어도 처형이 나간다.
+## 체력 임계치(CombatTuning.execute_hp_percent)는 그대로 지킨다 — 그것은 처형의 정의이지
+## 조건이 아니다.
+@export var grants_execute: bool = false
 
 # ===== GAUGE payload =====
 # 평타 등으로 누적되어 임계치에서 터지는 상태(버퍼 표식이 이 종류).
@@ -126,6 +149,8 @@ func get_kind_name() -> String:
 			return "지속 피해/회복"
 		Kind.GAUGE:
 			return "게이지 누적"
+		Kind.EMPOWER:
+			return "행동 부여"
 		_:
 			return "알 수 없음"
 
@@ -154,5 +179,15 @@ func validate() -> Array[String]:
 		Kind.STAT_MOD:
 			if stat_flat.is_empty() and stat_percent.is_empty():
 				problems.append("STAT_MOD인데 stat_flat/stat_percent가 모두 비어 있습니다.")
+		Kind.EMPOWER:
+			if grants_lifesteal_percent <= 0.0 and not grants_execute:
+				problems.append("EMPOWER인데 부여하는 행동이 하나도 없습니다.")
+
+	if grants_lifesteal_percent < 0.0:
+		problems.append("grants_lifesteal_percent는 0 이상이어야 합니다.")
+
+	# 행동 부여는 시간이 끝나면 사라져야 한다. 영구 부여는 스킬이 아니라 패시브의 일이다.
+	if kind == Kind.EMPOWER and is_permanent():
+		problems.append("EMPOWER는 duration이 있어야 합니다(영구 부여는 상태 효과가 아니라 패시브다).")
 
 	return problems

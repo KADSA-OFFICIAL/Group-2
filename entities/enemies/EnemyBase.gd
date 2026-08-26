@@ -345,18 +345,34 @@ func _fire_projectile(damage: int, effect_id: StringName) -> void:
 # 실제로 들어간 피해(방어 적용 후)를 반환한다.
 # 피흡처럼 "준 피해에 비례하는" 효과가 그 값을 알아야 한다 — 공격력으로 계산하면
 # 방어력 높은 적을 때릴 때 실제보다 크게 회복된다.
-func take_damage(amount: int, _source = null) -> int:
+func take_damage(amount: int, source = null) -> int:
 	if not is_alive:
 		return 0
 
 	# 방어력 적용. 피해 공식은 PlayerStats.apply_defense()가 단일 출처다.
 	# (여기서 다시 계산하지 않는다 — 이전에는 Player와 중복 구현되어 있었다.)
-	var dealt = get_stats().apply_defense(amount)
+	# 계산된 피해와 **실제로 깎인 체력**은 다르다. 남은 체력보다 큰 피해는 넘치는 만큼 버려진다.
+	# 반환값의 계약이 "실제로 들어간 피해"이므로 여기서 자른다.
+	#
+	# 자르지 않으면 "준 피해에 비례하는" 효과가 전부 부풀어 오른다. 처형이 대표적이다 —
+	# 처형은 방어력에 막히지 않으려고 max_hp x 100 을 넣는데, 체력 240 남은 적을 처형하면
+	# dealt 가 24만으로 잡혀 흡혈 50 퍼센트가 12만을 회복시킨다(만피 회복).
+	var dealt: int = mini(get_stats().apply_defense(amount), hp)
 	hp -= dealt
-	hp = max(hp, 0)
 
 	if EventBus:
 		EventBus.damage_taken.emit(self, dealt, global_position)
+
+	# 피해를 **준 쪽**에 실제로 들어간 양을 알린다(#276).
+	#
+	# 왜 여기인가: "준 모든 피해를 흡혈한다"는 평타·스킬·광역을 가리지 않는다. 그 전부를
+	# 훑으려면 피해를 내는 자리마다 같은 코드를 붙여야 하는데, 피해가 **들어오는** 곳은
+	# 여기 하나다. 한 곳에서 알리면 새 피해 경로가 생겨도 자동으로 포함된다.
+	#
+	# 평타 한정 피흡(원거리 3단계)은 여기로 오지 않는다 — 그쪽은 "평타로 준 피해"가 계약이라
+	# Player._resolve_attack_hit() 이 계속 갖는다. 두 채널은 별개다.
+	if source != null and is_instance_valid(source) and source.has_method("on_damage_dealt"):
+		source.on_damage_dealt(dealt)
 
 	if hp <= 0:
 		die()
