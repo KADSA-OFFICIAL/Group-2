@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusRing.gd" id="1_ring"]
+
+[node name="StatusRing" type="Node2D"]
+z_index = 50
+z_as_relative = false
+script = ExtResource("1_ring")
