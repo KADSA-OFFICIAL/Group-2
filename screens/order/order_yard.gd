@@ -311,7 +311,7 @@ func _make_building_placeholder(building: OrderBuildingData) -> Control:
 	shell.set_anchors_preset(Control.PRESET_FULL_RECT)
 	shell.offset_bottom = -24.0
 	shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	shell.set_meta("tint", building.tint)
+	shell.set_meta("building", building)
 	shell.draw.connect(_draw_building_shell.bind(shell))
 
 	# 아이콘은 지붕 아래 벽면에 붙는다. 크기는 _layout_buildings() 가 정한다
@@ -327,52 +327,312 @@ func _make_building_placeholder(building: OrderBuildingData) -> Control:
 	if icon != null:
 		icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		icon.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		# 건물이 실루엣만으로 구분되고 나면 아이콘은 "무엇의 자리인지" 알려 주는
+		# 표식일 뿐이다. 불투명하게 두면 UI 아이콘이 건물 위에 떠 있는 것으로 보인다.
+		# 살짝 눕혀서 벽에 그려 넣은 표식처럼 앉힌다.
+		icon.modulate.a = 0.72
 		margin.add_child(icon)
 	return shell
 
 
-# 지붕 + 벽 + 문. 셋이면 집으로 읽힌다.
+# 건물 하나를 그 **양식**대로 그린다(#316).
+#
+# 양식은 데이터가 지시한다(OrderBuildingData.silhouette). building_id 로 분기하면
+# 건물을 하나 더할 때마다 이 파일을 고쳐야 한다.
+#
+# 크기 기준: 뜰 폭의 0.18~0.24 라 실제로는 110~150px 안팎이다. 그 크기에서 뭉개지지
+# 않을 만큼만 그린다 — 더 넣으면 얼룩이 된다.
 func _draw_building_shell(shell: Control) -> void:
 	var w := shell.size.x
 	var h := shell.size.y
 	if w <= 0.0 or h <= 0.0:
 		return
 
-	var tint: Color = shell.get_meta("tint")
-	var wall := tint
-	var roof := tint.lerp(UITheme.OUTLINE, 0.42)
-	var door := tint.lerp(UITheme.OUTLINE, 0.68)
-	var line := UITheme.OUTLINE
-	var edge := maxf(w * 0.018, 2.0)
+	var building: OrderBuildingData = shell.get_meta("building")
+	var p := _palette(building.tint)
 
-	var roof_h := h * ROOF_RATIO
-	var eaves := w * EAVES_RATIO          # 처마가 벽보다 나와야 지붕으로 보인다
+	match building.silhouette:
+		OrderBuildingData.Silhouette.FORGE:
+			_draw_forge(shell, w, h, p)
+		OrderBuildingData.Silhouette.SHRINE:
+			_draw_shrine(shell, w, h, p)
+		OrderBuildingData.Silhouette.STALL:
+			_draw_stall(shell, w, h, p)
+		OrderBuildingData.Silhouette.GRANARY:
+			_draw_granary(shell, w, h, p)
+		_:
+			_draw_hut(shell, w, h, p)
 
-	# 벽
-	var wall_rect := Rect2(w * EAVES_RATIO, roof_h, w - w * EAVES_RATIO * 2.0, h - roof_h)
-	shell.draw_rect(wall_rect, wall)
 
-	# 문. 벽 아래 가운데를 파낸다. 들어갈 수 있는 곳으로 보인다.
-	var door_w := wall_rect.size.x * DOOR_WIDTH_RATIO
-	var door_h := wall_rect.size.y * DOOR_HEIGHT_RATIO
-	shell.draw_rect(Rect2(
-		wall_rect.position.x + (wall_rect.size.x - door_w) * 0.5,
-		h - door_h, door_w, door_h), door)
+# 건물 하나가 쓰는 색 한 벌. tint 에서 전부 파생한다 — 새 색을 만들지 않는다.
+func _palette(tint: Color) -> Dictionary:
+	return {
+		"wall": tint,
+		"wall_lit": tint.lerp(UITheme.CREAM, 0.22),
+		"wall_dim": tint.lerp(UITheme.OUTLINE, 0.20),
+		"roof": tint.lerp(UITheme.OUTLINE, 0.44),
+		"roof_lit": tint.lerp(UITheme.OUTLINE, 0.28),
+		"wood": tint.lerp(UITheme.OUTLINE, 0.58),
+		"dark": tint.lerp(UITheme.OUTLINE, 0.78),
+		"stone": UITheme.STONE_GRAY,
+		"stone_lit": UITheme.STONE_GRAY.lerp(UITheme.CREAM, 0.30),
+		"line": UITheme.OUTLINE,
+	}
 
-	# 지붕(맞배). 좌우로 처마가 나온다.
-	var gable := PackedVector2Array([
-		Vector2(w * 0.5, 0.0),
-		Vector2(w, roof_h),
-		Vector2(0.0, roof_h),
+
+# 윤곽선 두께. 건물이 작아도 선이 사라지지 않게 하한을 둔다.
+func _edge(w: float) -> float:
+	return maxf(w * 0.016, 1.5)
+
+
+# 초가 결. 지붕이 단색 삼각형이면 종이로 보인다. 가로 결을 몇 줄 그어 두께를 준다.
+func _thatch(on: CanvasItem, top: Vector2, left: Vector2, right: Vector2, color: Color) -> void:
+	var rows := 4
+	for i in range(1, rows + 1):
+		var t := float(i) / float(rows + 1)
+		on.draw_line(top.lerp(left, t), top.lerp(right, t), color,
+			maxf((right.x - left.x) * 0.012, 1.0))
+
+
+# 기둥 하나. 나무 기둥은 이 마당의 공통 부재다.
+func _post(on: CanvasItem, x: float, y_top: float, y_bottom: float, width: float,
+		p: Dictionary, edge: float) -> void:
+	var rect := Rect2(x - width * 0.5, y_top, width, y_bottom - y_top)
+	on.draw_rect(rect, p["wood"])
+	on.draw_rect(rect, p["line"], false, edge)
+
+
+# 항아리 몇 개. 마당에 물건이 있어야 사람이 쓰는 곳으로 보인다.
+func _jars(on: CanvasItem, base: Vector2, unit: float, count: int, p: Dictionary,
+		edge: float) -> void:
+	for i in count:
+		var c := Vector2(base.x + unit * 1.5 * float(i), base.y - unit * 0.5)
+		var shape := _ellipse(c, unit * 0.55, unit * 0.62, 12)
+		on.draw_colored_polygon(shape, p["stone_lit"])
+		on.draw_polyline(_closed(shape), p["line"], edge)
+
+
+func _closed(points: PackedVector2Array) -> PackedVector2Array:
+	var out := points.duplicate()
+	if out.size() > 0:
+		out.append(out[0])
+	return out
+
+
+# 지붕 마루에서 처마로 흐르는 외쪽지붕의 결.
+func _slope_grain(on: CanvasItem, ridge_a: Vector2, ridge_b: Vector2,
+		eave_a: Vector2, eave_b: Vector2, color: Color, width: float) -> void:
+	for i in range(1, 4):
+		var t := float(i) / 4.0
+		on.draw_line(ridge_a.lerp(eave_a, t), ridge_b.lerp(eave_b, t), color, width)
+
+
+# ── 기본 맞배집 (양식 미지정) ──
+func _draw_hut(on: CanvasItem, w: float, h: float, p: Dictionary) -> void:
+	var edge := _edge(w)
+	var roof_h := h * 0.34
+	var inset := w * 0.07
+
+	var wall := Rect2(inset, roof_h, w - inset * 2.0, h - roof_h)
+	on.draw_rect(wall, p["wall"])
+	on.draw_rect(Rect2(wall.position.x, wall.position.y, wall.size.x, wall.size.y * 0.30),
+		p["wall_lit"])
+
+	var door_w := wall.size.x * 0.30
+	var door_h := wall.size.y * 0.42
+	on.draw_rect(Rect2(wall.position.x + (wall.size.x - door_w) * 0.5, h - door_h,
+		door_w, door_h), p["dark"])
+
+	var top := Vector2(w * 0.5, 0.0)
+	var left := Vector2(0.0, roof_h)
+	var right := Vector2(w, roof_h)
+	on.draw_colored_polygon(PackedVector2Array([top, right, left]), p["roof"])
+	_thatch(on, top, left, right, p["roof_lit"])
+
+	on.draw_rect(wall, p["line"], false, edge)
+	on.draw_polyline(PackedVector2Array([left, top, right, left]), p["line"], edge)
+
+
+# ── 제조소: 옆이 트인 작업장 ──
+# 벽을 다 세우지 않는다. 안이 보여야 "작업하는 곳"으로 읽힌다.
+func _draw_forge(on: CanvasItem, w: float, h: float, p: Dictionary) -> void:
+	var edge := _edge(w)
+	var roof_h := h * 0.32
+
+	# 뒷벽(낮다). 트인 앞쪽과 대비되어 안쪽이 있다는 것을 보여 준다.
+	var back := Rect2(w * 0.16, roof_h, w * 0.68, (h - roof_h) * 0.58)
+	on.draw_rect(back, p["wall_dim"])
+	on.draw_rect(back, p["line"], false, edge)
+
+	# 모루 — 이 건물의 정체
+	var anvil_w := w * 0.30
+	var anvil := Rect2(w * 0.5 - anvil_w * 0.5, h - h * 0.22, anvil_w, h * 0.14)
+	on.draw_rect(Rect2(anvil.position.x - w * 0.05, anvil.position.y,
+		anvil.size.x + w * 0.10, anvil.size.y * 0.38), p["stone_lit"])
+	on.draw_rect(anvil, p["stone"])
+	on.draw_rect(anvil, p["line"], false, edge)
+
+	# 앞기둥 둘
+	_post(on, w * 0.12, roof_h, h, w * 0.07, p, edge)
+	_post(on, w * 0.88, roof_h, h, w * 0.07, p, edge)
+
+	# 외쪽지붕. 맞배가 아니라 한쪽으로 흘러야 작업장으로 보인다.
+	var ridge_a := Vector2(w * 0.06, h * 0.04)
+	var ridge_b := Vector2(w, h * 0.17)
+	var eave_a := Vector2(0.0, roof_h)
+	var eave_b := Vector2(w, roof_h)
+	var slope := PackedVector2Array([eave_a, ridge_a, ridge_b, eave_b])
+	on.draw_colored_polygon(slope, p["roof"])
+	_slope_grain(on, ridge_a, ridge_b, eave_a, eave_b, p["roof_lit"], maxf(w * 0.012, 1.0))
+	on.draw_polyline(_closed(slope), p["line"], edge)
+
+	# 굴뚝과 연기
+	var chimney := Rect2(w * 0.64, h * 0.01, w * 0.13, h * 0.17)
+	on.draw_rect(chimney, p["stone"])
+	on.draw_rect(chimney, p["line"], false, edge)
+	var smoke: Color = p["stone_lit"]
+	smoke.a = 0.5
+	on.draw_colored_polygon(_ellipse(Vector2(w * 0.71, -h * 0.02), w * 0.10, h * 0.05, 12), smoke)
+
+
+# ── 성소: 선돌과 상인방 ──
+# 이 마당에서 가장 격이 높은 자리다. 나무가 아니라 돌로 짓는다.
+func _draw_shrine(on: CanvasItem, w: float, h: float, p: Dictionary) -> void:
+	var edge := _edge(w)
+	var roof_h := h * 0.26
+	var step_h := h * 0.11
+	var body_bottom := h - step_h
+
+	# 계단
+	var steps := 3
+	for i in steps:
+		var t := float(i) / float(steps)
+		var sw := w * (0.60 + 0.40 * t)
+		var r := Rect2(w * 0.5 - sw * 0.5, body_bottom + step_h * t, sw,
+			step_h / float(steps) + 1.0)
+		on.draw_rect(r, p["stone"] if i % 2 == 0 else p["stone_lit"])
+		on.draw_rect(r, p["line"], false, edge * 0.7)
+
+	# 어두운 안쪽 + 선돌 둘
+	on.draw_rect(Rect2(w * 0.30, roof_h, w * 0.40, body_bottom - roof_h), p["dark"])
+	var pillar_w := w * 0.18
+	for x in [w * 0.24, w * 0.76]:
+		var taper := PackedVector2Array([
+			Vector2(x - pillar_w * 0.42, roof_h),
+			Vector2(x + pillar_w * 0.42, roof_h),
+			Vector2(x + pillar_w * 0.50, body_bottom),
+			Vector2(x - pillar_w * 0.50, body_bottom),
+		])
+		on.draw_colored_polygon(taper, p["stone"])
+		on.draw_polyline(_closed(taper), p["line"], edge)
+
+	# 상인방(가로 돌)
+	var lintel := Rect2(w * 0.13, roof_h - h * 0.02, w * 0.74, h * 0.09)
+	on.draw_rect(lintel, p["stone_lit"])
+	on.draw_rect(lintel, p["line"], false, edge)
+
+	# 처마가 넓은 지붕
+	var top := Vector2(w * 0.5, 0.0)
+	var left := Vector2(-w * 0.02, roof_h)
+	var right := Vector2(w * 1.02, roof_h)
+	on.draw_colored_polygon(PackedVector2Array([top, right, left]), p["roof"])
+	_thatch(on, top, left, right, p["roof_lit"])
+	on.draw_polyline(PackedVector2Array([left, top, right]), p["line"], edge)
+
+	# 처마에 걸린 천
+	for x in [w * 0.09, w * 0.91]:
+		var cloth := PackedVector2Array([
+			Vector2(x - w * 0.045, roof_h), Vector2(x + w * 0.045, roof_h),
+			Vector2(x + w * 0.030, roof_h + h * 0.15), Vector2(x - w * 0.030, roof_h + h * 0.15),
+		])
+		on.draw_colored_polygon(cloth, p["wall_lit"])
+		on.draw_polyline(_closed(cloth), p["line"], edge * 0.7)
+
+
+# ── 상점: 차양을 친 좌판 ──
+func _draw_stall(on: CanvasItem, w: float, h: float, p: Dictionary) -> void:
+	var edge := _edge(w)
+	var awning_y := h * 0.32
+	var counter_y := h * 0.66
+
+	_post(on, w * 0.10, awning_y, h, w * 0.06, p, edge)
+	_post(on, w * 0.90, awning_y, h, w * 0.06, p, edge)
+
+	# 차양. 가운데가 솟고 양끝이 처진다.
+	var awning := PackedVector2Array([
+		Vector2(w * 0.02, awning_y), Vector2(w * 0.5, h * 0.03),
+		Vector2(w * 0.98, awning_y), Vector2(w * 0.5, awning_y - h * 0.06),
 	])
-	shell.draw_colored_polygon(gable, roof)
+	on.draw_colored_polygon(awning, p["roof"])
+	on.draw_polyline(_closed(awning), p["line"], edge)
+	# 차양 술
+	for i in range(1, 6):
+		var t := float(i) / 6.0
+		var a := Vector2(w * 0.02, awning_y).lerp(Vector2(w * 0.98, awning_y), t)
+		on.draw_line(a, a + Vector2(0.0, h * 0.05), p["roof_lit"], maxf(w * 0.014, 1.0))
 
-	# 윤곽선. 아이콘과 같은 두께 규약을 따른다.
-	shell.draw_rect(wall_rect, line, false, edge)
-	shell.draw_polyline(PackedVector2Array([
-		Vector2(0.0, roof_h), Vector2(w * 0.5, 0.0), Vector2(w, roof_h),
-	]), line, edge)
-	shell.draw_line(Vector2(0.0, roof_h), Vector2(w, roof_h), line, edge)
+	# 판매대
+	var counter := Rect2(w * 0.06, counter_y, w * 0.88, h * 0.17)
+	on.draw_rect(counter, p["wall"])
+	on.draw_rect(Rect2(counter.position.x, counter.position.y, counter.size.x,
+		counter.size.y * 0.34), p["wall_lit"])
+	on.draw_rect(counter, p["line"], false, edge)
+
+	# 늘어놓은 물건
+	for i in 5:
+		on.draw_colored_polygon(_ellipse(
+			Vector2(w * (0.16 + 0.17 * float(i)), counter_y - h * 0.035),
+			w * 0.05, h * 0.035, 10), p["stone_lit"])
+
+	_jars(on, Vector2(w * 0.12, h), w * 0.11, 2, p, edge)
+
+
+# ── 창고: 고상식 곳간 ──
+# 기둥 위에 올려 습기와 짐승을 피한다. 창이 없다.
+func _draw_granary(on: CanvasItem, w: float, h: float, p: Dictionary) -> void:
+	var edge := _edge(w)
+	var roof_h := h * 0.34
+	var body_bottom := h * 0.74
+
+	# 기둥 셋 — 몸체 아래가 비어 있어야 고상식으로 읽힌다
+	for x in [w * 0.22, w * 0.50, w * 0.78]:
+		_post(on, x, body_bottom - h * 0.02, h, w * 0.07, p, edge)
+
+	# 몸체(창 없음)
+	var body := Rect2(w * 0.12, roof_h, w * 0.76, body_bottom - roof_h)
+	on.draw_rect(body, p["wall"])
+	on.draw_rect(Rect2(body.position.x, body.position.y, body.size.x, body.size.y * 0.28),
+		p["wall_lit"])
+	for i in range(1, 4):
+		var y := body.position.y + body.size.y * float(i) / 4.0
+		on.draw_line(Vector2(body.position.x, y), Vector2(body.end.x, y), p["wall_dim"],
+			maxf(w * 0.010, 1.0))
+	on.draw_rect(body, p["line"], false, edge)
+
+	# 작은 출입구
+	var hatch := Rect2(w * 0.40, roof_h + body.size.y * 0.34, w * 0.20, body.size.y * 0.40)
+	on.draw_rect(hatch, p["dark"])
+	on.draw_rect(hatch, p["line"], false, edge * 0.8)
+
+	# 가파른 지붕
+	var top := Vector2(w * 0.5, 0.0)
+	var left := Vector2(w * 0.02, roof_h)
+	var right := Vector2(w * 0.98, roof_h)
+	on.draw_colored_polygon(PackedVector2Array([top, right, left]), p["roof"])
+	_thatch(on, top, left, right, p["roof_lit"])
+	on.draw_polyline(PackedVector2Array([left, top, right]), p["line"], edge)
+
+	# 통나무 사다리
+	var la := Vector2(w * 0.72, h)
+	var lb := Vector2(w * 0.58, roof_h + body.size.y * 0.72)
+	var offset := Vector2(w * 0.10, 0.0)
+	on.draw_line(la, lb, p["wood"], edge * 1.6)
+	on.draw_line(la + offset, lb + offset, p["wood"], edge * 1.6)
+	for i in range(1, 4):
+		var t := float(i) / 4.0
+		on.draw_line(la.lerp(lb, t), la.lerp(lb, t) + offset, p["wood"], edge)
+
+	_jars(on, Vector2(w * 0.06, h), w * 0.10, 2, p, edge)
 
 
 func _on_building_pressed(building: OrderBuildingData) -> void:

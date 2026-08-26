@@ -21,6 +21,23 @@ class_name OrderBuildingData
 ## 건물 그림. 아직 없으면 비워 둔다 — 뜰이 아이콘 + 이름표 플레이스홀더로 대신 세운다.
 @export var art: Texture2D = null
 
+## 그림이 없을 때 그릴 **건물 양식**(#316).
+##
+## 왜 데이터가 정하는가: 화면이 building_id 로 분기하면 건물을 하나 더할 때마다
+## 화면 코드를 고쳐야 한다. "무엇처럼 보이는가"는 이 리소스의 책임이다
+## (art / icon_name / tint 와 같은 자리).
+##
+## art 가 있으면 쓰이지 않는다. 지정하지 않으면 HUT(기본 맞배집)이다.
+enum Silhouette {
+	HUT,       # 기본 맞배집. 양식이 정해지지 않은 건물
+	FORGE,     # 옆이 트인 작업장 — 기둥·모루·굴뚝
+	SHRINE,    # 선돌과 상인방 — 걸린 천·계단
+	STALL,     # 차양을 친 좌판 — 판매대·물건
+	GRANARY,   # 고상식 곳간 — 기둥 위에 올린 몸체·사다리
+}
+
+@export var silhouette: Silhouette = Silhouette.HUT
+
 ## 플레이스홀더에 쓸 아이콘 이름(UITheme.icon_path 가 경로를 푼다).
 ## 그림이 들어오면 쓰이지 않지만 지우지 않는다 — 아트를 다시 뺄 수도 있다.
 @export var icon_name: String = ""
