@@ -46,6 +46,19 @@ static func icon_path(icon_name: String) -> String:
 	return found
 
 
+# 메타 화면 배경(#287)이 어디 있는지도 **여기만 안다.** 아이콘과 같은 이유다.
+# 아이콘과 달리 확장자를 고르지 않는다 — 배경은 처음부터 PNG 한 종류다.
+const BACKDROP_DIR := "res://assets/sprites/screens"
+
+# 배경 이름("craft")으로 실제 경로를 얻는다. 없으면 빈 문자열.
+# 이름은 그 화면을 여는 건물의 building_id 다(data/order/buildings).
+static func backdrop_path(backdrop_name: String) -> String:
+	if backdrop_name.is_empty():
+		return ""
+	var candidate: String = BACKDROP_DIR.path_join(backdrop_name + ".png")
+	return candidate if ResourceLoader.exists(candidate) else ""
+
+
 # 재화 아이콘 이름. "재화 id 로 아이콘 이름을 만든다"는 규칙이 이 한 곳에만 있다.
 static func currency_icon_name(currency_type: String) -> String:
 	return "icon_" + currency_type

@@ -198,6 +198,13 @@ static func panel(pad: int = 14) -> StyleBoxFlat:
 # 0.78 은 전장의 형태가 비치면서 잉크 글자가 어떤 바닥 위에서도 읽히는 선이다.
 const OVERLAY_ALPHA := 0.78
 
+# 배경 그림 위에 덮는 스크림의 불투명도(#287).
+# 0.62 는 "그림이 무엇인지는 알아보되 UI 와 같은 층으로는 안 읽히는" 지점이다.
+# 더 내리면 밝은 그림(곳간의 하늘, 시장의 물감) 위에서 본문 글자가 흐려지고,
+# 더 올리면 그림을 넣은 의미가 없어진다. 화면별로 다르게 두지 않는다 —
+# 배경마다 밝기가 달라도 대비가 일정해야 화면들이 한 벌로 읽힌다.
+const BACKDROP_SCRIM_ALPHA := 0.62
+
 static func panel_overlay(pad: int = 12) -> StyleBoxFlat:
 	return _box(_alpha(panel_fill(), OVERLAY_ALPHA), line_hi(), BORDER, pad, RADIUS,
 		UITheme.SHADOW, 5)
@@ -323,7 +330,15 @@ static func accent_bar(color: Color = UITheme.ACCENT, width: int = 6, height: in
 # #118 에서 다크 시절의 가로 스캔라인을 걷어냈는데, 그건 어두운 줄을 밝은 면에
 # 얹어서 얼룩으로 읽혔기 때문이다. 여기서는 **밝은 줄을 중간 명도 면에** 45도로
 # 얹는다. 같은 "줄무늬"지만 방향·명도·용도가 달라서 직물 질감으로 읽힌다.
-static func make_backdrop() -> Control:
+#
+# art 를 주면 단색 대신 그 그림을 깔고 위에 스크림(반투명 판)을 얹는다(#287).
+# 그림이 없는 화면은 인자를 주지 않으면 되고, 그때 결과는 이전과 완전히 같다.
+#
+# 스크림을 쓰는 이유: 배경이 선명한 채로 있으면 그 위의 패널·글자와 같은 층으로
+# 읽혀 화면이 시끄럽다. 스토리 화면이 셰이더로 흐림을 거는 것과 같은 문제인데,
+# 여기는 UI 밀도가 훨씬 높아 흐림만으로는 대비가 모자란다. 바닥색을 그대로
+# 반투명하게 덮으면 배경이 어느 그림이든 글자 대비가 일정하게 유지된다.
+static func make_backdrop(art: Texture2D = null) -> Control:
 	var root := Control.new()
 	root.name = "Backdrop"
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -334,6 +349,24 @@ static func make_backdrop() -> Control:
 	base.set_anchors_preset(Control.PRESET_FULL_RECT)
 	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(base)
+
+	if art != null:
+		var picture := TextureRect.new()
+		picture.name = "Art"
+		picture.texture = art
+		picture.set_anchors_preset(Control.PRESET_FULL_RECT)
+		picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# 배경은 화면을 빈틈없이 덮어야 한다. 비율이 어긋나면 남는 쪽을 자른다.
+		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		root.add_child(picture)
+
+		var scrim := ColorRect.new()
+		scrim.name = "Scrim"
+		scrim.color = _alpha(ground_bg(), BACKDROP_SCRIM_ALPHA)
+		scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+		scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_child(scrim)
 
 	var weave := ColorRect.new()
 	weave.name = "Weave"
@@ -992,6 +1025,15 @@ static func make_serial(text: String) -> Label:
 # 없으면 null 이다 — 호출부는 그때 글자 등으로 떨어진다.
 static func load_icon(icon_name: String) -> Texture2D:
 	var path := UITheme.icon_path(icon_name)
+	if path.is_empty():
+		return null
+	return load(path) as Texture2D
+
+
+# 메타 화면 배경(#287). 없으면 null 을 돌려주고, make_backdrop 이 단색으로 돌아간다.
+# 아트가 아직 안 들어온 화면도 그냥 이 함수를 부르면 된다.
+static func load_backdrop(backdrop_name: String) -> Texture2D:
+	var path := UITheme.backdrop_path(backdrop_name)
 	if path.is_empty():
 		return null
 	return load(path) as Texture2D
