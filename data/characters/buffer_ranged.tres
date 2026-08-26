@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+
+[ext_resource type="Texture2D" uid="uid://c3mw0ogq7drhf" path="res://assets/sprites/placeholder/shape_buffer.svg" id="9_shape"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/portraits/girl_green.png" id="10_portrait"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/characters/buffer_pure_walk_frames.tres" id="10_walk"]
+
+[sub_resource type="Resource" id="PlayerStats_buffer_ranged"]
+script = ExtResource("2_stats")
+hp = 900
+strength = 110
+defense = 80
+intelligence = 100
+faith = 130
+
+[resource]
+script = ExtResource("1_chardata")
+role = 2
+secondary_role = 2
+character_id = &"buffer_ranged"
+display_name = "버퍼/원거리(겸직)"
+playable = true
+description = "로스터 플레이스홀더. 겸직(버퍼 + 원거리딜러) 슬롯. 이 자리는 원래 같은 id 의 플레이스홀더가 들고 있다가 설아로 교체됐고(#220), 설아가 순혈 버퍼로 옮겨 가면서(#276) 다시 플레이스홀더가 되었다. 스텟(900/110/80/신앙130)은 그때 설아가 물려받았던 값이며 [임시값]이다. **아트는 삭제된 buffer_pure 에서 물려받았다** — buffer_pure 는 이름이 정해지지 않은 채 아트만 먼저 들어온 플레이스홀더였고(#184 규약), 그 인물은 여전히 로스터에 자리가 필요하다. 아트를 버리면 모션 있는 캐릭터가 4명에서 3명으로 준다. 에셋 파일 이름(buffer_pure_walk.png)은 바꾸지 않았다: 재임포트와 UID 갱신이 따라붙는 변경이라, 이름이 역사적 흔적이라는 것을 README 에 적는 편이 싸다. 평타는 근접 즉시타격이다(basic_attack_* 미지정). 이름/개성/고유 스킬 미정."
+stats = SubResource("PlayerStats_buffer_ranged")
+sprite_texture = ExtResource("9_shape")
+portrait = ExtResource("10_portrait")
+tint = Color(0.3, 1, 0.3, 1)
+sprite_scale = Vector2(2, 2)
+walk_frames = ExtResource("10_walk")
+walk_sprite_scale = Vector2(0.25, 0.25)
+walk_sprite_offset = Vector2(0, -177)

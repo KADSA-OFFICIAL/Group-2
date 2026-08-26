@@ -998,6 +998,91 @@ func _fire_skill_effects(skill: SkillData, gauge_ratio: float) -> void:
 		_cast_beam_skill(skill)
 	if skill.chains_basic_attacks():
 		_open_chain_window(skill)
+	if skill.is_wave():
+		_cast_wave_skill(skill)
+	if skill.party_effect_id != &"":
+		_cast_party_effect(skill)
+
+
+# ===== 파동 (Shockwave) =====
+
+## 퍼지는 원형 파동. 판정이 시간에 따라 커진다(#276). BeamEffect 와 달리 **연출이 아니라 판정**이다.
+const SHOCKWAVE_SCENE := preload("res://entities/combat/Shockwave.tscn")
+
+
+# 파동을 놓는다. 시전자 자리에서 바깥으로 퍼지며 적에게 피해를, 아군에게 회복을 준다.
+#
+# 조준 방향을 쓰지 않는다 — 원은 방향이 없다. 이 스킬이 조준을 요구하지 않는 것이 의도다.
+func _cast_wave_skill(skill: SkillData) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+
+	var boost := get_stats().get_goddess_skill_boost()
+	var wave := SHOCKWAVE_SCENE.instantiate()
+	host.add_child(wave)
+	wave.global_position = global_position
+	wave.setup(
+		skill.wave_radius,
+		skill.wave_speed,
+		skill.get_effective_power(boost),
+		skill.get_effective_ally_heal(boost),
+		self,
+		data.tint if data != null else Color.WHITE
+	)
+
+	# 파동에는 노린 대상이 하나로 없다. 아군 AI 는 최근접 적을 스스로 고른다(#257).
+	if is_controlled() and EventBus:
+		EventBus.player_attacked.emit(self, null)
+
+
+# ===== 파티 전체 효과 (Party-wide effect) =====
+
+# 파티 전원(자기 자신 포함, 아군 AI 포함)에게 상태 효과를 건다(#276).
+#
+# 아군 AI 도 받는 이유: 이 효과가 바꾸는 것은 "그 캐릭터가 무엇을 할 수 있는가"이고,
+# 아군 AI 도 평타는 친다. 조종 중인 한 명만 받으면 파티 버프가 아니라 자기 버프가 된다.
+# 시전만 사람이 한다(docs §4 — 아군 AI 는 스킬을 쓰지 않는다).
+func _cast_party_effect(skill: SkillData) -> void:
+	if skill.party_effect_id == &"":
+		return
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if not is_instance_valid(node) or not node.is_alive:
+			continue
+		StatusEffectSystem.apply(node, skill.party_effect_id, self)
+
+
+# ===== 아군 회복 (Ally heal) =====
+
+# 체력 **비율**이 가장 낮은 아군을 회복시킨다(#276).
+#
+# 비율 기준인 이유는 미나 보호막(#259)과 같다 — 절대량으로 재면 최대 체력이 작은 멤버가
+# 만피여도 뽑힌다(1000 만피 < 1200 중 1100). 위태로운 쪽을 살리는 것이 의도다.
+func _heal_lowest_ally(skill: SkillData) -> void:
+	var target := _lowest_health_ally()
+	if target == null:
+		return
+	var amount := skill.get_effective_ally_heal(get_stats().get_goddess_skill_boost())
+	if amount > 0:
+		target.heal(amount)
+
+
+# 파티에서 체력 비율이 가장 낮은 멤버. **자기 자신도 후보다.**
+#
+# _lowest_health_party_member() 와 나눠 둔 이유: 그쪽은 미나 보호막이 쓰는데, 그 스킬은
+# 시전자에게 이미 따로 보호막을 걸어 놓고 "그 외에 한 명 더"를 찾는다. 여기는 "가장 위태로운
+# 한 명"이라 자기가 그 한 명이면 자기여야 한다. 같은 함수로 묶으면 둘 중 하나가 조용히 틀린다.
+func _lowest_health_ally() -> Node:
+	var best: Node = null
+	var best_percent := INF
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if not is_instance_valid(node) or not node.is_alive:
+			continue
+		var percent: float = node.get_health_percent()
+		if percent < best_percent:
+			best_percent = percent
+			best = node
+	return best
 
 
 # ===== 평타 체인 창 (Chain window) =====
@@ -1545,7 +1630,14 @@ func _projectile_impact_passive() -> SkillData:
 #
 # ② 는 aoe_at_projectile_impact 가 켜져 있고 시전자가 투사체 평타를 쓰면 여기까지 오지
 # 않는다. 그 경우는 탄이 착탄 지점에서 터뜨린다(_fire_basic_attack_projectile).
+#
+# 여기에 더해 아군 회복 채널(ally_heal, #276)도 이 훅에서 나간다 — 설아의 3타 회복이다.
+# 광역과 달리 대상이 "가장 위태로운 아군" 하나라 반경과 무관하다.
 func _fire_attack_passive(skill: SkillData) -> void:
+	# 아군 회복(#276). 시전자 자신의 체력과 무관한 별개 채널이라 아래 회복보다 먼저 본다.
+	if skill.heals_allies():
+		_heal_lowest_ally(skill)
+
 	var healed := 0
 	if skill.heal_missing_hp_percent > 0.0:
 		var missing: int = max_hp - hp
@@ -1760,6 +1852,31 @@ func _apply_lifesteal(damage_dealt: int) -> void:
 		_gain_shield(int(round(overflow * CombatConfig.tuning.overheal_to_shield_percent)))
 
 
+# 이 캐릭터가 적에게 피해를 **실제로** 넣었을 때 불린다(EnemyBase.take_damage 가 부른다, #276).
+#
+# 평타·스킬·광역 패시브를 가리지 않는다. 피해가 나가는 자리는 여러 곳이지만 피해가 들어오는
+# 곳은 한 곳이라, 그쪽에서 알리는 편이 새 피해 경로가 생겨도 자동으로 포함된다.
+#
+# 지금 여기 걸린 것은 **부여받은 흡혈**(EMPOWER)뿐이다. 원거리 3단계 피흡은 "평타로 준 피해"가
+# 계약이라 여기 오지 않고 _resolve_attack_hit() 이 계속 갖는다 — 둘은 별개 채널이고, 둘 다
+# 켜져 있으면 평타는 양쪽에서 회복한다.
+func on_damage_dealt(dealt: int) -> void:
+	if dealt <= 0 or not is_alive:
+		return
+
+	var percent := StatusEffectSystem.get_granted_lifesteal(self)
+	if percent <= 0.0:
+		return
+
+	var amount := int(round(dealt * percent))
+	if amount <= 0:
+		return
+
+	# 넘치는 분을 보호막으로 돌리지 않는다. 초과 회복 -> 보호막은 원거리 3단계가 가진 성질이고
+	# (CombatTuning.overheal_to_shield_percent), 이 흡혈은 그 시너지와 무관한 별개 출처다.
+	heal(amount)
+
+
 func _gain_shield(amount: int) -> void:
 	if amount <= 0:
 		return
@@ -1781,10 +1898,21 @@ func get_shield() -> int:
 #   ② 대상에 디버프가 걸려 있다
 #   ③ 대상 체력이 execute_hp_percent 이하다
 func _try_execute(target: Node) -> bool:
-	if not _is_role_active(CharacterData.Role.BUFFER):
-		return false
-	if not StatusEffectSystem.has_any_debuff(target):
-		return false
+	# 두 갈래로 열린다(#276):
+	#   ① 버퍼 1단계 시너지 — 파티 구성으로 켜지고, 대상에게 **디버프가 있어야** 한다.
+	#   ② 부여받은 처형(EMPOWER) — 설아 E 같은 스킬이 한시적으로 준다. 시너지도 디버프도 묻지 않는다.
+	#
+	# ② 가 디버프를 묻지 않는 이유: 디버프 조건은 시너지가 **상시** 갖는 힘에 붙은 대가다.
+	# 쿨타임과 지속시간으로 이미 값을 치른 스킬에 같은 대가를 또 물리면, 파티에 디버프 출처가
+	# 없을 때 스킬이 조용히 아무 일도 하지 않는다.
+	#
+	# 체력 임계치(can_execute)는 어느 쪽이든 지킨다 — 그것은 처형의 정의이지 조건이 아니다.
+	var granted := StatusEffectSystem.grants_execute(self)
+	if not granted:
+		if not _is_role_active(CharacterData.Role.BUFFER):
+			return false
+		if not StatusEffectSystem.has_any_debuff(target):
+			return false
 	if not can_execute(target):
 		return false
 
@@ -1848,6 +1976,10 @@ func take_damage(amount: int, source = null) -> int:
 	_shield -= absorbed
 	dealt -= absorbed
 
+	# 남은 체력보다 큰 피해는 넘치는 만큼 버려진다(EnemyBase 와 같은 규약).
+	# 자르지 않으면 아래 반사가 실제로 들어간 피해보다 크게 나간다.
+	dealt = mini(dealt, hp)
+
 	# 스킬 보호막이 이 피해로 깎였는지 본다. 0이 되면 **깨짐**이고 폭발 계기다.
 	# 원거리 3단계가 준 보호막만 깎인 경우에는 아무 일도 일어나지 않는다.
 	var skill_shield_broke := false
@@ -1856,7 +1988,6 @@ func take_damage(amount: int, source = null) -> int:
 		skill_shield_broke = _skill_shield <= 0
 
 	hp -= dealt
-	hp = max(hp, 0)
 
 	if EventBus:
 		# 흡수분도 "맞은 양"이다. 화면에 뜨는 숫자가 실제 타격과 어긋나면 안 된다.
