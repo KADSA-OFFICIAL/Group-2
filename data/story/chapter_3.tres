@@ -1,7 +1,9 @@
-[gd_resource type="Resource" script_class="StoryChapterData" load_steps=31 format=3]
+[gd_resource type="Resource" script_class="StoryChapterData" load_steps=33 format=3]
 
 [ext_resource type="Script" path="res://entities/story/StoryChapterData.gd" id="1"]
 [ext_resource type="Script" path="res://entities/story/StoryLineData.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/riverside.png" id="93_bg_riverside"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/highland.png" id="92_bg_highland"]
 [ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/forest.png" id="91_bg_forest"]
 [ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/village.png" id="90_bg_village"]
 
@@ -28,7 +30,7 @@ stage_id = &""
 
 [sub_resource type="Resource" id="L3"]
 script = ExtResource("2")
-background = ExtResource("91_bg_forest")
+background = ExtResource("92_bg_highland")
 kind = 0
 speaker = ""
 text = "세계지리와 시민 1등급이었던 주인공의 실력으로 마을 사람들과 함께 물가로 이동한다."
@@ -43,7 +45,7 @@ stage_id = &""
 
 [sub_resource type="Resource" id="L5"]
 script = ExtResource("2")
-background = ExtResource("90_bg_village")
+background = ExtResource("93_bg_riverside")
 kind = 0
 speaker = ""
 text = "물가에 도착한 사람들, 하지만 그곳에는 이미 건축물이 있었다."

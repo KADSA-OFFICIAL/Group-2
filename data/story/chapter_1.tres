@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="StoryChapterData" load_steps=36 format=3]
+[gd_resource type="Resource" script_class="StoryChapterData" load_steps=37 format=3]
 
 [ext_resource type="Script" path="res://entities/story/StoryChapterData.gd" id="1"]
 [ext_resource type="Script" path="res://entities/story/StoryLineData.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/snow_valley.png" id="92_bg_snow"]
 [ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/forest.png" id="91_bg_forest"]
 [ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/city_night.png" id="90_bg_city"]
 
@@ -162,6 +163,7 @@ screen_effect = 1
 
 [sub_resource type="Resource" id="L21"]
 script = ExtResource("2")
+background = ExtResource("92_bg_snow")
 kind = 0
 speaker = ""
 text = "정신을 차린 주인공, 주변은 온통 하얗다. 눈 앞에 금발의 여자가 있다."

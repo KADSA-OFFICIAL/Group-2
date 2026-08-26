@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
@@ -8,6 +8,7 @@
 [ext_resource type="Resource" path="res://data/skills/seola_triage.tres" id="12_passive"]
 [ext_resource type="Resource" path="res://data/skills/seola_wave.tres" id="13_wave"]
 [ext_resource type="Resource" path="res://data/skills/seola_empower.tres" id="14_empower"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/portraits/seola.png" id="20_portrait"]
 
 [sub_resource type="Resource" id="PlayerStats_seola"]
 script = ExtResource("2_stats")
@@ -29,6 +30,7 @@ stats = SubResource("PlayerStats_seola")
 skills = Array[ExtResource("11_skilldef")]([ExtResource("12_passive"), ExtResource("13_wave"), ExtResource("14_empower")])
 basic_attack_range = 360.0
 sprite_texture = ExtResource("9_shape")
+portrait = ExtResource("20_portrait")
 tint = Color(0.7, 0.85, 0.95, 1)
 sprite_scale = Vector2(2, 2)
 walk_frames = ExtResource("10_walk")
