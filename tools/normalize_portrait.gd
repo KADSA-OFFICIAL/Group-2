@@ -33,7 +33,12 @@ extends SceneTree
 ## 초상 폴더는 PortraitSystem 이 통째로 훑어 목록을 만들기 때문에, 백업본을 그 폴더에
 ## 두면 게임 안에서 고를 수 있는 초상으로 뜬다. 백업은 반드시 폴더 **밖**에 둘 것.
 ##
-## 참고: tools/normalize_walk_sheet.gd(같은 방식의 워크 시트 정규화), ui/HUDKit.gd
+## 원본이 아직 흰 배경 위의 불투명 PNG 라면 **먼저 tools/cutout_portrait.gd 로 누끼를
+## 딴다.** 이 도구는 알파를 전제로 인물 경계상자를 잡으므로, 배경이 남아 있으면
+## 캔버스 전체를 인물로 착각한다.
+##
+## 참고: tools/cutout_portrait.gd(누끼 — 이 도구보다 먼저 돌린다),
+##       tools/normalize_walk_sheet.gd(같은 방식의 워크 시트 정규화), ui/HUDKit.gd
 
 # 공통 캔버스 가로세로비(가로 / 세로). 저작본이 쓰던 1378/2476 = 0.5566 을 유지한다.
 # 바꾸면 6장을 모두 다시 정규화해야 한다.

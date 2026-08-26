@@ -352,3 +352,35 @@ func _stats_of(target) -> PlayerStats:
 	if target.has_method("get_stats"):
 		return target.get_stats()
 	return null
+
+
+# ===== EMPOWER 조회 (#276) =====
+#
+# "지금 이 대상이 무엇을 할 수 있는가"를 묻는 통로다. CONTROL 의 _blocks() 와 같은 모양이라,
+# 부르는 쪽(Player)이 효과 목록을 직접 훑지 않는다.
+
+# 걸려 있는 EMPOWER 효과들이 주는 흡혈 비율의 **합**. 없으면 0.0.
+#
+# 합인 이유: 서로 다른 스킬이 준 흡혈은 별개 출처다. 큰 쪽 하나만 남기면 두 번째 버프가
+# 조용히 아무 일도 하지 않게 된다.
+func get_granted_lifesteal(target) -> float:
+	if not _active.has(target):
+		return 0.0
+	var total := 0.0
+	for effect_id in _active[target]:
+		var inst: _Instance = _active[target][effect_id]
+		if inst.data.kind != StatusEffectData.Kind.EMPOWER:
+			continue
+		total += maxf(inst.data.grants_lifesteal_percent, 0.0)
+	return total
+
+
+# 걸려 있는 EMPOWER 효과 중 하나라도 처형을 부여하는가.
+func grants_execute(target) -> bool:
+	if not _active.has(target):
+		return false
+	for effect_id in _active[target]:
+		var inst: _Instance = _active[target][effect_id]
+		if inst.data.kind == StatusEffectData.Kind.EMPOWER and inst.data.grants_execute:
+			return true
+	return false

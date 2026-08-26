@@ -227,6 +227,48 @@ enum InputSlot {
 ## 명중 기준이면 탄이 날아가는 동안 쿨타임이 멈춘 것처럼 보여 인과가 흐려진다.
 @export var cooldown_reduction_per_attack: float = 0.0
 
+# ===== 아군 회복 (Ally heal) =====
+
+## 이 스킬이 **아군 한 명에게** 주는 회복량(절대값). 0 이면 아군을 회복시키지 않는다.
+##
+## scales_with_faith 가 켜져 있으면 여신 스킬 강화 배수를 탄다(base_power 와 같은 규약).
+##
+## 왜 절대값인가: 미나 보호막(#259, #261)과 같은 이유다. 이 회복은 **시전자가 주는 것**이지
+## 받는 사람의 그릇에서 나오는 것이 아니다. 최대 체력 비례로 두면 같은 스킬이 체력 큰 대상에게
+## 걸릴 때만 두꺼워져, "누구를 살릴까"라는 판단과 실제 회복량이 어긋난다.
+## 대가: 절대량이라 스텟 스케일이 바뀌면 같이 조정해야 한다.
+##
+## heal_missing_hp_percent 와 다른 채널이다. 그쪽은 **시전자 자신**의 잃은 체력 비례이고,
+## 이쪽은 **아군에게** 주는 고정량이다.
+@export var ally_heal: int = 0
+
+# ===== 파동 (Shockwave) =====
+#
+# 고정 반경 원(aoe_radius)과 달리 **시간에 따라 퍼지는** 판정이다(#276).
+# 파동이 닿는 그 순간 적중하므로 달려서 피할 수 있고, 먼 대상일수록 늦게 맞는다.
+# 한 대상은 한 번만 맞는다 — 되돌아오지 않는다.
+#
+# 적에게는 base_power 피해가, 아군에게는 ally_heal 회복이 들어간다.
+
+## 파동이 퍼지는 최대 반경(px). 0 이면 파동 스킬이 아니다.
+@export var wave_radius: float = 0.0
+
+## 파동이 퍼지는 속도(px/s). 0 이면 파동 스킬이 아니다.
+##
+## 이 값이 곧 "피할 수 있는가"를 정한다. 너무 빠르면 즉발과 구분되지 않고,
+## 너무 느리면 아군 회복이 늦어 죽은 뒤에 닿는다.
+@export var wave_speed: float = 0.0
+
+# ===== 파티 전체 효과 부여 (Party-wide effect) =====
+
+## 시전하면 **파티 전원**(시전자 포함, 아군 AI 포함)에게 걸 상태 효과 id. 비어 있으면 걸지 않는다.
+##
+## apply_effect_id 와 나눠 둔 이유: 그쪽은 **맞은 대상**(적)에게 거는 것이고, 이쪽은 조준·명중과
+## 무관하게 **아군 전원**에게 간다. 한 필드로 뭉치면 "누구에게 걸리는가"가 데이터에서 사라진다.
+##
+## 효과의 정의(지속시간·부여하는 행동)는 StatusEffectData 가 소유한다 — 여기서 다시 적지 않는다.
+@export var party_effect_id: StringName = &""
+
 # ===== 아직 필드가 아닌 것 (Not fields yet) =====
 #
 # **대상 선정**(누구에게 주는가)은 필드로 두지 않았다. 저작된 스킬이 적어 표본 하나로
@@ -299,3 +341,21 @@ func get_damage_against(target_current_hp: int, faith_boost: float = 1.0) -> int
 	if current_hp_damage_percent > 0.0:
 		total += maxf(float(target_current_hp), 0.0) * current_hp_damage_percent
 	return int(round(total))
+
+
+# 이 스킬이 퍼지는 파동인가.
+func is_wave() -> bool:
+	return wave_radius > 0.0 and wave_speed > 0.0
+
+
+# 이 스킬이 아군을 회복시키는가.
+func heals_allies() -> bool:
+	return ally_heal > 0
+
+
+# 신앙심 강화를 반영한 아군 회복량.
+# base_power 와 같은 규약을 쓴다 — scales_with_faith 가 꺼져 있으면 적힌 값 그대로다.
+func get_effective_ally_heal(faith_boost: float = 1.0) -> int:
+	if not scales_with_faith:
+		return ally_heal
+	return int(round(ally_heal * faith_boost))
