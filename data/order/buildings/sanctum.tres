@@ -7,6 +7,7 @@ script = ExtResource("1_building")
 building_id = &"sanctum"
 display_name = "성소"
 description = "트리아교의 본전. 지나온 이야기를 여기서 되짚는다."
+silhouette = 2
 icon_name = "icon_story"
 tint = Color(0.80, 0.76, 0.66, 1)
 spot = Vector2(0.50, 0.48)

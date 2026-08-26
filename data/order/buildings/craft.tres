@@ -7,6 +7,7 @@ script = ExtResource("1_building")
 building_id = &"craft"
 display_name = "제조소"
 description = "재료를 두드려 장비를 만드는 곳. 교단의 대장간이다."
+silhouette = 1
 icon_name = "icon_craft"
 tint = Color(0.82, 0.74, 0.58, 1)
 spot = Vector2(0.17, 0.63)
