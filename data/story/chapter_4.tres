@@ -1,0 +1,298 @@
+[gd_resource type="Resource" script_class="StoryChapterData" load_steps=43 format=3]
+
+[ext_resource type="Script" path="res://entities/story/StoryChapterData.gd" id="1"]
+[ext_resource type="Script" path="res://entities/story/StoryLineData.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/riverside.png" id="bg_riverside"]
+
+[sub_resource type="Resource" id="L0"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "하늘섬. 익룡 무리의 여왕 앞에 부하 하나가 무릎을 꿇는다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L1"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "여왕님, 최근에 육지공룡을 이끄는 어떤 세력이 수룡의 서식지를 침범하여 차지했다고 합니다. 저희 익룡한테도 해가 갈 가능성이 있습니다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L2"]
+script = ExtResource("2")
+kind = 1
+speaker = "여왕"
+character_id = &"pterosaur_queen"
+text = "그 세력의 지도자를 잡아와라."
+stage_id = &""
+
+[sub_resource type="Resource" id="L3"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "알겠습니다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L4"]
+script = ExtResource("2")
+background = ExtResource("bg_riverside")
+kind = 0
+speaker = ""
+text = "장소 전환. 물가에 자리 잡은 마을."
+stage_id = &""
+
+[sub_resource type="Resource" id="L5"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+character_id = &"childhood_friend"
+text = "야! 너 언제까지 우리 마을에 눌러앉아있을거야?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L6"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "갑자기 그게 무슨 소리야..?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L7"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+character_id = &"childhood_friend"
+text = "그냥 너무 팔자 좋아보여서 짜증나."
+stage_id = &""
+
+[sub_resource type="Resource" id="L8"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "(뭔가 더 까칠해진거 같은데)내가 마을에서 떠났으면 좋겠어?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L9"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+character_id = &"childhood_friend"
+text = "아니 그..그건 아닌데..이익..! 바보! 죽어!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L10"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "주인공을 마구 구타하는 소꿉친구, 마침 익룡수인들이 그 모습을 본다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L11"]
+script = ExtResource("2")
+kind = 1
+speaker = "익룡수인1"
+text = "저 여자애 매우 강해보이는데."
+stage_id = &""
+
+[sub_resource type="Resource" id="L12"]
+script = ExtResource("2")
+kind = 1
+speaker = "익룡수인2"
+text = "쟤가 분명 대장일거야."
+stage_id = &""
+
+[sub_resource type="Resource" id="L13"]
+script = ExtResource("2")
+kind = 1
+speaker = "익룡수인3"
+text = "빨리 잡아서 대장님께 데려가자."
+stage_id = &""
+
+[sub_resource type="Resource" id="L14"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "익룡수인들이 마을을 습격한다."
+screen_effect = 2
+stage_id = &""
+
+[sub_resource type="Resource" id="L15"]
+script = ExtResource("2")
+kind = 1
+speaker = "마을사람1"
+text = "습격이다!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L16"]
+script = ExtResource("2")
+kind = 1
+speaker = "수룡수인들"
+text = "우린 맨날 습격당하냐..!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L17"]
+script = ExtResource("2")
+kind = 1
+speaker = "마을사람2"
+text = "살려줘!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L18"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "마을사람들을 무시한채 익룡수인들은 소꿉친구만 낚아채간다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L19"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+character_id = &"childhood_friend"
+text = "꺄악..! 살려줘!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L20"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "안돼! 그녀를 놔줘!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L21"]
+script = ExtResource("2")
+kind = 1
+speaker = "익룡수인1"
+text = "놔주겠냐 멍청아."
+stage_id = &""
+
+[sub_resource type="Resource" id="L22"]
+script = ExtResource("2")
+kind = 1
+speaker = "익룡수인2"
+text = "너희 대장은 우리가 접수해가겠다."
+stage_id = &""
+
+[sub_resource type="Resource" id="L23"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "대장..? 아무튼 그녀를 놔달라고!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L24"]
+script = ExtResource("2")
+kind = 1
+speaker = "익룡수인1"
+text = "그니까 놔주겠냐고! 얼른 가자!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L25"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "꼭 구하러 갈게! 살아있어야돼!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L26"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+character_id = &"childhood_friend"
+text = "끼야아악!!!!"
+screen_effect = 2
+stage_id = &""
+
+[sub_resource type="Resource" id="L27"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "사건이 일단락된 후"
+stage_id = &""
+
+[sub_resource type="Resource" id="L28"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "주민분들, 제 말을 들어주세요. 전 지금부터 소꿉친구를 구하러 가겠습니다. 같이 가실 분 있나요?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L29"]
+script = ExtResource("2")
+kind = 1
+speaker = "하랑"
+text = "마을 재건에 힘써주셨는데 보답할수만 있다면 같이 갈게요..!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L30"]
+script = ExtResource("2")
+kind = 1
+speaker = "강지"
+text = "난 힘이 세니까 도움이 많이 될거야. 나도 같이 갈게."
+stage_id = &""
+
+[sub_resource type="Resource" id="L31"]
+script = ExtResource("2")
+kind = 1
+speaker = "설아"
+character_id = &"seola"
+text = "사람이 많을수록 효율적. 나도 합류할게."
+stage_id = &""
+
+[sub_resource type="Resource" id="L32"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "오..! 고마워!"
+stage_id = &""
+
+[sub_resource type="Resource" id="L33"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "근데 그녀가 어디로 잡혀갔는지는 알고 있는거야?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L34"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "응? 그러게 어디로 갔지?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L35"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "그것도 모르면서 막무가내로 가려고 하다니..준비성이 없네. 난 그녀가 어디있는지 아니까 같이 가줄게."
+stage_id = &""
+
+[sub_resource type="Resource" id="L36"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "오 고마워. 넌 이름이 뭐야?"
+stage_id = &""
+
+[sub_resource type="Resource" id="L37"]
+script = ExtResource("2")
+kind = 1
+speaker = "태희"
+character_id = &"taehee"
+text = "난 태희야. 네 친구를 구하는데는 관심없고 싸움이 재미있을거 같아서 같이 가는거니까 착각하지마. 익룡들이 그녀를 잡아간걸로 봐서 아마 여왕이 벌인 짓일거야. 아마 지금쯤 하늘섬에 있겠지. 출발하자."
+stage_id = &""
+
+[sub_resource type="Resource" id="L38"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "알았어. 가보자."
+stage_id = &""
+
+[resource]
+script = ExtResource("1")
+background = ExtResource("bg_riverside")
+chapter_id = &"chapter_4"
+number = 4
+title = "하늘섬으로"
+summary = "익룡 여왕의 명령으로 소꿉친구가 납치된다. 주인공은 구출대를 꾸려 하늘섬으로 향한다."
+lines = [SubResource("L0"), SubResource("L1"), SubResource("L2"), SubResource("L3"), SubResource("L4"), SubResource("L5"), SubResource("L6"), SubResource("L7"), SubResource("L8"), SubResource("L9"), SubResource("L10"), SubResource("L11"), SubResource("L12"), SubResource("L13"), SubResource("L14"), SubResource("L15"), SubResource("L16"), SubResource("L17"), SubResource("L18"), SubResource("L19"), SubResource("L20"), SubResource("L21"), SubResource("L22"), SubResource("L23"), SubResource("L24"), SubResource("L25"), SubResource("L26"), SubResource("L27"), SubResource("L28"), SubResource("L29"), SubResource("L30"), SubResource("L31"), SubResource("L32"), SubResource("L33"), SubResource("L34"), SubResource("L35"), SubResource("L36"), SubResource("L37"), SubResource("L38")]
