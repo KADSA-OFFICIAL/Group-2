@@ -14,7 +14,7 @@
 |---|---|---|---|
 | `shipduck.tres` | `shipduck` | 탱커 + 버퍼 (겸직) | 파랑 |
 | `ranged_tank.tres` | `ranged_tank` | 원거리딜러 + 탱커 (겸직) | 빨강 |
-| `buffer_ranged.tres` | `buffer_ranged` | 버퍼 + 원거리딜러 (겸직) | 초록 |
+| `harang.tres` | `harang` | 버퍼 + 원거리딜러 (겸직) | 초록 |
 | `mina.tres` | `mina` | 탱커 (순혈) | 청록 |
 | `taehee.tres` | `taehee` | 원거리딜러 (순혈) | 보라 |
 | `seola.tres` | `seola` | 버퍼 (순혈) | 연청 |
@@ -49,7 +49,7 @@
 
 ## 현재 상태: 플레이스홀더
 
-**`shipduck`·`mina`·`taehee`·`seola` 를 제외한 2명(`ranged_tank`, `buffer_ranged`)은 역할 구성만 채운 플레이스홀더다.**
+**`shipduck`·`mina`·`taehee`·`seola`·`harang` 를 제외한 1명(`ranged_tank`)만 역할 구성을 채운 플레이스홀더다.**
 
 > 미나와 shipduck 의 역할은 #259 에서 맞바꿨다 — 미나가 순혈 탱커, shipduck 이 겸직(탱커+버퍼)이다.
 > 미나는 로스터에서 유일하게 **스킬 게이지**(`skill_gauge_max` / `skill_gauge_gain_per_attack`)를 갖는다.
@@ -57,7 +57,8 @@
 >
 > 설아는 #276 에서 **겸직(버퍼+원거리) -> 순혈 버퍼**로 옮겼다. 태희(#263)와 같은 구조의 이동이다.
 > 설아가 비운 겸직 자리는 플레이스홀더 `buffer_ranged` 가 이어받았고, 순혈 자리에 있던 `buffer_pure` 는 삭제했다.
-> **`buffer_pure` 의 아트(워크 시트 + 초상)는 `buffer_ranged` 가 물려받았다.** `buffer_pure` 는 이름이
+> 그 겸직 자리는 #315 에서 **하랑**(`harang`)이 이름을 받아 확정했다.
+> **`buffer_pure` 의 아트(워크 시트 + 초상)는 `buffer_ranged`(지금의 `harang`)가 물려받았다.** `buffer_pure` 는 이름이
 > 정해지지 않은 채 아트만 먼저 들어온 플레이스홀더였고, 그 인물은 여전히 로스터에 자리가 필요하다 —
 > 아트를 버리면 모션 있는 캐릭터가 4명에서 3명으로 준다. 에셋 **파일 이름은 바꾸지 않았다**
 > (`buffer_pure_walk.png` 그대로): 재임포트와 UID 갱신이 따라붙는 변경이라, 이름이 역사적 흔적이라는
