@@ -83,7 +83,7 @@ func _build_chapter_panel() -> Control:
 	_chapter_list = VBoxContainer.new()
 	_chapter_list.add_theme_constant_override("separation", 8)
 	_chapter_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_chapter_list)
+	scroll.add_child(HUDKit.hover_safe(_chapter_list))
 	return panel
 
 

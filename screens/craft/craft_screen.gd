@@ -106,7 +106,7 @@ func _build_recipe_panel() -> Control:
 	_recipe_list = VBoxContainer.new()
 	_recipe_list.add_theme_constant_override("separation", 6)
 	_recipe_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_recipe_list)
+	scroll.add_child(HUDKit.hover_safe(_recipe_list))
 	return panel
 
 
