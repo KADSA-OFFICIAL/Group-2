@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/GaugeRing.gd" id="1_ring"]
+
+[node name="GaugeRing" type="Node2D"]
+z_index = 49
+z_as_relative = false
+script = ExtResource("1_ring")

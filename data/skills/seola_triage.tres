@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"seola_triage"
+display_name = "3타 응급처치"
+description = "설아 평타 패시브(#276). 설아 평타는 **히트스캔 원거리**다 — 태희처럼 탄이 날아가지 않고, 사거리 안이면 그 자리에서 즉시 맞는다(탄이 없으므로 조준과 무관하게 최근접 자동 타겟이다). 평타가 3번 나갈 때마다(적중이 아니라 발생 기준, 미나·태희와 같은 규약) **체력 비율이 가장 낮은 아군**을 ally_heal 만큼 회복시킨다. **자기 자신도 후보다** — 설아가 가장 위태로우면 자기를 회복한다. '가장 낮은'은 비율 기준이다: 절대량으로 재면 최대 체력이 작은 멤버가 만피여도 뽑혀(1000 만피 < 1200 중 1100), 위태로운 쪽을 살리는 의도와 어긋난다. 회복량은 절대값이고 신앙심 강화 배수를 탄다 — 이 회복은 **설아가 주는 것**이지 받는 사람의 그릇에서 나오는 것이 아니다(미나 보호막 #259/#261 과 같은 규약). 발동형이 아니라 평타에 붙는 패시브이므로 키 슬롯이 없다. 버퍼 3단계 시너지가 기대는 힐 출처가 미나 보호막 하나뿐이었는데, 이 스킬이 두 번째다. [이름 미정] — display_name 은 기능을 그대로 적은 임시 이름이다. 수치는 [임시값]이다."
+base_power = 0
+scales_with_faith = true
+every_n_attacks = 3
+ally_heal = 90
