@@ -1019,6 +1019,46 @@ func _fire_skill_effects(skill: SkillData, gauge_ratio: float) -> void:
 		_cast_self_effect(skill)
 	if skill.overrides_basic_attack():
 		_open_attack_override_window(skill)
+	if skill.creates_aura():
+		_cast_aura_zone(skill)
+	if skill.ally_effect_id != &"":
+		_cast_ally_effect(skill)
+
+
+# ===== 지대 (Aura zone) =====
+
+## 머무는 원형 지대. Shockwave 와 달리 퍼지지 않고 그 자리에 남는다(#334).
+const AURA_ZONE_SCENE := preload("res://entities/combat/AuraZone.tscn")
+
+
+# 지대를 놓는다. 시전자 자리에 고정되며, 안에 있는 아군에게만 효과가 걸린다.
+#
+# 부모를 이 캐릭터가 아니라 **전장**으로 두는 이유는 Shockwave·Projectile 과 같다:
+# 시전자가 죽거나 조종이 넘어가도 지대는 그 자리에 남아야 하고, 방을 버릴 때 함께 정리되어야 한다.
+# (지대 자신이 _exit_tree 에서 걸어 둔 효과를 푼다.)
+func _cast_aura_zone(skill: SkillData) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+
+	var zone = AURA_ZONE_SCENE.instantiate()
+	host.add_child(zone)
+	zone.global_position = global_position
+	var color: Color = data.tint if data != null else Color.WHITE
+	zone.setup(skill.aura_radius, skill.aura_duration, skill.aura_effect_id, self, color)
+
+
+# ===== 아군 1명 효과 부여 (Single-ally effect) =====
+
+# 체력 비율이 가장 낮은 아군 하나에게 효과를 건다(#334).
+#
+# 대상 선정은 _lowest_health_ally() 하나가 갖는다 — 설아 3타 회복(ally_heal)이 쓰는 것과
+# 같은 규칙이라 여기서 다시 만들지 않는다. 시전자 자신도 후보다.
+func _cast_ally_effect(skill: SkillData) -> void:
+	var target := _lowest_health_ally()
+	if target == null:
+		return
+	StatusEffectSystem.apply(target, skill.ally_effect_id, self)
 
 
 # ===== 즉발 광역 (Instant AoE) =====
@@ -1661,6 +1701,10 @@ func _resolve_attack_hit(target: Node, damage: int) -> void:
 	# 원거리 3단계: 실제로 준 피해에 비례해 회복한다(죽인 타격도 포함이다).
 	_apply_lifesteal(dealt)
 
+	# 강지 평타 패시브(#334): 준 피해에 비례해 가장 위태로운 아군을 회복시킨다.
+	# 피흡과 같은 자리·같은 기준(실제로 들어간 피해)이지만 회복하는 쪽이 자기가 아니라 아군이다.
+	_apply_attack_ally_heal(dealt)
+
 	# 대상이 이 평타로 죽었으면 이후 처리를 하지 않는다.
 	if not is_instance_valid(target) or not target.is_alive:
 		return
@@ -1732,6 +1776,29 @@ func _basic_attack_direction(target: Node) -> Vector2:
 	if is_instance_valid(target):
 		return target.global_position - global_position
 	return Vector2.ZERO
+
+
+# 평타로 준 피해에 비례해 **가장 위태로운 아군**을 회복시킨다(강지, #334).
+#
+# 왜 _apply_attack_passives() 가 아니라 여기인가: 그쪽은 `every_n_attacks` 주기 패시브이고
+# 기준이 평타 **발생**이다. 이 채널의 계약은 "**실제로 들어간 피해**의 비율"이라 닿아야만
+# 나가고, 그 값을 아는 자리는 여기다(원거리 3단계 피흡이 같은 이유로 같은 자리에 있다).
+#
+# 여러 스킬이 이 채널을 가지면 각각 따로 회복시킨다. 합산하지 않는 이유: 스킬마다 대상을
+# 다시 고르는 것이 맞다 — 첫 회복으로 최저 체력이 바뀌면 다음 회복은 다른 사람에게 가야 한다.
+func _apply_attack_ally_heal(damage_dealt: int) -> void:
+	if damage_dealt <= 0 or data == null:
+		return
+
+	for skill in data.skills:
+		if skill == null or not skill.heals_ally_on_attack():
+			continue
+		var amount := skill.get_ally_heal_from_damage(damage_dealt)
+		if amount <= 0:
+			continue
+		var target := _lowest_health_ally()
+		if target != null:
+			target.heal(amount)
 
 
 # ===== 평타 패시브 (Basic-attack passives) =====
@@ -2154,8 +2221,19 @@ func take_damage(amount: int, source = null, ignore_defense: bool = false) -> in
 	if not is_alive:
 		return 0
 
+	# 무적(#334)은 **맨 앞에서** 막는다. 방어력·보호막을 거치기 전이므로 보호막이 깎이지 않고,
+	# 지속 피해도 들어가지 않고, 반사도 일어나지 않는다.
+	#
+	# 여기서 damage_taken 배수와 섞지 않는 이유: 그 배수는 최소 피해를 지켜 1 은 계속
+	# 들어간다(감소를 겹쳐도 무적이 되지 않게 하려는 의도). 무적은 별개 상태다.
+	if StatusEffectSystem.grants_invulnerable(self):
+		return 0
+
 	# 방어력 적용. 피해 공식은 PlayerStats.apply_defense()가 단일 출처다.
 	var dealt: int = amount if ignore_defense else get_stats().apply_defense(amount)
+
+	# 받는 피해 감소(#334). 방어와 나눠 둔 통로라 방어를 무시하는 피해에도 걸린다.
+	dealt = get_stats().apply_damage_taken(dealt)
 
 	# 보호막이 먼저 받아 낸다. 남은 만큼만 체력이 깎인다.
 	var absorbed: int = mini(_shield, dealt)

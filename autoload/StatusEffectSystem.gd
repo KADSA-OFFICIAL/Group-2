@@ -446,6 +446,20 @@ func get_taunt_source(target) -> Node:
 	return newest
 
 
+# 걸려 있는 EMPOWER 효과 중 하나라도 **무적**을 부여하는가(#334).
+#
+# 부르는 쪽(take_damage 맨 앞)이 이것으로 갈라진다. 무적은 감소가 아니라 분기이므로
+# 스텟 배수(get_damage_taken_multiplier)와 섞이지 않는다.
+func grants_invulnerable(target) -> bool:
+	if not _active.has(target):
+		return false
+	for effect_id in _active[target]:
+		var inst: _Instance = _active[target][effect_id]
+		if inst.data.kind == StatusEffectData.Kind.EMPOWER and inst.data.grants_invulnerable:
+			return true
+	return false
+
+
 # 걸려 있는 EMPOWER 효과 중 하나라도 처형을 부여하는가.
 func grants_execute(target) -> bool:
 	if not _active.has(target):

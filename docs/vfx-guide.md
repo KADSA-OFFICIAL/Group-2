@@ -316,8 +316,11 @@ HUD 미터만으로는 부족하다 — 게이지는 **Q 의 반경과 E 의 두
 
 ## 6. 미정 사항
 
-- 미나 외 4명(`shipduck`·`seola`·`ranged_tank`·`buffer_pure`)의 스킬 이펙트 —
-  스킬 자체가 아직 저작되지 않았다([`data/characters/README.md`](../data/characters/README.md)).
+- `ranged_tank` 의 스킬 이펙트 — 스킬 자체가 아직 저작되지 않았다
+  ([`data/characters/README.md`](../data/characters/README.md)).
+  나머지 다섯(미나·태희·설아·하랑·강지)은 스킬이 저작되었고 이펙트만 남았다.
+  강지 Q 의 지대(`AuraZone`)는 판정 노드가 직접 원을 그린다 — 연출이 아니라 판정 범위라
+  `Shockwave` 와 같은 규약이다(§1.7).
 - 적 공격 예고(telegraph) 규약. 지금 적은 예고 없이 때린다.
 - 사운드. 이 문서는 시각만 다룬다.
 - 아트 에셋(파티클 텍스처). 현재는 전부 도형이다.
