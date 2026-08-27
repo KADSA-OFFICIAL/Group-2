@@ -1043,6 +1043,10 @@ const OVERLOAD_EFFECT_SCENE := preload("res://entities/combat/OverloadEffect.tsc
 const BURST_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/burst.png")
 const BURST_FRAME_COUNT: int = 4
 const BURST_FPS: float = 12.0
+const IMMUNITY_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/immunity_shell.png")
+const IMMUNITY_EFFECT_ID: StringName = &"gangji_immunity"
+const IMMUNITY_FRAME_COUNT: int = 5
+const IMMUNITY_LOOP_START: int = 3
 
 
 # 조준 방향으로 부채꼴 판정을 낸다(#336).
@@ -1146,7 +1150,13 @@ func _cast_ally_effect(skill: SkillData) -> void:
 	var target := _lowest_health_ally()
 	if target == null:
 		return
-	StatusEffectSystem.apply(target, skill.ally_effect_id, self)
+	if not StatusEffectSystem.apply(target, skill.ally_effect_id, self):
+		return
+	if skill.ally_effect_id == IMMUNITY_EFFECT_ID:
+		StatusSheetEffect.attach(
+			target, skill.ally_effect_id, IMMUNITY_EFFECT_SHEET,
+			IMMUNITY_FRAME_COUNT, IMMUNITY_LOOP_START
+		)
 
 
 # ===== 즉발 광역 (Instant AoE) =====
