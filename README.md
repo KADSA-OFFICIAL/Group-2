@@ -16,6 +16,19 @@ cd Group-2
 
 Godot을 실행한 뒤 **Import** → 클론한 폴더의 `project.godot` 파일을 선택합니다.
 
+### 1-1 초원 맵 확인
+
+`stage/Stage1_1.tscn`을 열고 현재 씬 실행(`F6`)을 누르면 전투 화면에서 초원 맵을
+확인할 수 있습니다. 맵 전체를 편집하려면 `stage/grassland/GrasslandMap.tscn`을
+2D 편집기에서 엽니다. 움집·목책·나무·돌 같은 배치물은 `Objects` 아래의 독립 씬
+인스턴스라 각각 선택해 이동할 수 있습니다.
+
+> **회색 배경이 보일 때:** `feat-348-arin-combat-vfx` 같은 PR #356 병합 전 체크아웃은
+> 아직 기존 회색 플레이스홀더를 사용합니다. `git switch main` 후
+> `git pull --ff-only origin main`을 실행하고, Godot에서 프로젝트를 다시 스캔하거나
+> 다시 연 뒤 실행하세요. `stage/Stage1_1.tscn`에 `GrasslandMap` 노드가 있으면 최신
+> 맵이 적용된 상태입니다.
+
 ## 폴더 구조
 
 ```
