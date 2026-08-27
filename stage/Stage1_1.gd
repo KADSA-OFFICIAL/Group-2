@@ -4,6 +4,12 @@ class_name Stage
 # 거점 존 씬(#377). 무엇을 어디에 놓을지는 데이터가 정하고 씬은 하나뿐이라 여기서 preload 한다.
 const CAPTURE_ZONE_SCENE := preload("res://entities/stage/CaptureZone.tscn")
 
+# 전장을 찾는 그룹 (#444). HUD 가 CaptureZone.GROUP 으로 존을 찾는 것과 같은 방식이다.
+#
+# 왜 필요한가: 이 노드의 이름은 stage_name 을 따라 **동적으로 바뀌므로** 노드 경로로
+# 찾을 수 없고, GameManager 도 전장을 들고 있지 않다.
+const GROUP := &"stage"
+
 # 씬 트리 노드 이름이자 stage_started/completed 에 실리는 값.
 # 어떤 스테이지가 로드됐는지 드러나야 하므로 현재 스테이지 id 를 따른다.
 var stage_name: String = "Stage"
@@ -18,6 +24,7 @@ var _map_scene_path: String = ""
 
 
 func _ready():
+	add_to_group(GROUP)
 	StageSystem.stage_requested.connect(_on_stage_requested)
 	_enter_current_stage()
 
@@ -319,6 +326,43 @@ func _advance_wave_if_cleared() -> void:
 #
 # 조건이 안 됐으면 그냥 기다린다. 전장에 적이 없고 점령 게이지만 차는 상태가 되며,
 # 점령이 미완이므로 _objectives_met() 가 false 라 승리로 끝나지도 않는다.
+# ===== 웨이브 조회 (Wave queries) — #444 =====
+#
+# HUD 가 부대 판을 그리는 데 쓴다. **신호(stage_wave_started)로는 부족하다**:
+# main.tscn 에서 전장이 HUD 보다 먼저 _ready 를 돌아 1파 신호를 이미 쏘므로,
+# HUD 는 그것을 놓친 채 시작한다(HUD._ready 의 튜토리얼 주석에 같은 문제가 적혀 있다).
+# 그래서 상태를 물어볼 수 있게 열어 둔다 — HUD 는 매 프레임 조회하는 방식이다.
+
+# 지금 놓여 있는 웨이브 번호(0부터). -1 은 StageData.spawns(웨이브 이전의 시작 배치)다.
+func get_wave_index() -> int:
+	return _wave_index
+
+
+# 저작된 웨이브 수. 웨이브를 쓰지 않는 스테이지는 0 이다.
+func get_wave_total() -> int:
+	var stage := StageSystem.get_current_stage()
+	return stage.waves.size() if stage != null else 0
+
+
+# 다음 파가 점령 조건(#442)으로 막혀 기다리는 중인가.
+#
+# 왜 이 판단을 HUD 가 아니라 여기서 하는가: 조건이 셋(적이 없음 + 다음 파가
+# requires_capture + 존 미확보)이고 _next_wave_unlocked() 가 이미 그 논리를 갖고 있다.
+# HUD 에서 다시 조립하면 같은 규칙이 두 곳에 생겨, 한쪽만 고쳐지는 순간 화면과
+# 실제 동작이 어긋난다.
+func is_waiting_for_capture() -> bool:
+	var stage := StageSystem.get_current_stage()
+	if stage == null or not stage.requires_clear():
+		return false
+	if not GameManager.get_all_enemies().is_empty():
+		return false
+	# 놓을 웨이브가 남아 있는데 잠겨 있을 때만 "기다리는 중"이다.
+	# 마지막 파까지 전멸시킨 상태는 대기가 아니라 소탕 완료다.
+	if _wave_index + 1 >= stage.waves.size():
+		return false
+	return not _next_wave_unlocked(stage)
+
+
 func _next_wave_unlocked(stage: StageData) -> bool:
 	var next_index := _wave_index + 1
 	if next_index >= stage.waves.size():
