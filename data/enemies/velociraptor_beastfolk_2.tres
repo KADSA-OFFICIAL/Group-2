@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/velociraptor_beastfolk_2_walk_frames.tres" id="10_walk"]
+[ext_resource type="Texture2D" uid="uid://baxxj1ncqlubu" path="res://assets/sprites/enemies/portraits/velociraptor_beastfolk_2.png" id="4_portrait"]
+
+[sub_resource type="Resource" id="PlayerStats_velociraptor_beastfolk_2"]
+script = ExtResource("2_stats")
+hp = 600
+strength = 33
+defense = 60
+intelligence = 100
+faith = 100
+
+[resource]
+script = ExtResource("1_enemydata")
+enemy_id = &"velociraptor_beastfolk_2"
+display_name = "벨로시랩터 수인 2"
+description = "벨로시랩터 수인(#340)의 다른 개체(#342). **스탯과 AI 파라미터가 1번과 완전히 같고 외형만 다르다** — 같은 종의 다른 개체로 세워 스테이지 화면이 단조로워지지 않게 하는 것이 목적이므로, 수치를 건드리면 그 목적을 넘는다. 따라서 tier 1 · HP/공격/방어 배수 0.5(HP 600 / 근력 33 / 방어 60) · 이동 0.9 · 공속 1.4 · 사거리 45 · 탐지 600 · 근접(투사체 없음) · 강화 평타 없음까지 그대로다. 수치 근거는 1번(data/enemies/velociraptor_beastfolk.tres)에 있고 전부 [임시값]이다 — 한쪽만 고치면 두 개체가 갈라지므로 밸런스를 손볼 때는 둘을 함께 본다. 외형은 전용 워크 시트(velociraptor_beastfolk_2_walk.png, 셀 424x496)를 쓴다. 초상은 전용 아트다(#342, velociraptor_beastfolk_2.png) — 1번이 강지에서 물려받은 플레이스홀더(girl_violet)를 쓰는 것과 달리 이쪽은 자기 그림이다. 흰 배경 원본(1378x2476)에서 tools/cutout_portrait.gd 로 누끼를 따고 tools/normalize_portrait.gd 로 캔버스를 맞췄다(735x1321, 세로 점유율 92% — 기존 초상들과 같은 기준). 개성/서사 미정."
+stats = SubResource("PlayerStats_velociraptor_beastfolk_2")
+balance_tier = 1
+hp_multiplier = 0.5
+attack_multiplier = 0.5
+defense_multiplier = 0.5
+sprite_texture = ExtResource("9_shape")
+tint = Color(0.9, 0.65, 0.85, 1)
+sprite_scale = Vector2(1.2, 1.2)
+walk_frames = ExtResource("10_walk")
+walk_sprite_scale = Vector2(0.25, 0.25)
+walk_sprite_offset = Vector2(0, -183)
+portrait = ExtResource("4_portrait")
+ai_enabled = true
+detection_range = 600.0
+attack_range = 45.0
+move_speed_multiplier = 0.9
+attack_speed_multiplier = 1.4

@@ -1,10 +1,11 @@
-[gd_resource type="Resource" script_class="StageData" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="StageData" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
 [ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
 [ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="4_seoa"]
 [ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="5_mammoth"]
 [ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk.tscn" id="6_raptor"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk2.tscn" id="7_raptor2"]
 
 [sub_resource type="Resource" id="StageSpawn_seoa"]
 script = ExtResource("2_spawn")
@@ -27,15 +28,22 @@ position = Vector2(600, 230)
 count = 1
 offset = Vector2(100, 0)
 
+[sub_resource type="Resource" id="StageSpawn_raptor2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_raptor2")
+position = Vector2(680, 230)
+count = 1
+offset = Vector2(100, 0)
+
 [resource]
 script = ExtResource("1_stagedata")
 stage_id = &"stage_1_1"
 display_name = "1-1 시험장"
-description = "첫 전투. 서아·매머드 수인·벨로시랩터 수인이 스폰 지점부터 파티를 향해 다가온다(#208 로 탐지 범위가 600 이 되어 스폰 거리 500~531px 가 범위 안이다). 벨로시랩터(#340)가 가장 먼저 붙어 난타하지만 물몸이라 빨리 죽고, 서아가 그 다음, 매머드는 느리지만 단단하다."
+description = "첫 전투. 네 마리 — 서아·매머드 수인·벨로시랩터 수인 둘 — 이 스폰 지점부터 파티를 향해 다가온다(#208 로 탐지 범위가 600 이 되어 스폰 거리 500~531px 가 범위 안이다). 벨로시랩터 둘(#340, #342 — 스탯이 같고 외형만 다르다)이 가장 먼저 붙어 난타하지만 물몸이라 빨리 죽고, 서아가 그 다음, 매머드는 느리지만 단단하다."
 type = 0
 clear_rewards = {
 "gold": 40,
 "protein": 50,
 "stone": 25
 }
-spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_seoa"), SubResource("StageSpawn_mammoth"), SubResource("StageSpawn_raptor")])
+spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_seoa"), SubResource("StageSpawn_mammoth"), SubResource("StageSpawn_raptor"), SubResource("StageSpawn_raptor2")])
