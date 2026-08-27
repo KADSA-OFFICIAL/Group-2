@@ -65,6 +65,75 @@ func get_last_result() -> Dictionary:
 	return _last_result.duplicate(true)
 
 
+# ===== 해금 (Unlock) — #434 =====
+#
+# 앞 챕터를 전부 클리어할 때까지 다음 챕터는 출격 목록에 뜨지 않는다.
+#
+# 왜 저장 필드를 새로 만들지 않는가: 해금은 **클리어 기록에서 도출된다.** "2챕터 열림"을
+# 따로 저장하면 클리어 기록과 어긋난 세이브(스테이지는 안 깼는데 챕터는 열린)가 만들어질 수 있다.
+# StageData 가 승리 조건을 type 에서, 컨셉을 chapter 에서 도출한 것과 같은 규약이다.
+#
+# 왜 화면이 아니라 여기인가: 해금은 **플레이어 상태에 대한 판정**이다. 규칙이 화면에 있으면
+# 목록 화면과 (나중에 생길) 출격 차단·다음 스테이지 추천이 각자 규칙을 갖는다.
+# 챕터 구성과 정렬은 그대로 StageDatabase 가 소유하고, 여기는 그것에 클리어 기록을 겹친다.
+
+# 챕터의 저작된 스테이지를 전부 클리어했는가.
+# 스테이지가 하나도 저작되지 않은 챕터는 "클리어됨"이 아니다(깰 것이 없었을 뿐이다).
+func is_chapter_cleared(chapter: int) -> bool:
+	var ids := StageDatabase.get_ids_by_chapter(chapter)
+	if ids.is_empty():
+		return false
+	for id in ids:
+		if not is_cleared(id):
+			return false
+	return true
+
+
+# 이 챕터가 열려 있는가.
+#
+# 기준은 **바로 앞의 저작된 챕터**다. 챕터 번호에서 1을 빼지 않는 이유: 앞 챕터가 아직
+# 저작되지 않았으면(스테이지 0개) 클리어가 불가능하고, 그것을 장벽으로 세면 뒷 챕터가
+# 영구히 잠긴다. 저작 중인 지금은 2챕터가 비어 있어도 3챕터를 열어 볼 수 있어야 한다.
+#
+# 첫 번째로 저작된 챕터는 클리어 기록이 없어도 열려 있다(새 세이브에서 1챕터).
+# 챕터 밖(NO_CHAPTER)은 챕터가 아니므로 항상 열려 있다 — 테스트·연습 스테이지가 잠기지 않는다.
+func is_chapter_unlocked(chapter: int) -> bool:
+	if chapter == StageData.NO_CHAPTER:
+		return true
+
+	var previous := _previous_authored_chapter(chapter)
+	if previous == StageData.NO_CHAPTER:
+		return true
+	return is_chapter_cleared(previous)
+
+
+# 이 스테이지가 열려 있는가. 챕터 단위 해금이므로 같은 챕터의 세 스테이지는 함께 열린다.
+# 알 수 없는 id 는 열려 있다고 하지 않는다 — 어느 챕터의 것인지 판정할 근거가 없다.
+func is_unlocked(stage_id: StringName) -> bool:
+	if not StageDatabase.has_stage(stage_id):
+		return false
+	return is_chapter_unlocked(StageDatabase.get_stage(stage_id).chapter)
+
+
+# 열려 있는 챕터 번호 목록(오름차순). 저작된 챕터 중에서만 나온다.
+# 목록 화면은 이쪽을 돌면 되고 챕터마다 판정을 다시 하지 않는다.
+func get_unlocked_chapters() -> Array:
+	var result: Array = []
+	for chapter in StageDatabase.get_authored_chapters():
+		if is_chapter_unlocked(chapter):
+			result.append(chapter)
+	return result
+
+
+# chapter 보다 앞에 있는, 스테이지가 저작된 챕터 중 가장 큰 번호. 없으면 NO_CHAPTER.
+func _previous_authored_chapter(chapter: int) -> int:
+	var previous := StageData.NO_CHAPTER
+	for authored in StageDatabase.get_authored_chapters():
+		if authored < chapter:
+			previous = authored
+	return previous
+
+
 # ===== 정산 (Settle) =====
 
 func _on_stage_completed(stage_name) -> void:
