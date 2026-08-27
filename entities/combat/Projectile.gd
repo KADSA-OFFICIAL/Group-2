@@ -86,6 +86,9 @@ var _travelled: float = 0.0
 
 ## 튕김 표시(#329). 탄이 다음 대상으로 넘어갈 때 한 장씩 놓는다.
 const CHAIN_ARC_SCENE := preload("res://entities/combat/ChainArc.tscn")
+const BURST_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/burst.png")
+const BURST_FRAME_COUNT: int = 4
+const BURST_FPS: float = 12.0
 
 
 # 그룹 이름의 단일 출처. 날아가는 탄을 밖에서 찾아야 하는 시스템이 이 이름으로 훑는다
@@ -255,6 +258,12 @@ func _nearest_unhit() -> Node2D:
 # 착탄 지점 반경 안의 모든 대상에게 피해와 효과를 넣는다.
 func _explode() -> void:
 	var origin := global_position
+	if aoe_radius > 0.0:
+		var diameter: float = aoe_radius * 2.0
+		SpriteSheetEffect.spawn_once(
+			get_parent(), BURST_EFFECT_SHEET, origin, BURST_FRAME_COUNT,
+			Vector2(diameter, diameter), BURST_FPS
+		)
 	for node in _candidates():
 		var body := node as Node2D
 		if body == null or not is_instance_valid(body) or not _is_alive(body):

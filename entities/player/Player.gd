@@ -1040,6 +1040,9 @@ const STRIKE_EFFECT_SCENE := preload("res://entities/combat/StrikeEffect.tscn")
 
 ## 아린 E의 시전·활성·종료 연출. 상태 효과 수치는 데이터에서 받아 온다(#348).
 const OVERLOAD_EFFECT_SCENE := preload("res://entities/combat/OverloadEffect.tscn")
+const BURST_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/burst.png")
+const BURST_FRAME_COUNT: int = 4
+const BURST_FPS: float = 12.0
 
 
 # 조준 방향으로 부채꼴 판정을 낸다(#336).
@@ -1390,6 +1393,9 @@ func _resolve_override_attack(skill: SkillData) -> bool:
 		_resolve_attack_hit(enemy, damage)
 		hit_any = true
 
+	if hit_any and skill.attack_override_aoe_radius > 0.0:
+		_spawn_burst(global_position, skill.attack_override_aoe_radius)
+
 	return hit_any
 
 
@@ -1586,6 +1592,7 @@ func _detonate_skill_shield() -> void:
 		return
 
 	var origin := global_position
+	_spawn_burst(origin, skill.aoe_radius)
 	for enemy in GameManager.get_all_enemies():
 		if enemy == null or not enemy.is_alive:
 			continue
@@ -1599,6 +1606,17 @@ func _detonate_skill_shield() -> void:
 
 	if EventBus:
 		EventBus.skill_shield_burst.emit(self, skill.skill_id, origin, power)
+
+
+func _spawn_burst(origin: Vector2, radius: float) -> void:
+	var host := get_parent()
+	if host == null or radius <= 0.0:
+		return
+	var diameter: float = radius * 2.0
+	SpriteSheetEffect.spawn_once(
+		host, BURST_EFFECT_SHEET, origin, BURST_FRAME_COUNT,
+		Vector2(diameter, diameter), BURST_FPS
+	)
 
 
 func get_skill_shield() -> int:

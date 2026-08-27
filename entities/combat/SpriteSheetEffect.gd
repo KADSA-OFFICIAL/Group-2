@@ -10,6 +10,23 @@ var _loop_start: int = -1
 var _elapsed: float = 0.0
 
 
+static func spawn_once(
+		host: Node,
+		sheet: Texture2D,
+		world_position: Vector2,
+		frame_count: int,
+		world_size: Vector2,
+		frames_per_second: float = 12.0
+) -> SpriteSheetEffect:
+	if host == null or sheet == null:
+		return null
+	var effect := SpriteSheetEffect.new()
+	host.add_child(effect)
+	effect.global_position = world_position
+	effect.setup(sheet, frame_count, frames_per_second, world_size)
+	return effect
+
+
 func setup(
 		sheet: Texture2D,
 		frame_count: int,
@@ -25,6 +42,7 @@ func setup(
 	hframes = _frame_count
 	frame = 0
 	centered = true
+	z_index = 6
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 
 	if texture != null and world_size.x > 0.0 and world_size.y > 0.0:
