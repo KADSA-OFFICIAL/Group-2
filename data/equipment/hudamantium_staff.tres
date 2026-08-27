@@ -6,11 +6,11 @@
 script = ExtResource("1_equipmentdata")
 equipment_id = &"hudamantium_staff"
 display_name = "후다만티움 지팡이"
-description = "후다만티움 티어 마법 무기(스톤 x2.56). 마법 공격력을 올린다. 제작 비용은 [임시값]이며 밸런싱 대상이다."
+description = "후다만티움 티어 마법 무기(스톤 x2.56). 마법 공격력을 올린다. 제작 비용은 [임시값]이며 밸런싱 대상이다. 스텟 값의 근거(이슈 354): 티어1 풀세트(도끼 + 방어구 3부위)가 기본 스텟 블록(HP 1000 / 근력 100 / 방어 100) 대비 전투력 +25% 가 되게 잡고 티어마다 x1.6 을 적용했다(티어2 +40% / 티어3 +64%). 이전 값은 최종 티어를 다 갖춰도 물리공격이 +7.5% 밖에 오르지 않아, BalanceReference 가 파생하는 적 기준선이 티어1에서 티어3 사이에 8% 만 움직였다."
 slot = 0
 tier = 3
 attack_type = 2
-magic_attack_bonus = 15
+magic_attack_bonus = 130
 craft_cost = {
 "coal": 5,
 "gold": 520,
