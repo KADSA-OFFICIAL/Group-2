@@ -155,6 +155,19 @@ enum Stacking {
 ## 스텟이 아니라 EMPOWER 인 이유는 이 섹션 머리말과 같다 — 숫자가 아니라 분기다.
 @export var grants_invulnerable: bool = false
 
+## 이 효과가 걸린 동안, 대상의 **평타 사거리 제한이 사라지는가**(#336).
+##
+## 켜져 있으면 `Player.get_attack_range()` 가 무제한을 돌려준다 — 살아 있는 적이 있으면
+## 거리와 무관하게 평타가 나간다.
+##
+## 왜 "사거리 +N%"(STAT_MOD)가 아닌가: 사거리는 `PlayerStats` 의 스텟이 아니다.
+## 그 값의 출처는 `CharacterData.basic_attack_range` 이거나 씬의 `AttackArea2D` 이고,
+## 버프 채널이 없다. 채널을 새로 파서 배율을 곱하는 방법도 있지만 스펙이 "**제한 해제**"라
+## 배율로는 표현되지 않는다(무한대를 곱으로 만들 수 없다). 숫자가 아니라 분기이므로 EMPOWER 다.
+##
+## 사거리만 푼다 — 피해도 공속도 바꾸지 않는다. 함께 걸어야 하면 also_apply_effect_id 로 잇는다.
+@export var grants_unlimited_attack_range: bool = false
+
 # ===== TAUNT payload =====
 #
 # **payload 가 없다.** 도발이 필요한 정보는 "누가 걸었는가" 하나이고, 그것은 이미
@@ -258,7 +271,8 @@ func validate() -> Array[String]:
 			if stat_flat.is_empty() and stat_percent.is_empty():
 				problems.append("STAT_MOD인데 stat_flat/stat_percent가 모두 비어 있습니다.")
 		Kind.EMPOWER:
-			if grants_lifesteal_percent <= 0.0 and not grants_execute and not grants_invulnerable:
+			if grants_lifesteal_percent <= 0.0 and not grants_execute \
+					and not grants_invulnerable and not grants_unlimited_attack_range:
 				problems.append("EMPOWER인데 부여하는 행동이 하나도 없습니다.")
 
 	if grants_lifesteal_percent < 0.0:

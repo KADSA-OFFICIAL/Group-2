@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"ranged_tank_overload"
+display_name = "과부하"
+description = "ranged_tank 고유 스킬(E, #336). 시전하면 **5초 동안** ① 공속이 오르고 ② **평타 사거리 제한이 사라진다**. 둘의 정의는 효과 리소스 둘이 나눠 갖는다(overload -> overload_reach): kind 가 하나뿐이라 공속(STAT_MOD)과 사거리 해제(EMPOWER)를 한 효과에 담을 수 없어 동반 효과로 이어 붙였다. 지속시간·수치는 **효과 리소스가 소유한다** — 여기 다시 적지 않는다. 이 스킬이 두 배로 세지는 이유: 이 인물의 평타는 맞은 적을 0.3초 기절시키므로, **공속이 오르면 딜과 CC 가 함께 오른다.** 거기에 사거리까지 풀리면 화면 안 아무 적에게나 그 기절이 걸린다 — 5초 동안 전장 전체를 끊어 놓는 것이 이 스킬이다. 그래서 겸직(원거리딜러 + 탱커)의 두 몫이 한 버튼에 들어간다. 조준하지 않는다: 대상 선정은 평타 규칙(최근접 적)을 그대로 쓰고, 이 스킬은 그 규칙의 **제한만 푼다**. base_power 0 — 스스로 피해를 내지 않고 평타가 내는 피해를 바꾼다(설아 E 와 같은 종류의 스킬이다). scales_with_faith 는 위력이 없어 의미가 없으므로 껐다. 쿨타임 22 초는 [임시값]이다 — 5초를 얻는 대가로 로스터 중간 값에 두었다(설아 E 24, 하랑 E 30, 강지 E 45)."
+base_power = 0
+scales_with_faith = false
+cooldown = 22.0
+self_effect_id = &"overload"
+input_slot = 2

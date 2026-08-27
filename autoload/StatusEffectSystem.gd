@@ -460,6 +460,17 @@ func grants_invulnerable(target) -> bool:
 	return false
 
 
+# 걸려 있는 EMPOWER 효과 중 하나라도 **평타 사거리 제한을 푸는가**(#336).
+func grants_unlimited_attack_range(target) -> bool:
+	if not _active.has(target):
+		return false
+	for effect_id in _active[target]:
+		var inst: _Instance = _active[target][effect_id]
+		if inst.data.kind == StatusEffectData.Kind.EMPOWER and inst.data.grants_unlimited_attack_range:
+			return true
+	return false
+
+
 # 걸려 있는 EMPOWER 효과 중 하나라도 처형을 부여하는가.
 func grants_execute(target) -> bool:
 	if not _active.has(target):
