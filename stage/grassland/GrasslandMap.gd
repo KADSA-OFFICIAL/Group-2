@@ -26,7 +26,6 @@ func _ready() -> void:
 	_build_ground()
 	_build_path()
 	_build_details()
-	_build_objects()
 	_build_boundaries()
 
 
@@ -82,45 +81,6 @@ func _build_details() -> void:
 			var value := _hash_cell(x, y, 73)
 			if value % 23 == 0:
 				detail.set_cell(cell, SOURCE_ID, Vector2i(value % 6, 0))
-
-
-func _build_objects() -> void:
-	objects.y_sort_enabled = true
-	_add_object(GrasslandObject.Kind.HUT, Vector2(600, 360))
-
-	# 3~5개 연속 목책과 120px 이상의 중앙 통로.
-	for x in [330.0, 426.0, 522.0]:
-		_add_object(GrasslandObject.Kind.FENCE, Vector2(x, 432))
-	for x in [738.0, 834.0, 930.0]:
-		_add_object(GrasslandObject.Kind.FENCE, Vector2(x, 432))
-	_add_object(GrasslandObject.Kind.FENCE_BROKEN, Vector2(1026, 432))
-	var fallen := _add_object(GrasslandObject.Kind.FENCE_FALLEN, Vector2(1090, 486))
-	fallen.rotation = -0.12
-	objects.remove_child(fallen)
-	decals.add_child(fallen)
-
-	# 랜드마크 밀도: 한 화면에 움막 또는 큰 나무 하나가 중심이 되도록 벌려 둔다.
-	_add_object(GrasslandObject.Kind.TREE_LARGE, Vector2(150, 360), 0)
-	_add_object(GrasslandObject.Kind.TREE_LARGE, Vector2(1360, 310), 1)
-	_add_object(GrasslandObject.Kind.TREE_LARGE, Vector2(1240, 850), 2)
-	_add_object(GrasslandObject.Kind.TREE_SMALL, Vector2(1040, 170), 0)
-	_add_object(GrasslandObject.Kind.TREE_SMALL, Vector2(250, 820), 1)
-	for position in [Vector2(80, 690), Vector2(470, 720), Vector2(980, 760), Vector2(1450, 620)]:
-		_add_object(GrasslandObject.Kind.BUSH, position)
-	for position in [Vector2(410, 230), Vector2(1120, 560)]:
-		_add_object(GrasslandObject.Kind.ROCK_LARGE, position)
-	for position in [Vector2(710, 760), Vector2(1320, 560), Vector2(210, 560)]:
-		_add_object(GrasslandObject.Kind.ROCK_SMALL, position)
-	_add_object(GrasslandObject.Kind.CRATE, Vector2(760, 325))
-	_add_object(GrasslandObject.Kind.SIGN, Vector2(290, 505))
-
-
-func _add_object(kind: int, position: Vector2, variant: int = 0) -> GrasslandObject:
-	var object := GrasslandObject.new()
-	object.position = position
-	object.setup(kind, variant)
-	objects.add_child(object)
-	return object
 
 
 func _build_boundaries() -> void:

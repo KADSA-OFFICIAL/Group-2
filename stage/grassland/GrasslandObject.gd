@@ -1,3 +1,4 @@
+@tool
 extends Node2D
 class_name GrasslandObject
 
@@ -21,8 +22,14 @@ const ROCK_LIGHT := Color("9E9E9E")
 const ROCK_MAIN := Color("767676")
 const ROCK_SHADOW := Color("4F4F4F")
 
-var kind: Kind = Kind.BUSH
-var variant: int = 0
+@export var kind: Kind = Kind.BUSH:
+	set(value):
+		kind = value
+		queue_redraw()
+@export_range(0, 2) var variant: int = 0:
+	set(value):
+		variant = value
+		queue_redraw()
 var _elapsed := 0.0
 
 
@@ -30,7 +37,11 @@ func setup(object_kind: int, object_variant: int = 0) -> void:
 	kind = object_kind
 	variant = object_variant
 	name = Kind.keys()[kind].to_pascal_case()
-	_build_collision()
+	queue_redraw()
+
+
+func _ready() -> void:
+	_rebuild_collision()
 	queue_redraw()
 
 
@@ -189,7 +200,11 @@ func _draw_log(from: Vector2, to: Vector2, width: float) -> void:
 	draw_line(from + Vector2(-1, -1), to + Vector2(-1, -1), WOOD_LIGHT, 1.5, true)
 
 
-func _build_collision() -> void:
+func _rebuild_collision() -> void:
+	var old_footprint := get_node_or_null("Footprint")
+	if old_footprint:
+		remove_child(old_footprint)
+		old_footprint.queue_free()
 	if kind == Kind.FENCE_FALLEN or kind == Kind.BUSH:
 		return
 	var footprint := Vector2.ZERO

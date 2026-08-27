@@ -34,6 +34,16 @@ func _ready() -> void:
 		_expect(fallen.get_parent().name == "Decal", "fallen fence must be in the decal layer")
 		_expect(not fallen.has_node("Footprint"), "fallen fence must not block movement")
 
+	# Every placed prop must remain an external PackedScene instance so designers can
+	# select, move, duplicate, or replace it directly in GrasslandMap.tscn.
+	for layer_name in ["Objects", "Decal"]:
+		for child in map.get_node(layer_name).get_children():
+			if child is GrasslandObject:
+				_expect(
+					child.scene_file_path.begins_with("res://stage/grassland/objects/"),
+					"%s must be an independently instanced object scene" % child.name,
+				)
+
 	# Fence centers are 216px apart around the gate; subtracting two 48px half-widths leaves 120px.
 	_expect(738.0 - 522.0 - 96.0 >= 120.0, "central fence passage must be at least 120px")
 
