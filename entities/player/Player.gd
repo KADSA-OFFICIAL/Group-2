@@ -2522,8 +2522,9 @@ func heal(amount: int) -> int:
 	hp = min(hp, max_hp)
 	var applied := hp - before
 
-	if EventBus:
-		EventBus.healing_applied.emit(self, amount)
+	if EventBus and applied > 0:
+		# 숫자와 연출은 요청량이 아니라 실제로 오른 체력을 표시한다(#399).
+		EventBus.healing_applied.emit(self, applied)
 
 	return applied
 

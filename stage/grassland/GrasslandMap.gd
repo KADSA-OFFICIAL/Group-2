@@ -4,7 +4,12 @@ class_name GrasslandMap
 # v3 초원 맵 스펙을 실제 24px TileMapLayer와 Y-sort 오브젝트로 구성한다(#352).
 
 const TILE_SIZE := 24
-const MAP_SIZE := Vector2i(64, 40)
+# 96x64 x 24px = 2304x1536 (#396). 64x40(1536x960) 이었을 때는 카메라를 zoom 0.8 로
+# 물리면 보이는 폭 1600 이 맵 폭 1536 을 넘어 어디를 봐도 맵 바깥이 드러났다.
+#
+# 타일은 원점에서 +방향으로 생성되므로 **동쪽·남쪽으로만** 넓어진다 —
+# 기존 프롭(움막·울타리)과 길의 세계 좌표는 그대로다.
+const MAP_SIZE := Vector2i(96, 64)
 const SOURCE_ID := 0
 const GRASS_BASE := Color("75885A")
 const GRASS_LIGHT := Color("899867")
