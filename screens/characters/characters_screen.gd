@@ -516,15 +516,33 @@ func _skill_fact_rows(skill: SkillData) -> Array[Control]:
 	if skill.current_hp_damage_percent > 0.0:
 		rows.append(HUDKit.stat_row("추가 피해", "hp scaling",
 			"대상 현재 체력 %d%%" % roundi(skill.current_hp_damage_percent * 100.0)))
+	if skill.attack_override_max_hp_percent > 0.0:
+		# 바뀐 평타의 피해축. 공격력이 아니라 맞은 적의 최대 체력에서 나온다(하랑 E).
+		rows.append(HUDKit.stat_row("바뀐 평타", "max hp",
+			"대상 최대 체력 %d%%" % roundi(skill.attack_override_max_hp_percent * 100.0)))
+	if skill.attack_aoe_power_percent > 0.0:
+		rows.append(HUDKit.stat_row("광역 위력", "of p.atk",
+			"물리 공격력 %d%%" % roundi(skill.attack_aoe_power_percent * 100.0)))
 	if skill.ally_heal > 0:
-		rows.append(HUDKit.stat_row("아군 회복", "heal", str(skill.ally_heal)))
+		# ally_heal 도 base_power 와 같은 규약으로 신앙심 강화를 탄다
+		# (SkillData.get_effective_ally_heal). 위력 줄에만 적으면 회복은 안 타는 것으로 읽힌다.
+		var heal_faith := " (신앙심 비례)" if skill.scales_with_faith else ""
+		rows.append(HUDKit.stat_row("아군 회복", "heal", "%d%s" % [skill.ally_heal, heal_faith]))
 	if skill.heal_missing_hp_percent > 0.0:
 		rows.append(HUDKit.stat_row("회복", "heal",
 			"잃은 체력 %d%%" % roundi(skill.heal_missing_hp_percent * 100.0)))
-	if skill.shield_base > 0:
-		var shield := str(skill.shield_base)
+	if skill.heal_to_aoe_damage_percent > 0.0:
+		rows.append(HUDKit.stat_row("회복 연동 피해", "of heal",
+			"회복량 %d%%" % roundi(skill.heal_to_aoe_damage_percent * 100.0)))
+	if skill.attack_damage_to_ally_heal_percent > 0.0:
+		# 실제로 들어간 평타 피해 기준이라 빗나가면 회복되지 않는다(강지 패시브).
+		rows.append(HUDKit.stat_row("평타 연동 회복", "of hit",
+			"들어간 피해 %d%%" % roundi(skill.attack_damage_to_ally_heal_percent * 100.0)))
+	if skill.grants_shield():
+		# grants_shield() 와 같은 조건을 쓴다 — 게이지에서만 나오는 보호막도 보여야 한다.
+		var shield := str(skill.get_effective_shield(0.0))
 		if skill.shield_gauge_bonus > 0:
-			shield = "%d ~ %d" % [skill.shield_base, skill.shield_base + skill.shield_gauge_bonus]
+			shield = "%d ~ %d" % [skill.get_effective_shield(0.0), skill.get_effective_shield(1.0)]
 		rows.append(HUDKit.stat_row("보호막", "shield", shield))
 	if skill.shield_duration > 0.0:
 		rows.append(HUDKit.stat_row("보호막 지속", "shield time", _seconds(skill.shield_duration)))
@@ -539,6 +557,12 @@ func _skill_fact_rows(skill: SkillData) -> Array[Control]:
 		rows.append(HUDKit.stat_row("연쇄 지속", "chain", _seconds(skill.chain_duration)))
 	if skill.chain_bounces > 0:
 		rows.append(HUDKit.stat_row("연쇄 횟수", "bounces", "최대 %d회" % skill.chain_bounces))
+	if skill.chain_range > 0.0:
+		rows.append(HUDKit.stat_row("연쇄 거리", "chain range", "%d" % roundi(skill.chain_range)))
+	if skill.chain_bounces > 0 and skill.chain_damage_percent < 1.0:
+		# 기본값이 1.0(감쇠 없음)이라 다른 필드와 달리 "0 이 아니면" 이 아니라 "1 미만이면" 이다.
+		rows.append(HUDKit.stat_row("연쇄 감쇠", "per bounce",
+			"튕길 때마다 %d%%" % roundi(skill.chain_damage_percent * 100.0)))
 	if skill.aura_duration > 0.0:
 		rows.append(HUDKit.stat_row("지대 지속", "zone", _seconds(skill.aura_duration)))
 	if skill.attack_override_duration > 0.0:
@@ -561,11 +585,12 @@ func _skill_shape_rows(skill: SkillData) -> Array[Control]:
 	if skill.projectile_range > 0.0:
 		rows.append(HUDKit.stat_row("사거리", "range", "%d" % roundi(skill.projectile_range)))
 	if skill.aoe_radius > 0.0:
-		var radius := "%d" % roundi(skill.aoe_radius)
+		# 반경 계산은 SkillData 가 소유한다 — 여기서 공식을 다시 쓰지 않는다.
+		var radius := "%d" % roundi(skill.get_effective_radius(0.0))
 		# 게이지로 반경이 커지는 스킬은 실제로 변하는 폭을 보여 준다(미나 Q).
 		if skill.gauge_radius_bonus_percent > 0.0:
-			radius = "%d ~ %d" % [roundi(skill.aoe_radius),
-				roundi(skill.aoe_radius * (1.0 + skill.gauge_radius_bonus_percent))]
+			radius = "%d ~ %d" % [roundi(skill.get_effective_radius(0.0)),
+				roundi(skill.get_effective_radius(1.0))]
 		rows.append(HUDKit.stat_row("범위", "radius", radius))
 	if skill.instant_aoe_radius > 0.0:
 		rows.append(HUDKit.stat_row("범위", "radius", "%d" % roundi(skill.instant_aoe_radius)))
@@ -599,16 +624,24 @@ func _skill_effect_rows(skill: SkillData) -> Array[Control]:
 		var id: StringName = entry[2]
 		if String(id).is_empty():
 			continue
-		rows.append(HUDKit.stat_row(entry[0], entry[1], _effect_name(id)))
+		rows.append(HUDKit.stat_row(entry[0], entry[1], _effect_text(id)))
 	return rows
 
 
-func _effect_name(id: StringName) -> String:
+# 효과 이름과 지속시간. 둘 다 StatusEffectData 가 소유한다.
+#
+# 지속시간을 함께 그리는 이유: 이 스킬들은 "얼마나 오래"가 스킬 자신의 필드가 아니라 효과
+# 리소스에 있다. 이름만 그리면 summary 의 "잠시 동안"이 화면 어디에서도 수치로 안 풀린다
+# (과부하 5초·도발 7초·고양 3초 ...). summary 에는 수치를 적지 않는 것이 규약이므로
+# 여기서 안 그리면 그 수치는 어디에도 없다.
+func _effect_text(id: StringName) -> String:
 	var effect := StatusEffectDatabase.get_effect(id)
 	# 정의를 못 찾으면 id 라도 보여 준다 — 조용히 사라지면 저작 실수를 눈치채지 못한다.
 	if effect == null or effect.display_name.is_empty():
 		return String(id)
-	return effect.display_name
+	if effect.is_permanent():
+		return effect.display_name
+	return "%s · %s" % [effect.display_name, _seconds(effect.duration)]
 
 
 # 초 표기. 1.0 처럼 떨어지면 소수점을 떼어 "1초" 로 읽히게 한다.
