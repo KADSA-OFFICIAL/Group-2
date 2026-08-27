@@ -67,6 +67,24 @@ const NEIGHBORS_8: Array[Vector2i] = [
 	Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1),
 ]
 
+# ===== 체커보드 배경 (#358) =====
+#
+# 투명 미리보기 체커보드가 구워진 원본이 있다. 두 톤이 격자로 번갈아 깔려 있어서,
+# 테두리 flood fill 만으로는 **인물에 둘러싸인 안쪽 주머니**(머리카락 사이, 소매와
+# 몸 사이)에 무늬가 그대로 남는다.
+#
+# 격자 좌표를 계산해 지우는 방법은 쓰지 않는다 — 실제로 해 보니 주기가 이미지를
+# 가로지르며 어긋나(예측 정확도 93% -> 75%) 아래쪽에서 무너지고, 무엇보다 **흰옷에
+# 구멍이 뚫린다**(드레스의 흰색이 밝은 칸 예측과, 음영이 어두운 칸 예측과 맞는다).
+#
+# 대신 **격자와 무관한 국소 판정**을 쓴다: 창 안이 전부 무채색이고 값이 두 톤에만
+# 몰려 있으면 그곳은 배경이다. 그림은 유채색이거나 값이 고르게 퍼져 있어 걸리지 않는다.
+const CHECKER_PROBE_RADIUS: int = 10   # 창 반지름(px). 셀보다 커야 두 톤이 다 들어온다
+const CHECKER_PROBE_STEP: int = 3      # 창 안 표본 간격. 전부 보면 느리다
+const CHECKER_SEED_STEP: int = 8       # 씨앗 후보를 이 간격으로만 검사한다
+const CHECKER_TONE_TOLERANCE: int = 5  # 잰 두 톤과의 허용 차
+const CHECKER_GRAY_TOLERANCE: int = 4  # 채널 간 차이가 이보다 크면 유채색 = 그림
+
 # 픽셀 분류
 const BACKGROUND := 0
 const UNKNOWN := 1
@@ -154,6 +172,43 @@ func _cutout(src: String, dst: String, dry_run: bool) -> bool:
 			if nx < 0 or ny < 0 or nx >= w or ny >= h:
 				continue
 			_seed(image, kind, queue, nx, ny, w, bg, tol)
+
+	# ===== 2b. 갇힌 체커보드 주머니를 씨앗으로 더한다 =====
+	#
+	# 테두리에서 번지는 것만으로는 인물에 막힌 안쪽에 닿지 못한다. 국소 판정으로
+	# "여기는 순수 배경"인 지점을 찾아 거기서도 번지게 한다.
+	var tone_low: float = measured["tone_low"]
+	var tone_high: float = measured["tone_high"]
+	var checker_seeds := 0
+	# 두 톤이 충분히 벌어져 있을 때만 한다. 단색 배경이면 할 일이 없다.
+	if (tone_high - tone_low) * 255.0 >= 6.0:
+		var y := CHECKER_SEED_STEP
+		while y < h - CHECKER_SEED_STEP:
+			var x := CHECKER_SEED_STEP
+			while x < w - CHECKER_SEED_STEP:
+				if kind[y * w + x] == FOREGROUND and _is_checker(image, x, y, w, h,
+						tone_low, tone_high):
+					var before := queue.size()
+					_seed(image, kind, queue, x, y, w, bg, tol)
+					if queue.size() > before:
+						checker_seeds += 1
+				x += CHECKER_SEED_STEP
+			y += CHECKER_SEED_STEP
+
+		# 새 씨앗에서 다시 번진다.
+		while head < queue.size():
+			var idx := queue[head]
+			head += 1
+			var cx := idx % w
+			var cy := idx / w
+			for d in NEIGHBORS_4:
+				var nx := cx + d.x
+				var ny := cy + d.y
+				if nx < 0 or ny < 0 or nx >= w or ny >= h:
+					continue
+				_seed(image, kind, queue, nx, ny, w, bg, tol)
+		if checker_seeds > 0:
+			print("    갇힌 체커보드 씨앗 %d개에서 추가로 번짐" % checker_seeds)
 
 	var bg_count := queue.size()
 
@@ -253,6 +308,41 @@ func _cutout(src: String, dst: String, dry_run: bool) -> bool:
 	return true
 
 
+# 이 자리를 둘러싼 창이 **순수 체커보드**인가.
+#
+# 격자 위치를 모른 채로 판정한다: 창 안이 전부 무채색이고, 값이 잰 두 톤에만 몰려
+# 있으면 배경이다. 그림은 유채색이거나 두 톤 사이를 고르게 채워 걸리지 않는다.
+func _is_checker(image: Image, x0: int, y0: int, w: int, h: int,
+		tone_low: float, tone_high: float) -> bool:
+	var tol := float(CHECKER_TONE_TOLERANCE) / 255.0
+	var gray_tol := float(CHECKER_GRAY_TOLERANCE) / 255.0
+	var saw_low := false
+	var saw_high := false
+	var samples := 0
+
+	var y := maxi(0, y0 - CHECKER_PROBE_RADIUS)
+	while y <= mini(h - 1, y0 + CHECKER_PROBE_RADIUS):
+		var x := maxi(0, x0 - CHECKER_PROBE_RADIUS)
+		while x <= mini(w - 1, x0 + CHECKER_PROBE_RADIUS):
+			var px := image.get_pixel(x, y)
+			# 유채색이면 그림이다.
+			if maxf(maxf(px.r, px.g), px.b) - minf(minf(px.r, px.g), px.b) > gray_tol:
+				return false
+			var near_low: bool = absf(px.r - tone_low) <= tol
+			var near_high: bool = absf(px.r - tone_high) <= tol
+			# 두 톤 어느 쪽도 아니면 그림이다(경계 흐림 몇 픽셀은 아래 비율로 걸러진다).
+			if not near_low and not near_high:
+				return false
+			saw_low = saw_low or near_low
+			saw_high = saw_high or near_high
+			samples += 1
+			x += CHECKER_PROBE_STEP
+		y += CHECKER_PROBE_STEP
+
+	# 두 톤이 다 보여야 체커보드다. 한 톤만 있으면 단색 면(옷)일 수 있다.
+	return samples >= 16 and saw_low and saw_high
+
+
 # 아직 배경으로 안 찍힌 픽셀이 배경색과 비슷하면 배경으로 찍고 큐에 넣는다.
 func _seed(image: Image, kind: PackedByteArray, queue: Array[int], x: int, y: int,
 		w: int, bg: Color, tol: float) -> void:
@@ -337,11 +427,20 @@ func _background(image: Image) -> Dictionary:
 	for c in kept:
 		spread = maxf(spread, _distance(c, mean))
 
+	# 배경이 체커보드면 두 톤이 있다. 가장 어두운/밝은 표본이 그 둘이다.
+	var lo := 1.0
+	var hi := 0.0
+	for c in kept:
+		lo = minf(lo, c.r)
+		hi = maxf(hi, c.r)
+
 	return {
 		"color": mean,
 		"tolerance": spread + float(BG_TOLERANCE) / 255.0,
 		"spread": spread,
 		"dropped": samples.size() - kept.size(),
+		"tone_low": lo,
+		"tone_high": hi,
 	}
 
 
