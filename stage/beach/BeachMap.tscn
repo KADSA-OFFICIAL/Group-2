@@ -1,0 +1,98 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://stage/beach/BeachMap.gd" id="1_map"]
+[ext_resource type="PackedScene" path="res://stage/beach/objects/Palm.tscn" id="2_palm"]
+[ext_resource type="PackedScene" path="res://stage/beach/objects/Driftwood.tscn" id="3_driftwood"]
+[ext_resource type="PackedScene" path="res://stage/beach/objects/RockWet.tscn" id="4_rock"]
+[ext_resource type="PackedScene" path="res://stage/beach/objects/Shell.tscn" id="5_shell"]
+
+[node name="BeachMap" type="Node2D"]
+script = ExtResource("1_map")
+
+[node name="Ground" type="TileMapLayer" parent="."]
+z_index = -5
+
+[node name="Overlay" type="TileMapLayer" parent="."]
+z_index = -4
+
+[node name="Detail" type="TileMapLayer" parent="."]
+z_index = -3
+
+[node name="Decal" type="Node2D" parent="."]
+z_index = -2
+
+[node name="ShellWest" parent="Decal" instance=ExtResource("5_shell")]
+position = Vector2(500, 450)
+
+[node name="ShellCenter" parent="Decal" instance=ExtResource("5_shell")]
+position = Vector2(880, 520)
+variant = 1
+
+[node name="ShellNorth" parent="Decal" instance=ExtResource("5_shell")]
+position = Vector2(1400, 300)
+variant = 2
+
+[node name="ShellEast" parent="Decal" instance=ExtResource("5_shell")]
+position = Vector2(1780, 470)
+
+[node name="ShellShore" parent="Decal" instance=ExtResource("5_shell")]
+position = Vector2(640, 690)
+variant = 1
+
+[node name="ShellFarEast" parent="Decal" instance=ExtResource("5_shell")]
+position = Vector2(2060, 560)
+variant = 2
+
+[node name="Objects" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="PalmWest1" parent="Objects" instance=ExtResource("2_palm")]
+position = Vector2(150, 300)
+
+[node name="PalmWest2" parent="Objects" instance=ExtResource("2_palm")]
+position = Vector2(232, 214)
+variant = 1
+
+[node name="PalmNorth" parent="Objects" instance=ExtResource("2_palm")]
+position = Vector2(1084, 196)
+variant = 2
+
+[node name="PalmEast1" parent="Objects" instance=ExtResource("2_palm")]
+position = Vector2(1290, 268)
+
+[node name="PalmEast2" parent="Objects" instance=ExtResource("2_palm")]
+position = Vector2(1372, 190)
+variant = 1
+
+[node name="PalmFarEast1" parent="Objects" instance=ExtResource("2_palm")]
+position = Vector2(2036, 330)
+variant = 2
+
+[node name="PalmFarEast2" parent="Objects" instance=ExtResource("2_palm")]
+position = Vector2(2148, 258)
+
+[node name="DriftwoodShore" parent="Objects" instance=ExtResource("3_driftwood")]
+position = Vector2(712, 628)
+
+[node name="DriftwoodEast" parent="Objects" instance=ExtResource("3_driftwood")]
+position = Vector2(1516, 648)
+variant = 1
+
+[node name="DriftwoodFarEast" parent="Objects" instance=ExtResource("3_driftwood")]
+position = Vector2(1996, 706)
+variant = 2
+
+[node name="RockWest" parent="Objects" instance=ExtResource("4_rock")]
+position = Vector2(404, 646)
+
+[node name="RockCenter" parent="Objects" instance=ExtResource("4_rock")]
+position = Vector2(1150, 604)
+variant = 1
+
+[node name="RockEast" parent="Objects" instance=ExtResource("4_rock")]
+position = Vector2(1762, 668)
+variant = 2
+
+[node name="RockNorthWest" parent="Objects" instance=ExtResource("4_rock")]
+position = Vector2(196, 148)
+variant = 1
