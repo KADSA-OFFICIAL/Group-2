@@ -1047,6 +1047,13 @@ const IMMUNITY_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/i
 const IMMUNITY_EFFECT_ID: StringName = &"gangji_immunity"
 const IMMUNITY_FRAME_COUNT: int = 5
 const IMMUNITY_LOOP_START: int = 3
+const TAUNT_SKILL_ID: StringName = &"harang_taunt"
+const TAUNT_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/taunt_ring.png")
+const TAUNT_FRAME_COUNT: int = 3
+const RAMPAGE_EFFECT_ID: StringName = &"harang_rampage"
+const RAMPAGE_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/rage_crack.png")
+const RAMPAGE_FRAME_COUNT: int = 4
+const RAMPAGE_LOOP_START: int = 3
 
 
 # 조준 방향으로 부채꼴 판정을 낸다(#336).
@@ -1168,6 +1175,12 @@ func _cast_ally_effect(skill: SkillData) -> void:
 func _cast_instant_aoe(skill: SkillData) -> void:
 	var damage := skill.get_effective_power(get_stats().get_goddess_skill_boost())
 	var hit_any := false
+	if skill.skill_id == TAUNT_SKILL_ID and skill.instant_aoe_radius > 0.0:
+		var diameter: float = skill.instant_aoe_radius * 2.0
+		SpriteSheetEffect.spawn_once(
+			get_parent(), TAUNT_EFFECT_SHEET, global_position, TAUNT_FRAME_COUNT,
+			Vector2(diameter, diameter), 12.0
+		)
 
 	for enemy in GameManager.get_all_enemies():
 		if enemy == null or not enemy.is_alive:
@@ -1202,8 +1215,13 @@ func _cast_instant_aoe(skill: SkillData) -> void:
 func _cast_self_effect(skill: SkillData) -> void:
 	if not StatusEffectSystem.apply(self, skill.self_effect_id, self):
 		return
-	if skill.skill_id == &"arin_overload":
+	if skill.self_effect_id == &"arin_overload":
 		_spawn_overload_effect(skill.self_effect_id)
+	elif skill.self_effect_id == RAMPAGE_EFFECT_ID:
+		StatusSheetEffect.attach(
+			self, skill.self_effect_id, RAMPAGE_EFFECT_SHEET,
+			RAMPAGE_FRAME_COUNT, RAMPAGE_LOOP_START
+		)
 
 
 func _spawn_overload_effect(effect_id: StringName) -> void:
