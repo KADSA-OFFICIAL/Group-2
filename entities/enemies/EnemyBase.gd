@@ -132,6 +132,15 @@ func _apply_data() -> void:
 		_anim_sprite.visible = true
 		if sprite is Sprite2D:
 			sprite.visible = false
+	elif anim is AnimatedSprite2D:
+		# 워크 시트가 없으면 **AnimatedSprite2D 를 숨긴다**(#425).
+		#
+		# 씬의 그 노드는 기본이 visible 이고 sprite_frames 는 비어 있다. 숨기지 않으면
+		# 이펙트가 "보이는 스프라이트"를 찾을 때 이 빈 노드를 고르고
+		# (OverloadEffect/KnockbackEffect/ShockStatusEffect 의 _visible_sprite),
+		# sprite_frames.get_frame_texture() 에서 널을 만진다.
+		# 도형 플레이스홀더로 서는 캐릭터(아린·강지)가 여기 해당한다.
+		anim.visible = false
 
 func _exit_tree():
 	if EventBus and EventBus.status_effect_applied.is_connected(_on_status_effect_applied):

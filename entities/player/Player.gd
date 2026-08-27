@@ -147,6 +147,15 @@ func _apply_data() -> void:
 		_anim_sprite.visible = true
 		if sprite is Sprite2D:
 			sprite.visible = false
+	elif anim is AnimatedSprite2D:
+		# 워크 시트가 없으면 **AnimatedSprite2D 를 숨긴다**(#425).
+		#
+		# 씬의 그 노드는 기본이 visible 이고 sprite_frames 는 비어 있다. 숨기지 않으면
+		# 이펙트가 "보이는 스프라이트"를 찾을 때 이 빈 노드를 고르고
+		# (OverloadEffect/KnockbackEffect/ShockStatusEffect 의 _visible_sprite),
+		# sprite_frames.get_frame_texture() 에서 널을 만진다.
+		# 도형 플레이스홀더로 서는 캐릭터(아린·강지)가 여기 해당한다.
+		anim.visible = false
 
 
 # ===== 조종 상태 (Control) =====
@@ -1215,7 +1224,17 @@ func _cast_instant_aoe(skill: SkillData) -> void:
 func _cast_self_effect(skill: SkillData) -> void:
 	if not StatusEffectSystem.apply(self, skill.self_effect_id, self):
 		return
-	if skill.self_effect_id == &"arin_overload":
+	# **스킬 id 로 가른다. 효과 id 로 가르지 않는다**(#425).
+	#
+	# 두 값은 대체로 같지만 아린 E 만 다르다 — skill_id 는 arin_overload 인데
+	# self_effect_id 는 overload 다. 여기서 self_effect_id 를 arin_overload 와
+	# 비교해 놓아 분기가 영영 참이 되지 않았고, 그 스킬만 조용히 연출을 잃었다.
+	# 하랑은 두 id 가 같아서 우연히 동작했기 때문에 드러나지 않았다.
+	#
+	# 아래 두 줄이 서로 다른 기준으로 갈리는 것이 이상해 보이겠지만 의도한 것이다:
+	# 과부하는 **어느 스킬이 걸었는가**로(효과는 overload/overload_reach 둘로 쪼개져 있다),
+	# 격노는 **어느 효과가 붙었는가**로 판단하는 것이 각각 자연스럽다.
+	if skill.skill_id == &"arin_overload":
 		_spawn_overload_effect(skill.self_effect_id)
 	elif skill.self_effect_id == RAMPAGE_EFFECT_ID:
 		StatusSheetEffect.attach(
