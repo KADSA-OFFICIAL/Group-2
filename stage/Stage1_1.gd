@@ -118,13 +118,65 @@ func spawn_enemies() -> void:
 		push_warning("Stage: 현재 스테이지 정의가 없습니다. 적 없이 시작합니다.")
 		return
 
-	for spawn in stage.spawns:
+	_wave_index = -1
+	var placed := _place(stage.spawns)
+
+	# spawns 가 비었고 웨이브만 저작된 스테이지는 첫 웨이브를 바로 놓는다.
+	# 놓지 않으면 _begin_judging 이 "적이 없다"며 판정을 꺼서 영영 끝나지 않는다.
+	if placed == 0:
+		_advance_wave()
+
+
+# ===== 웨이브 (Waves) — #375 =====
+#
+# 지금 놓여 있는 웨이브 번호. -1 은 **StageData.spawns**(웨이브 이전의 시작 배치)다.
+# 전멸할 때마다 하나씩 올라가고, 마지막 웨이브까지 전멸시켜야 승리다.
+#
+# 왜 "마지막 웨이브 == 보스" 로 두지 않는가: 보스 뒤에 잔당 웨이브를 붙이는 순간 깨진다.
+# 보스 여부는 StageWave.is_boss 가 따로 들고 있고, 승리 조건은 그것과 무관하다.
+var _wave_index: int = -1
+
+
+# 적 배치 한 묶음을 방에 놓는다. 실제로 놓은 마리 수를 돌려준다.
+func _place(spawns: Array[StageSpawn]) -> int:
+	var placed := 0
+	for spawn in spawns:
 		if spawn == null or spawn.enemy_scene == null:
 			continue
 		for i in range(spawn.count):
 			var enemy = spawn.enemy_scene.instantiate()
 			current_room.add_child(enemy)
 			enemy.global_position = spawn.get_position(i)
+			placed += 1
+	return placed
+
+
+# 다음 웨이브를 놓는다. 놓을 것이 남아 있지 않으면 false — 그때가 소탕 완료다.
+#
+# 비어 있는 웨이브는 **건너뛴다**(멈추지 않는다). 거기서 멈추면 적도 없고 승리도 없어
+# 판이 영영 끝나지 않고, 플레이어에게는 원인이 전혀 보이지 않는다.
+# 저작 시점에는 StageData.validate() 가 이미 걸러 준다 — 여기는 그 그물을 빠져나온
+# 경우(씬 로드 실패 등)를 위한 마지막 방어선이다.
+func _advance_wave() -> bool:
+	var stage := StageSystem.get_current_stage()
+	if stage == null:
+		return false
+
+	while _wave_index + 1 < stage.waves.size():
+		_wave_index += 1
+		var wave := stage.waves[_wave_index]
+		if wave == null:
+			push_warning("Stage: waves[%d]가 비어 있습니다(건너뜀): %s" % [_wave_index, stage_name])
+			continue
+
+		if _place(wave.spawns) == 0:
+			push_warning("Stage: waves[%d]에 놓인 적이 없습니다(건너뜀): %s" % [_wave_index, stage_name])
+			continue
+
+		EventBus.stage_wave_started.emit(stage_name, _wave_index, stage.waves.size(), wave)
+		return true
+
+	return false
 
 
 # ===== 승패 판정 (Outcome) =====
@@ -156,7 +208,8 @@ func _process(_delta: float) -> void:
 		return
 
 	# 소탕 조건은 진입 시 확인했다(_begin_judging). 여기서는 남은 적만 본다.
-	if GameManager.get_all_enemies().is_empty():
+	# 남은 웨이브가 있으면 승리가 아니라 다음 웨이브다(#375).
+	if GameManager.get_all_enemies().is_empty() and not _advance_wave():
 		_finish(true)
 
 
