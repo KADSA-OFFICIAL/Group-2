@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/mammoth_beastfolk_walk_frames.tres" id="10_walk"]
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="11_skilldef"]
+[ext_resource type="Resource" path="res://data/enemies/skills/boss_charge.tres" id="12_charge"]
+[ext_resource type="Resource" path="res://data/enemies/skills/boss_leap_slam.tres" id="13_leap"]
+
+[sub_resource type="Resource" id="PlayerStats_mammoth_boss"]
+script = ExtResource("2_stats")
+hp = 9600
+strength = 143
+defense = 192
+intelligence = 100
+faith = 100
+
+[resource]
+script = ExtResource("1_enemydata")
+enemy_id = &"mammoth_boss"
+display_name = "매머드 수인 우두머리"
+description = "첫 보스(#376). **매머드 수인(mammoth_beastfolk)의 리소스를 그대로 쓴다** — 워크 시트가 같고 크기만 walk_sprite_scale 0.25 -> 0.45 로 커진다(약 1.8배). walk_sprite_offset 은 -183 그대로다: offset 은 스케일 **전** 로컬 좌표라 배율만 바꾸면 발이 닿는 자리가 비례로 유지된다. 충돌 캡슐도 MammothBoss.tscn 에서 10x28 -> 18x50 으로 함께 키웠다 — 몸만 크고 판정이 작으면 때리는 자리가 어긋난다. 스텟은 표준 적(서아, tier 1: HP 1200 / 근력 65 / 방어 120) 대비 HP x8.0(9600) · 공격 x2.2(143) · 방어 x1.6(192) 다. 일반 매머드(x2.0 / x1.4 / x1.2)의 약 4배 체력이라 특별 스킬 3회(75%/50%/25%)를 전부 보여 줄 만큼 오래 산다. 행동 넷: ① **광역 평타** — basic_attack_aoe_radius 130 으로 대상 자리 주변 파티원이 함께 맞는다(뭉쳐 있으면 전원). ② **3타마다 기절** — charged_attack_threshold 2 다. 판정이 `_charge_count >= threshold` 라 2 가 **3타째**를 강화한다(일반 매머드의 3 은 4타째다 — 그쪽 description 의 '3번 명중시키면 다음 평타'와 일치한다). ③ **대시** — 평타 사거리(110) 밖이면 걸어가지 않고 dash_speed 900 으로 0.4초 돌진하며 경로(반경 90) 위 파티원을 공격력 x1.2 로 때린다. 쿨타임 6초라 계속 붙어 다니지는 않는다. 느린 이동(x0.40)과 짝을 이루는 장치다 — 대시가 없으면 뒷걸음질만 쳐도 안전하다. ④ **특별 스킬** — phase_skill_hp_step 0.25 로 75%/50%/25% 에서 한 번씩, boss_charge 와 boss_leap_slam 을 번갈아 쓴다(75% 돌진, 50% 도약, 25% 돌진). 두 스킬 전부 **대상 최대 체력 비례** 피해라 맞으면 죽을 수 있고, 그래서 둘 다 회피 창을 갖는다. attack_range 110 은 일반 매머드(45)보다 넓다 — 몸이 커진 만큼 팔이 닿는 거리도 늘어야 한다. detection_range 800 은 대시 사거리를 감안한 값이다. 보스 전용 아트(워크 시트·초상)는 없다. 모든 수치가 [임시값]이다."
+stats = SubResource("PlayerStats_mammoth_boss")
+balance_tier = 1
+hp_multiplier = 8.0
+attack_multiplier = 2.2
+defense_multiplier = 1.6
+skills = Array[ExtResource("11_skilldef")]([])
+sprite_texture = ExtResource("9_shape")
+tint = Color(1, 1, 1, 1)
+sprite_scale = Vector2(2.7, 2.7)
+walk_frames = ExtResource("10_walk")
+walk_sprite_scale = Vector2(0.45, 0.45)
+walk_sprite_offset = Vector2(0, -183)
+ai_enabled = true
+detection_range = 800.0
+attack_range = 110.0
+move_speed_multiplier = 0.4
+attack_speed_multiplier = 0.45
+charged_attack_threshold = 2
+charged_attack_damage_multiplier = 1.5
+charged_attack_effect = &"stun"
+basic_attack_aoe_radius = 130.0
+dash_speed = 900.0
+dash_duration = 0.4
+dash_cooldown = 6.0
+dash_hit_radius = 90.0
+dash_damage_multiplier = 1.2
+phase_skill_hp_step = 0.25
+phase_skills = Array[ExtResource("11_skilldef")]([ExtResource("12_charge"), ExtResource("13_leap")])
