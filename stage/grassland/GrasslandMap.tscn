@@ -1,0 +1,116 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://stage/grassland/GrasslandMap.gd" id="1_map"]
+[ext_resource type="Script" path="res://stage/grassland/GrasslandAmbient.gd" id="2_ambient"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/Hut.tscn" id="3_hut"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/Fence.tscn" id="4_fence"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/FenceBroken.tscn" id="5_fence_broken"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/FenceFallen.tscn" id="6_fence_fallen"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/TreeLarge.tscn" id="7_tree_large"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/TreeSmall.tscn" id="8_tree_small"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/Bush.tscn" id="9_bush"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/RockLarge.tscn" id="10_rock_large"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/RockSmall.tscn" id="11_rock_small"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/Crate.tscn" id="12_crate"]
+[ext_resource type="PackedScene" path="res://stage/grassland/objects/Sign.tscn" id="13_sign"]
+
+[node name="GrasslandMap" type="Node2D"]
+script = ExtResource("1_map")
+
+[node name="Ground" type="TileMapLayer" parent="."]
+z_index = -5
+
+[node name="Overlay" type="TileMapLayer" parent="."]
+z_index = -4
+
+[node name="Detail" type="TileMapLayer" parent="."]
+z_index = -3
+
+[node name="Decal" type="Node2D" parent="."]
+z_index = -2
+
+[node name="FenceFallen" parent="Decal" instance=ExtResource("6_fence_fallen")]
+position = Vector2(1090, 486)
+rotation = -0.12
+
+[node name="Objects" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Hut" parent="Objects" instance=ExtResource("3_hut")]
+position = Vector2(600, 360)
+
+[node name="FenceLeft1" parent="Objects" instance=ExtResource("4_fence")]
+position = Vector2(330, 432)
+
+[node name="FenceLeft2" parent="Objects" instance=ExtResource("4_fence")]
+position = Vector2(426, 432)
+
+[node name="FenceLeft3" parent="Objects" instance=ExtResource("4_fence")]
+position = Vector2(522, 432)
+
+[node name="FenceRight1" parent="Objects" instance=ExtResource("4_fence")]
+position = Vector2(738, 432)
+
+[node name="FenceRight2" parent="Objects" instance=ExtResource("4_fence")]
+position = Vector2(834, 432)
+
+[node name="FenceRight3" parent="Objects" instance=ExtResource("4_fence")]
+position = Vector2(930, 432)
+
+[node name="FenceBroken" parent="Objects" instance=ExtResource("5_fence_broken")]
+position = Vector2(1026, 432)
+
+[node name="TreeLargeWest" parent="Objects" instance=ExtResource("7_tree_large")]
+position = Vector2(150, 360)
+
+[node name="TreeLargeEast" parent="Objects" instance=ExtResource("7_tree_large")]
+position = Vector2(1360, 310)
+variant = 1
+
+[node name="TreeLargeSouth" parent="Objects" instance=ExtResource("7_tree_large")]
+position = Vector2(1240, 850)
+variant = 2
+
+[node name="TreeSmallNorth" parent="Objects" instance=ExtResource("8_tree_small")]
+position = Vector2(1040, 170)
+
+[node name="TreeSmallSouth" parent="Objects" instance=ExtResource("8_tree_small")]
+position = Vector2(250, 820)
+variant = 1
+
+[node name="BushWest" parent="Objects" instance=ExtResource("9_bush")]
+position = Vector2(80, 690)
+
+[node name="BushCenter" parent="Objects" instance=ExtResource("9_bush")]
+position = Vector2(470, 720)
+
+[node name="BushSouth" parent="Objects" instance=ExtResource("9_bush")]
+position = Vector2(980, 760)
+
+[node name="BushEast" parent="Objects" instance=ExtResource("9_bush")]
+position = Vector2(1450, 620)
+
+[node name="RockLargeNorth" parent="Objects" instance=ExtResource("10_rock_large")]
+position = Vector2(410, 230)
+
+[node name="RockLargeEast" parent="Objects" instance=ExtResource("10_rock_large")]
+position = Vector2(1120, 560)
+
+[node name="RockSmallCenter" parent="Objects" instance=ExtResource("11_rock_small")]
+position = Vector2(710, 760)
+
+[node name="RockSmallEast" parent="Objects" instance=ExtResource("11_rock_small")]
+position = Vector2(1320, 560)
+
+[node name="RockSmallWest" parent="Objects" instance=ExtResource("11_rock_small")]
+position = Vector2(210, 560)
+
+[node name="Crate" parent="Objects" instance=ExtResource("12_crate")]
+position = Vector2(760, 325)
+
+[node name="Sign" parent="Objects" instance=ExtResource("13_sign")]
+position = Vector2(290, 505)
+
+[node name="Ambient" type="Node2D" parent="."]
+z_index = 20
+script = ExtResource("2_ambient")
