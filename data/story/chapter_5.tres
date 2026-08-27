@@ -1,0 +1,270 @@
+[gd_resource type="Resource" script_class="StoryChapterData" load_steps=46 format=3]
+
+[ext_resource type="Script" path="res://entities/story/StoryChapterData.gd" id="1"]
+[ext_resource type="Script" path="res://entities/story/StoryLineData.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/highland.png" id="bg_highland"]
+
+[sub_resource type="Resource" id="L0"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "근데 너는 육식공룡이면서 익룡에 대해 잘 아네?"
+
+[sub_resource type="Resource" id="L1"]
+script = ExtResource("2")
+kind = 1
+speaker = "태희"
+character_id = &"taehee"
+text = "익룡이랑 영역을 두고 많이 싸워봤거든."
+
+[sub_resource type="Resource" id="L2"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "아하. 미운정이 많이 들었구나."
+
+[sub_resource type="Resource" id="L3"]
+script = ExtResource("2")
+kind = 1
+speaker = "태희"
+character_id = &"taehee"
+text = "널 저번에 끝장낸 익룡처럼 만들고 싶어지게 하지마."
+
+[sub_resource type="Resource" id="L4"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "넵, 죄송합니다."
+
+[sub_resource type="Resource" id="L5"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "여기서부터는 지나가면 목숨이 위험해! 랄까나~."
+
+[sub_resource type="Resource" id="L6"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "ㅁ..뭐야 누구야..너 날개 있는거 보니 익룡이구나! 여왕이 보냈지!"
+
+[sub_resource type="Resource" id="L7"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "에에~ 잠깐만 나는 여왕의 부하가 아니라구 진짜루! 너희를 도와주고 싶어서 온거야!"
+
+[sub_resource type="Resource" id="L8"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "우리를 갑자기 도와준다고? 수상한데.."
+
+[sub_resource type="Resource" id="L9"]
+script = ExtResource("2")
+kind = 1
+speaker = "미나"
+character_id = &"mina"
+text = "난 네 친구를 구해주고싶은걸. 모두랑 친해지면 신나자나~."
+
+[sub_resource type="Resource" id="L10"]
+script = ExtResource("2")
+kind = 1
+speaker = "태희"
+character_id = &"taehee"
+text = "뭔가 기분나빠. 처리할까?"
+
+[sub_resource type="Resource" id="L11"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "아니아니! 도와준다면 사양할 이유는 없지.. 같이 가자!"
+
+[sub_resource type="Resource" id="L12"]
+script = ExtResource("2")
+kind = 1
+speaker = "미나"
+character_id = &"mina"
+text = "에! 진심?! 진짜루 고마워어!"
+
+[sub_resource type="Resource" id="L13"]
+script = ExtResource("2")
+kind = 2
+text = "하늘섬으로 가면서 일어나는 여러 번의 전투"
+
+[sub_resource type="Resource" id="L14"]
+script = ExtResource("2")
+text = "그러다 길에 엎드려 있는 어떤 익룡을 발견한다."
+
+[sub_resource type="Resource" id="L15"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "저건 또 뭐지..?"
+
+[sub_resource type="Resource" id="L16"]
+script = ExtResource("2")
+kind = 1
+speaker = "설아"
+character_id = &"seola"
+text = "객사한 시체일 가능성 농후."
+
+[sub_resource type="Resource" id="L17"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "일단 확인은 해보자..저기..괜찮아? 살아있는거야..?"
+
+[sub_resource type="Resource" id="L18"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "쿨~"
+
+[sub_resource type="Resource" id="L19"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "자고있잖아!"
+
+[sub_resource type="Resource" id="L20"]
+script = ExtResource("2")
+kind = 1
+speaker = "하랑"
+character_id = &"harang"
+text = "저기 괜찮으신가요? 먹을 것좀 드릴까요?"
+
+[sub_resource type="Resource" id="L21"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "하암~누구야..?"
+
+[sub_resource type="Resource" id="L22"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "너야말로 누군데 길바닥에서 자고 있는거야?"
+
+[sub_resource type="Resource" id="L23"]
+script = ExtResource("2")
+kind = 1
+speaker = "아린"
+character_id = &"arin"
+text = "난 아린이라고 하는데..잠이 많아서..졸리면 바로 자..zzz"
+
+[sub_resource type="Resource" id="L24"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "또 잠들었잖아!"
+
+[sub_resource type="Resource" id="L25"]
+script = ExtResource("2")
+kind = 1
+speaker = "강지"
+character_id = &"gangji"
+text = "길에 냅두면 위험하지 않을까..? 이왕 이렇게 된거 얘도 같이 데려가는게 어때."
+
+[sub_resource type="Resource" id="L26"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "어쩔 수 없지..너도 같이 가자.."
+
+[sub_resource type="Resource" id="L27"]
+script = ExtResource("2")
+kind = 1
+speaker = "아린"
+character_id = &"arin"
+text = "쿨~"
+
+[sub_resource type="Resource" id="L28"]
+script = ExtResource("2")
+kind = 2
+text = "몇 번의 전투를 더 치른다."
+
+[sub_resource type="Resource" id="L29"]
+script = ExtResource("2")
+text = "하늘섬에 있는 여왕의 성에 도달한 주인공과 일행들."
+
+[sub_resource type="Resource" id="L30"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "..도착했다..! 다들 준비는 됐지? 들어간다!"
+
+[sub_resource type="Resource" id="L31"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "허락도 없이 남의 성에 잘도 들어왔구나..후회하게 해주지!"
+
+[sub_resource type="Resource" id="L32"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "내가 할말이야! 내 친구를 돌려줘!"
+
+[sub_resource type="Resource" id="L33"]
+script = ExtResource("2")
+kind = 1
+speaker = "여왕"
+character_id = &"pterosaur_queen"
+text = "가져갈 수 있으면 가져가봐라!"
+
+[sub_resource type="Resource" id="L34"]
+script = ExtResource("2")
+kind = 2
+text = "보스전 시작"
+
+[sub_resource type="Resource" id="L35"]
+script = ExtResource("2")
+text = "보스전 끝. 주인공 일행 승리."
+screen_effect = 2
+
+[sub_resource type="Resource" id="L36"]
+script = ExtResource("2")
+kind = 1
+speaker = "여왕"
+character_id = &"pterosaur_queen"
+text = "주인공 버프…에바다..크헉..!"
+
+[sub_resource type="Resource" id="L37"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "여왕 수준 낮네. 너무 쉽다! 줴줴이~야 넌 나가라ㅋㅋ"
+
+[sub_resource type="Resource" id="L38"]
+script = ExtResource("2")
+text = "여왕을 쓰러뜨리고 소꿉친구를 구한 주인공."
+
+[sub_resource type="Resource" id="L39"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+character_id = &"childhood_friend"
+text = "믿고있었어..(주인공이름)아!"
+
+[sub_resource type="Resource" id="L40"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "구하러 온다고 약속했으니까..마을로 돌아가자."
+
+[sub_resource type="Resource" id="L41"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+character_id = &"childhood_friend"
+text = "응!"
+
+[resource]
+script = ExtResource("1")
+background = ExtResource("bg_highland")
+chapter_id = &"chapter_5"
+number = 5
+title = "하늘섬의 여왕"
+summary = "미나와 아린이 합류하고, 주인공 일행은 하늘섬의 여왕을 쓰러뜨려 소꿉친구를 구한다."
+lines = [SubResource("L0"), SubResource("L1"), SubResource("L2"), SubResource("L3"), SubResource("L4"), SubResource("L5"), SubResource("L6"), SubResource("L7"), SubResource("L8"), SubResource("L9"), SubResource("L10"), SubResource("L11"), SubResource("L12"), SubResource("L13"), SubResource("L14"), SubResource("L15"), SubResource("L16"), SubResource("L17"), SubResource("L18"), SubResource("L19"), SubResource("L20"), SubResource("L21"), SubResource("L22"), SubResource("L23"), SubResource("L24"), SubResource("L25"), SubResource("L26"), SubResource("L27"), SubResource("L28"), SubResource("L29"), SubResource("L30"), SubResource("L31"), SubResource("L32"), SubResource("L33"), SubResource("L34"), SubResource("L35"), SubResource("L36"), SubResource("L37"), SubResource("L38"), SubResource("L39"), SubResource("L40"), SubResource("L41")]
