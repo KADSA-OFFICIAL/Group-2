@@ -364,8 +364,11 @@ func _refresh_detail() -> void:
 	_detail_body.add_child(HUDKit.stat_row("부위", "slot", item.get_slot_name()))
 	_detail_body.add_child(HUDKit.stat_row("보유", "owned", "×%d" % EquipmentSystem.get_owned_count(item.equipment_id)))
 
-	if not item.description.is_empty():
-		var desc := HUDKit.label(item.description, 12, HUDKit.text_2())
+	# **description 이 아니라 summary 다**(#360). description 은 개발자용이라
+	# 이슈 번호와 [임시값] 표시가 들어 있다 — 그대로 그리면 플레이어가 그걸 읽는다.
+	# 비어 있으면 아무것도 그리지 않는다: 개발 노트가 새는 것보다 낫다.
+	if not item.summary.is_empty():
+		var desc := HUDKit.label(item.summary, 12, HUDKit.text_2())
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_detail_body.add_child(desc)
 
