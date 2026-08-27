@@ -89,3 +89,57 @@ func get_ids_requiring(objective: StageData.Objective) -> Array:
 		if _stages[id].requires(objective):
 			result.append(id)
 	return result
+
+
+# ===== 챕터별 조회 (Chapter queries) — #408 =====
+#
+# 전체 규모는 3챕터 x 3스테이지다. 챕터/컨셉 대응의 출처는 StageData 이므로
+# 여기서 그 대응을 다시 쓰지 않는다 — 정렬과 묶기만 한다.
+
+# (chapter, number) 순으로 정렬된 전체 id 목록.
+# 챕터에 속하지 않는 스테이지(테스트 등)는 맨 끝에 온다.
+#
+# get_all_ids() 는 Dictionary 키 순서를 그대로 돌려주므로 파일 순회 순서에 달려 있다.
+# 목록 화면은 이쪽을 쓴다.
+func get_ordered_ids() -> Array:
+	var ids: Array = _stages.keys()
+	ids.sort_custom(func(a, b):
+		var ka: int = _stages[a].get_sort_key()
+		var kb: int = _stages[b].get_sort_key()
+		if ka == kb:
+			# 같은 자리에 두 스테이지가 저작되면(실수) 순서가 실행마다 흔들리지 않게 id 로 가른다.
+			return String(a) < String(b)
+		return ka < kb)
+	return ids
+
+
+# 특정 챕터에 속한 id 목록. number 순으로 정렬된다.
+func get_ids_by_chapter(chapter: int) -> Array:
+	var result: Array = []
+	for id in get_ordered_ids():
+		if _stages[id].chapter == chapter:
+			result.append(id)
+	return result
+
+
+# 스테이지가 하나라도 저작된 챕터 번호 목록(오름차순).
+# 저작 전인 챕터는 나오지 않는다 — 목록 화면이 빈 챕터 머리를 띄우지 않도록.
+# StageData.NO_CHAPTER 는 챕터가 아니므로 포함되지 않는다.
+func get_authored_chapters() -> Array:
+	var seen := {}
+	for id in _stages:
+		var chapter: int = _stages[id].chapter
+		if chapter != StageData.NO_CHAPTER:
+			seen[chapter] = true
+	var chapters: Array = seen.keys()
+	chapters.sort()
+	return chapters
+
+
+# 어느 챕터에도 속하지 않는 id 목록(테스트·연습 스테이지).
+func get_chapterless_ids() -> Array:
+	var result: Array = []
+	for id in get_ordered_ids():
+		if _stages[id].chapter == StageData.NO_CHAPTER:
+			result.append(id)
+	return result
