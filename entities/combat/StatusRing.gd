@@ -11,11 +11,20 @@ const RING_WIDTH: float = 2.0
 const ARC_POINTS: int = 48
 const TRAP_SEGMENTS: int = 8
 const TRAP_ARC_RATIO: float = 0.56
+const BUFF_SEGMENTS: int = 4
+const BUFF_ARC_RATIO: float = 0.22
+# 전장 상태를 반드시 읽어야 하는 두 버프만 표시한다. 모든 이로운 효과를 넣으면 발밑 링이
+# 상시 UI가 되어 디버프 경고가 묻힌다(#403).
+const VISIBLE_BUFF_IDS := {
+	&"empowered": true,
+	&"gangji_zone": true,
+}
 
 enum RingStyle {
 	DEFAULT,
 	MOVEMENT_ONLY,
 	MOVEMENT_AND_ATTACK,
+	BENEFICIAL,
 }
 
 
@@ -79,8 +88,8 @@ func _sync_target(target: Variant) -> void:
 	set_process(true)
 
 
-# 여러 링을 포개면 차단 프로필을 읽을 수 없어 가장 많은 행동을 막는 디버프 하나만 남긴다(#301).
-# 같은 심각도는 정렬된 id의 앞쪽을 골라 실행마다 모양이 바뀌지 않게 한다.
+# 여러 링을 포개면 상태를 읽을 수 없어 하나만 남긴다. 디버프가 언제나 버프보다 우선하고,
+# 디버프끼리는 가장 많은 행동을 막는 것을 고른다. 같은 우선순위는 정렬된 id의 앞쪽이다.
 func _select_effect(target: Node) -> StatusEffectData:
 	var effect_ids: Array = StatusEffectSystem.get_effect_ids(target)
 	effect_ids.sort()
@@ -91,12 +100,18 @@ func _select_effect(target: Node) -> StatusEffectData:
 		if not StatusEffectDatabase.has_effect(effect_id):
 			continue
 		var data: StatusEffectData = StatusEffectDatabase.get_effect(effect_id)
-		if data == null or not data.is_debuff:
+		if data == null:
 			continue
-		var severity: int = _severity(data)
+		var is_visible_buff: bool = not data.is_debuff and VISIBLE_BUFF_IDS.has(effect_id)
+		if not data.is_debuff and not is_visible_buff:
+			continue
+		# 버프는 0~3의 디버프 심각도보다 낮다. 디버프가 하나라도 있으면 반드시 그쪽이 이긴다.
+		var severity: int = _severity(data) if data.is_debuff else -1
 		if severity > selected_severity:
 			selected = data
 			selected_severity = severity
+		elif selected == null and is_visible_buff:
+			selected = data
 	return selected
 
 
@@ -128,6 +143,8 @@ func _draw() -> void:
 			continue
 		var center: Vector2 = to_local(state.target.global_position)
 		match _style_for(state.data):
+			RingStyle.BENEFICIAL:
+				_draw_buff_ring(center)
 			RingStyle.MOVEMENT_ONLY:
 				_draw_segmented_ring(center)
 			RingStyle.MOVEMENT_AND_ATTACK:
@@ -138,6 +155,8 @@ func _draw() -> void:
 
 
 func _style_for(data: StatusEffectData) -> RingStyle:
+	if not data.is_debuff:
+		return RingStyle.BENEFICIAL
 	if data.blocks_movement and data.blocks_attack:
 		return RingStyle.MOVEMENT_AND_ATTACK
 	if data.blocks_movement and not data.blocks_attack:
@@ -155,3 +174,12 @@ func _draw_segmented_ring(center: Vector2) -> void:
 
 func _draw_solid_ring(center: Vector2, radius: float) -> void:
 	draw_arc(center, radius, 0.0, TAU, ARC_POINTS, UITheme.LILAC, RING_WIDTH)
+
+
+func _draw_buff_ring(center: Vector2) -> void:
+	draw_arc(center, RING_RADIUS, 0.0, TAU, ARC_POINTS, UITheme.LEAF, RING_WIDTH + 1.0)
+	var segment_angle: float = TAU / float(BUFF_SEGMENTS)
+	for segment: int in range(BUFF_SEGMENTS):
+		var start_angle: float = float(segment) * segment_angle - segment_angle * BUFF_ARC_RATIO * 0.5
+		var end_angle: float = start_angle + segment_angle * BUFF_ARC_RATIO
+		draw_arc(center, RING_RADIUS - 3.0, start_angle, end_angle, 4, UITheme.CREAM, RING_WIDTH)
