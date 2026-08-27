@@ -6,6 +6,11 @@ class_name DamageNumberSpawner
 const POOL_SIZE: int = 32
 const ENEMY_GROUP: StringName = &"enemy"
 const DAMAGE_NUMBER_SCENE: PackedScene = preload("res://entities/combat/DamageNumber.tscn")
+const HEAL_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/heal.png")
+const HEAL_FRAME_COUNT: int = 4
+const HEAL_FPS: float = 12.0
+# 시트의 발밑 타원(y=80)이 캐릭터 충돌 도형 아래쪽에 오도록 중심을 올린다.
+const HEAL_EFFECT_OFFSET := Vector2(0.0, -12.0)
 
 var _pool: Array[DamageNumber] = []
 var _next_spawn_order: int = 0
@@ -16,11 +21,15 @@ func _ready() -> void:
 	# Player의 기존 연결은 아군 AI 교전용이다. 시각 리스너는 따로 붙여 책임을 섞지 않는다(#297).
 	if not EventBus.damage_taken.is_connected(_on_damage_taken):
 		EventBus.damage_taken.connect(_on_damage_taken)
+	if not EventBus.healing_applied.is_connected(_on_healing_applied):
+		EventBus.healing_applied.connect(_on_healing_applied)
 
 
 func _exit_tree() -> void:
 	if EventBus.damage_taken.is_connected(_on_damage_taken):
 		EventBus.damage_taken.disconnect(_on_damage_taken)
+	if EventBus.healing_applied.is_connected(_on_healing_applied):
+		EventBus.healing_applied.disconnect(_on_healing_applied)
 
 
 func _build_pool() -> void:
@@ -52,6 +61,25 @@ func _on_damage_taken(target: Variant, damage: int, position: Vector2) -> void:
 		return
 	_next_spawn_order += 1
 	number.play(damage, position, color, _next_spawn_order)
+
+
+func _on_healing_applied(target: Variant, amount: int) -> void:
+	var target_node: Node2D = target as Node2D
+	if target_node == null or not is_instance_valid(target_node) or amount <= 0:
+		return
+	if not target_node.is_in_group(PartySystem.MEMBER_GROUP):
+		return
+
+	var number: DamageNumber = _acquire_number()
+	if number != null:
+		_next_spawn_order += 1
+		number.play(amount, target_node.global_position, UITheme.POSITIVE, _next_spawn_order)
+
+	var effect := SpriteSheetEffect.new()
+	effect.name = "HealEffect"
+	target_node.add_child(effect)
+	effect.position = HEAL_EFFECT_OFFSET
+	effect.setup(HEAL_EFFECT_SHEET, HEAL_FRAME_COUNT, HEAL_FPS)
 
 
 func _acquire_number() -> DamageNumber:
