@@ -202,6 +202,13 @@ func _update_goddess() -> void:
 	if GoddessSkillSystem.is_time_stopped():
 		_goddess_state_label.text = "정지 %.1f초" % GoddessSkillSystem.get_time_stop_left()
 		_goddess_state_label.add_theme_color_override("font_color", HUDKit.accent_text())
+	elif GoddessSkillSystem.is_hasted():
+		# 가속은 "얼마나 올랐나"가 핵심이라 남은 시간과 함께 지금 증가율을 보여 준다(#366).
+		_goddess_state_label.text = "가속 %.1f초  공속 +%.0f%% / 이속 +%.0f%%" % [
+			GoddessSkillSystem.get_haste_left(),
+			GoddessSkillSystem.get_haste_attack_speed_percent() * 100.0,
+			GoddessSkillSystem.get_haste_move_speed_percent() * 100.0]
+		_goddess_state_label.add_theme_color_override("font_color", HUDKit.accent_text())
 	elif GoddessSkillSystem.is_available():
 		_goddess_state_label.text = "사용 가능"
 		_goddess_state_label.add_theme_color_override("font_color", HUDKit.up_color())

@@ -285,6 +285,12 @@ func _refresh_goddess() -> void:
 				line = "체력 %.0f%% (기본 %.0f%% × 강화 %.2f×)" % [
 					chosen_skill.get_effective_revive_percent(boost) * 100.0,
 					chosen_skill.revive_hp_percent * 100.0, boost]
+			GoddessSkillData.Kind.TIME_HASTE:
+				# 끝에 도달하는 값을 보여 준다 — 중간값은 곡선이라 한 줄로 말할 수 없다.
+				line = "%.0f초 끝에 공속 +%.0f%% / 이속 +%.0f%% (강화 %.2f×)" % [
+					chosen_skill.duration,
+					chosen_skill.get_haste_attack_speed(1.0, boost) * 100.0,
+					chosen_skill.get_haste_move_speed(1.0, boost) * 100.0, boost]
 		_goddess_body.add_child(HUDKit.label(line, 11, HUDKit.accent_text()))
 
 

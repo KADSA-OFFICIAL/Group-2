@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GoddessSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/goddess/GoddessSkillData.gd" id="1_goddess"]
+
+[resource]
+script = ExtResource("1_goddess")
+skill_id = &"time_haste"
+display_name = "시간 가속"
+description = "10초 동안 파티원 전원의 이동속도·공격속도를 점점 올린다(#366). 증가량은 0 에서 시작해 거듭제곱 곡선(진행도^2)을 타고 지속 끝에 최대치에 닿는다 — 5초에 최대치의 25%, 7.5초에 56%, 10초에 100%다. 느리게 시작해 뒤에서 몰아치는 형태라, 언제 켜는지가 곧 언제 몰아칠지를 정한다. 최대치는 공속 +50% / 이속 +20% 로 원거리딜러 1단계 스택의 상한(공속 10스택 x 5% / 이속 10스택 x 2%)과 같은 크기다. 다만 그 버프는 자기 자신만 평타를 맞춰 가며 쌓는 데 반해 이쪽은 **파티 전원에게 자동으로** 걸리고 여신 스킬 강화 배수까지 곱해진다 — 순혈 3인(삼각근 Lv.4 기준 배수 1.92)이면 끝에 공속 +96% / 이속 +38% 다(평타 쿨다운 0.5 -> 0.26초, 이동 200 -> 276px/s). 지속 10초는 강화 배수를 타지 않는다(GoddessSkillData.scales_with_boost 주석의 종류별 규칙). 시간 정지가 적의 시간을 멈추는 카드라면 이쪽은 우리 시간을 당기는 카드다. 스테이지당 1회. 수치는 전부 [임시값]이다."
+kind = 2
+duration = 10.0
+haste_attack_speed_max = 0.5
+haste_move_speed_max = 0.2
+ramp_exponent = 2.0
+scales_with_boost = true
