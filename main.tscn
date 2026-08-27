@@ -13,8 +13,8 @@
 
 [node name="GameCamera" type="Camera2D" parent="."]
 script = ExtResource("2_cam")
-zoom = Vector2(1.5, 1.5)
-offset = Vector2(0, -80)
+zoom = Vector2(1, 1)
+offset = Vector2(0, -120)
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("3_hud")
