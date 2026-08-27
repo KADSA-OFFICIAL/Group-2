@@ -226,6 +226,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "하랑"
+character_id = &"harang"
 text = "마을 재건에 힘써주셨는데 보답할수만 있다면 같이 갈게요..!"
 stage_id = &""
 
@@ -233,6 +234,7 @@ stage_id = &""
 script = ExtResource("2")
 kind = 1
 speaker = "강지"
+character_id = &"gangji"
 text = "난 힘이 세니까 도움이 많이 될거야. 나도 같이 갈게."
 stage_id = &""
 
