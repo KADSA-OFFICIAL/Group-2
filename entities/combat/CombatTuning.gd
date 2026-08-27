@@ -212,6 +212,13 @@ class_name CombatTuning
 ## 위험 없이 채우는 것을 막는다 — "살아서 지켜야 한다"가 점령의 값어치다.
 @export var capture_decay_multiplier: float = 0.5
 
+## 거점 존을 지키는 적이 존 중심에서 벗어나지 않는 반경(px) — 점령전 전용(#386).
+##
+## 존이 없는 스테이지에서는 쓰이지 않는다(그쪽 적 행동은 탐지 범위만 본다).
+## 320 의 근거: 1-2 의 존 반경 140 + 여유 180. 존을 벗어나 쫓아오되 전장을 가로지르지는
+## 못하는 거리다. 존별로 CaptureZoneData.defend_radius 를 저작하면 그 존만 덮어쓴다. [임시값]
+@export var capture_defend_radius: float = 320.0
+
 
 # 디버그/검증용: 모든 값을 Dictionary로 반환한다.
 func get_summary() -> Dictionary:
@@ -260,6 +267,7 @@ func get_summary() -> Dictionary:
 		"heal_to_damage_percent": heal_to_damage_percent,
 		"capture_hold_seconds": capture_hold_seconds,
 		"capture_decay_multiplier": capture_decay_multiplier,
+		"capture_defend_radius": capture_defend_radius,
 	}
 
 
@@ -314,6 +322,8 @@ func validate() -> Array[String]:
 		problems.append("capture_hold_seconds는 0보다 커야 합니다.")
 	if capture_decay_multiplier < 0.0:
 		problems.append("capture_decay_multiplier는 0 이상이어야 합니다.")
+	if capture_defend_radius <= 0.0:
+		problems.append("capture_defend_radius는 0보다 커야 합니다.")
 
 	if damage_min < 0:
 		problems.append("damage_min은 0 이상이어야 합니다.")
