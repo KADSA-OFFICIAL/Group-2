@@ -1,0 +1,98 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://stage/sky/SkyIslandMap.gd" id="1_map"]
+[ext_resource type="Script" path="res://stage/sky/SkyClouds.gd" id="6_clouds"]
+[ext_resource type="PackedScene" path="res://stage/sky/objects/StandingStone.tscn" id="2_stone"]
+[ext_resource type="PackedScene" path="res://stage/sky/objects/WindTree.tscn" id="3_tree"]
+[ext_resource type="PackedScene" path="res://stage/sky/objects/Boulder.tscn" id="4_boulder"]
+[ext_resource type="PackedScene" path="res://stage/sky/objects/GrassTuft.tscn" id="5_tuft"]
+
+[node name="SkyIslandMap" type="Node2D"]
+script = ExtResource("1_map")
+
+[node name="Ground" type="TileMapLayer" parent="."]
+z_index = -6
+
+[node name="Clouds" type="Node2D" parent="."]
+z_index = -5
+script = ExtResource("6_clouds")
+
+[node name="Overlay" type="TileMapLayer" parent="."]
+z_index = -4
+
+[node name="Detail" type="TileMapLayer" parent="."]
+z_index = -3
+
+[node name="Decal" type="Node2D" parent="."]
+z_index = -2
+
+[node name="TuftWest" parent="Decal" instance=ExtResource("5_tuft")]
+position = Vector2(500, 420)
+
+[node name="TuftCenter" parent="Decal" instance=ExtResource("5_tuft")]
+position = Vector2(700, 520)
+variant = 1
+
+[node name="TuftNorth" parent="Decal" instance=ExtResource("5_tuft")]
+position = Vector2(620, 360)
+variant = 2
+
+[node name="TuftEast" parent="Decal" instance=ExtResource("5_tuft")]
+position = Vector2(1700, 480)
+
+[node name="TuftSouth" parent="Decal" instance=ExtResource("5_tuft")]
+position = Vector2(900, 1140)
+variant = 1
+
+[node name="TuftEastLow" parent="Decal" instance=ExtResource("5_tuft")]
+position = Vector2(1560, 600)
+variant = 2
+
+[node name="Objects" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="StoneNorth" parent="Objects" instance=ExtResource("2_stone")]
+position = Vector2(576, 240)
+
+[node name="StoneWest" parent="Objects" instance=ExtResource("2_stone")]
+position = Vector2(200, 480)
+variant = 1
+
+[node name="StoneEastIsland" parent="Objects" instance=ExtResource("2_stone")]
+position = Vector2(1728, 380)
+variant = 2
+
+[node name="StoneFarEast" parent="Objects" instance=ExtResource("2_stone")]
+position = Vector2(2112, 230)
+
+[node name="TreeNorthWest" parent="Objects" instance=ExtResource("3_tree")]
+position = Vector2(350, 250)
+
+[node name="TreeNorthEast" parent="Objects" instance=ExtResource("3_tree")]
+position = Vector2(800, 250)
+variant = 1
+
+[node name="TreeEastIsland" parent="Objects" instance=ExtResource("3_tree")]
+position = Vector2(1600, 620)
+
+[node name="TreeSouthEast" parent="Objects" instance=ExtResource("3_tree")]
+position = Vector2(1920, 1080)
+variant = 2
+
+[node name="BoulderSouth" parent="Objects" instance=ExtResource("4_boulder")]
+position = Vector2(576, 700)
+
+[node name="BoulderEast" parent="Objects" instance=ExtResource("4_boulder")]
+position = Vector2(1040, 500)
+variant = 1
+
+[node name="BoulderSouthEast" parent="Objects" instance=ExtResource("4_boulder")]
+position = Vector2(850, 700)
+variant = 2
+
+[node name="BoulderSouthIsland" parent="Objects" instance=ExtResource("4_boulder")]
+position = Vector2(912, 1100)
+
+[node name="BoulderEastIsland" parent="Objects" instance=ExtResource("4_boulder")]
+position = Vector2(1850, 560)
+variant = 1
