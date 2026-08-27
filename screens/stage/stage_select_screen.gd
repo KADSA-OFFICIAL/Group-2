@@ -170,8 +170,11 @@ func _make_stage_card(id: StringName) -> Control:
 
 	info.add_child(_objective_row(stage))
 
-	if not stage.description.is_empty():
-		var desc := HUDKit.label(stage.description, 12, HUDKit.text_3())
+	# **description 이 아니라 summary 다**(#360). description 은 개발자용이라
+	# 이슈 번호와 [임시값] 표시가 들어 있다 — 그대로 그리면 플레이어가 그걸 읽는다.
+	# 비어 있으면 아무것도 그리지 않는다: 개발 노트가 새는 것보다 낫다.
+	if not stage.summary.is_empty():
+		var desc := HUDKit.label(stage.summary, 12, HUDKit.text_3())
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.add_child(desc)
 

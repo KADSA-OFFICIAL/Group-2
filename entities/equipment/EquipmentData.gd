@@ -18,7 +18,23 @@ enum Slot {
 # ===== 식별 (Identity) =====
 @export var equipment_id: StringName = &""   # 고유 식별자 (예: &"stone_helmet")
 @export var display_name: String = ""         # 화면 표시 이름
+
+## **개발자용.** 왜 이 티어·이 수치인가. 이슈 번호·`[임시값]` 표시가 섞여 있다.
+## 화면에 그리지 않는다 — 아래 summary 가 그 몫이다(#360).
 @export_multiline var description: String = ""
+
+## **플레이어용.** 이 장비가 무엇인가. 장비 화면 상세가 보여 준다 (#360).
+##
+## description 을 그대로 그렸더니 플레이어가 "제작 비용은 [임시값]이며 밸런싱
+## 대상이다" 를 읽게 됐다. 그렇다고 description 을 다듬으면 설계 근거가 사라진다.
+## 스킬(#353)과 같은 방식으로 필드를 나눈다.
+##
+## 규약(data/skills/README.md 와 같다):
+##   - 이슈 번호·마크다운·`[임시값]`·필드명을 쓰지 않는다.
+##   - **수치를 글로 다시 적지 않는다.** 옵션·제작 비용은 화면이 필드에서 읽어
+##     따로 그린다. 여기에 또 적으면 데이터를 고칠 때 둘이 갈라진다.
+##   - 비어 있으면 화면이 **아무것도 그리지 않는다** — 개발 노트가 새는 것보다 낫다.
+@export_multiline var summary: String = ""
 
 # 장착 슬롯. 슬롯당 1개만 장착된다.
 @export var slot: Slot = Slot.WEAPON
