@@ -38,6 +38,43 @@ enum Type {
 @export var display_name: String = ""     # 화면 표시 이름
 @export_multiline var description: String = ""
 
+# ===== 챕터와 컨셉 (Chapter & Concept) — #408 =====
+#
+# 스테이지 전체 규모는 **3챕터 x 3스테이지 = 9스테이지**로 확정되어 있다.
+# 챕터 하나가 컨셉 하나를 갖는다: 1챕터 육지 / 2챕터 바다 / 3챕터 하늘.
+#
+# 왜 컨셉이 @export 필드가 아닌가: 챕터가 컨셉을 **결정한다.** 둘을 각각 저작하게 두면
+# "2챕터인데 육지"처럼 서로 어긋나는 데이터가 만들어질 수 있다 —
+# 승리 조건을 type 에서 도출한 것(아래 "승리 조건 조회")과 같은 이유다. 챕터가 출처다.
+#
+# 왜 stage_id 에서 파싱하지 않는가: id 는 식별자일 뿐 형식을 약속한 적이 없다.
+# &"stage_test" 처럼 챕터에 속하지 않는 id 가 이미 있고, 파싱은 그런 id 를 만나면
+# 조용히 0 이나 엉뚱한 값을 내놓는다. 번호는 저작된 값이어야 한다.
+
+# 챕터에 속하지 않는 스테이지를 뜻하는 값. 테스트·연습 스테이지가 이 값을 쓴다.
+#
+# 기본값으로 둔 이유: 이 필드가 없는 기존 .tres(stage_test.tres)는 누락 필드를
+# 기본값으로 로드한다. 기본값이 1 이면 테스트 스테이지가 조용히 1챕터에 끼어든다.
+const NO_CHAPTER := 0
+
+# 챕터 수와 챕터당 스테이지 수. 저작 실수를 validate() 가 잡는 근거다.
+const CHAPTER_COUNT := 3
+const STAGES_PER_CHAPTER := 3
+
+# 컨셉 3종. 챕터에서 도출되며 저작 대상이 아니다.
+enum Concept {
+	LAND,  # 육지
+	SEA,   # 바다
+	SKY,   # 하늘
+}
+
+# 이 스테이지가 속한 챕터 (1..CHAPTER_COUNT). NO_CHAPTER 면 챕터 밖이다.
+@export_range(0, CHAPTER_COUNT) var chapter: int = NO_CHAPTER
+
+# 챕터 안에서의 순번 (1..STAGES_PER_CHAPTER). 표시 번호("1-2")와 목록 정렬에 쓴다.
+# 챕터가 NO_CHAPTER 면 이 값은 쓰이지 않는다.
+@export_range(0, STAGES_PER_CHAPTER) var number: int = 0
+
 # ===== 승리 조건 (Victory) =====
 # 기본값 BATTLE: 첫 값을 기본으로 두어 누락된 .tres 도 안전하게 로드된다.
 @export var type: Type = Type.BATTLE
@@ -152,6 +189,41 @@ func requires_capture() -> bool:
 	return requires(Objective.CAPTURE)
 
 
+# ===== 챕터 조회 (Chapter accessors) — #408 =====
+# 승리 조건과 같은 규약: 컨셉을 .tres 에 저작하지 않고 챕터에서 도출한다.
+
+# 이 스테이지가 챕터에 속하는가. 테스트·연습 스테이지는 false 다.
+func has_chapter() -> bool:
+	return chapter != NO_CHAPTER
+
+
+# 이 스테이지의 컨셉. 챕터 밖이면 -1 (Concept 값이 아니다 — 호출부는 has_chapter() 를 먼저 본다).
+func get_concept() -> int:
+	return chapter_to_concept(chapter)
+
+
+# 챕터 -> 컨셉. 대응표의 정본이다. 화면·전투 코드가 이 대응을 다시 쓰지 않는다.
+# 챕터 밖(NO_CHAPTER 포함)이면 -1.
+static func chapter_to_concept(c: int) -> int:
+	match c:
+		1:
+			return Concept.LAND
+		2:
+			return Concept.SEA
+		3:
+			return Concept.SKY
+		_:
+			return -1
+
+
+# 목록 정렬 기준. 챕터 없는 스테이지는 맨 끝으로 간다(테스트 스테이지가 1챕터 사이에 끼지 않도록).
+# 값 자체에 뜻은 없다 — 크기 비교에만 쓴다.
+func get_sort_key() -> int:
+	if not has_chapter():
+		return (CHAPTER_COUNT + 1) * 100 + number
+	return chapter * 100 + number
+
+
 # ===== 표시 이름 (Display names) =====
 # 한글 표시 이름의 단일 출처. 화면에서 문자열을 다시 적지 않는다.
 
@@ -189,6 +261,38 @@ func get_objectives_display_name() -> String:
 	return " + ".join(names)
 
 
+# 컨셉의 한글 이름. 챕터 밖(-1)이면 "알 수 없음".
+static func concept_to_name(c: int) -> String:
+	match c:
+		Concept.LAND:
+			return "육지"
+		Concept.SEA:
+			return "바다"
+		Concept.SKY:
+			return "하늘"
+		_:
+			return "알 수 없음"
+
+
+func get_concept_name() -> String:
+	return concept_to_name(get_concept())
+
+
+# 챕터 머리에 쓰는 한 줄. 예: "2챕터 · 바다"
+static func chapter_to_display_name(c: int) -> String:
+	if c == NO_CHAPTER:
+		return "챕터 밖"
+	return "%d챕터 · %s" % [c, concept_to_name(chapter_to_concept(c))]
+
+
+# 스테이지 표시 번호. 예: "1-2". 챕터 밖이면 빈 문자열이다
+# (display_name 에 번호가 없는 stage_test 에 "0-0" 을 붙이지 않는다).
+func get_stage_number_text() -> String:
+	if not has_chapter():
+		return ""
+	return "%d-%d" % [chapter, number]
+
+
 # ===== 무결성 점검 (Validation) =====
 # CharacterData / EnemyData / EquipmentData 의 validate() 와 같은 규약.
 # 문제 메시지 배열을 반환한다. 비어 있으면 정상이다.
@@ -201,6 +305,20 @@ func validate() -> Array[String]:
 	# 타입이 enum 밖이면 승리 조건을 도출할 수 없다(저작 실수로 클리어 불가 스테이지가 된다).
 	if get_objectives().is_empty():
 		problems.append("type이 알 수 없는 값입니다: %d" % type)
+
+	# 챕터·번호(#408). 범위 밖이면 목록에서 자리를 잃거나 표시 번호가 거짓이 된다.
+	# NO_CHAPTER 는 유효하다 -- 테스트·연습 스테이지가 챕터에 속하지 않는 것은 정상이다.
+	if chapter != NO_CHAPTER:
+		if chapter < 1 or chapter > CHAPTER_COUNT:
+			problems.append("chapter는 1..%d 또는 %d(챕터 밖)여야 합니다: %d"
+				% [CHAPTER_COUNT, NO_CHAPTER, chapter])
+		if number < 1 or number > STAGES_PER_CHAPTER:
+			problems.append("챕터에 속한 스테이지의 number는 1..%d 여야 합니다: %d"
+				% [STAGES_PER_CHAPTER, number])
+	elif number != 0:
+		# 챕터가 없는데 번호가 있으면 어느 쪽이 저작 실수인지 알 수 없다.
+		problems.append("chapter가 %d(챕터 밖)인데 number가 저작되어 있습니다: %d"
+			% [NO_CHAPTER, number])
 
 	# 배치 한 줄이 잘못되면 그 적만 조용히 빠진다. 저작 시점에 드러나야 한다.
 	for i in range(spawns.size()):

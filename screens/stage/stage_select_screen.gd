@@ -8,11 +8,16 @@ extends Control
 #   스테이지 목록/정의 -> StageDatabase / StageData
 #   승리 조건          -> StageData.get_objectives_display_name()
 #                        (타입->조건 대응을 화면에서 다시 쓰지 않는다)
+#   챕터·컨셉          -> StageData.chapter_to_display_name() (#408)
+#                        (챕터->컨셉 대응도 화면에서 다시 쓰지 않는다)
 #   색·조각            -> UITheme / HUDKit
 #
-# 아직 저작된 스테이지가 없다 (data/stages 가 비어 있다).
-# 그래서 목록이 비었을 때를 정상 상태로 다루고, 지금까지처럼 바로 출격할 수 있는
-# 길을 남겨 둔다. 스테이지가 저작되면 목록이 자동으로 채워진다.
+# 목록은 챕터별로 묶인다(#408) — 전체 규모는 3챕터 x 3스테이지이고 챕터 하나가
+# 컨셉(육지/바다/하늘) 하나를 갖는다. 저작 전인 챕터는 머리도 뜨지 않고,
+# 챕터에 속하지 않는 스테이지(테스트)는 맨 끝에 따로 모인다.
+#
+# 저작된 스테이지가 하나도 없을 때는 목록이 빈 것을 정상 상태로 다루고,
+# 지금까지처럼 바로 출격할 수 있는 길을 남겨 둔다.
 #
 # 참고: docs/combat-screen-design.md §5, data/stages/README.md
 
@@ -21,6 +26,20 @@ extends Control
 const OBJECTIVE_ICON_NAME := {
 	StageData.Objective.CLEAR: "icon_battle",
 	StageData.Objective.CAPTURE: "icon_capture",
+}
+
+# 컨셉 -> 챕터 머리의 색과 영문 캡션. 컨셉의 출처는 StageData.Concept 이고,
+# 그 컨셉이 어떤 색·캡션을 쓰는지는 이 화면이 정한다(위 아이콘 표와 같은 규약).
+const CONCEPT_COLOR := {
+	StageData.Concept.LAND: UITheme.SAGE,
+	StageData.Concept.SEA: UITheme.SKY,
+	StageData.Concept.SKY: UITheme.LILAC,
+}
+
+const CONCEPT_CAPTION := {
+	StageData.Concept.LAND: "land",
+	StageData.Concept.SEA: "sea",
+	StageData.Concept.SKY: "sky",
 }
 
 # 편성 화면은 경로만 둔다. 출격은 이 화면 -> 편성(출격 모드) 한 방향이라 순환은 아니지만,
@@ -64,7 +83,6 @@ func _build() -> void:
 	scroll.add_child(_list_holder)
 
 
-
 # ===== 목록 =====
 
 func _refresh() -> void:
@@ -72,13 +90,35 @@ func _refresh() -> void:
 		return
 	_clear(_list_holder)
 
-	var ids := StageDatabase.get_all_ids()
-	if ids.is_empty():
+	if StageDatabase.get_count() == 0:
 		_list_holder.add_child(_empty_notice())
 		return
 
-	for id in ids:
-		_list_holder.add_child(_make_stage_card(id))
+	# 챕터별로 묶어 놓는다(#408). 전체 규모는 3챕터 x 3스테이지이고, 챕터 하나가
+	# 컨셉(육지/바다/하늘) 하나를 갖는다. 아직 저작되지 않은 챕터는 머리도 뜨지 않는다 —
+	# 빈 머리 셋을 미리 띄우면 화면이 "저작 안 됨"을 알리는 자리가 되어 버린다.
+	for chapter in StageDatabase.get_authored_chapters():
+		_list_holder.add_child(_chapter_header(chapter))
+		for id in StageDatabase.get_ids_by_chapter(chapter):
+			_list_holder.add_child(_make_stage_card(id))
+
+	# 챕터에 속하지 않는 스테이지(테스트·연습)는 맨 끝에 따로 모은다.
+	# 챕터 사이에 끼면 1-1 다음이 테스트 스테이지처럼 보인다.
+	var chapterless := StageDatabase.get_chapterless_ids()
+	if not chapterless.is_empty():
+		_list_holder.add_child(HUDKit.section("챕터 밖", "extra", UITheme.STONE_GRAY))
+		for id in chapterless:
+			_list_holder.add_child(_make_stage_card(id))
+
+
+# 챕터 머리. 이름("2챕터 · 바다")의 출처는 StageData 다 — 챕터->컨셉 대응을 화면에서 다시 쓰지 않는다.
+# 색과 영문 캡션은 화면이 정한다(승리 조건 아이콘과 같은 규약).
+func _chapter_header(chapter: int) -> Control:
+	var concept := StageData.chapter_to_concept(chapter)
+	return HUDKit.section(
+		StageData.chapter_to_display_name(chapter),
+		CONCEPT_CAPTION.get(concept, ""),
+		CONCEPT_COLOR.get(concept, UITheme.ACCENT))
 
 
 # 저작된 스테이지가 없을 때. 오류가 아니라 정상 상태다.
