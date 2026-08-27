@@ -90,15 +90,18 @@ func _build_details() -> void:
 
 func _build_boundaries() -> void:
 	var world_size := Vector2(MAP_SIZE * TILE_SIZE)
-	_add_boundary(Vector2(world_size.x * 0.5, -12), Vector2(world_size.x, 24))
-	_add_boundary(Vector2(world_size.x * 0.5, world_size.y + 12), Vector2(world_size.x, 24))
-	_add_boundary(Vector2(-12, world_size.y * 0.5), Vector2(24, world_size.y))
-	_add_boundary(Vector2(world_size.x + 12, world_size.y * 0.5), Vector2(24, world_size.y))
+	# 이름을 방향별로 나눈다(#446). 넷 다 "MapBoundary" 로 지으면 Godot 이 중복 이름을
+	# **통째로 갈아치워** 하나만 남고 나머지가  이 된다(실측) --
+	# 그러면 트리에서 어느 벽인지 읽을 수 없고 이름으로 찾는 검사도 쓸 수 없다.
+	_add_boundary("MapBoundaryNorth", Vector2(world_size.x * 0.5, -12), Vector2(world_size.x, 24))
+	_add_boundary("MapBoundarySouth", Vector2(world_size.x * 0.5, world_size.y + 12), Vector2(world_size.x, 24))
+	_add_boundary("MapBoundaryWest", Vector2(-12, world_size.y * 0.5), Vector2(24, world_size.y))
+	_add_boundary("MapBoundaryEast", Vector2(world_size.x + 12, world_size.y * 0.5), Vector2(24, world_size.y))
 
 
-func _add_boundary(position: Vector2, size: Vector2) -> void:
+func _add_boundary(boundary_name: String, position: Vector2, size: Vector2) -> void:
 	var body := StaticBody2D.new()
-	body.name = "MapBoundary"
+	body.name = boundary_name
 	body.position = position
 	var collision := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
