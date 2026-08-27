@@ -1040,6 +1040,20 @@ const STRIKE_EFFECT_SCENE := preload("res://entities/combat/StrikeEffect.tscn")
 
 ## 아린 E의 시전·활성·종료 연출. 상태 효과 수치는 데이터에서 받아 온다(#348).
 const OVERLOAD_EFFECT_SCENE := preload("res://entities/combat/OverloadEffect.tscn")
+const BURST_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/burst.png")
+const BURST_FRAME_COUNT: int = 4
+const BURST_FPS: float = 12.0
+const IMMUNITY_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/immunity_shell.png")
+const IMMUNITY_EFFECT_ID: StringName = &"gangji_immunity"
+const IMMUNITY_FRAME_COUNT: int = 5
+const IMMUNITY_LOOP_START: int = 3
+const TAUNT_SKILL_ID: StringName = &"harang_taunt"
+const TAUNT_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/taunt_ring.png")
+const TAUNT_FRAME_COUNT: int = 3
+const RAMPAGE_EFFECT_ID: StringName = &"harang_rampage"
+const RAMPAGE_EFFECT_SHEET: Texture2D = preload("res://assets/sprites/effects/rage_crack.png")
+const RAMPAGE_FRAME_COUNT: int = 4
+const RAMPAGE_LOOP_START: int = 3
 
 
 # 조준 방향으로 부채꼴 판정을 낸다(#336).
@@ -1143,7 +1157,13 @@ func _cast_ally_effect(skill: SkillData) -> void:
 	var target := _lowest_health_ally()
 	if target == null:
 		return
-	StatusEffectSystem.apply(target, skill.ally_effect_id, self)
+	if not StatusEffectSystem.apply(target, skill.ally_effect_id, self):
+		return
+	if skill.ally_effect_id == IMMUNITY_EFFECT_ID:
+		StatusSheetEffect.attach(
+			target, skill.ally_effect_id, IMMUNITY_EFFECT_SHEET,
+			IMMUNITY_FRAME_COUNT, IMMUNITY_LOOP_START
+		)
 
 
 # ===== 즉발 광역 (Instant AoE) =====
@@ -1155,6 +1175,12 @@ func _cast_ally_effect(skill: SkillData) -> void:
 func _cast_instant_aoe(skill: SkillData) -> void:
 	var damage := skill.get_effective_power(get_stats().get_goddess_skill_boost())
 	var hit_any := false
+	if skill.skill_id == TAUNT_SKILL_ID and skill.instant_aoe_radius > 0.0:
+		var diameter: float = skill.instant_aoe_radius * 2.0
+		SpriteSheetEffect.spawn_once(
+			get_parent(), TAUNT_EFFECT_SHEET, global_position, TAUNT_FRAME_COUNT,
+			Vector2(diameter, diameter), 12.0
+		)
 
 	for enemy in GameManager.get_all_enemies():
 		if enemy == null or not enemy.is_alive:
@@ -1189,8 +1215,13 @@ func _cast_instant_aoe(skill: SkillData) -> void:
 func _cast_self_effect(skill: SkillData) -> void:
 	if not StatusEffectSystem.apply(self, skill.self_effect_id, self):
 		return
-	if skill.skill_id == &"arin_overload":
+	if skill.self_effect_id == &"arin_overload":
 		_spawn_overload_effect(skill.self_effect_id)
+	elif skill.self_effect_id == RAMPAGE_EFFECT_ID:
+		StatusSheetEffect.attach(
+			self, skill.self_effect_id, RAMPAGE_EFFECT_SHEET,
+			RAMPAGE_FRAME_COUNT, RAMPAGE_LOOP_START
+		)
 
 
 func _spawn_overload_effect(effect_id: StringName) -> void:
@@ -1390,6 +1421,9 @@ func _resolve_override_attack(skill: SkillData) -> bool:
 		_resolve_attack_hit(enemy, damage)
 		hit_any = true
 
+	if hit_any and skill.attack_override_aoe_radius > 0.0:
+		_spawn_burst(global_position, skill.attack_override_aoe_radius)
+
 	return hit_any
 
 
@@ -1586,6 +1620,7 @@ func _detonate_skill_shield() -> void:
 		return
 
 	var origin := global_position
+	_spawn_burst(origin, skill.aoe_radius)
 	for enemy in GameManager.get_all_enemies():
 		if enemy == null or not enemy.is_alive:
 			continue
@@ -1599,6 +1634,17 @@ func _detonate_skill_shield() -> void:
 
 	if EventBus:
 		EventBus.skill_shield_burst.emit(self, skill.skill_id, origin, power)
+
+
+func _spawn_burst(origin: Vector2, radius: float) -> void:
+	var host := get_parent()
+	if host == null or radius <= 0.0:
+		return
+	var diameter: float = radius * 2.0
+	SpriteSheetEffect.spawn_once(
+		host, BURST_EFFECT_SHEET, origin, BURST_FRAME_COUNT,
+		Vector2(diameter, diameter), BURST_FPS
+	)
 
 
 func get_skill_shield() -> int:
@@ -2036,6 +2082,10 @@ func _fire_attack_passive(skill: SkillData) -> void:
 
 	if amount <= 0 or skill.aoe_radius <= 0.0:
 		return
+
+	# 미나 패시브(3타 회복 폭발)의 광역도 폭발 연출을 쓴다 — 같은 사건이므로 같은 그림이다.
+	# 탄 폭발·보호막 폭발·하랑 대체 평타와 함께 burst.png 하나를 공유한다.
+	_spawn_burst(global_position, skill.aoe_radius)
 
 	for enemy in GameManager.get_all_enemies():
 		if enemy == null or not enemy.is_alive:
@@ -2522,8 +2572,9 @@ func heal(amount: int) -> int:
 	hp = min(hp, max_hp)
 	var applied := hp - before
 
-	if EventBus:
-		EventBus.healing_applied.emit(self, amount)
+	if EventBus and applied > 0:
+		# 숫자와 연출은 요청량이 아니라 실제로 오른 체력을 표시한다(#399).
+		EventBus.healing_applied.emit(self, applied)
 
 	return applied
 
