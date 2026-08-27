@@ -31,3 +31,4 @@ execute_hp_percent = 0.2
 heal_to_damage_percent = 0.5
 capture_hold_seconds = 10.0
 capture_decay_multiplier = 0.5
+capture_defend_radius = 320.0

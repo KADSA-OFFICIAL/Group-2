@@ -129,6 +129,8 @@ func _draw() -> void:
 	for member: Node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
 		_draw_node_radius(member as Node2D)
 
+	_draw_defend_radius()
+
 	var stage_root: Node = get_parent()
 	if stage_root != null:
 		_draw_projectiles(stage_root)
@@ -144,6 +146,23 @@ func _draw_projectiles(node: Node) -> void:
 		_draw_node_radius(node as Node2D)
 	for child: Node in node.get_children():
 		_draw_projectiles(child)
+
+
+# 거점 존의 **수비 반경**(#386). 존 자체의 반경은 CaptureZone 이 직접 그리므로 여기서는
+# 적이 벗어나지 못하는 경계만 덧그린다 — 그 경계는 데이터에만 있고 화면에 없었다.
+func _draw_defend_radius() -> void:
+	for node: Node in get_tree().get_nodes_in_group(CaptureZone.GROUP):
+		if not is_instance_valid(node):
+			continue
+		var zone := node as Node2D
+		if zone == null:
+			continue
+		var zone_data = zone.get("data")
+		var radius: float = CombatConfig.tuning.capture_defend_radius
+		if zone_data != null and zone_data.defend_radius > 0.0:
+			radius = zone_data.defend_radius
+		if radius > 0.0:
+			_draw_circle_outline(zone.global_position, radius)
 
 
 func _draw_node_radius(node: Node2D) -> void:

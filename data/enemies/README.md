@@ -73,6 +73,15 @@
 함께 둔다(`entities/combat/BossTelegraph.gd`). 예고로 그리는 크기는 판정 크기와 **같아야**
 한다(docs/vfx-guide.md §1.2).
 
+## 대본에 나오는 인물을 적으로 저작할 때
+
+이름 해석 순서는 `CharacterDatabase` -> `EnemyDatabase` -> `StoryCastDatabase` 다(#187, #202).
+따라서 `data/story/cast/<id>.tres` 로만 있던 인물을 여기에 `EnemyData` 로 저작하면
+**대본은 고칠 것이 없고**, 남은 cast 파일만 지우면 된다.
+
+지울 때 `tint` 를 EnemyData 로 옮겨 적을 것. 안 옮기면 그 인물의 대사 색이 조용히 바뀐다.
+`pterosaur_queen`(여왕, #375)이 이 경로를 그대로 밟았다.
+
 ## 지금 있는 적
 
 | id | 무엇 |
@@ -80,4 +89,5 @@
 | `seoa` | 원거리 표준 적(tier 1 기준) |
 | `velociraptor_beastfolk` / `_2` | 물몸·고이속 근접. 스탯이 같고 외형만 다르다 |
 | `mammoth_beastfolk` | 고체력 근접 브루저. 4타째 강화 평타로 기절 |
-| `mammoth_boss` | 첫 보스. 매머드 리소스를 키워 쓰고 광역 평타·3타 기절·대시·특별 스킬 2종 |
+| `mammoth_boss` | 매머드 리소스를 키워 쓰는 보스. 광역 평타·3타 기절·대시·특별 스킬 2종 (#376) |
+| `pterosaur_queen` | 원거리 보스. 사거리 320 에서 쏘며 4타째 강화탄으로 기절. 대본 화자를 겸한다 (#375) |
