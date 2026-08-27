@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"arin_sweep"
+display_name = "부채꼴 밀어내기"
+description = "아린 고유 스킬(Q, #336). 이름은 #338 에서 붙었다(그전 슬롯 이름은 ranged_tank). 조준 방향으로 **부채꼴** 판정을 내고, 맞은 적을 피해와 함께 **바깥으로 밀어낸다**. 부채꼴을 쓴 이유: 빔(태희 E)은 멀어져도 폭이 같아 '줄을 맞춘 적'에게 강하고, 원(하랑 Q)은 등 뒤까지 때려 조준이 값어치에 들어가지 않는다. '내 앞을 치운다'는 스킬은 **바로 앞이 넓어야** 하는데 그것은 폭이 아니라 각도로 표현된다. 관통이다 — 앞의 적이 뒤의 적을 막아 주지 않는다. 넉백 방향은 **조준 방향이 아니라 시전자에서 대상으로 향하는 벡터**다: 조준 방향으로 일괄해서 밀면 부채꼴 가장자리의 적이 옆으로 끌려가 '앞을 치웠다'는 감각이 어긋난다. 정면의 적은 곧게, 가장자리의 적은 비스듬히 밀려난다. 밀려나는 것은 순간이동이 아니다 — 0.15초에 걸쳐 미끄러지고 move_and_slide 를 거치므로 벽을 통과하지 않으며, 밀리는 동안 그 적의 추격은 멈춘다(EnemyBase.apply_knockback). 아린의 자리에서 이 스킬이 하는 일: 낙뢰 평타는 넓은 원형 사거리를 전제로 하는데 적이 붙으면 그 전제가 무너진다. Q 는 **거리를 되찾는 버튼**이다 — 딜보다 위치가 목적이라 base_power 를 낮게 잡았다. 길이 300·각도 70도·넉백 220·쿨타임 10 초·위력 120 은 전부 [임시값]이다. 길이는 평타 사거리(380)보다 짧게 잡았다 — 밀어내기는 붙은 적을 떼는 것이지 원거리 견제가 아니다."
+base_power = 120
+scales_with_faith = false
+cooldown = 10.0
+cone_length = 300.0
+cone_angle_degrees = 70.0
+knockback_distance = 220.0
+input_slot = 1

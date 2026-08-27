@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 4
+stacking = 0
+max_stacks = 1
+effect_id = &"gangji_immunity"
+display_name = "불가침"
+description = "강지 E 가 아군 한 명에게 거는 **무적**(#334). 걸린 동안 그 아군의 take_damage() 는 맨 앞에서 0 을 돌려준다 — 방어력·보호막을 거치기 전이므로 보호막이 깎이지 않고, 지속 피해(PERIODIC)도 들어가지 않고, 탱커 3단계 반사도 일어나지 않는다. '받는 피해 -100%'(damage_taken)로 만들지 않은 이유: 그 채널은 최소 피해(CombatTuning.damage_min)를 지켜 1 이 계속 들어간다. 그것이 의도다 — 감소는 아무리 겹쳐도 무적이 되지 않아야 한다. 무적은 감소의 극단이 아니라 별개의 상태이므로 통로를 따로 두었다(StatusEffectData.grants_invulnerable). EMPOWER 인 이유는 흡혈·처형과 같다: 숫자가 아니라 분기다. 흡혈도 처형도 부여하지 않는다 — 이 효과는 '죽지 않는다' 하나만 한다. is_debuff = false. 중첩은 REFRESH. **지속시간 3초는 [확정 스펙]이다** — 대신 스킬 쪽 쿨타임이 매우 길다."
+is_debuff = false
+duration = 3.0
+grants_invulnerable = true

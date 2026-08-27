@@ -114,7 +114,7 @@ func _build_inventory_panel() -> Control:
 	_inventory_grid.add_theme_constant_override("h_separation", 8)
 	_inventory_grid.add_theme_constant_override("v_separation", 8)
 	_inventory_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_inventory_grid)
+	scroll.add_child(HUDKit.hover_safe(_inventory_grid))
 	return panel
 
 

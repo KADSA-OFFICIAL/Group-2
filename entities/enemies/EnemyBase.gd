@@ -144,6 +144,11 @@ func _physics_process(delta: float) -> void:
 	if _attack_cooldown_left > 0.0:
 		_attack_cooldown_left -= delta
 
+	# 밀려나는 중이면 추격 AI 보다 우선한다(#336). 밀리면서 동시에 다가오면 넉백이 없는 것과 같다.
+	if _tick_knockback(delta):
+		_update_walk_animation()
+		return
+
 	_process_ai()
 
 	# AI가 꺼져 있어도(velocity가 계속 0) 호출한다. 그래야 정지 포즈로 고정된다.
@@ -179,6 +184,75 @@ func _process_ai() -> void:
 	move_and_slide()
 
 
+# ===== 넉백 (Knockback, #336) =====
+#
+# 밀려나는 것은 **순간이동이 아니다.** 짧은 시간에 걸쳐 미끄러지며, 이동은 move_and_slide 를
+# 거치므로 벽을 통과하지 않는다. 위치를 직접 대입하면 지형 안으로 들어가 박힐 수 있다.
+#
+# 밀리는 동안 추격 AI 는 멈춘다(_physics_process 의 분기). 밀리면서 동시에 다가오면
+# 넉백이 아무 일도 하지 않은 것과 같아지기 때문이다.
+#
+# 기절(CONTROL)과 다르다: 기절은 **행동**을 막고, 넉백은 **위치**를 옮긴다. 둘은 함께 걸릴 수 있다.
+
+## 넉백이 진행되는 시간(초). 이 값이 짧을수록 세게 튕겨 나가는 것처럼 보인다.
+## 판정이 아니라 감각을 정하는 값이라 EnemyBase 가 갖는다(SkillData 는 거리만 정한다).
+const KNOCKBACK_DURATION: float = 0.15
+
+# 남은 넉백 시간(초). 0 이하면 밀리는 중이 아니다.
+var _knockback_left: float = 0.0
+
+# 넉백 속도(px/s). 거리 / KNOCKBACK_DURATION 으로 미리 구해 둔다.
+var _knockback_velocity: Vector2 = Vector2.ZERO
+
+
+# 이 적을 from_global 의 반대 방향으로 distance 만큼 밀어낸다.
+#
+# 방향의 출처가 **시전자 위치**인 이유는 SkillData.knockback_distance 주석에 있다 —
+# 조준 방향으로 일괄해서 밀면 옆에 있던 적이 옆으로 끌려간다.
+#
+# 겹쳐 맞으면 **덮어쓴다**(누적하지 않는다). 누적하면 두 번 맞은 적만 화면 밖으로 날아간다.
+func apply_knockback(from_global: Vector2, distance: float) -> void:
+	if not is_alive or distance <= 0.0:
+		return
+	var direction := from_global.direction_to(global_position)
+	if direction == Vector2.ZERO:
+		# 정확히 같은 자리에 겹쳐 있으면 밀 방향이 없다. 임의 방향으로 밀면
+		# 같은 입력이 매번 다른 결과를 내므로 아무 일도 하지 않는다.
+		return
+	_knockback_velocity = direction * (distance / KNOCKBACK_DURATION)
+	_knockback_left = KNOCKBACK_DURATION
+
+
+# 지금 밀려나는 중인가. HUD/검증이 읽는다.
+func is_knocked_back() -> bool:
+	return _knockback_left > 0.0
+
+
+# 넉백 한 틱. 밀리는 중이면 true 를 돌려주고, 부르는 쪽이 AI 를 건너뛴다.
+func _tick_knockback(delta: float) -> bool:
+	if _knockback_left <= 0.0:
+		return false
+
+	# 마지막 프레임은 **남은 시간만큼만** 움직인다.
+	#
+	# 그러지 않으면 넉백이 끝나는 프레임이 통째로 더해져 저작된 거리보다 멀리 날아간다 —
+	# 프레임이 길수록 더 멀리 가므로 같은 스킬이 기기마다 다른 거리를 민다.
+	# move_and_slide() 는 자기 델타를 쓰므로, 속도를 비율로 줄여 이동량을 맞춘다.
+	var step := minf(delta, _knockback_left)
+	_knockback_left -= delta
+	if delta > 0.0:
+		velocity = _knockback_velocity * (step / delta)
+	else:
+		velocity = Vector2.ZERO
+	move_and_slide()
+
+	if _knockback_left <= 0.0:
+		_knockback_left = 0.0
+		_knockback_velocity = Vector2.ZERO
+		velocity = Vector2.ZERO
+	return true
+
+
 # ===== 워크 애니메이션 (Walk animation) =====
 
 # 지금 속도에 맞는 방향 애니메이션을 재생한다. 멈춰 있으면 정지 포즈로 고정한다.
@@ -204,10 +278,37 @@ func _update_walk_animation() -> void:
 # 추적 대상을 결정한다.
 # 지금 대상이 아직 유효하면 유지하고(대상이 매 프레임 바뀌어 떠는 것을 막는다),
 # 아니면 가장 가까운 파티 멤버를 새로 고른다.
+#
+# 도발(#328)이 걸려 있으면 그 무엇보다 먼저다 — 지금 붙어 싸우던 대상도, 거리도 무시하고
+# 도발한 쪽으로 간다. 그것이 도발의 정의다.
 func _resolve_target() -> Node2D:
+	var taunter := _taunt_target()
+	if taunter != null:
+		return taunter
 	if _is_valid_target(_target):
 		return _target
 	return _find_nearest_party_member()
+
+
+# 도발이 강제하는 대상. 없으면 null.
+#
+# _is_valid_target() 을 쓰지 않는다: 그 함수는 **탐지 범위 안**인지도 보는데, 도발은
+# 범위를 무시하는 것이 요점이다. 탐지 범위 안에서만 듣는 도발은 이미 오고 있던 적에게는
+# 아무 일도 하지 않는 것과 같다.
+#
+# 살아 있는지는 그대로 본다 — 죽은 대상을 향해 계속 걸어가면 적이 멈추지 않는다.
+# 그 경우 null 을 돌려주므로 지금까지의 대상 선정으로 돌아간다.
+func _taunt_target() -> Node2D:
+	var source := StatusEffectSystem.get_taunt_source(self)
+	if source == null or not is_instance_valid(source):
+		return null
+	var member := source as Node2D
+	if member == null:
+		return null
+	var alive = member.get("is_alive")
+	if alive != null and not bool(alive):
+		return null
+	return member
 
 
 # 추적 대상으로 쓸 수 있는 노드인가.
@@ -345,7 +446,12 @@ func _fire_projectile(damage: int, effect_id: StringName) -> void:
 # 실제로 들어간 피해(방어 적용 후)를 반환한다.
 # 피흡처럼 "준 피해에 비례하는" 효과가 그 값을 알아야 한다 — 공격력으로 계산하면
 # 방어력 높은 적을 때릴 때 실제보다 크게 회복된다.
-func take_damage(amount: int, source = null) -> int:
+#
+# ignore_defense: 방어력을 적용하지 않는다(#328). 기본은 false 다 — 방어 공식을 우회하는 것은
+# 예외이며, 지금 이 통로를 쓰는 것은 "대가로 내는 자기 피해"(StatusEffectData.tick_ignores_defense)
+# 하나뿐이다. 적에게 이 값이 true 로 들어오는 경우는 아직 없지만, 시그니처는 Player 와 맞춰 둔다
+# — 상태 효과 틱은 대상이 적인지 파티원인지 가리지 않고 같은 코드로 부른다.
+func take_damage(amount: int, source = null, ignore_defense: bool = false) -> int:
 	if not is_alive:
 		return 0
 
@@ -357,7 +463,11 @@ func take_damage(amount: int, source = null) -> int:
 	# 자르지 않으면 "준 피해에 비례하는" 효과가 전부 부풀어 오른다. 처형이 대표적이다 —
 	# 처형은 방어력에 막히지 않으려고 max_hp x 100 을 넣는데, 체력 240 남은 적을 처형하면
 	# dealt 가 24만으로 잡혀 흡혈 50 퍼센트가 12만을 회복시킨다(만피 회복).
-	var dealt: int = mini(get_stats().apply_defense(amount), hp)
+	var raw: int = amount if ignore_defense else get_stats().apply_defense(amount)
+	# 받는 피해 감소(#334). 채널이 PlayerStats 공용이므로 적에게도 그대로 걸린다 —
+	# 지금 적에게 이 값을 넣는 효과는 없지만, 넣으면 동작해야 한다.
+	raw = get_stats().apply_damage_taken(raw)
+	var dealt: int = mini(raw, hp)
 	hp -= dealt
 
 	if EventBus:

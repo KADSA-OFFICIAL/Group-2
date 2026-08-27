@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 2
+stacking = 0
+max_stacks = 1
+effect_id = &"harang_rampage_burn"
+display_name = "폭주 - 소진"
+description = "폭주(harang_rampage)의 마지막 고리이며 이 스킬의 **대가**다(#328). 1초마다 하랑 **자신의 최대 체력 7%** 피해를 입는다 — 7초 동안 7회, 합쳐서 최대 체력의 49% 다. 절대값(tick_damage)이 아니라 tick_max_hp_percent 를 쓰는 이유: 스펙이 '최대 체력의 몇 퍼센트'이므로 성장·장비로 체력이 늘어도 그 비율이 유지되어야 한다. tick_ignores_defense = true 다: 방어 공식이 raw^2/(raw+def) 라 작은 피해를 크게 깎는다 — 하랑(체력 900, 물방 ~230)의 7% = 63 은 방어를 받으면 14 로 줄어 스펙의 22% 밖에 들어가지 않고, 그러면 '체력을 태워 화력을 얻는다'는 거래가 방어력 스텟에 따라 흔들린다. 보호막은 그대로 받아 낸다 — 무시하는 것은 방어력뿐이다. 자기 피해라 source 가 하랑 자신인데, 탱커 3단계 반사(_reflect_damage)와 아군 AI 반격(_on_damaged_by)은 둘 다 source == self 를 이미 걸러 내므로 자기에게 되돌지 않는다. is_debuff = true 다 — 이것은 실제로 불리한 상태이고, 아군에게 걸린 디버프를 세는 코드는 지금 없다(버퍼 처형은 적만 본다). 7% x 7초는 [확정 스펙]이다."
+is_debuff = true
+duration = 7.0
+tick_interval = 1.0
+tick_max_hp_percent = 0.07
+tick_ignores_defense = true

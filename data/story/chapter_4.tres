@@ -39,6 +39,7 @@ background = ExtResource("bg_riverside")
 kind = 0
 speaker = ""
 text = "장소 전환. 물가에 자리 잡은 마을."
+screen_effect = 1
 stage_id = &""
 
 [sub_resource type="Resource" id="L5"]
@@ -62,6 +63,7 @@ kind = 1
 speaker = "소꿉친구"
 character_id = &"childhood_friend"
 text = "그냥 너무 팔자 좋아보여서 짜증나."
+emotion = 4
 stage_id = &""
 
 [sub_resource type="Resource" id="L8"]
@@ -84,6 +86,7 @@ script = ExtResource("2")
 kind = 0
 speaker = ""
 text = "주인공을 마구 구타하는 소꿉친구, 마침 익룡수인들이 그 모습을 본다."
+screen_effect = 2
 stage_id = &""
 
 [sub_resource type="Resource" id="L11"]
@@ -127,6 +130,7 @@ script = ExtResource("2")
 kind = 1
 speaker = "수룡수인들"
 text = "우린 맨날 습격당하냐..!"
+emotion = 4
 stage_id = &""
 
 [sub_resource type="Resource" id="L17"]
@@ -141,6 +145,7 @@ script = ExtResource("2")
 kind = 0
 speaker = ""
 text = "마을사람들을 무시한채 익룡수인들은 소꿉친구만 낚아채간다."
+screen_effect = 3
 stage_id = &""
 
 [sub_resource type="Resource" id="L19"]
@@ -207,6 +212,7 @@ script = ExtResource("2")
 kind = 0
 speaker = ""
 text = "사건이 일단락된 후"
+screen_effect = 1
 stage_id = &""
 
 [sub_resource type="Resource" id="L28"]
@@ -264,6 +270,7 @@ script = ExtResource("2")
 kind = 1
 speaker = "???"
 text = "그것도 모르면서 막무가내로 가려고 하다니..준비성이 없네. 난 그녀가 어디있는지 아니까 같이 가줄게."
+emotion = 1
 stage_id = &""
 
 [sub_resource type="Resource" id="L36"]

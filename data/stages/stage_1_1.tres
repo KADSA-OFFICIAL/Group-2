@@ -1,16 +1,10 @@
-[gd_resource type="Resource" script_class="StageData" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="StageData" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
 [ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
-[ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="4_seoa"]
 [ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="5_mammoth"]
-
-[sub_resource type="Resource" id="StageSpawn_seoa"]
-script = ExtResource("2_spawn")
-enemy_scene = ExtResource("4_seoa")
-position = Vector2(600, 140)
-count = 1
-offset = Vector2(100, 0)
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk.tscn" id="6_raptor"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk2.tscn" id="7_raptor2"]
 
 [sub_resource type="Resource" id="StageSpawn_mammoth"]
 script = ExtResource("2_spawn")
@@ -19,15 +13,30 @@ position = Vector2(600, 320)
 count = 1
 offset = Vector2(100, 0)
 
+[sub_resource type="Resource" id="StageSpawn_raptor"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_raptor")
+position = Vector2(600, 230)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="StageSpawn_raptor2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_raptor2")
+position = Vector2(680, 230)
+count = 1
+offset = Vector2(100, 0)
+
 [resource]
 script = ExtResource("1_stagedata")
 stage_id = &"stage_1_1"
 display_name = "1-1 시험장"
-description = "첫 전투. 서아와 매머드 수인이 스폰 지점부터 파티를 향해 다가온다(#208 로 탐지 범위가 600 이 되어 스폰 거리 500~531px 가 범위 안이다). 서아가 더 빠르게 붙고, 매머드는 느리지만 단단하다."
+description = "**튜토리얼 스테이지**(#345). 세 마리 — 벨로시랩터 수인 둘(#340, #342 — 스탯이 같고 외형만 다르다)과 매머드 수인 — 이 스폰 지점부터 파티를 향해 다가온다(#208 로 탐지 범위가 600 이 되어 스폰 거리 500~531px 가 범위 안이다). 벨로시랩터가 먼저 붙어 난타하지만 물몸이라 빨리 죽고, 매머드는 느리지만 단단하다. 서아는 원거리라 대시 회피를 가르치기 전에 원거리 피해가 섞이는 것을 피하려고 이 스테이지에서 뺐다(정의는 남아 있고 다른 스테이지에 쓸 수 있다). forced_party 로 순혈 3인(미나·태희·설아)을 강제한다 — 설계 §8.2 에서 세 역할 시너지가 모두 켜지는 유일한 조합이라, 튜토리얼이 가르치는 체인(표식 → 기절 → 처형)이 실제로 화면에서 일어난다. 단계 저작본은 data/tutorial/stage_1_1.tres 다."
 type = 0
+forced_party = Array[StringName]([&"mina", &"taehee", &"seola"])
 clear_rewards = {
 "gold": 40,
 "protein": 50,
 "stone": 25
 }
-spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_seoa"), SubResource("StageSpawn_mammoth")])
+spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_mammoth"), SubResource("StageSpawn_raptor"), SubResource("StageSpawn_raptor2")])

@@ -8,10 +8,14 @@
 | `stone_spearman_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
 | `mammoth_beastfolk_walk.png` | 매머드 수인. 4방향 x 3프레임 워크 시트 (셀 424x496, 시트 1272x1984) |
 | `mammoth_beastfolk_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+| `velociraptor_beastfolk_walk.png` | 벨로시랩터 수인. 4방향 x 3프레임 워크 시트 (셀 396x492, 시트 1188x1968) |
+| `velociraptor_beastfolk_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+| `velociraptor_beastfolk_2_walk.png` | 벨로시랩터 수인 2. 4방향 x 3프레임 워크 시트 (셀 424x496, 시트 1272x1984) |
+| `velociraptor_beastfolk_2_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
 
 ## 시트 규약
 
-**격자**: 가로 3프레임(워크 사이클) x 세로 4방향. 셀은 모두 `524 x 492`다.
+**격자**: 가로 3프레임(워크 사이클) x 세로 4방향. **셀 크기는 시트마다 다르다**(돌창병 524x492, 매머드 424x496, 벨로시랩터 396x492) — 정규화 도구가 그 시트의 내용 폭에 맞춰 정한다(벨로시랩터 2 는 424x496). 한 시트 안에서는 모든 셀이 같다.
 
 **행 순서**는 화면 방향 기준 **하 / 좌 / 상 / 우**이며, Godot의 `+y`가 아래인 좌표계를 따른다.
 
@@ -70,6 +74,8 @@ godot --headless --path . --script res://tools/normalize_walk_sheet.gd -- <입�
 |---|---|---|
 | `stone_spearman_walk.png` | 뒷모습 행에서 겹침 | 머리카락 끝 7px·9px (폭 507px의 1.5% 미만) |
 | `mammoth_beastfolk_walk.png` | 없음 | **없음** |
+| `velociraptor_beastfolk_walk.png` | 없음 | **없음** |
+| `velociraptor_beastfolk_2_walk.png` | 없음 | **없음** |
 
 ## 원본에서 돌창병 시트를 만든 방법
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://drnb52wly5ops"
-path="res://.godot/imported/girl_violet.png-503b66b8db18de22303a99992bec32c6.ctex"
+uid="uid://hegejrh7877b"
+path="res://.godot/imported/velociraptor_beastfolk_2_walk.png-51cfe0545bb5d1f987ba63326ca324a2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/characters/portraits/girl_violet.png"
-dest_files=["res://.godot/imported/girl_violet.png-503b66b8db18de22303a99992bec32c6.ctex"]
+source_file="res://assets/sprites/enemies/velociraptor_beastfolk_2_walk.png"
+dest_files=["res://.godot/imported/velociraptor_beastfolk_2_walk.png-51cfe0545bb5d1f987ba63326ca324a2.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

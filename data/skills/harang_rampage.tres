@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"harang_rampage"
+display_name = "폭주"
+description = "하랑 고유 스킬(E, #328). **자신의 체력이 최대치의 30% 미만일 때만** 시전할 수 있다(require_hp_below_percent) — 조건에 걸리면 쿨타임도 소모하지 않는다. 몰린 순간에만 쓸 수 있는 역전기라, 이 조건은 쿨타임을 아무리 길게 잡아도 대신할 수 없다. 시전하면 7초 동안 두 가지가 함께 일어난다. ① **평타가 바뀐다**(attack_override_*): 단일 근접 평타가 **광역 근접 평타**가 되고, 피해가 공격력이 아니라 **맞은 적의 최대 체력 8%** 가 된다. 태희 E 의 현재 체력 비례(current_hp_damage_percent)와 반대 축이다 — 최대 체력 기준이라 적이 깎여도 약해지지 않고 마무리도 된다. ② **자기 강화**(self_effect_id -> harang_rampage): 공속 +200%, 준 모든 피해 50% 흡혈, 그리고 1초마다 자기 최대 체력 7% 피해. 셋의 정의는 효과 리소스 셋이 나눠 갖는다(kind 가 하나뿐이라 동반 효과로 이어 붙였다). 거래의 구조: 7초 동안 최대 체력의 49% 를 스스로 태우고, 그것을 흡혈로 되찾으며 광역 최대체력 비례 피해를 넣는다 — 때리지 못하면 그대로 죽는다. 최대체력 비례 8% 는 [임시값]이며 방어 적용 **전** 값이다. 이 창의 값어치가 단일 대상 화력이 아니라 **광역 + 큰 적**이 되도록 잡았다: 실측(매머드 수인 최대체력 2400·물방 307, 하랑 물공 220)으로 평소 평타는 92 가 들어가고 최대체력 8% = 192 는 방어를 지나 74 가 된다 — 단일 대상으로는 조금 약하고, 반경 안 적 전원에게 들어가며, 더 큰 적에게는 커진다(최대체력 4800 이면 213). 작은 적에게는 확실히 약한 것이 이 창의 성질이다. 공속 3배로 7초에 약 42 번 나가므로 반경 안 한 명당 약 3100 이 누적된다(같은 시간 평소 평타의 단일 대상 합 약 3900 과 견줄 수 있는 크기다). 반경 120·쿨타임 30 초도 [임시값]이다 — 반경은 근접 평타 사거리(하랑은 씬 기준 60)보다 넓게 잡아 '광역 근접'이 되게 했다."
+base_power = 0
+scales_with_faith = false
+cooldown = 30.0
+self_effect_id = &"harang_rampage"
+require_hp_below_percent = 0.3
+attack_override_duration = 7.0
+attack_override_aoe_radius = 120.0
+attack_override_max_hp_percent = 0.08
+input_slot = 2
