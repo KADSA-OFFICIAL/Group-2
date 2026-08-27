@@ -9,6 +9,13 @@ const CAPTURE_ZONE_SCENE := preload("res://entities/stage/CaptureZone.tscn")
 var stage_name: String = "Stage"
 var current_room: Node = null
 
+# 전장 맵 노드의 이름. 컨셉마다 다른 씬이 들어오므로 이름은 씬과 무관하게 고정한다
+# ("GrasslandMap" 이라는 이름이 바다 맵에 붙어 있으면 트리를 읽을 수 없다).
+const MAP_NODE_NAME := "StageMap"
+
+# 지금 놓여 있는 맵의 씬 경로. 같은 맵으로 다시 진입할 때 재생성을 건너뛰는 판단에 쓴다.
+var _map_scene_path: String = ""
+
 
 func _ready():
 	StageSystem.stage_requested.connect(_on_stage_requested)
@@ -24,8 +31,50 @@ func _enter_current_stage() -> void:
 	var stage := StageSystem.get_current_stage()
 	stage_name = String(StageSystem.get_current_id()) if stage != null else "Stage"
 	name = stage_name
+	_place_map(stage)
 	EventBus.stage_started.emit(stage_name)
 	load_room()
+
+# 이 스테이지의 컨셉에 맞는 전장 맵을 놓는다 (#420).
+#
+# 맵은 여태 stage/Stage1_1.tscn 에 GrasslandMap 인스턴스로 박혀 있었다. 그래서 어떤
+# 스테이지로 출격해도 초원이었다 -- 컨셉(#408)이 이름만 바꾸고 화면은 바꾸지 않았다.
+#
+# 컨셉->씬 대응은 StageMaps 가 안다. 여기에 경로를 적지 않는다.
+func _place_map(stage: StageData) -> void:
+	var path := StageMaps.resolve_for_stage(stage)
+	var existing := get_node_or_null(MAP_NODE_NAME)
+
+	# 같은 맵이면 다시 만들지 않는다. 초원은 96x64 = 6144 셀을 코드로 깔기 때문에
+	# 1-1 -> 1-2 처럼 컨셉이 같은 스테이지로 갈아탈 때마다 다시 생성하면 진입이 눈에 띄게 멈춘다.
+	if existing != null and path == _map_scene_path:
+		return
+
+	# 트리에서 **즉시** 떼어낸다. queue_free 는 프레임 끝에 실제로 지우므로,
+	# 그때까지 남겨 두면 이름이 겹쳐 새 맵이 "StageMap2" 로 들어간다
+	# (load_room() 이 예전에 겪은 것과 같은 함정이다).
+	if existing != null:
+		remove_child(existing)
+		existing.queue_free()
+	_map_scene_path = ""
+
+	var scene := load(path) as PackedScene
+	if scene == null:
+		# 전장이 맵 없이 열린다. 파티·적은 그대로 놓이므로 판은 돌아간다.
+		push_warning("Stage: 맵 씬을 불러올 수 없습니다: " + path)
+		return
+
+	var map := scene.instantiate() as Node2D
+	if map == null:
+		push_warning("Stage: 맵 씬의 루트가 Node2D 가 아닙니다: " + path)
+		return
+
+	map.name = MAP_NODE_NAME
+	map.position = StageMaps.MAP_OFFSET
+	add_child(map)
+	# 첫 자식으로 옮긴다 -- 파티·적(Room1)보다 먼저 그려져야 바닥이 된다.
+	move_child(map, 0)
+	_map_scene_path = path
 
 # 방을 새로 만들고 파티와 적을 놓는다. 다시 부르면 이전 방을 통째로 버린다.
 #
