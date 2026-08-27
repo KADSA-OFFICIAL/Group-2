@@ -37,6 +37,9 @@ const TUTORIAL_PANEL_WIDTH: int = 460
 # 읽는 국면의 안내. 입력 액션(ui_accept)의 기본 바인딩을 사람 말로 쓴 것이다.
 const TUTORIAL_CONFIRM_HINT := "Space / Enter — 계속"
 
+# 여신의 스킬 발동 키(#358). project.godot 의 goddess_skill 액션 바인딩을 사람 말로 쓴 것이다.
+const GODDESS_KEY_LABEL := "R"
+
 var _party_rows: Array = []          # [{ "root": Control, "name": Label, "hp": Label, "bracket": Control }]
 var _synergy_rows: Dictionary = {}   # Role -> Label
 var _mark_row: Control
@@ -67,6 +70,11 @@ var _enemy_rows: Dictionary = {}     # enemy_id -> Label (수량)
 var _enemy_signature: Array = []     # 현재 줄이 만들어진 종류 목록(정렬됨)
 # 역할 패널. 안의 세 줄이 전부 숨으면 제목만 남은 빈 판이 되므로 통째로 숨긴다.
 var _mechanics_panel: PanelContainer
+
+# 여신의 스킬 판(#358). 고른 스킬이 있을 때만 보인다.
+var _goddess_panel: PanelContainer
+var _goddess_name_label: Label
+var _goddess_state_label: Label
 
 # 튜토리얼 판(#345). TutorialSystem 이 단계를 알려줄 때만 보인다.
 var _tutorial_panel: PanelContainer
@@ -108,6 +116,7 @@ func _process(_delta: float) -> void:
 	_update_mechanics()
 	_update_skills()
 	_update_synergy()
+	_update_goddess()
 	_update_enemies()
 
 
@@ -149,12 +158,56 @@ func _build() -> void:
 	left.add_child(_build_party_panel())
 	left.add_child(_build_mechanics_panel())
 	left.add_child(_build_skill_panel())
+	left.add_child(_build_goddess_panel())
 	right.add_child(_build_synergy_panel())
 	right.add_child(_build_enemy_panel())
 
 	# 튜토리얼 판은 화면 아래 가운데에 따로 놓는다(#345). 위 두 열에 끼우면
 	# 파티·시너지 판을 밀어내는데, 튜토리얼이 가리키는 것이 바로 그 판들이다.
 	root.add_child(_build_tutorial_layer())
+
+
+# 여신의 스킬 판(#358). 무엇을 들고 왔는지 / 아직 쓸 수 있는지 / 정지 잔여 시간.
+#
+# 스킬 판(Q·E)과 나눠 두는 이유: 저쪽은 **조종 중인 캐릭터**의 것이라 전환하면 내용이
+# 바뀌지만, 이쪽은 **파티 하나에 하나**이고 스테이지 내내 같다.
+# 고른 스킬이 없으면 판째로 숨는다.
+func _build_goddess_panel() -> PanelContainer:
+	var panel := HUDKit.make_panel("여신의 스킬", "GODDESS", 10, true)
+	var body := HUDKit.body_of(panel)
+
+	_goddess_name_label = HUDKit.label("", 12, HUDKit.text_2())
+	body.add_child(_goddess_name_label)
+
+	_goddess_state_label = HUDKit.value("-", 13)
+	body.add_child(_goddess_state_label)
+
+	_goddess_panel = panel
+	return panel
+
+
+func _update_goddess() -> void:
+	if _goddess_panel == null:
+		return
+
+	var skill: GoddessSkillData = GoddessSkillSystem.get_selected()
+	if skill == null:
+		# 고르지 않았으면 빈 판을 남기지 않는다.
+		_goddess_panel.visible = false
+		return
+	_goddess_panel.visible = true
+
+	_goddess_name_label.text = "%s  [%s]" % [skill.display_name, GODDESS_KEY_LABEL]
+
+	if GoddessSkillSystem.is_time_stopped():
+		_goddess_state_label.text = "정지 %.1f초" % GoddessSkillSystem.get_time_stop_left()
+		_goddess_state_label.add_theme_color_override("font_color", HUDKit.accent_text())
+	elif GoddessSkillSystem.is_available():
+		_goddess_state_label.text = "사용 가능"
+		_goddess_state_label.add_theme_color_override("font_color", HUDKit.up_color())
+	else:
+		_goddess_state_label.text = "사용함"
+		_goddess_state_label.add_theme_color_override("font_color", HUDKit.text_3())
 
 
 # 튜토리얼 판(#345). 진행은 TutorialSystem 이 하고, 여기는 **그리기만** 한다.

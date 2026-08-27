@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="GoddessSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/goddess/GoddessSkillData.gd" id="1_goddess"]
+
+[resource]
+script = ExtResource("1_goddess")
+skill_id = &"revive"
+display_name = "부활"
+description = "죽은 파티원 한 명을 되살린다(#358). 기본 최대 체력의 30%로 살아 있는 파티원 옆에 다시 선다. 여러 명이 죽어 있으면 파티 순서상 앞선 한 명이다. 되살릴 파티원이 없으면 발동하지 않고 사용 횟수도 소모하지 않는다. 회복 비율은 여신 스킬 강화 배수(신앙심 + 거울)를 타며 100%를 넘지 않는다 — 파티 내 최고값을 쓰므로 순혈 3인(설아, 삼각근 Lv.4 기준 배수 1.92)이면 **58%**다. 처음 저작값은 50% 였는데 같은 조건에서 96% 가 나와 사실상 만피 부활이었다 — 낮췄다. 스테이지당 1회. 기본값 30% 는 [임시값]이다."
+kind = 1
+revive_hp_percent = 0.3
+scales_with_boost = true

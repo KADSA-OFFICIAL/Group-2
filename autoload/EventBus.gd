@@ -88,3 +88,13 @@ signal player_dashed(who)
 # 처형이 성사됐다. enemy 는 이 직후 죽으므로 **이 신호 안에서만** 유효하다.
 @warning_ignore("unused_signal")
 signal enemy_executed(enemy, by)
+
+# ----- 여신의 스킬 (#358) -----
+
+# 여신의 스킬이 발동했다(스테이지당 1회). 연출·HUD·통계가 듣는다.
+@warning_ignore("unused_signal")
+signal goddess_skill_used(skill_id: StringName)
+
+# 시간 정지가 시작/종료됐다. seconds_left 는 시작 시 전체 지속시간, 종료 시 0 이다.
+@warning_ignore("unused_signal")
+signal time_stop_changed(active: bool, seconds_left: float)
