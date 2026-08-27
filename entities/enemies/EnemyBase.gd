@@ -158,9 +158,17 @@ func is_ai_active() -> bool:
 func _physics_process(delta: float) -> void:
 	if _attack_cooldown_left > 0.0:
 		_attack_cooldown_left -= delta
+	if _dash_cooldown_left > 0.0:
+		_dash_cooldown_left -= delta
 
 	# 밀려나는 중이면 추격 AI 보다 우선한다(#336). 밀리면서 동시에 다가오면 넉백이 없는 것과 같다.
 	if _tick_knockback(delta):
+		_update_walk_animation()
+		return
+
+	# 대시 중이면 추격 AI 를 돌지 않는다(#376). 돌면 같은 프레임에 velocity 가
+	# 걷는 속도로 덮여 대시가 사라진다.
+	if _tick_dash(delta):
 		_update_walk_animation()
 		return
 
@@ -194,9 +202,105 @@ func _process_ai() -> void:
 		velocity = Vector2.ZERO
 		try_attack()
 	else:
+		# 사거리 밖이면 먼저 대시를 시도한다(#376). 대시를 저작하지 않은 적은
+		# 여기서 false 가 나와 예전처럼 걸어서 접근한다.
+		if try_dash():
+			return
 		velocity = global_position.direction_to(_target.global_position) * get_move_speed()
 
 	move_and_slide()
+
+
+# ===== 대시 (Dash, #376) =====
+#
+# 평타 사거리 **밖**에 대상이 있으면 걸어가는 대신 돌진하고, 지나가는 길에 있는 파티원을 때린다.
+#
+# 왜 필요한가: 느린 적은 사거리 밖에서 계속 쫓기만 해서 플레이어가 뒷걸음질만 쳐도 안전하다.
+# 대시는 그 거리를 한 번에 지운다.
+#
+# 넉백과 같은 규약을 쓴다 — 위치를 직접 대입하지 않고 velocity + move_and_slide 로 미끄러진다.
+# 대입하면 지형을 통과해 벽 안에 박힌다.
+
+# 남은 대시 시간(초). 0 보다 크면 대시 중이다.
+var _dash_left: float = 0.0
+# 다음 대시까지 남은 쿨타임(초).
+var _dash_cooldown_left: float = 0.0
+# 대시 방향. 시작할 때 정하고 도중에 바꾸지 않는다 — 유도 대시는 피할 수 없다.
+var _dash_direction: Vector2 = Vector2.ZERO
+# 이번 대시에서 이미 때린 대상. 한 대시에 같은 사람을 여러 프레임 때리지 않는다.
+var _dash_hit: Array = []
+
+
+# 지금 대시 중인가.
+func is_dashing() -> bool:
+	return _dash_left > 0.0
+
+
+# 대시를 저작한 적인가.
+func can_dash() -> bool:
+	return data != null and data.dash_speed > 0.0 and data.dash_duration > 0.0
+
+
+# 대시를 시작할 거리. 저작하지 않았으면 평타 사거리를 쓴다
+# — "평타 사거리 밖이면 대시" 가 기본 계약이다.
+func get_dash_trigger_distance() -> float:
+	if data == null:
+		return 0.0
+	if data.dash_trigger_distance > 0.0:
+		return data.dash_trigger_distance
+	return data.attack_range
+
+
+# 조건이 맞으면 대시를 시작한다. 시작했으면 true.
+func try_dash() -> bool:
+	if not can_dash() or is_dashing() or _dash_cooldown_left > 0.0:
+		return false
+	if not _is_valid_target(_target):
+		return false
+	# 기절 등 CONTROL 효과 중에는 대시하지 않는다. 평타와 같은 규칙이다.
+	if StatusEffectSystem.blocks_movement(self):
+		return false
+	if global_position.distance_to(_target.global_position) <= get_dash_trigger_distance():
+		return false
+
+	_dash_direction = global_position.direction_to(_target.global_position)
+	_dash_left = data.dash_duration
+	_dash_cooldown_left = data.dash_cooldown
+	_dash_hit.clear()
+	return true
+
+
+# 대시 한 틱. 대시 중이면 true 를 돌려 추격 AI 를 건너뛰게 한다.
+func _tick_dash(delta: float) -> bool:
+	if _dash_left <= 0.0:
+		return false
+
+	_dash_left -= delta
+	velocity = _dash_direction * data.dash_speed
+	move_and_slide()
+	_apply_dash_hits()
+
+	if _dash_left <= 0.0:
+		_dash_left = 0.0
+		velocity = Vector2.ZERO
+	return true
+
+
+# 지금 자리 주변의 파티원을 때린다. 한 대시에 대상당 한 번뿐이다.
+#
+# 매 프레임 자리를 다시 보는 이유: 판정을 시작·끝점의 선분으로 한 번만 잡으면, 대시 도중에
+# 경로로 걸어 들어온 사람이 통과해 버린다. 지나가는 길에 있으면 맞는 것이 이 기술의 계약이다.
+func _apply_dash_hits() -> void:
+	var damage := int(round(get_stats().get_physical_attack() * data.dash_damage_multiplier))
+	if damage <= 0:
+		return
+	for node in _living_party_members():
+		if _dash_hit.has(node):
+			continue
+		if global_position.distance_to(node.global_position) > data.dash_hit_radius:
+			continue
+		_dash_hit.append(node)
+		_hit_one(node, damage, &"")
 
 
 # ===== 넉백 (Knockback, #336) =====
@@ -421,10 +525,11 @@ func try_attack() -> bool:
 	if data != null and data.projectile_scene != null:
 		_fire_projectile(damage, effect_id)
 	else:
-		_target.take_damage(damage, self)
-		# 대상이 그 사이 죽었으면 효과를 걸지 않는다.
-		if effect_id != &"" and is_instance_valid(_target) and _target.get("is_alive") != false:
-			StatusEffectSystem.apply(_target, effect_id, self)
+		# 대상 자리를 먼저 읽어 둔다 — take_damage 가 대상을 죽이면 위치를 못 읽는다.
+		var origin: Vector2 = _target.global_position
+		_hit_one(_target, damage, effect_id)
+		# 광역 평타면 그 자리 반경 안의 나머지도 함께 맞는다(반경 0 이면 아무 일도 없다).
+		_hit_around(origin, damage, effect_id, _target)
 
 	if is_charged:
 		_charge_count = 0
@@ -432,6 +537,47 @@ func try_attack() -> bool:
 		_charge_count += 1
 
 	return true
+
+
+# 파티원 하나를 때리고, 살아 있으면 상태 효과를 건다.
+#
+# 피해와 효과가 한 자리에 있는 이유: 둘을 떼어 놓으면 "죽은 대상에게 효과를 걸지 않는다"는
+# 규칙을 부르는 쪽마다 다시 써야 하고, 한 곳만 빠뜨리는 순간이 온다.
+func _hit_one(target: Node, damage: int, effect_id: StringName) -> void:
+	if not _is_valid_target(target) or not target.has_method("take_damage"):
+		return
+	target.take_damage(damage, self)
+	# 대상이 그 사이 죽었으면 효과를 걸지 않는다.
+	if effect_id != &"" and is_instance_valid(target) and target.get("is_alive") != false:
+		StatusEffectSystem.apply(target, effect_id, self)
+
+
+# 한 지점 주변의 파티원 전원을 때린다 (#376).
+#
+# `exclude` 는 이미 맞은 대상이다 — 광역 평타는 노린 한 명을 먼저 때리고 나머지를 훑으므로,
+# 그 한 명이 두 번 맞으면 안 된다.
+#
+# 반경이 0 이면 아무 일도 하지 않는다. 그래서 이 필드를 저작하지 않은 기존 적은
+# 예전처럼 단일 대상 그대로다.
+func _hit_around(origin: Vector2, damage: int, effect_id: StringName, exclude: Node = null) -> void:
+	var radius: float = data.basic_attack_aoe_radius if data != null else 0.0
+	if radius <= 0.0:
+		return
+	for node in _living_party_members():
+		if node == exclude:
+			continue
+		if origin.distance_to(node.global_position) > radius:
+			continue
+		_hit_one(node, damage, effect_id)
+
+
+# 살아 있는 파티원 전부. 그룹 이름은 PartySystem 이 단일 출처다.
+func _living_party_members() -> Array:
+	var result: Array = []
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if _is_valid_target(node):
+			result.append(node)
+	return result
 
 
 # 대상 방향으로 투사체를 스폰한다 (#214).
