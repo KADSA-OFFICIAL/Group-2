@@ -27,6 +27,7 @@
 | EquipmentData | `entities/equipment/EquipmentData.gd` | 장비 정의(슬롯/스텟보너스/제작비용) (Resource) | 장비 정의 |
 | MusicSystem | `autoload/MusicSystem.gd` | 배경음악 재생(한 번에 한 곡, 페이드) | 재생 중인 트랙 |
 | TutorialSystem | `autoload/TutorialSystem.gd` | 전투 튜토리얼 진행(단계 판정·정지·완료 저장) | 진행 상태 / `data/tutorial/*.tres` |
+| CaptureZoneData | `entities/stage/CaptureZoneData.gd` | 거점 존 정의(위치·반경·확보 시간) (Resource) | 점령 존 정의 |
 | TutorialSequenceData | `entities/tutorial/TutorialSequenceData.gd` | 스테이지 하나의 튜토리얼 단계 묶음 (Resource) | 튜토리얼 단계 정의 |
 | GoddessSkillSystem | `autoload/GoddessSkillSystem.gd` | 여신의 스킬 — 선택·스테이지당 1회·시전(시간 정지/부활) | 선택 상태 / `data/goddess_skills/*.tres` |
 | GoddessSkillData | `entities/goddess/GoddessSkillData.gd` | 여신의 스킬 정의 (Resource) | 여신 스킬 정의 |

@@ -1,6 +1,9 @@
 extends Node2D
 class_name Stage
 
+# 거점 존 씬(#377). 무엇을 어디에 놓을지는 데이터가 정하고 씬은 하나뿐이라 여기서 preload 한다.
+const CAPTURE_ZONE_SCENE := preload("res://entities/stage/CaptureZone.tscn")
+
 # 씬 트리 노드 이름이자 stage_started/completed 에 실리는 값.
 # 어떤 스테이지가 로드됐는지 드러나야 하므로 현재 스테이지 id 를 따른다.
 var stage_name: String = "Stage"
@@ -44,6 +47,7 @@ func load_room() -> void:
 
 	spawn_party()
 	spawn_enemies()
+	spawn_capture_zones()
 
 	# 적이 놓인 뒤에 판정을 켠다. 순서가 바뀌면 진입하자마자 승리가 된다.
 	_begin_judging()
@@ -127,12 +131,31 @@ func spawn_enemies() -> void:
 			enemy.global_position = spawn.get_position(i)
 
 
+# 거점 존을 놓는다(#377). 무엇을 어디에 놓을지는 **StageData.capture_zones** 가 정한다.
+#
+# 적 배치(spawn_enemies)와 같은 구조다: 코드에 좌표를 박지 않고 저작된 데이터를 읽는다.
+# 존이 없는 스테이지(전투 타입)에서는 아무 일도 하지 않는다.
+func spawn_capture_zones() -> void:
+	var stage := StageSystem.get_current_stage()
+	if stage == null:
+		return
+
+	for zone_data in stage.capture_zones:
+		if zone_data == null:
+			continue
+		var zone = CAPTURE_ZONE_SCENE.instantiate()
+		current_room.add_child(zone)
+		zone.setup(zone_data)
+
+
 # ===== 승패 판정 (Outcome) =====
 #
-# 소탕(적 전멸) = 승리, 파티 전멸 = 패배. docs §5.1 의 [확정] 사항이다.
+# 승리 = 스테이지 타입이 요구하는 프리미티브를 **모두** 충족. 패배 = 파티 전멸.
+# docs §5.1/§5.2 의 [확정] 사항이며, 무엇을 요구하는지는 StageData 가 답한다
+# (requires_clear / requires_capture) — 여기서 타입을 다시 해석하지 않는다.
 #
-# 점령은 판정하지 않는다: 존 위치와 확보 시간이 §5.2 에서 [미정]이라 만들 근거가 없다.
-# 점령이 필요한 스테이지에서는 판정을 켜지 않고 경고만 남긴다(전투는 계속된다).
+#   소탕  — 전장에 살아 있는 적이 없다.
+#   점령  — 저작된 모든 거점 존이 확보됐다(#377). 존의 진행도는 CaptureZone 이 소유한다.
 #
 # 결과 화면을 여는 일은 여기서 하지 않는다. 전장은 화면을 모르고,
 # EventBus 로 알리기만 한다(screens/result/stage_result_launcher.gd 가 받는다).
@@ -155,9 +178,40 @@ func _process(_delta: float) -> void:
 		_finish(false)
 		return
 
-	# 소탕 조건은 진입 시 확인했다(_begin_judging). 여기서는 남은 적만 본다.
-	if GameManager.get_all_enemies().is_empty():
+	if _objectives_met():
 		_finish(true)
+
+
+# 이 스테이지가 요구하는 프리미티브가 모두 충족됐는가.
+#
+# 요구 목록의 출처는 StageData 다. 그래서 타입이 늘어도 이 함수는 그대로다.
+func _objectives_met() -> bool:
+	var stage := StageSystem.get_current_stage()
+	if stage == null:
+		return false
+
+	# 소탕 조건은 진입 시 확인했다(_begin_judging). 여기서는 남은 적만 본다.
+	if stage.requires_clear() and not GameManager.get_all_enemies().is_empty():
+		return false
+
+	# 점령(#377): 저작된 존을 **전부** 확보해야 한다.
+	if stage.requires_capture() and not _all_zones_captured():
+		return false
+
+	return true
+
+
+# 전장의 모든 거점 존이 확보됐는가. 존이 하나도 없으면 false 다 —
+# 점령이 필요한 스테이지에서 존이 없다는 것은 아직 놓이지 않았다는 뜻이고,
+# 그것을 true 로 보면 진입 즉시 승리가 된다.
+func _all_zones_captured() -> bool:
+	var zones := get_tree().get_nodes_in_group(CaptureZone.GROUP)
+	if zones.is_empty():
+		return false
+	for zone in zones:
+		if not is_instance_valid(zone) or not zone.is_captured():
+			return false
+	return true
 
 
 # 방을 새로 만든 직후에 부른다. 판정 가능 여부는 이때 한 번만 따진다.
@@ -168,15 +222,20 @@ func _begin_judging() -> void:
 	if stage == null:
 		return
 
-	if not stage.requires_clear():
-		# 점령 전용 스테이지. 판정할 수단이 없다.
-		push_warning("Stage: 점령 판정은 아직 없습니다(§5.2 미정). 승패를 판정하지 않습니다: " + stage_name)
+	# 요구 조건이 하나도 없는 타입은 판정할 것이 없다(enum 밖의 값 등).
+	if stage.get_objectives().is_empty():
+		push_warning("Stage: 승리 조건을 도출할 수 없습니다(type=%d): %s" % [stage.type, stage_name])
 		return
 
 	# 적이 하나도 스폰되지 않았으면 진입하자마자 승리가 되어 버린다.
 	# (StageData.validate 가 막지만, 씬이 비어 있는 경우까지 여기서 막는다.)
-	if GameManager.get_all_enemies().is_empty():
+	if stage.requires_clear() and GameManager.get_all_enemies().is_empty():
 		push_warning("Stage: 적이 없어 소탕을 판정하지 않습니다: " + stage_name)
+		return
+
+	# 같은 이유로 존이 없는 점령 스테이지도 판정하지 않는다.
+	if stage.requires_capture() and get_tree().get_nodes_in_group(CaptureZone.GROUP).is_empty():
+		push_warning("Stage: 거점 존이 없어 점령을 판정하지 않습니다: " + stage_name)
 		return
 
 	_judging = true
