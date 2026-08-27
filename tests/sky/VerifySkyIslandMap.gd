@@ -148,18 +148,14 @@ func _ready() -> void:
 		_expect(_is_blocked(map, open_void),
 			"open void %s must be blocked" % open_void)
 
-	# 맵 네 변의 기존 경계는 그대로 있어야 한다.
+	# 맵 네 변의 경계가 **이름으로** 찾힌다 (#446).
 	#
-	# 이름으로 세지 않는 이유: `_add_boundary()` 가 넷 다 "MapBoundary" 로 짓지만
-	# Godot 은 중복 이름을 **통째로 갈아치운다** -- 실제 트리는
-	# ["MapBoundary", "@StaticBody2D@207", "@StaticBody2D@209", "@StaticBody2D@211"] 이다
-	# (실측). 그래서 이름 대신 "VoidBlock 이 아닌 StaticBody2D 자식"으로 센다.
-	# 세 맵이 다 같은 방식이라 이름이 사실상 하나만 남는 것은 이 이슈 범위 밖이다.
-	var boundaries := 0
-	for child in map.get_children():
-		if child is StaticBody2D and child.name != "VoidBlock":
-			boundaries += 1
-	_expect(boundaries == 4, "the 4 map boundaries must remain (got %d)" % boundaries)
+	# 예전에는 "VoidBlock 이 아닌 StaticBody2D 자식"으로 셌다 — 넷 다 "MapBoundary" 로
+	# 지어져 Godot 이 중복 이름을 갈아치우는 탓이었다. 이름이 유일해진 뒤로는 그 우회가
+	# 필요 없고, 정적 몸이 하나 더 늘어도 이 검사가 깨지지 않는다.
+	for direction in ["North", "South", "West", "East"]:
+		var boundary := map.get_node_or_null("MapBoundary" + direction)
+		_expect(boundary is StaticBody2D, "MapBoundary%s must exist" % direction)
 
 	if _failures.is_empty():
 		print("PASS: sky island map structure and collision contract")
