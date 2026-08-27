@@ -95,7 +95,7 @@ func _sweep() -> void:
 		if _inside.has(member):
 			continue
 		_inside.append(member)
-		StatusEffectSystem.apply(member, effect_id, source)
+		StatusEffectSystem.apply(member, effect_id, _live_source())
 
 	# 나간 대상: 뒤에서부터 지운다(순회 중 제거).
 	for i in range(_inside.size() - 1, -1, -1):
@@ -109,6 +109,24 @@ func _sweep() -> void:
 		_inside.remove_at(i)
 		if is_instance_valid(member):
 			StatusEffectSystem.remove(member, effect_id)
+
+
+# 아직 살아 있는 시전자. 이미 해제됐으면 null 이다(#391).
+#
+# 지대는 **시전자보다 오래 산다** — 부모가 시전자가 아니라 전장이고(vfx-guide §1.7),
+# 수명은 aura_duration 이 따로 갖는다. 그래서 지대가 도는 동안 시전자가 죽을 수 있다.
+#
+# 그때 해제된 노드를 그대로 넘기면 `StatusEffectSystem.apply()` 의 인자 타입 검사에서
+# "previously freed" 로 터진다 — 매 프레임 새로 들어오는 대상마다 난다.
+# 실제로 익룡 여왕이 체력 25% 에서 지대를 깔고 6초 안에 죽으면서 이 경로를 밟았다.
+# 강지 Q 도 같은 구조라(시전자가 파티원이고 죽을 수 있다) 같은 보호를 받는다.
+#
+# 효과 자체는 그대로 걸어야 한다 — 지대가 살아 있는 한 그 안은 위험한 자리다.
+# source 는 "누가 걸었는가"라는 부가 정보이지 효과의 전제가 아니다(apply 의 기본값도 null).
+func _live_source() -> Node:
+	if source != null and is_instance_valid(source):
+		return source
+	return null
 
 
 # 걸어 둔 효과를 전부 푼다.

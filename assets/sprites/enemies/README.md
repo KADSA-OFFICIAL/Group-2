@@ -12,6 +12,8 @@
 | `velociraptor_beastfolk_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
 | `velociraptor_beastfolk_2_walk.png` | 벨로시랩터 수인 2. 4방향 x 3프레임 워크 시트 (셀 424x496, 시트 1272x1984) |
 | `velociraptor_beastfolk_2_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+| `pterosaur_queen_walk.png` | 익룡 여왕 SD. 4방향 x 3프레임 워크 시트 (셀 96x96, 시트 288x384) |
+| `pterosaur_queen_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` (8fps) |
 
 ## 시트 규약
 
@@ -102,3 +104,7 @@ godot --headless --path . --script res://tools/normalize_walk_sheet.gd -- <입�
 
 임포트는 `mipmaps/generate=true`로 두었다. 원본이 크고 화면에서는 0.25배로 줄여 그리므로
 밉맵이 없으면 이동할 때 픽셀이 지글거린다.
+
+익룡 여왕은 SD 비율과 금장·헤드피스 디테일을 보존하기 위해 96x96 셀을 2배 확대한다.
+화면 키는 기존 설계와 같은 144px이다. `PterosaurQueen.tscn`의
+`AnimatedSprite2D.texture_filter`를 nearest로 고정해 경계가 흐려지지 않게 한다.
