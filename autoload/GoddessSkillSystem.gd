@@ -30,6 +30,9 @@ const SAVE_KEY := "goddess_skill"
 # 발동 입력 (project.godot [input] 에 정의, R 키).
 const CAST_ACTION := "goddess_skill"
 
+# 시간 가속(#366)이 스텟 기여를 등록할 때 쓰는 출처 키. 원거리 스택과 다른 키라 서로 합산된다.
+const HASTE_SOURCE := &"goddess_haste"
+
 # 부활한 파티원을 살아 있는 파티원에게서 얼마나 떨어뜨려 세울지(px).
 const REVIVE_OFFSET := Vector2(-48.0, 0.0)
 
@@ -53,6 +56,14 @@ var _time_stop_left: float = 0.0
 # 얼린 노드 -> 원래 process_mode. 되돌릴 때 그대로 복원한다
 # (전부 INHERIT 으로 되돌리면 원래 다른 값이던 노드가 조용히 달라진다).
 var _frozen: Dictionary = {}
+
+# ----- 시간 가속 상태 (#366) -----
+var _haste_skill: GoddessSkillData = null
+var _haste_boost: float = 1.0
+var _haste_total: float = 0.0
+var _haste_left: float = 0.0
+# 한 번이라도 기여를 걸었던 노드. 종료 시 여기 전부에서 지운다.
+var _haste_touched: Dictionary = {}
 
 
 func _ready() -> void:
@@ -150,6 +161,39 @@ func get_time_stop_left() -> float:
 	return maxf(_time_stop_left, 0.0)
 
 
+# ----- 시간 가속 조회 (#366) -----
+
+# 정의까지 함께 본다: 남은 시간만으로 판정하면 정의가 없는 상태에서 화면이 "가속 중 +0%"
+# 라는 앞뒤 안 맞는 줄을 그린다. 두 값은 항상 함께 세워지고 함께 지워진다.
+func is_hasted() -> bool:
+	return _haste_left > 0.0 and _haste_skill != null
+
+
+func get_haste_left() -> float:
+	return maxf(_haste_left, 0.0)
+
+
+# 곡선을 태운 지금의 최대치 대비 비율(0~1). 화면이 "얼마나 올랐나"를 보여 줄 때 쓴다.
+func get_haste_ratio() -> float:
+	if _haste_skill == null:
+		return 0.0
+	return _haste_skill.get_ramp_ratio(_haste_progress())
+
+
+# 지금 걸려 있는 공격속도 증가율(0.5 = +50%).
+func get_haste_attack_speed_percent() -> float:
+	if _haste_skill == null:
+		return 0.0
+	return _haste_skill.get_haste_attack_speed(_haste_progress(), _haste_boost)
+
+
+# 지금 걸려 있는 이동속도 증가율.
+func get_haste_move_speed_percent() -> float:
+	if _haste_skill == null:
+		return 0.0
+	return _haste_skill.get_haste_move_speed(_haste_progress(), _haste_boost)
+
+
 # 여신 스킬 강화 배수. **파티 내 최고값**을 쓴다.
 #
 # 왜 최고값인가: 여신 스킬은 파티 공용인데 배수는 캐릭터 스텟(신앙심)과 장비(거울)에서
@@ -190,6 +234,7 @@ func _on_stage_started(_stage_name: String) -> void:
 	# 진입할 때마다 1회로 돌아온다. 이 시스템의 유일한 제약이다.
 	_available = true
 	_end_time_stop()
+	_end_haste()
 	availability_changed.emit(is_available())
 
 
@@ -223,6 +268,8 @@ func cast() -> bool:
 			ok = _cast_time_stop(skill, boost)
 		GoddessSkillData.Kind.REVIVE:
 			ok = _cast_revive(skill, boost)
+		GoddessSkillData.Kind.TIME_HASTE:
+			ok = _cast_time_haste(skill, boost)
 
 	if not ok:
 		return false
@@ -281,17 +328,88 @@ func _end_time_stop() -> void:
 
 
 func _process(delta: float) -> void:
-	if _time_stop_left <= 0.0:
-		return
-	_time_stop_left -= delta
-	if _time_stop_left <= 0.0:
-		_end_time_stop()
+	if _time_stop_left > 0.0:
+		_time_stop_left -= delta
+		if _time_stop_left <= 0.0:
+			_end_time_stop()
+
+	if _haste_left > 0.0:
+		_haste_left -= delta
+		if _haste_left <= 0.0:
+			_end_haste()
+		else:
+			_apply_haste()
+			EventBus.goddess_haste_changed.emit(true, _haste_left, get_haste_ratio())
 
 
 func _is_party_node(node) -> bool:
 	if node == null or not is_instance_valid(node) or not (node is Node):
 		return false
 	return (node as Node).is_in_group(PartySystem.MEMBER_GROUP)
+
+
+# ----- 스킬 3: 시간 가속 (#366) -----
+
+func _cast_time_haste(skill: GoddessSkillData, boost: float) -> bool:
+	var duration := skill.get_effective_duration(boost)
+	if duration <= 0.0:
+		return false
+
+	_haste_skill = skill
+	_haste_boost = boost
+	_haste_total = duration
+	_haste_left = duration
+	_apply_haste()
+	EventBus.goddess_haste_changed.emit(true, _haste_left, get_haste_ratio())
+	return true
+
+
+# 지금 진행도의 증가율을 **살아 있는 파티원 전원**에게 밀어 넣는다.
+#
+# 매 프레임 다시 넣는 이유 둘:
+#   ① 증가율이 계속 변한다(램프).
+#   ② 가속 중에 부활한 파티원(스킬 2)도 그 시점부터 함께 받아야 한다.
+#
+# StatusEffectSystem 의 외부 기여 채널을 쓴다 — 원거리 스택이 쓰는 것과 같은 통로라
+# 상태 효과·장비 보너스와 자연스럽게 합산된다. PlayerStats.set_buff_bonuses() 를 직접
+# 부르면 "최종값"을 받는 구조여서 다른 버프를 덮어쓴다.
+func _apply_haste() -> void:
+	if _haste_skill == null:
+		return
+
+	var progress := _haste_progress()
+	var percent := {
+		"attack_speed": _haste_skill.get_haste_attack_speed(progress, _haste_boost),
+		"move_speed": _haste_skill.get_haste_move_speed(progress, _haste_boost),
+	}
+
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if not is_instance_valid(node) or not node.is_alive:
+			continue
+		# 종료 시 지울 대상을 기억한다 — 지금 죽은 파티원이 되살아나면 목록에서 빠져도
+		# 이미 걸린 기여분이 남는다.
+		_haste_touched[node] = true
+		StatusEffectSystem.set_external_bonus(node, HASTE_SOURCE, {}, percent)
+
+
+func _end_haste() -> void:
+	_haste_left = 0.0
+	_haste_total = 0.0
+	_haste_skill = null
+	_haste_boost = 1.0
+
+	for node in _haste_touched.keys():
+		if is_instance_valid(node):
+			StatusEffectSystem.clear_external_bonus(node, HASTE_SOURCE)
+	_haste_touched.clear()
+	EventBus.goddess_haste_changed.emit(false, 0.0, 0.0)
+
+
+# 0(시작) ~ 1(끝).
+func _haste_progress() -> float:
+	if _haste_total <= 0.0:
+		return 0.0
+	return clampf(1.0 - _haste_left / _haste_total, 0.0, 1.0)
 
 
 # ----- 스킬 2: 부활 -----

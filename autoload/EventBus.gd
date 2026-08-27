@@ -98,3 +98,8 @@ signal goddess_skill_used(skill_id: StringName)
 # 시간 정지가 시작/종료됐다. seconds_left 는 시작 시 전체 지속시간, 종료 시 0 이다.
 @warning_ignore("unused_signal")
 signal time_stop_changed(active: bool, seconds_left: float)
+
+# 시간 가속(#366)의 상태가 바뀌었다. ratio 는 최대치 대비 지금 비율(0~1)이다.
+# 매 프레임 나온다 — 화면이 진행을 그릴 수 있어야 하고, 값이 계속 변한다.
+@warning_ignore("unused_signal")
+signal goddess_haste_changed(active: bool, seconds_left: float, ratio: float)
