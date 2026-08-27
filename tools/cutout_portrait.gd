@@ -36,9 +36,13 @@ extends SceneTree
 ##
 ## 참고: tools/normalize_portrait.gd, assets/sprites/characters/README.md
 
-# 배경색으로 볼 색 차이(채널당 0~255). 넉넉하면 인물의 밝은 부분까지 먹고,
-# 빡빡하면 배경에 남은 옅은 얼룩을 놓친다.
+# 잰 배경 퍼짐에 **더해 주는** 여유(채널당 0~255).
+# 허용 오차 = 테두리에서 잰 퍼짐 + 이 값. 배경이 단색이면 퍼짐이 0 이라 이 값만 남는다.
 const BG_TOLERANCE: int = 10
+
+# 테두리 표본 중 이만큼 벗어나면 배경이 아니라 인물로 보고 버린다(채널당 0~255 를 1.0 기준으로).
+# 인물이 화면 끝에 닿아 있을 때 그 픽셀이 배경 퍼짐을 부풀리는 것을 막는다.
+const OUTLIER_DISTANCE: float = 40.0 / 255.0
 
 # 경계로 볼 띠의 두께(px). 배경에서 이만큼 안쪽까지를 "되돌릴 대상"으로 본다.
 # 안티에일리어싱은 보통 1~2px 라 2 면 충분하고, 키우면 인물을 깎아 먹는다.
@@ -114,10 +118,13 @@ func _cutout(src: String, dst: String, dry_run: bool) -> bool:
 	var name := src.get_file()
 
 	# ===== 1. 배경색을 네 모서리에서 잰다 =====
-	var bg := _corner_color(image)
-	print("%s: %dx%d  배경색 rgb(%d,%d,%d)" % [
+	var measured := _background(image)
+	var bg: Color = measured["color"]
+	print("%s: %dx%d  배경색 rgb(%d,%d,%d)  퍼짐 %.0f  허용 %.0f  (테두리 표본 %d개 버림)" % [
 		name, w, h,
 		int(round(bg.r * 255.0)), int(round(bg.g * 255.0)), int(round(bg.b * 255.0)),
+		float(measured["spread"]) * 255.0, float(measured["tolerance"]) * 255.0,
+		int(measured["dropped"]),
 	])
 
 	# ===== 2. 테두리에서 flood fill 해서 진짜 배경만 고른다 =====
@@ -126,7 +133,7 @@ func _cutout(src: String, dst: String, dry_run: bool) -> bool:
 	kind.fill(FOREGROUND)
 
 	var queue: Array[int] = []
-	var tol := float(BG_TOLERANCE) / 255.0
+	var tol: float = measured["tolerance"]
 
 	for x in w:
 		_seed(image, kind, queue, x, 0, w, bg, tol)
@@ -209,7 +216,16 @@ func _cutout(src: String, dst: String, dry_run: bool) -> bool:
 				numerator = c[1]
 
 		if absf(denominator) < MIN_CHANNEL_CONTRAST:
-			# 인물 색이 배경과 거의 같다. 잘못 푸느니 불투명으로 남긴다.
+			# 인물 색이 배경과 거의 같아 **알파는** 못 푼다. 그래도 **색은 고칠 수 있다.
+			#
+			# 예전에는 여기서 픽셀을 통째로 손대지 않고 넘어갔는데, 그러면 원본의
+			# 배경 섞인 색이 불투명으로 남아 **겉에 흰 테두리**가 생긴다.
+			# 흰옷 캐릭터에서 터진다 — 아린은 이 구간이 38,097px 이었고 겉 테두리의
+			# 42.7% 가 흰색이었다(정상 초상은 0% 대다).
+			#
+			# 알파를 건드리지 않으므로 실루엣은 그대로고, 색만 옆의 인물 색으로 바꾼다.
+			# 잘못 푼 알파로 구멍을 내는 것보다 안전하다.
+			image.set_pixel(x, y, Color(fg.r, fg.g, fg.b, observed.a))
 			kept += 1
 			continue
 
@@ -277,19 +293,72 @@ func _foreground_reference(image: Image, kind: PackedByteArray, w: int, h: int,
 	return Color(r / n, g / n, b / n, 1.0)
 
 
-# 네 모서리의 평균색. 배경색을 흰색이라고 박아 두지 않는 이유는 파일 위 주석에 있다.
-func _corner_color(image: Image) -> Color:
+# 테두리 한 줄에서 배경색과 **퍼짐**을 함께 잰다.
+#
+# 왜 네 모서리 평균이 아닌가 (실제 겪은 문제):
+#   아린 원본은 배경이 단색이 아니라 **투명 미리보기 체커보드가 구워진** 그림이었다
+#   (254 와 241 두 톤이 번갈아 깔려 있다). 모서리 넷만 재면 밝은 톤 하나만 잡히고,
+#   고정 허용 오차로는 어두운 톤을 놓쳐 **체커보드가 그대로 남는다.**
+#
+#   그래서 테두리 링 전체를 훑어 평균과 최대 편차를 함께 구한다. 배경이 정말 단색이면
+#   편차가 0 에 가까워 예전과 같게 동작하고, 체커보드면 두 톤을 모두 덮는 폭이 나온다.
+#
+# 인물이 테두리에 닿아 있으면 그 픽셀이 편차를 부풀린다. 그래서 **가장 흔한 톤에서
+# 크게 벗어난 표본은 버린다** — 배경은 테두리의 압도적 다수라는 전제다.
+func _background(image: Image) -> Dictionary:
 	var w := image.get_width()
 	var h := image.get_height()
-	var samples := [
-		image.get_pixel(0, 0), image.get_pixel(w - 1, 0),
-		image.get_pixel(0, h - 1), image.get_pixel(w - 1, h - 1),
-	]
+
+	var samples: Array[Color] = []
+	# 링을 촘촘히 다 볼 필요는 없다. 큰 그림에서 비용만 든다.
+	var step: int = maxi(1, int(round(float(maxi(w, h)) / 400.0)))
+	for x in range(0, w, step):
+		samples.append(image.get_pixel(x, 0))
+		samples.append(image.get_pixel(x, h - 1))
+	for y in range(0, h, step):
+		samples.append(image.get_pixel(0, y))
+		samples.append(image.get_pixel(w - 1, y))
+
+	# 1차 평균으로 대략의 배경을 잡는다.
+	var rough := _mean(samples)
+
+	# 인물 픽셀 걸러내기: 대략의 배경에서 많이 벗어난 표본을 버린다.
+	var kept: Array[Color] = []
+	for c in samples:
+		if _distance(c, rough) <= OUTLIER_DISTANCE:
+			kept.append(c)
+	if kept.is_empty():
+		kept = samples
+
+	var mean := _mean(kept)
+
+	# 남은 표본의 최대 편차가 곧 배경의 퍼짐이다. 여기에 여유를 더해 허용 오차로 쓴다.
+	var spread := 0.0
+	for c in kept:
+		spread = maxf(spread, _distance(c, mean))
+
+	return {
+		"color": mean,
+		"tolerance": spread + float(BG_TOLERANCE) / 255.0,
+		"spread": spread,
+		"dropped": samples.size() - kept.size(),
+	}
+
+
+func _mean(colors: Array[Color]) -> Color:
+	if colors.is_empty():
+		return Color(1, 1, 1, 1)
 	var r := 0.0
 	var g := 0.0
 	var b := 0.0
-	for s in samples:
-		r += s.r
-		g += s.g
-		b += s.b
-	return Color(r / samples.size(), g / samples.size(), b / samples.size(), 1.0)
+	for c in colors:
+		r += c.r
+		g += c.g
+		b += c.b
+	var n := float(colors.size())
+	return Color(r / n, g / n, b / n, 1.0)
+
+
+# 채널별 최대 차이. 평균 거리보다 이쪽이 "한 채널만 튄 색"을 제대로 잡는다.
+func _distance(a: Color, b: Color) -> float:
+	return maxf(maxf(absf(a.r - b.r), absf(a.g - b.g)), absf(a.b - b.b))
