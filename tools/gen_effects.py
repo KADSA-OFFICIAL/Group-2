@@ -89,6 +89,7 @@ def _radial_triangle(
     length: float,
     half_width: float,
     color: str,
+    edge_color: str | None = None,
 ) -> None:
     import math
 
@@ -108,6 +109,8 @@ def _radial_triangle(
             (base_x - half_width * px, base_y - half_width * py),
         ],
         fill=color,
+        outline=edge_color,
+        width=1,
     )
 
 
@@ -123,7 +126,7 @@ def render_burst() -> list[Image.Image]:
     ellipse(draw, (56, 56, 72, 72), fill=CREAM)
     ellipse(draw, (12, 12, 116, 116), outline=HOSTILE, width=6)
     for angle in range(0, 360, 45):
-        _radial_triangle(draw, angle, 52, 10, 4, HOSTILE)
+        _radial_triangle(draw, angle, 52, 10, 4, HOSTILE, HOSTILE_DARK)
 
     draw = ImageDraw.Draw(frames[2])
     ellipse(draw, (2, 2, 126, 126), outline=HOSTILE_DARK, width=2)
@@ -150,6 +153,8 @@ def render_heal() -> list[Image.Image]:
     ellipse(draw, (10, 73, 54, 87), outline=POSITIVE, width=2)
     for x, length in stem_specs:
         line(draw, [(x, 78), (x, 78 - length)], POSITIVE_LIGHT, 2)
+        # A compact cap sharpens the rising direction without adding a sparkle motif.
+        draw.rectangle(_scaled_box((x - 1, 77 - length, x + 1, 79 - length)), fill=CREAM)
 
     draw = ImageDraw.Draw(frames[2])
     ellipse(draw, (10, 73, 54, 87), outline=POSITIVE_LIGHT, width=1)
@@ -176,6 +181,9 @@ def _taunt_hook(draw: ImageDraw.ImageDraw, angle_degrees: float) -> None:
     bend = (cx + 110 * ux + 5 * tx, cy + 110 * uy + 5 * ty)
     inner = (cx + 106 * ux, cy + 106 * uy)
     line(draw, [outer, bend, inner], LEAF, 3, joint="curve")
+    # Reinforce the elbow so the inward hook remains readable after world scaling.
+    bx, by = bend
+    draw.rectangle(_scaled_box((bx - 1, by - 1, bx + 1, by + 1)), fill=LEAF)
 
 
 # A fixed-diameter flash that exposes the exact one-shot taunt radius.
@@ -202,13 +210,13 @@ def render_taunt_ring() -> list[Image.Image]:
 
 
 RAGE_CRACKS = [
-    [(8, 43), (18, 43), (18, 35)],
-    [(73, 34), (82, 34), (82, 22)],
-    [(14, 97), (23, 88), (23, 78)],
-    [(72, 92), (83, 92), (83, 105)],
-    [(9, 64), (21, 64), (26, 59)],
-    [(70, 65), (82, 65), (88, 59)],
-    [(48, 0), (48, 25), (40, 33)],
+    [(7, 43), (17, 43), (17, 35), (22, 30)],
+    [(74, 35), (82, 35), (82, 25), (87, 20)],
+    [(13, 98), (22, 89), (22, 79), (28, 73)],
+    [(71, 91), (82, 91), (82, 103), (88, 109)],
+    [(8, 65), (19, 65), (25, 59), (30, 59)],
+    [(69, 65), (81, 65), (87, 59), (92, 59)],
+    [(48, 0), (48, 24), (41, 31), (41, 36)],
 ]
 
 
@@ -273,6 +281,11 @@ def _draw_shell_plates(
                 outline=color,
                 width=width,
             )
+            # One restrained inner bevel adds plate depth while keeping every face hollow.
+            if index in (4, 5, 0):
+                a = SHELL_INNER[index]
+                b = SHELL_INNER[next_index]
+                line(draw, [a, b], CREAM, 1)
         if seams:
             for x, y in SHELL_INNER:
                 draw.rectangle(_scaled_box((x - 1, y - 1, x + 2, y + 2)), fill=CREAM)
@@ -323,4 +336,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
