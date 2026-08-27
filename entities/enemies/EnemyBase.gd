@@ -158,9 +158,17 @@ func is_ai_active() -> bool:
 func _physics_process(delta: float) -> void:
 	if _attack_cooldown_left > 0.0:
 		_attack_cooldown_left -= delta
+	if _dash_cooldown_left > 0.0:
+		_dash_cooldown_left -= delta
 
 	# 밀려나는 중이면 추격 AI 보다 우선한다(#336). 밀리면서 동시에 다가오면 넉백이 없는 것과 같다.
 	if _tick_knockback(delta):
+		_update_walk_animation()
+		return
+
+	# 대시 중이면 추격 AI 를 돌지 않는다(#376). 돌면 같은 프레임에 velocity 가
+	# 걷는 속도로 덮여 대시가 사라진다.
+	if _tick_dash(delta):
 		_update_walk_animation()
 		return
 
@@ -185,7 +193,11 @@ func _process_ai() -> void:
 
 	_target = _resolve_target()
 	if _target == null:
-		velocity = Vector2.ZERO
+		# 쫓을 대상이 없다. 점령전에서 수비 자리를 벗어나 있으면 걸어서 돌아간다(#386).
+		# 그 밖에는 지금까지처럼 제자리에 선다.
+		velocity = _return_velocity()
+		if velocity != Vector2.ZERO:
+			move_and_slide()
 		return
 
 	# 사거리 안이면 멈춰서 때리고, 밖이면 직선으로 접근한다.
@@ -194,9 +206,111 @@ func _process_ai() -> void:
 		velocity = Vector2.ZERO
 		try_attack()
 	else:
+		# 사거리 밖이면 먼저 대시를 시도한다(#376). 대시를 저작하지 않은 적은
+		# 여기서 false 가 나와 예전처럼 걸어서 접근한다.
+		if try_dash():
+			return
 		velocity = global_position.direction_to(_target.global_position) * get_move_speed()
 
+	# 점령전(#386): 어떤 이유로든 수비 반경 밖으로 걸어 나가지 않는다.
+	velocity = _clamp_to_defend_area(velocity)
+
 	move_and_slide()
+
+
+# ===== 대시 (Dash, #376) =====
+#
+# 평타 사거리 **밖**에 대상이 있으면 걸어가는 대신 돌진하고, 지나가는 길에 있는 파티원을 때린다.
+#
+# 왜 필요한가: 느린 적은 사거리 밖에서 계속 쫓기만 해서 플레이어가 뒷걸음질만 쳐도 안전하다.
+# 대시는 그 거리를 한 번에 지운다.
+#
+# 넉백과 같은 규약을 쓴다 — 위치를 직접 대입하지 않고 velocity + move_and_slide 로 미끄러진다.
+# 대입하면 지형을 통과해 벽 안에 박힌다.
+
+# 남은 대시 시간(초). 0 보다 크면 대시 중이다.
+var _dash_left: float = 0.0
+# 다음 대시까지 남은 쿨타임(초).
+var _dash_cooldown_left: float = 0.0
+# 대시 방향. 시작할 때 정하고 도중에 바꾸지 않는다 — 유도 대시는 피할 수 없다.
+var _dash_direction: Vector2 = Vector2.ZERO
+# 이번 대시에서 이미 때린 대상. 한 대시에 같은 사람을 여러 프레임 때리지 않는다.
+var _dash_hit: Array = []
+
+
+# 지금 대시 중인가.
+func is_dashing() -> bool:
+	return _dash_left > 0.0
+
+
+# 대시를 저작한 적인가.
+func can_dash() -> bool:
+	return data != null and data.dash_speed > 0.0 and data.dash_duration > 0.0
+
+
+# 대시를 시작할 거리. 저작하지 않았으면 평타 사거리를 쓴다
+# — "평타 사거리 밖이면 대시" 가 기본 계약이다.
+func get_dash_trigger_distance() -> float:
+	if data == null:
+		return 0.0
+	if data.dash_trigger_distance > 0.0:
+		return data.dash_trigger_distance
+	return data.attack_range
+
+
+# 조건이 맞으면 대시를 시작한다. 시작했으면 true.
+func try_dash() -> bool:
+	if not can_dash() or is_dashing() or _dash_cooldown_left > 0.0:
+		return false
+	if not _is_valid_target(_target):
+		return false
+	# 기절 등 CONTROL 효과 중에는 대시하지 않는다. 평타와 같은 규칙이다.
+	if StatusEffectSystem.blocks_movement(self):
+		return false
+	if global_position.distance_to(_target.global_position) <= get_dash_trigger_distance():
+		return false
+
+	_dash_direction = global_position.direction_to(_target.global_position)
+	_dash_left = data.dash_duration
+	_dash_cooldown_left = data.dash_cooldown
+	_dash_hit.clear()
+	return true
+
+
+# 대시 한 틱. 대시 중이면 true 를 돌려 추격 AI 를 건너뛰게 한다.
+func _tick_dash(delta: float) -> bool:
+	if _dash_left <= 0.0:
+		return false
+
+	_dash_left -= delta
+	velocity = _dash_direction * data.dash_speed
+	# 대시로도 수비 반경을 넘지 않는다(#386). 대상이 반경 안이어도 돌진은 그 대상을
+	# 지나쳐 나갈 수 있다.
+	velocity = _clamp_to_defend_area(velocity)
+	move_and_slide()
+	_apply_dash_hits()
+
+	if _dash_left <= 0.0:
+		_dash_left = 0.0
+		velocity = Vector2.ZERO
+	return true
+
+
+# 지금 자리 주변의 파티원을 때린다. 한 대시에 대상당 한 번뿐이다.
+#
+# 매 프레임 자리를 다시 보는 이유: 판정을 시작·끝점의 선분으로 한 번만 잡으면, 대시 도중에
+# 경로로 걸어 들어온 사람이 통과해 버린다. 지나가는 길에 있으면 맞는 것이 이 기술의 계약이다.
+func _apply_dash_hits() -> void:
+	var damage := int(round(get_stats().get_physical_attack() * data.dash_damage_multiplier))
+	if damage <= 0:
+		return
+	for node in _living_party_members():
+		if _dash_hit.has(node):
+			continue
+		if global_position.distance_to(node.global_position) > data.dash_hit_radius:
+			continue
+		_dash_hit.append(node)
+		_hit_one(node, damage, &"")
 
 
 # ===== 넉백 (Knockback, #336) =====
@@ -305,6 +419,99 @@ func _resolve_target() -> Node2D:
 	return _find_nearest_party_member()
 
 
+# ===== 거점 수비 (Defend, #386) =====
+#
+# 점령전에서 적은 **존을 지키는 병력**이다. 존이 있는 스테이지에서만 켜지므로
+# 소탕 전용 스테이지의 적 행동은 하나도 바뀌지 않는다(존이 없으면 anchor 가 null 이다).
+#
+# 왜 필요한가: 이 규칙이 없으면 파티원 한 명이 반대편으로 달리는 것만으로 수비 병력
+# 전체가 존을 비운다. 남은 둘이 빈 존을 밟으면 그대로 이기므로, 점령전의 최적해가
+# "적을 최대한 멀리 끌고 가기"가 되고 #377 의 보완 규칙(존 안의 적이 진행을 막는다)이
+# 무력해진다.
+#
+# 기준을 **적 자신이 아니라 존**으로 잡는 것이 핵심이다. 적 기준으로 재면 한 걸음씩
+# 끌려 나가 결국 같은 문제가 된다.
+#
+# 세 지점에 걸린다:
+#   대상 선정  — 반경 밖의 파티원은 쫓지 않는다(_is_valid_target). 도발은 예외다.
+#   이동       — 반경을 넘는 성분을 제거한다(_clamp_to_defend_area). 경계를 따라서는 움직인다.
+#   복귀       — 이미 밖에 있으면 걸어서 돌아온다(_return_velocity).
+
+# 이 적이 지킬 존. 가장 가까운 것을 고르고, 존이 없는 스테이지면 null 이다.
+#
+# 매 틱 다시 찾는 이유: 존은 적보다 **나중에** 스폰된다(Stage.load_room 순서).
+# 한 번 캐시하면 첫 틱에 null 을 잡고 그대로 굳는다. 존은 한두 개라 비용도 무의미하다.
+func _defend_anchor() -> Node2D:
+	var nearest: Node2D = null
+	var nearest_distance := INF
+	for node in get_tree().get_nodes_in_group(CaptureZone.GROUP):
+		if not is_instance_valid(node):
+			continue
+		var zone := node as Node2D
+		if zone == null:
+			continue
+		var distance := global_position.distance_to(zone.global_position)
+		if distance < nearest_distance:
+			nearest_distance = distance
+			nearest = zone
+	return nearest
+
+
+# 그 존의 수비 반경. 존별 저작값이 없으면 공통 튜닝을 따른다.
+func _defend_radius(anchor: Node2D) -> float:
+	if anchor == null:
+		return 0.0
+	var zone_data = anchor.get("data")
+	if zone_data != null and zone_data.defend_radius > 0.0:
+		return zone_data.defend_radius
+	return CombatConfig.tuning.capture_defend_radius
+
+
+# 수비 반경 밖에 있으면 존 쪽으로 걸어가는 속도. 그 외에는 정지(Vector2.ZERO).
+func _return_velocity() -> Vector2:
+	var anchor := _defend_anchor()
+	if anchor == null:
+		return Vector2.ZERO
+	var leash := _defend_radius(anchor)
+	if leash <= 0.0:
+		return Vector2.ZERO
+	if global_position.distance_to(anchor.global_position) <= leash:
+		return Vector2.ZERO
+	return global_position.direction_to(anchor.global_position) * get_move_speed()
+
+
+# 이동 속도에서 **반경 바깥으로 나가는 성분**만 제거한다.
+#
+# 왜 통째로 멈추지 않는가: 경계에서 정지시키면 대상이 경계 근처에 있을 때 적이 굳는다.
+# 바깥 성분만 지우면 경계를 따라 옆으로 미끄러지며 갈 수 있는 만큼 다가간다.
+#
+# 이미 밖에 있을 때는 제한하지 않는다 — 그 경우는 복귀가 우선이고, 여기서 막으면
+# 돌아오는 이동까지 지워진다.
+func _clamp_to_defend_area(desired: Vector2) -> Vector2:
+	if desired == Vector2.ZERO:
+		return desired
+	var anchor := _defend_anchor()
+	if anchor == null:
+		return desired
+	var leash := _defend_radius(anchor)
+	if leash <= 0.0:
+		return desired
+
+	var outward := anchor.global_position.direction_to(global_position)
+	var distance := anchor.global_position.distance_to(global_position)
+	if distance > leash:
+		return desired
+	if desired.dot(outward) <= 0.0:
+		# 존 쪽으로 가는 이동이다. 제한할 이유가 없다.
+		return desired
+	# 이번 틱의 이동으로 경계를 넘지 않으면 그대로 둔다.
+	var outward_step := desired.dot(outward) * get_physics_process_delta_time()
+	if distance + outward_step <= leash:
+		return desired
+	# 넘어간다면 바깥 성분만 제거한다(경계를 따라 미끄러진다).
+	return desired - outward * desired.dot(outward)
+
+
 # 도발이 강제하는 대상. 없으면 null.
 #
 # _is_valid_target() 을 쓰지 않는다: 그 함수는 **탐지 범위 안**인지도 보는데, 도발은
@@ -348,7 +555,20 @@ func _is_valid_target(node) -> bool:
 	var alive = target.get("is_alive")
 	if alive != null and not bool(alive):
 		return false
-	return global_position.distance_to(target.global_position) <= data.detection_range
+	if global_position.distance_to(target.global_position) > data.detection_range:
+		return false
+
+	# 점령전(#386): 수비 반경 밖의 대상은 쫓지 않는다.
+	#
+	# 적 자신이 아니라 **존을 기준으로** 재는 것이 핵심이다. 적 기준으로 재면 한 걸음씩
+	# 끌려 나가 결국 존을 비우게 된다 — 지금 문제가 그것이다.
+	# (도발은 이 판정을 거치지 않는다. _taunt_target() 이 먼저 결정한다.)
+	var anchor := _defend_anchor()
+	if anchor != null:
+		var leash := _defend_radius(anchor)
+		if leash > 0.0 and anchor.global_position.distance_to(target.global_position) > leash:
+			return false
+	return true
 
 
 # 탐지 범위 안에서 가장 가까운 살아 있는 파티 멤버를 반환한다. 없으면 null.
@@ -421,10 +641,11 @@ func try_attack() -> bool:
 	if data != null and data.projectile_scene != null:
 		_fire_projectile(damage, effect_id)
 	else:
-		_target.take_damage(damage, self)
-		# 대상이 그 사이 죽었으면 효과를 걸지 않는다.
-		if effect_id != &"" and is_instance_valid(_target) and _target.get("is_alive") != false:
-			StatusEffectSystem.apply(_target, effect_id, self)
+		# 대상 자리를 먼저 읽어 둔다 — take_damage 가 대상을 죽이면 위치를 못 읽는다.
+		var origin: Vector2 = _target.global_position
+		_hit_one(_target, damage, effect_id)
+		# 광역 평타면 그 자리 반경 안의 나머지도 함께 맞는다(반경 0 이면 아무 일도 없다).
+		_hit_around(origin, damage, effect_id, _target)
 
 	if is_charged:
 		_charge_count = 0
@@ -432,6 +653,47 @@ func try_attack() -> bool:
 		_charge_count += 1
 
 	return true
+
+
+# 파티원 하나를 때리고, 살아 있으면 상태 효과를 건다.
+#
+# 피해와 효과가 한 자리에 있는 이유: 둘을 떼어 놓으면 "죽은 대상에게 효과를 걸지 않는다"는
+# 규칙을 부르는 쪽마다 다시 써야 하고, 한 곳만 빠뜨리는 순간이 온다.
+func _hit_one(target: Node, damage: int, effect_id: StringName) -> void:
+	if not _is_valid_target(target) or not target.has_method("take_damage"):
+		return
+	target.take_damage(damage, self)
+	# 대상이 그 사이 죽었으면 효과를 걸지 않는다.
+	if effect_id != &"" and is_instance_valid(target) and target.get("is_alive") != false:
+		StatusEffectSystem.apply(target, effect_id, self)
+
+
+# 한 지점 주변의 파티원 전원을 때린다 (#376).
+#
+# `exclude` 는 이미 맞은 대상이다 — 광역 평타는 노린 한 명을 먼저 때리고 나머지를 훑으므로,
+# 그 한 명이 두 번 맞으면 안 된다.
+#
+# 반경이 0 이면 아무 일도 하지 않는다. 그래서 이 필드를 저작하지 않은 기존 적은
+# 예전처럼 단일 대상 그대로다.
+func _hit_around(origin: Vector2, damage: int, effect_id: StringName, exclude: Node = null) -> void:
+	var radius: float = data.basic_attack_aoe_radius if data != null else 0.0
+	if radius <= 0.0:
+		return
+	for node in _living_party_members():
+		if node == exclude:
+			continue
+		if origin.distance_to(node.global_position) > radius:
+			continue
+		_hit_one(node, damage, effect_id)
+
+
+# 살아 있는 파티원 전부. 그룹 이름은 PartySystem 이 단일 출처다.
+func _living_party_members() -> Array:
+	var result: Array = []
+	for node in get_tree().get_nodes_in_group(PartySystem.MEMBER_GROUP):
+		if _is_valid_target(node):
+			result.append(node)
+	return result
 
 
 # 대상 방향으로 투사체를 스폰한다 (#214).

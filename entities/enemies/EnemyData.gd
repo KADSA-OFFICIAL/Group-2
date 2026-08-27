@@ -123,6 +123,46 @@ class_name EnemyData
 ## 정의 출처는 data/status_effects/*.tres (예: &"stun").
 @export var charged_attack_effect: StringName = &""
 
+@export_group("광역 평타 (AoE basic attack)")
+## 평타가 **대상 자리 주변**에 함께 들어가는 반경(px). 0 이면 대상 한 명만 맞는다
+## (기존 동작 그대로 — 이 필드가 없던 .tres 도 그대로 로드된다).
+##
+## 왜 시전자가 아니라 **대상 자리** 기준인가: 사거리 안의 한 명을 노려 내리치는 동작이라,
+## 판정의 중심은 때리는 자리다. 시전자 중심으로 잡으면 사거리 밖 뒤쪽 파티원까지 맞는다.
+##
+## 강화 평타(위 그룹)와 함께 켜지면 **강화된 피해와 상태 효과가 반경 안 전원에게** 간다.
+@export var basic_attack_aoe_radius: float = 0.0
+
+@export_group("대시 (Dash)")
+## 대시 이동 속도(px/s). 0 이면 대시하지 않는다(기존 적 전부).
+##
+## 무엇을 위한 것인가: 느린 적은 사거리 밖에서 계속 쫓기만 해서 플레이어가 뒷걸음질만
+## 쳐도 안전하다. 대시는 그 거리를 한 번에 지우고, 지나가는 길에 있는 파티원을 때린다.
+@export var dash_speed: float = 0.0
+## 대시가 유지되는 시간(초). 속도 x 시간이 실제로 이동하는 거리다.
+@export var dash_duration: float = 0.35
+## 다음 대시까지의 쿨타임(초). 없으면 사거리 밖에 있는 동안 계속 붙어 버린다.
+@export var dash_cooldown: float = 6.0
+## 대시를 시작할 최소 거리(px). 0 이면 attack_range 를 쓴다 —
+## "평타 사거리 밖이면 대시" 가 기본 계약이다.
+@export var dash_trigger_distance: float = 0.0
+## 대시 경로 판정 반경(px). 이 안에 든 파티원이 맞는다.
+@export var dash_hit_radius: float = 80.0
+## 대시 피해 배수(일반 평타 대비). 방어 적용은 대상의 take_damage 가 한다.
+@export var dash_damage_multiplier: float = 1.0
+
+@export_group("특별 스킬 (Phase skills)")
+## 최대 체력의 이 비율만큼 깎일 때마다 특별 스킬을 한 번 쓴다. 0 이면 비활성.
+##
+## 예) 0.25 -> 75% / 50% / 25% 선에서 각각 한 번, 총 3회.
+## 같은 선에서 두 번 터지지 않는다 — 지나간 선은 소모된다.
+@export var phase_skill_hp_step: float = 0.0
+## 특별 스킬 목록. 임계선을 지날 때마다 **순서대로 돌려 가며** 쓴다.
+##
+## 실제 동작(준비자세·도약 수·판정 모양)은 적 스크립트가 갖는다. 여기 SkillData 는
+## **수치의 출처**다 — 준비 시간·판정 크기·피해 비율을 .tres 에서 읽는다.
+@export var phase_skills: Array[SkillData] = []
+
 # ----- 확장 가이드 (Extensibility) -----
 # 새 항목은 위 섹션 중 알맞은 곳에 @export 필드를 "기본값과 함께" 추가한다.
 # 기본값이 있으면 기존 .tres는 누락 필드를 기본값으로 로드하므로 호환이 유지된다.

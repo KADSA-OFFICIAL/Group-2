@@ -26,6 +26,11 @@ signal stage_started(stage_name)
 signal stage_completed(stage_name)   # 승리 — 스테이지의 승리 조건을 채웠다
 @warning_ignore("unused_signal")
 signal stage_failed(stage_name)      # 패배 — 파티가 전멸했다
+# 웨이브가 놓였다(#375). index 는 0 부터, total 은 그 스테이지의 웨이브 수다.
+# wave 는 StageWave — 받는 쪽이 label/is_boss 를 읽는다. 시그널 인자를 늘리지 않으려고
+# 리소스를 통째로 넘긴다(연출이 늘 때마다 시그널을 고치면 받는 쪽이 전부 깨진다).
+@warning_ignore("unused_signal")
+signal stage_wave_started(stage_name, index: int, total: int, wave: StageWave)
 
 # Currency signals
 @warning_ignore("unused_signal")

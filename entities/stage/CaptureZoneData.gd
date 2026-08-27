@@ -29,6 +29,12 @@ class_name CaptureZoneData
 # 존마다 다르게 하고 싶을 때만 저작한다 — 기본은 게임 공통 값 하나여야 한다.
 @export var hold_seconds: float = 0.0
 
+# 이 존을 지키는 적이 벗어나지 않는 반경(px). **0 이면 CombatTuning.capture_defend_radius 를 따른다.**
+#
+# 적 AI 가 이 값을 읽어 대상 선정·이동·복귀를 제한한다(#386). 존 반경(radius)보다 커야
+# 의미가 있다 — 같거나 작으면 적이 존 밖으로 한 걸음도 나오지 못해 유인 자체가 사라진다.
+@export var defend_radius: float = 0.0
+
 
 # 실제로 쓸 확보 시간. 저작값이 없으면 공통 튜닝을 따른다.
 #
@@ -50,6 +56,11 @@ func validate() -> Array[String]:
 	if radius <= 0.0:
 		problems.append("radius는 0보다 커야 합니다: %.1f" % radius)
 	# 음수는 저작 실수다. 0 은 "공통 튜닝을 따른다"는 뜻이라 유효하다.
+	if defend_radius < 0.0:
+		problems.append("defend_radius는 0 이상이어야 합니다(0 = 공통 튜닝): %.1f" % defend_radius)
+	if defend_radius > 0.0 and defend_radius < radius:
+		problems.append("defend_radius(%.1f)가 존 반경(%.1f)보다 작습니다 — 적이 존 밖으로 나올 수 없습니다."
+			% [defend_radius, radius])
 	if hold_seconds < 0.0:
 		problems.append("hold_seconds는 0 이상이어야 합니다(0 = 공통 튜닝): %.1f" % hold_seconds)
 	return problems
