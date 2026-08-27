@@ -1023,6 +1023,74 @@ func _fire_skill_effects(skill: SkillData, gauge_ratio: float) -> void:
 		_cast_aura_zone(skill)
 	if skill.ally_effect_id != &"":
 		_cast_ally_effect(skill)
+	if skill.is_cone():
+		_cast_cone_skill(skill)
+
+
+# ===== 부채꼴 (Cone) =====
+
+## 부채꼴이 지나간 자리를 잠깐 그리는 표시. 판정은 시전 순간에 이미 끝난다.
+const CONE_EFFECT_SCENE := preload("res://entities/combat/ConeEffect.tscn")
+
+## 낙뢰가 떨어진 자리를 잠깐 그리는 표시. 마찬가지로 판정하지 않는다.
+const STRIKE_EFFECT_SCENE := preload("res://entities/combat/StrikeEffect.tscn")
+
+
+# 조준 방향으로 부채꼴 판정을 낸다(#336).
+#
+# 빔(_cast_beam_skill)과 같은 자리·같은 방향 출처를 쓰지만 판정 모양이 다르다:
+# 빔은 축에서의 **수직 거리**로 자르고, 부채꼴은 축과의 **각도**로 자른다.
+# 그래서 부채꼴은 멀수록 넓어진다 — 붙어 있는 적 무리를 한 번에 치우는 데 맞는 모양이다.
+#
+# 관통이다 — 앞의 적이 뒤의 적을 막아 주지 않는다.
+func _cast_cone_skill(skill: SkillData) -> void:
+	var forward := get_aim_direction()
+	if forward == Vector2.ZERO:
+		forward = _facing_direction()
+	forward = forward.normalized()
+
+	var half_angle := skill.get_cone_half_angle()
+	var damage := skill.get_effective_power(get_stats().get_goddess_skill_boost())
+	var origin := global_position
+
+	_spawn_cone_effect(origin, forward, skill)
+
+	for enemy in GameManager.get_all_enemies().duplicate():
+		if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive:
+			continue
+
+		# 타입을 명시한다: enemy 가 타입 없는 Variant 라 := 로는 추론이 되지 않는다.
+		var offset: Vector2 = enemy.global_position - origin
+		if offset.length() > skill.cone_length:
+			continue
+		# 정확히 겹쳐 있으면 각도를 잴 수 없다. 붙어 있는 것이므로 맞는 것으로 본다.
+		if offset != Vector2.ZERO and absf(forward.angle_to(offset)) > half_angle:
+			continue
+
+		if damage > 0:
+			enemy.take_damage(damage, self)
+		# 죽었으면 밀 대상도, 걸 효과도 없다.
+		if not is_instance_valid(enemy) or not enemy.is_alive:
+			continue
+		if skill.knockback_distance > 0.0 and enemy.has_method("apply_knockback"):
+			enemy.apply_knockback(origin, skill.knockback_distance)
+		if skill.apply_effect_id != &"":
+			StatusEffectSystem.apply(enemy, skill.apply_effect_id, self)
+
+	# 노린 대상이 하나로 없다. 아군 AI 는 이 신호에서 최근접 적을 스스로 고른다(#257).
+	if is_controlled() and EventBus:
+		EventBus.player_attacked.emit(self, null)
+
+
+func _spawn_cone_effect(origin: Vector2, forward: Vector2, skill: SkillData) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+	var fx = CONE_EFFECT_SCENE.instantiate()
+	host.add_child(fx)
+	fx.global_position = origin
+	fx.setup(forward, skill.cone_length, skill.get_cone_half_angle(),
+		data.tint if data != null else Color.WHITE)
 
 
 # ===== 지대 (Aura zone) =====
@@ -1657,6 +1725,14 @@ func try_attack() -> bool:
 		_gain_stack()
 		return true
 
+	# 낙뢰 평타(#336): 날아가지 않고 **대상 자리에** 즉시 떨어진다. 그 원 안의 적이 전부 맞는다.
+	if data != null and data.has_strike_basic_attack():
+		# 패시브 광역이 대상을 먼저 죽였을 수 있다. 그때는 떨어뜨릴 자리가 없다.
+		if is_instance_valid(target) and target.is_alive:
+			_resolve_strike_attack(target)
+		_gain_stack()
+		return true
+
 	# 원거리 평타: 탄을 쏘고 끝난다. 피해·처형·피흡·표식은 탄이 닿았을 때 걸린다.
 	if data != null and data.has_projectile_basic_attack():
 		_fire_basic_attack_projectile(target, impact_passive)
@@ -1716,6 +1792,11 @@ func _resolve_attack_hit(target: Node, damage: int) -> void:
 	# 표식 충전은 **파티 전체**의 평타로 이뤄진다(탱커 본인만이 아니다).
 	_charge_mark(target)
 
+	# 평타에 실린 상태 효과(#336). 평타 모양(근접/투사체/낙뢰)과 무관하게, **닿았으면** 걸린다.
+	# 여기 두는 이유는 이 함수의 계약과 같다 — 평타가 닿았을 때 일어나는 일의 단일 출처다.
+	if data != null and data.basic_attack_effect_id != &"":
+		StatusEffectSystem.apply(target, data.basic_attack_effect_id, self)
+
 
 # 평타 투사체를 쏜다.
 #
@@ -1770,6 +1851,42 @@ func _fire_basic_attack_projectile(target: Node, impact_passive: SkillData = nul
 
 # 평타 탄이 나갈 방향. 조준이 켜져 있으면 커서 쪽, 아니면 타겟 쪽이다.
 # 둘 다 없으면 0 벡터를 돌려주고, 부르는 쪽이 발사를 접는다.
+# 낙뢰 평타 한 번(#336). 대상 **자리**에 원을 떨어뜨리고 그 안의 적을 전부 때린다.
+#
+# 원의 중심이 시전자가 아니라 **대상**이다: 원거리에서 떨어뜨리는 것이므로 발밑에서 터지면
+# 사거리의 의미가 없다(태희 4타 광역이 착탄 지점에서 터지는 것과 같은 이유).
+#
+# 반경 안 적 하나하나를 _resolve_attack_hit() 에 통과시킨다 — 그래서 처형·피흡·표식·
+# 평타 상태 효과가 전원에게 각각 걸린다. 광역이 된 평타는 맞은 적 하나하나에게 평타를 넣은 것이다.
+#
+# 대상 자신도 그 원 안에 있으므로 따로 때리지 않는다(중복 타격 방지).
+func _resolve_strike_attack(target: Node) -> void:
+	var center: Vector2 = target.global_position
+	var radius: float = data.basic_attack_strike_radius
+	var damage := get_stats().get_physical_attack()
+
+	_spawn_strike_effect(center, radius)
+
+	# 순회 중 적이 죽어(queue_free) 목록이 흔들릴 수 있으므로 사본을 돈다.
+	for enemy in GameManager.get_all_enemies().duplicate():
+		if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive:
+			continue
+		if center.distance_to(enemy.global_position) > radius:
+			continue
+		_resolve_attack_hit(enemy, damage)
+
+
+# 낙뢰가 떨어진 자리를 잠깐 보여 준다. **판정하지 않는다**(BeamEffect 와 같은 규약).
+func _spawn_strike_effect(at_global: Vector2, radius: float) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+	var fx = STRIKE_EFFECT_SCENE.instantiate()
+	host.add_child(fx)
+	fx.global_position = at_global
+	fx.setup(radius, data.tint if data != null else Color.WHITE)
+
+
 func _basic_attack_direction(target: Node) -> Vector2:
 	if _uses_aimed_fire():
 		return get_aim_direction()
@@ -2180,6 +2297,13 @@ func _find_attack_target() -> Node:
 		return null
 	return nearest
 
+# 사거리 제한이 풀렸을 때 쓰는 값(px, #336).
+#
+# 한 방(Stage1_1.load_room)의 크기를 훨씬 넘는 거리라 "제한 없음"과 구분되지 않는다.
+# INF 가 아닌 유한값인 이유는 get_attack_range() 주석 참고.
+const UNLIMITED_ATTACK_RANGE: float = 100000.0
+
+
 # 이 반경 안에 살아 있는 적이 하나라도 있는가(#328).
 #
 # 평타 변형 창이 "이번 평타가 나갈 수 있는가"를 판단할 때 쓴다. 대상을 하나 고르지 않는 이유:
@@ -2200,6 +2324,14 @@ func _has_enemy_within(radius: float) -> bool:
 # 캐릭터 정의가 값을 갖고 있으면 그쪽이 우선이다(원거리 평타는 씬 노드보다 훨씬 멀리 닿는다).
 # 없으면 지금까지처럼 씬의 AttackArea2D 위치를 기준으로 삼는다.
 func get_attack_range() -> float:
+	# 사거리 제한 해제(#336). 켜져 있으면 거리 판정이 사실상 사라진다 —
+	# 살아 있는 적이 있으면 어디에 있든 평타가 나간다.
+	#
+	# INF 를 쓰지 않고 아주 큰 수를 쓰는 이유: 이 값이 distance 비교뿐 아니라 뺄셈·곱셈에
+	# 들어갈 수 있는데(HUD 표시 등), INF 는 그 자리에서 NaN 을 만든다.
+	if StatusEffectSystem.grants_unlimited_attack_range(self):
+		return UNLIMITED_ATTACK_RANGE
+
 	if data != null and data.basic_attack_range > 0.0:
 		return data.basic_attack_range
 	var area := get_node_or_null("AttackArea2D")

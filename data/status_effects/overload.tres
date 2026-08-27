@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 0
+stacking = 0
+max_stacks = 1
+effect_id = &"overload"
+display_name = "과부하"
+description = "ranged_tank 의 E 가 **자신에게만** 거는 자기 강화의 첫 고리(#336). 이 효과 자신은 **공속 +80%** 다. 사거리 제한 해제는 동반 효과 overload_reach 가 갖는다 — 한 StatusEffectData 의 kind 는 하나이고, 공속은 STAT_MOD(수치)이지만 사거리 해제는 EMPOWER(분기)다. 둘의 duration 이 모두 5.0 인 것은 우연이 아니다: 해제는 연쇄되지 않고 각자 만료되므로, 함께 시작한 상태가 함께 끝나려면 같은 값이어야 한다. 공속이 오르면 낙뢰 평타의 0.3초 기절 빈도도 함께 올라간다 — 이 스킬이 딜 강화이면서 동시에 CC 강화인 이유다. is_debuff = false. 중첩은 REFRESH(세기가 누적되면 공속이 무한히 오른다). **5초는 [확정 스펙]**이고 공속 +80% 는 [임시값]이다 — 하랑·도발의 +200% 보다 낮게 잡았다. 저쪽은 짧은 순간의 폭발이거나 대가가 딸린 것이고, 이쪽은 대가 없이 5초를 그냥 얻기 때문이다."
+is_debuff = false
+duration = 5.0
+also_apply_effect_id = &"overload_reach"
+stat_percent = {
+"attack_speed": 0.8
+}

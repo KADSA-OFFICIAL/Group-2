@@ -144,6 +144,11 @@ func _physics_process(delta: float) -> void:
 	if _attack_cooldown_left > 0.0:
 		_attack_cooldown_left -= delta
 
+	# 밀려나는 중이면 추격 AI 보다 우선한다(#336). 밀리면서 동시에 다가오면 넉백이 없는 것과 같다.
+	if _tick_knockback(delta):
+		_update_walk_animation()
+		return
+
 	_process_ai()
 
 	# AI가 꺼져 있어도(velocity가 계속 0) 호출한다. 그래야 정지 포즈로 고정된다.
@@ -177,6 +182,75 @@ func _process_ai() -> void:
 		velocity = global_position.direction_to(_target.global_position) * get_move_speed()
 
 	move_and_slide()
+
+
+# ===== 넉백 (Knockback, #336) =====
+#
+# 밀려나는 것은 **순간이동이 아니다.** 짧은 시간에 걸쳐 미끄러지며, 이동은 move_and_slide 를
+# 거치므로 벽을 통과하지 않는다. 위치를 직접 대입하면 지형 안으로 들어가 박힐 수 있다.
+#
+# 밀리는 동안 추격 AI 는 멈춘다(_physics_process 의 분기). 밀리면서 동시에 다가오면
+# 넉백이 아무 일도 하지 않은 것과 같아지기 때문이다.
+#
+# 기절(CONTROL)과 다르다: 기절은 **행동**을 막고, 넉백은 **위치**를 옮긴다. 둘은 함께 걸릴 수 있다.
+
+## 넉백이 진행되는 시간(초). 이 값이 짧을수록 세게 튕겨 나가는 것처럼 보인다.
+## 판정이 아니라 감각을 정하는 값이라 EnemyBase 가 갖는다(SkillData 는 거리만 정한다).
+const KNOCKBACK_DURATION: float = 0.15
+
+# 남은 넉백 시간(초). 0 이하면 밀리는 중이 아니다.
+var _knockback_left: float = 0.0
+
+# 넉백 속도(px/s). 거리 / KNOCKBACK_DURATION 으로 미리 구해 둔다.
+var _knockback_velocity: Vector2 = Vector2.ZERO
+
+
+# 이 적을 from_global 의 반대 방향으로 distance 만큼 밀어낸다.
+#
+# 방향의 출처가 **시전자 위치**인 이유는 SkillData.knockback_distance 주석에 있다 —
+# 조준 방향으로 일괄해서 밀면 옆에 있던 적이 옆으로 끌려간다.
+#
+# 겹쳐 맞으면 **덮어쓴다**(누적하지 않는다). 누적하면 두 번 맞은 적만 화면 밖으로 날아간다.
+func apply_knockback(from_global: Vector2, distance: float) -> void:
+	if not is_alive or distance <= 0.0:
+		return
+	var direction := from_global.direction_to(global_position)
+	if direction == Vector2.ZERO:
+		# 정확히 같은 자리에 겹쳐 있으면 밀 방향이 없다. 임의 방향으로 밀면
+		# 같은 입력이 매번 다른 결과를 내므로 아무 일도 하지 않는다.
+		return
+	_knockback_velocity = direction * (distance / KNOCKBACK_DURATION)
+	_knockback_left = KNOCKBACK_DURATION
+
+
+# 지금 밀려나는 중인가. HUD/검증이 읽는다.
+func is_knocked_back() -> bool:
+	return _knockback_left > 0.0
+
+
+# 넉백 한 틱. 밀리는 중이면 true 를 돌려주고, 부르는 쪽이 AI 를 건너뛴다.
+func _tick_knockback(delta: float) -> bool:
+	if _knockback_left <= 0.0:
+		return false
+
+	# 마지막 프레임은 **남은 시간만큼만** 움직인다.
+	#
+	# 그러지 않으면 넉백이 끝나는 프레임이 통째로 더해져 저작된 거리보다 멀리 날아간다 —
+	# 프레임이 길수록 더 멀리 가므로 같은 스킬이 기기마다 다른 거리를 민다.
+	# move_and_slide() 는 자기 델타를 쓰므로, 속도를 비율로 줄여 이동량을 맞춘다.
+	var step := minf(delta, _knockback_left)
+	_knockback_left -= delta
+	if delta > 0.0:
+		velocity = _knockback_velocity * (step / delta)
+	else:
+		velocity = Vector2.ZERO
+	move_and_slide()
+
+	if _knockback_left <= 0.0:
+		_knockback_left = 0.0
+		_knockback_velocity = Vector2.ZERO
+		velocity = Vector2.ZERO
+	return true
 
 
 # ===== 워크 애니메이션 (Walk animation) =====

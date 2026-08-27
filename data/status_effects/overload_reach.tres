@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 4
+stacking = 0
+max_stacks = 1
+effect_id = &"overload_reach"
+display_name = "과부하 - 무제한 사거리"
+description = "과부하(overload)의 둘째 고리(#336). 걸린 동안 **평타 사거리 제한이 사라진다** — Player.get_attack_range() 가 무제한을 돌려주므로, 살아 있는 적이 있으면 거리와 무관하게 낙뢰가 떨어진다. '사거리 +N%'(STAT_MOD)로 만들지 않은 이유: 사거리는 PlayerStats 의 스텟이 아니다. 그 값의 출처는 CharacterData.basic_attack_range 이거나 씬의 AttackArea2D 이고 버프 채널이 없다. 무엇보다 스펙이 '**제한 해제**'라 배율로는 표현되지 않는다 — 무한대를 곱으로 만들 수 없다. 숫자가 아니라 분기이므로 EMPOWER 다(흡혈·처형·무적과 같은 판단). 사거리만 푼다: 피해도 공속도 바꾸지 않는다. 공속은 첫 고리 overload 가 갖는다. 이 효과가 걸린 동안 이 인물의 평타는 '화면 안 어디든 떨어지는 낙뢰'가 되고, 대상 선정은 기존대로 최근접 적이다(Player._find_attack_target). is_debuff = false. 지속시간 5.0 은 overload 와 같아야 한다 — 해제가 연쇄되지 않으므로 함께 끝나려면 같은 값이어야 한다."
+is_debuff = false
+duration = 5.0
+grants_unlimited_attack_range = true

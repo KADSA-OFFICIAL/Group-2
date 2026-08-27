@@ -107,10 +107,45 @@ enum SecondaryRole {
 ## Player.tscn 을 복제해야 한다. 사거리는 캐릭터 정의가 갖는 편이 옳다.
 @export var basic_attack_range: float = 0.0
 
+## 평타가 **대상 자리에 떨어질 때** 함께 때리는 원의 반경(px). 0 이면 대상 하나만 때린다(#336).
+##
+## 세 번째 평타 모양이다. 앞의 둘과 무엇이 다른가:
+##   근접 즉시타격 — 사거리 안 대상 **하나**를 그 자리에서 때린다.
+##   투사체        — **날아가서** 맞는다. 그래서 빗나갈 수 있고 조준이 의미를 갖는다.
+##   낙뢰(이 필드) — 원거리인데 **날아가지 않는다.** 대상 자리에 즉시 떨어지고 그 원 안이 전부 맞는다.
+##
+## 투사체와 나눠 둔 이유: 날아가는 시간이 없으므로 **빗나가지 않는다.** 그 대신 판정이
+## 대상 자리에 묶여 있어 조준으로 더 많이 맞힐 수 없다 — 적이 뭉쳐 있을 때만 여러 명이 맞는다.
+## 투사체의 `aoe_at_projectile_impact`(태희 4타)와 겉모습이 비슷하지만 그쪽은 **탄이 멈춘 자리**이고
+## 이쪽은 **대상 자리**다. 탄이 없으므로 멈출 자리도 없다.
+##
+## 반경 안 적 하나하나가 평타를 맞은 것으로 처리된다 — 처형·피흡·표식이 각각 적용된다.
+@export var basic_attack_strike_radius: float = 0.0
+
+## 평타에 맞은 적에게 걸 상태 효과 id. 비어 있으면 피해만 준다(#336).
+##
+## 적 쪽에는 이미 같은 통로가 있었지만(`EnemyData.charged_attack_effect`) 플레이어 평타에는
+## 없었다. 스킬(`SkillData.apply_effect_id`)이 아니라 **캐릭터 정의**가 갖는 이유는 평타의
+## 다른 성질(근접/원거리/사거리)과 같다 — 이것은 "이 인물의 평타가 무엇인가"이지
+## 따로 발동하는 스킬이 아니다.
+##
+## 평타 모양과 무관하게 걸린다: 근접이든 투사체든 낙뢰든 **닿았으면** 걸린다.
+## 판정 지점이 `Player._resolve_attack_hit()`(평타 규칙의 단일 출처) 한 곳이기 때문이다.
+## 효과의 지속시간·내용은 `StatusEffectData` 가 소유한다.
+@export var basic_attack_effect_id: StringName = &""
+
 
 # 이 캐릭터의 평타가 날아가는 투사체인가.
 func has_projectile_basic_attack() -> bool:
 	return basic_attack_projectile_speed > 0.0
+
+
+# 이 캐릭터의 평타가 대상 자리에 떨어지는 낙뢰형인가(#336).
+#
+# 투사체와 동시에 켜지면 투사체가 이긴다(Player.try_attack 의 분기 순서).
+# 둘 다 저작하는 것은 지금 스펙에 없어서 validate() 가 막는다.
+func has_strike_basic_attack() -> bool:
+	return basic_attack_strike_radius > 0.0 and not has_projectile_basic_attack()
 
 # ===== 외형 (Appearance) =====
 @export var sprite_texture: Texture2D = null
@@ -347,6 +382,11 @@ func validate() -> Array[String]:
 		problems.append("basic_attack_projectile_speed가 있으면 basic_attack_projectile_range도 0보다 커야 합니다.")
 	if basic_attack_projectile_speed < 0.0 or basic_attack_projectile_range < 0.0 or basic_attack_range < 0.0:
 		problems.append("basic_attack_* 값은 0 이상이어야 합니다.")
+	if basic_attack_strike_radius < 0.0:
+		problems.append("basic_attack_strike_radius는 0 이상이어야 합니다.")
+	# 평타 모양은 하나여야 한다. 둘 다 켜면 어느 쪽이 나가는지가 코드의 분기 순서에 숨는다.
+	if basic_attack_strike_radius > 0.0 and basic_attack_projectile_speed > 0.0:
+		problems.append("basic_attack_strike_radius와 basic_attack_projectile_speed를 함께 쓸 수 없습니다(평타 모양은 하나다).")
 
 	# 워크 시트를 지정했다면 네 방향이 모두 있어야 한다.
 	# 하나라도 빠지면 그 방향으로 이동할 때 재생할 애니메이션이 없어 외형이 멈춘다.
