@@ -45,6 +45,7 @@ PartySystem="*res://autoload/PartySystem.gd"
 ScreenManager="*res://autoload/ScreenManager.gd"
 PlayerProfile="*res://autoload/PlayerProfile.gd"
 GuideSystem="*res://autoload/GuideSystem.gd"
+TutorialSystem="*res://autoload/TutorialSystem.gd"
 MusicSystem="*res://autoload/MusicSystem.gd"
 
 [display]

@@ -54,6 +54,20 @@ enum Type {
 @export var spawns: Array[StageSpawn] = []
 
 
+# ===== 강제 파티 (Forced party) — #345 =====
+#
+# 이 스테이지에서 **플레이어 편성을 덮어쓸** 파티. 비어 있으면(기본값) 플레이어가 편성한
+# 파티를 그대로 쓴다 — 지금까지 저작된 .tres 는 이 필드가 없어 그대로 동작한다.
+#
+# 왜 필요한가: 튜토리얼 스테이지(1-1)는 **가르치는 내용이 화면에서 실제로 일어나야** 한다.
+# 시너지 체인(표식 -> 기절 -> 처형)을 설명하려면 세 역할이 각 1카운트인 파티여야 하고
+# (설계 §8.2 — 순혈 3인 조합 하나뿐이다), 플레이어가 겸직 3명으로 들어오면
+# 시너지가 하나도 켜지지 않아 안내가 거짓말이 된다.
+#
+# 왜 id 만 담는가: 캐릭터 정의의 출처는 CharacterDatabase 다(SYSTEM_CONVENTIONS 기초 시스템).
+# 여기에 스텟·역할을 적으면 같은 데이터가 두 곳에 생긴다.
+@export var forced_party: Array[StringName] = []
+
 # ===== 보상 (Rewards) =====
 # 클리어 보상. 재화 id(String) -> 수량(int).
 # 키는 CurrencySystem.DEFAULT_CURRENCIES 의 재화 id 를 참조한다(단일 출처).
@@ -185,4 +199,23 @@ func validate() -> Array[String]:
 	# 소탕이 필요한데 적이 없으면 클리어할 수 없다(저작 실수).
 	if requires_clear() and spawns.is_empty():
 		problems.append("소탕이 필요한 스테이지인데 spawns가 비어 있습니다.")
+
+	# 강제 파티(#345). 편성이 거부되면 그 스테이지는 파티 없이 열려 아무것도 못 한다.
+	# 캐릭터 정의·편성 가능 여부의 출처는 CharacterDatabase 이므로 그쪽에 묻는다.
+	#
+	# 정원(PartySystem.PARTY_SIZE)은 여기서 보지 않는다: StageDatabase 가 PartySystem 보다
+	# 먼저 초기화되므로(project.godot autoload 순서) 로드 시점에 그 시스템이 아직 없다.
+	# 정원 초과는 PartySystem.set_party() 가 거부하며 경고를 남긴다.
+	var seen_members := {}
+	for id in forced_party:
+		if seen_members.has(id):
+			problems.append("forced_party에 중복 캐릭터가 있습니다: " + String(id))
+		seen_members[id] = true
+		if not CharacterDatabase.has_character(id):
+			problems.append("forced_party의 알 수 없는 character_id: " + String(id))
+			continue
+		var member := CharacterDatabase.get_character(id)
+		if member != null and not member.playable:
+			problems.append("forced_party에 편성할 수 없는 캐릭터가 있습니다: " + String(id))
+
 	return problems
