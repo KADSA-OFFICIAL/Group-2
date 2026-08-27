@@ -54,7 +54,7 @@ func _ready() -> void:
 
 	_make_projectile(viewport, NORMAL_FRAMES, Vector2(97, 642), "NORMAL  8x8", Color("e2c5f4"))
 	_make_projectile(viewport, CHARGED_FRAMES, Vector2(455, 642), "CHARGED  12x12 / STUN", Color("ffd27a"))
-	var note := _label("48x48 cells  /  8 fps  /  nearest 4x", 18, Color("9b929b"))
+	var note := _label("96x96 cells  /  8 fps  /  nearest 2x", 18, Color("9b929b"))
 	note.position = Vector2(845, 626)
 	viewport.add_child(note)
 

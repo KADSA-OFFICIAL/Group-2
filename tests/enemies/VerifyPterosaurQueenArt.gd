@@ -32,8 +32,8 @@ func _run() -> void:
 	_check(data != null, "queen EnemyData should load")
 	if data != null:
 		_check(data.validate().is_empty(), "queen EnemyData should validate: %s" % [data.validate()])
-		_check(data.walk_sprite_scale == Vector2(4, 4), "walk scale should be 4x")
-		_check(data.walk_sprite_offset == Vector2(0, -15), "walk offset should be (0, -15)")
+		_check(data.walk_sprite_scale == Vector2(2, 2), "walk scale should be 2x")
+		_check(data.walk_sprite_offset == Vector2(0, -30), "walk offset should be (0, -30)")
 		_check(data.tint.is_equal_approx(Color("8b6bb0")), "dialogue tint should be #8B6BB0")
 		_check(data.projectile_hit_radius == 16.0, "projectile hit radius should remain 16px")
 		_check(data.charged_attack_threshold == 4, "charged attack threshold should remain 4")
@@ -81,7 +81,7 @@ func _run() -> void:
 func _verify_walk_sheet() -> void:
 	var texture := load(WALK_SHEET_PATH) as Texture2D
 	var image := texture.get_image() if texture != null else null
-	_check(image != null and image.get_size() == Vector2i(144, 192), "walk sheet should be 144x192")
+	_check(image != null and image.get_size() == Vector2i(288, 384), "walk sheet should be 288x384")
 	if image == null:
 		return
 	var saw_transparency := false
@@ -97,11 +97,11 @@ func _verify_walk_sheet() -> void:
 	for row in 4:
 		for frame in 3:
 			var last_y := -1
-			for local_y in 48:
-				for local_x in 48:
-					if image.get_pixel(frame * 48 + local_x, row * 48 + local_y).a >= 0.5:
+			for local_y in 96:
+				for local_x in 96:
+					if image.get_pixel(frame * 96 + local_x, row * 96 + local_y).a >= 0.5:
 						last_y = maxi(last_y, local_y)
-			var expected := 44 if frame == 0 else 43
+			var expected := 88 if frame == 0 else 87
 			_check(last_y == expected, "row %d frame %d baseline should be y=%d, got %d" % [row, frame, expected, last_y])
 
 
