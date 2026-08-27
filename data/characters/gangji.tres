@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=9 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
@@ -8,6 +8,7 @@
 [ext_resource type="Resource" path="res://data/skills/gangji_transfusion.tres" id="12_passive"]
 [ext_resource type="Resource" path="res://data/skills/gangji_field.tres" id="13_field"]
 [ext_resource type="Resource" path="res://data/skills/gangji_immunity.tres" id="14_immunity"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/portraits/gangji.png" id="20_portrait"]
 
 [sub_resource type="Resource" id="PlayerStats_gangji"]
 script = ExtResource("2_stats")
@@ -25,8 +26,9 @@ character_id = &"gangji"
 display_name = "강지"
 skills = Array[ExtResource("11_skilldef")]([ExtResource("12_passive"), ExtResource("13_field"), ExtResource("14_immunity")])
 playable = true
-description = "로스터의 겸직(버퍼 + 원거리딜러) 슬롯(#334). 이 자리를 들고 있던 shipduck 을 이름·스텟·스킬까지 다시 만든 인물이다 — **역할만 그대로 이어받았다.** 역할을 유지한 것은 제약이다: 로스터 역할 카운트 3/3/3 과 설계 §8.2 의 성질(역할마다 3카운트 파티가 정확히 1개)이 이 자리가 버퍼/원거리인 것에 의존한다. 스텟(1000/100/90/신앙140)은 **새로 잡았다**. 이전 값(1400/80/160)은 이 인물이 순혈 탱커였던 시절(#259 이전)의 것이 슬롯을 두 번 옮기고도 남아 있던 것이라, 역할과 어긋나 있었다 — 로스터에서 가장 단단한 몸을 가진 버퍼였다. 새 값의 근거: 평타로 아군을 회복시키므로 **때리러 나가야 해서** 순혈 버퍼(설아 1000/80/100)만큼 무르면 안 되고, 그렇다고 탱커도 아니다. 근력 100 은 설아(80)와 태희(130) 사이 — 회복량이 딜에 비례하므로 화력이 필요하다. 신앙 140 은 버퍼 성향(설아 160 다음)이다. 전부 [임시값]. 고유 스킬 3종(#334): 평타 패시브 = 수혈(data/skills/gangji_transfusion.tres) — 평타로 들어간 피해의 비율만큼 가장 위태로운 아군을 회복시킨다. Q = 원형 지대(data/skills/gangji_field.tres) — 시전 자리에 5초 남는 지대, 안에 있는 아군은 공속 증가 + 받는 피해 감소. E = 불가침(data/skills/gangji_immunity.tres) — 가장 위태로운 아군 하나를 3초 무적, 쿨타임 45초. 셋 다 **아군이 어디 서 있는지**에 값어치가 걸려 있고, 수혈 때문에 강지가 딜을 넣지 않으면 파티가 회복되지 않는다 — 뒤에 서서 버튼만 누르는 버퍼가 아니다. 평타는 근접 즉시타격이다(basic_attack_* 미지정) — 원거리 겸직이지만 근접/원거리는 역할이 아니라 캐릭터의 성질이다(docs §1.1). 겸직이므로 버퍼·원거리딜러 두 역할 카운트에 각각 기여한다. 워크 시트가 없어 전투에서 도형 플레이스홀더로 보인다. 도형은 주 역할을 따라 shape_buffer 로 잡았다(이전에는 순혈 탱커 시절의 shape_tank 가 남아 있었다). 초상이 없다 — 임시로 쓰던 girl_violet.png 는 #340 에서 벨로시랩터 수인의 초상으로 옮겼고(assets/sprites/enemies/portraits/), 강지는 전용 아트가 나올 때까지 초상 없이 둔다. tint 는 로스터 색 표(data/characters/README.md)의 파랑을 유지했다 — 색을 다시 고르면 표 전체를 함께 손봐야 한다. 개성·서사 미정."
+description = "로스터의 겸직(버퍼 + 원거리딜러) 슬롯(#334). 이 자리를 들고 있던 shipduck 을 이름·스텟·스킬까지 다시 만든 인물이다 — **역할만 그대로 이어받았다.** 역할을 유지한 것은 제약이다: 로스터 역할 카운트 3/3/3 과 설계 §8.2 의 성질(역할마다 3카운트 파티가 정확히 1개)이 이 자리가 버퍼/원거리인 것에 의존한다. 스텟(1000/100/90/신앙140)은 **새로 잡았다**. 이전 값(1400/80/160)은 이 인물이 순혈 탱커였던 시절(#259 이전)의 것이 슬롯을 두 번 옮기고도 남아 있던 것이라, 역할과 어긋나 있었다 — 로스터에서 가장 단단한 몸을 가진 버퍼였다. 새 값의 근거: 평타로 아군을 회복시키므로 **때리러 나가야 해서** 순혈 버퍼(설아 1000/80/100)만큼 무르면 안 되고, 그렇다고 탱커도 아니다. 근력 100 은 설아(80)와 태희(130) 사이 — 회복량이 딜에 비례하므로 화력이 필요하다. 신앙 140 은 버퍼 성향(설아 160 다음)이다. 전부 [임시값]. 고유 스킬 3종(#334): 평타 패시브 = 수혈(data/skills/gangji_transfusion.tres) — 평타로 들어간 피해의 비율만큼 가장 위태로운 아군을 회복시킨다. Q = 원형 지대(data/skills/gangji_field.tres) — 시전 자리에 5초 남는 지대, 안에 있는 아군은 공속 증가 + 받는 피해 감소. E = 불가침(data/skills/gangji_immunity.tres) — 가장 위태로운 아군 하나를 3초 무적, 쿨타임 45초. 셋 다 **아군이 어디 서 있는지**에 값어치가 걸려 있고, 수혈 때문에 강지가 딜을 넣지 않으면 파티가 회복되지 않는다 — 뒤에 서서 버튼만 누르는 버퍼가 아니다. 평타는 근접 즉시타격이다(basic_attack_* 미지정) — 원거리 겸직이지만 근접/원거리는 역할이 아니라 캐릭터의 성질이다(docs §1.1). 겸직이므로 버퍼·원거리딜러 두 역할 카운트에 각각 기여한다. 워크 시트가 없어 전투에서 도형 플레이스홀더로 보인다. 도형은 주 역할을 따라 shape_buffer 로 잡았다(이전에는 순혈 탱커 시절의 shape_tank 가 남아 있었다). 초상은 #383 에서 들어왔다 — 이것으로 로스터 6인 전원이 초상을 갖는다(강지가 마지막이었다). 그전에 임시로 쓰던 girl_violet.png 는 #340 에서 벨로시랩터 수인의 초상으로 옮겨 갔고, 그 뒤로 한동안 초상 없이 도형으로 떴다. 사용자 지급 원본은 알파가 이미 깨끗해 누끼 작업 없이 공통 캔버스 정규화(tools/normalize_portrait.gd)만 돌렸다. tint 는 로스터 색 표(data/characters/README.md)의 파랑을 유지했다 — 색을 다시 고르면 표 전체를 함께 손봐야 한다. 개성·서사 미정."
 stats = SubResource("PlayerStats_gangji")
 sprite_texture = ExtResource("9_shape")
+portrait = ExtResource("20_portrait")
 tint = Color(0, 0.5, 1, 1)
 sprite_scale = Vector2(2, 2)
