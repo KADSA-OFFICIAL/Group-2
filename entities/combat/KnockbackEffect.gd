@@ -67,6 +67,10 @@ func _visible_sprite(target: Node) -> CanvasItem:
 func _copy_current_frame(source: CanvasItem, ghost: Sprite2D) -> void:
 	if source is AnimatedSprite2D:
 		var animated := source as AnimatedSprite2D
+		# sprite_frames 가 빌 수 있다 — 워크 시트 없는 캐릭터의 빈 노드다(#425).
+		# 근본 원인은 그 노드를 숨겨서 막지만, 여기서도 널을 만지지 않는다.
+		if animated.sprite_frames == null:
+			return
 		ghost.texture = animated.sprite_frames.get_frame_texture(animated.animation, animated.frame)
 		ghost.centered = animated.centered
 		ghost.offset = animated.offset
