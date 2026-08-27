@@ -5,12 +5,18 @@ class_name SkyIslandMap
 #
 # 컨셉은 **구름 사이에 뜬 바위섬**이다. 섬은 밟는 자리이고 섬 사이는 허공이다.
 #
-# **섬 밖으로 나가는 것을 막지 않는다.** "떠 있는 섬"이면 자연히 낙하를 떠올리게 되지만
-# 지금 전투에는 이동 봉쇄도 낙사도 없다. 여기서 그것을 만들면 하늘 맵만 다른 전투 규칙을
-# 갖게 되고, 그 규칙이 맵 파일 안에 숨는다. 그래서 허공은 **시각적 배경**이다 --
-# 걸어 나갈 수 있고 아무 일도 일어나지 않는다. 대신 섬을 넉넉히 두어 전투가 자연히
-# 섬 위에서 일어나게 만든다(본섬이 파티·적 스폰 자리를 모두 덮는다).
-# 낙하·이동 봉쇄는 전투 규칙이므로 별도 판단이 필요하다.
+# **섬 밖으로는 나가지 못한다** (#429). 허공에 충돌을 놓아 섬이 실제 발판이 되게 한다.
+# 파티·적 구분 없이 적용된다 -- 이 프로젝트는 물리 레이어를 지정하지 않으므로
+# (전부 기본 레이어 1) 기본 StaticBody2D 하나로 둘 다 막힌다.
+#
+# **낙하·낙사를 만들지 않는다.** 낙하를 넣으면 새 전투 규칙이 줄줄이 따라온다 --
+# 낙하 피해량, 복귀 자리, 복귀 후 무적 시간, 적에게도 적용할지, 넉백으로 밀어
+# 떨어뜨리는 것이 정당한 전술인지. 그 전부가 밸런스 결정이고, 하늘 맵 하나 때문에
+# 전투 전체가 달라진다. 막기만 하면 **새 규칙이 하나도 생기지 않는다.**
+#
+# 넉백(EnemyBase.apply_knockback)과 여왕 후퇴가 둘 다 move_and_slide 라서
+# 밀려나 떨어지는 일 자체가 없다 -- 그래서 "밀어 떨어뜨리기"를 어떻게 다룰지도
+# 정할 필요가 없다.
 #
 # **Ground 를 전부 채운다.** 섬이 아닌 칸도 허공·구름으로 명시적으로 깐다.
 # 채우지 않으면 섬 사이 허공과 **맵 바깥 빈 공간이 화면에서 구별되지 않아**
@@ -61,6 +67,7 @@ func _ready() -> void:
 	_build_void()
 	_build_islands()
 	_build_details()
+	_build_void_collision()
 	_build_boundaries()
 
 
@@ -185,10 +192,57 @@ func _build_details() -> void:
 			detail.set_cell(cell, SOURCE_ID, Vector2i(value % 5, 0))
 
 
-# ===== 경계 =====
+# ===== 허공 충돌 (#429) =====
 #
-# 초원·해변과 같다. 맵 밖으로는 나가지 못한다 -- 섬 밖 허공은 걸을 수 있지만
-# 맵 밖은 아니다.
+# 섬 밖으로 나가지 못하게 허공 칸을 막는다.
+#
+# **왜 섬 둘레 한 칸만 막지 않는가**: 벽 두께가 24px 이면 한 프레임에 그보다 많이
+# 움직이는 이동이 뚫고 지나갈 수 있다(터널링). 지금 이 맵에 그런 이동이 있는지는
+# 확실하지 않다 -- 여왕 후퇴가 700px/s(60fps 에서 12px/프레임)라 여유가 있지만,
+# 나중에 붙는 적이 어떤 속도를 가질지는 알 수 없다.
+#
+# 허공을 전부 채우면 그 걱정이 아예 없어지고, **가로 병합 후에는 둘레만 막는 것보다
+# 비싸지도 않다**(둘레도 병합하면 비슷한 수의 사각형이 된다). 그래서 안전한 쪽을 골랐다.
+#
+# **왜 칸마다 몸을 만들지 않는가**: 허공이 4천 칸이 넘는다. 가로로 이어진 칸을 사각형
+# 하나로 합치면 형상 수가 수백 개로 줄고, 물리 몸은 하나면 된다.
+#
+# 세로로도 합치면(2D 직사각형 분할) 더 줄지만, 가로 병합만으로 이미 충분히 적고
+# 코드가 훨씬 단순하다. 실제 형상 수는 검증에서 실측한다.
+func _build_void_collision() -> void:
+	var body := StaticBody2D.new()
+	body.name = "VoidBlock"
+	add_child(body)
+
+	for y in MAP_SIZE.y:
+		var run_start := -1
+		# x == MAP_SIZE.x 까지 도는 이유: 마지막 칸에서 끝나는 구간을 닫아야 한다.
+		for x in range(MAP_SIZE.x + 1):
+			var is_void := x < MAP_SIZE.x and not _island_cells.has(Vector2i(x, y))
+			if is_void:
+				if run_start < 0:
+					run_start = x
+				continue
+			if run_start >= 0:
+				_add_void_run(body, run_start, x - 1, y)
+				run_start = -1
+
+
+# 한 행의 [from_x, to_x] 구간을 사각형 하나로 막는다.
+func _add_void_run(body: StaticBody2D, from_x: int, to_x: int, y: int) -> void:
+	var cells := to_x - from_x + 1
+	var collision := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(float(cells * TILE_SIZE), float(TILE_SIZE))
+	collision.shape = shape
+	collision.position = Vector2(
+		float(from_x * TILE_SIZE) + shape.size.x * 0.5,
+		float(y * TILE_SIZE) + float(TILE_SIZE) * 0.5)
+	body.add_child(collision)
+
+
+# ===== 경계 =====
+
 func _build_boundaries() -> void:
 	var world_size := Vector2(MAP_SIZE * TILE_SIZE)
 	_add_boundary(Vector2(world_size.x * 0.5, -12), Vector2(world_size.x, 24))
