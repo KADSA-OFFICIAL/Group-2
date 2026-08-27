@@ -71,3 +71,20 @@ signal skill_used(user, skill_id: StringName)
 
 # 고유 스킬이 준 보호막이 터졌다(깨짐·만료·재입력). position 에서 반경 안의 적에게 power 피해.
 signal skill_shield_burst(target, skill_id: StringName, position: Vector2, power: int)
+
+# ----- 튜토리얼이 듣는 행동 신호 (#345) -----
+#
+# 왜 신호로 알리는가: 튜토리얼은 "플레이어가 실제로 그 행동을 했을 때" 다음 단계로
+# 넘어간다(TutorialStepData.Advance). 대시는 상태를 폴링해도 잡을 수 있지만
+# 처형은 그 순간 대상이 사라지므로 폴링으로는 잡을 수 없다. 두 사실을 같은 방식으로
+# 흘려 두면 조건 판정이 한 종류가 된다.
+#
+# 튜토리얼 전용 신호는 아니다 — "이 일이 일어났다"는 사실이므로 통계·연출·업적도 쓸 수 있다.
+
+# 캐릭터가 대시했다(충전이 소모된 성공한 대시만).
+@warning_ignore("unused_signal")
+signal player_dashed(who)
+
+# 처형이 성사됐다. enemy 는 이 직후 죽으므로 **이 신호 안에서만** 유효하다.
+@warning_ignore("unused_signal")
+signal enemy_executed(enemy, by)

@@ -31,6 +31,12 @@ const ICON_SIZE_SMALL: int = 14
 # 얼굴이 뭉개져 색 판과 구별되지 않는다.
 const ENEMY_PORTRAIT_SIZE: int = 36
 
+# 튜토리얼 판(#345). 세 줄 본문이 한 눈에 들어오는 폭이다.
+const TUTORIAL_PANEL_WIDTH: int = 460
+
+# 읽는 국면의 안내. 입력 액션(ui_accept)의 기본 바인딩을 사람 말로 쓴 것이다.
+const TUTORIAL_CONFIRM_HINT := "Space / Enter — 계속"
+
 var _party_rows: Array = []          # [{ "root": Control, "name": Label, "hp": Label, "bracket": Control }]
 var _synergy_rows: Dictionary = {}   # Role -> Label
 var _mark_row: Control
@@ -62,6 +68,13 @@ var _enemy_signature: Array = []     # 현재 줄이 만들어진 종류 목록(
 # 역할 패널. 안의 세 줄이 전부 숨으면 제목만 남은 빈 판이 되므로 통째로 숨긴다.
 var _mechanics_panel: PanelContainer
 
+# 튜토리얼 판(#345). TutorialSystem 이 단계를 알려줄 때만 보인다.
+var _tutorial_panel: PanelContainer
+var _tutorial_step_label: Label
+var _tutorial_title_label: Label
+var _tutorial_body_label: Label
+var _tutorial_hint_label: Label
+
 
 func _ready() -> void:
 	name = "HUD"
@@ -74,6 +87,18 @@ func _ready() -> void:
 		# 갱신하지 않으면 "소탕 완료" 옆에 죽은 적이 그대로 남은 화면이 찍힌다.
 		EventBus.stage_completed.connect(_on_stage_finished)
 		EventBus.stage_failed.connect(_on_stage_finished)
+
+	# 튜토리얼 판은 신호로만 갱신한다(#345) — 읽는 국면에는 전투가 멈춰
+	# _process 가 돌지 않으므로 매 프레임 갱신에 얹을 수 없다.
+	TutorialSystem.step_changed.connect(_on_tutorial_step_changed)
+	TutorialSystem.finished.connect(_on_tutorial_finished)
+
+	# 전장(Stage)은 main.tscn 에서 HUD 보다 먼저 _ready 를 돌아 stage_started 를 이미 쏜다.
+	# 그래서 첫 단계의 step_changed 를 놓친 상태로 시작한다 — 지금 상태를 직접 읽어 그린다.
+	if TutorialSystem.is_active():
+		_on_tutorial_step_changed(TutorialSystem.get_current_step(),
+			TutorialSystem.get_step_index(), TutorialSystem.get_step_count(),
+			TutorialSystem.is_reading())
 
 	_rebuild_party_rows()
 
@@ -126,6 +151,95 @@ func _build() -> void:
 	left.add_child(_build_skill_panel())
 	right.add_child(_build_synergy_panel())
 	right.add_child(_build_enemy_panel())
+
+	# 튜토리얼 판은 화면 아래 가운데에 따로 놓는다(#345). 위 두 열에 끼우면
+	# 파티·시너지 판을 밀어내는데, 튜토리얼이 가리키는 것이 바로 그 판들이다.
+	root.add_child(_build_tutorial_layer())
+
+
+# 튜토리얼 판(#345). 진행은 TutorialSystem 이 하고, 여기는 **그리기만** 한다.
+#
+# 매 프레임 갱신하지 않는 유일한 판이다: 단계는 드물게 바뀌고, 읽는 국면에서는 전투가
+# 멈춰 있어 HUD._process 가 돌지 않는다. 그래서 신호로만 갱신한다.
+func _build_tutorial_layer() -> Control:
+	# 아래 가운데 정렬. 전투 화면 가운데(캐릭터가 서 있는 곳)를 가리지 않게 아래에 붙인다.
+	var holder := VBoxContainer.new()
+	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	holder.alignment = BoxContainer.ALIGNMENT_END
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(row)
+
+	var panel := HUDKit.make_panel("", "", 12, true)
+	panel.custom_minimum_size = Vector2(TUTORIAL_PANEL_WIDTH, 0)
+	panel.visible = false
+	var body := HUDKit.body_of(panel)
+
+	# 몇 번째 단계인지. 끝이 보이지 않는 안내는 읽지 않는다.
+	_tutorial_step_label = HUDKit.label("", 11, HUDKit.text_3())
+	body.add_child(_tutorial_step_label)
+
+	_tutorial_title_label = HUDKit.label("", 15, HUDKit.text_1(), 700)
+	body.add_child(_tutorial_title_label)
+
+	_tutorial_body_label = HUDKit.label("", 12, HUDKit.text_2())
+	_tutorial_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tutorial_body_label.custom_minimum_size = Vector2(TUTORIAL_PANEL_WIDTH - 32, 0)
+	body.add_child(_tutorial_body_label)
+
+	body.add_child(HUDKit.rule())
+
+	# 지금 무엇을 하면 넘어가는지. 읽는 국면과 하는 국면에서 문구가 달라진다.
+	_tutorial_hint_label = HUDKit.label("", 12, HUDKit.accent_text(), 600)
+	body.add_child(_tutorial_hint_label)
+
+	_tutorial_panel = panel
+	row.add_child(panel)
+	return holder
+
+
+func _on_tutorial_step_changed(step: TutorialStepData, index: int, total: int, reading: bool) -> void:
+	if _tutorial_panel == null or step == null:
+		return
+
+	_tutorial_step_label.text = "튜토리얼 %d/%d" % [index + 1, total]
+	_tutorial_title_label.text = step.title
+	_tutorial_body_label.text = step.body
+	_tutorial_hint_label.text = TUTORIAL_CONFIRM_HINT if reading else _tutorial_goal_text(step)
+	_tutorial_panel.visible = true
+
+
+func _on_tutorial_finished(_stage_id: StringName) -> void:
+	if _tutorial_panel == null:
+		return
+	_tutorial_panel.visible = false
+
+
+# 하는 국면에서 띄우는 목표 문구.
+#
+# 문구를 저작본(TutorialStepData.body)에 또 적지 않는 이유: 이것은 **진행 조건의 표현**이라
+# 조건과 같은 곳에서 나와야 한다. 저작본에 손으로 적으면 조건을 바꿀 때 문구가 남는다.
+func _tutorial_goal_text(step: TutorialStepData) -> String:
+	match step.advance:
+		TutorialStepData.Advance.DASH:
+			return "▶ 대시해 보세요"
+		TutorialStepData.Advance.EFFECT_APPLIED:
+			return "▶ 적에게 %s을 부여하세요" % _effect_name(step.effect_id)
+		TutorialStepData.Advance.EFFECT_BURST:
+			return "▶ %s을 끝까지 채워 터뜨리세요" % _effect_name(step.effect_id)
+		TutorialStepData.Advance.EXECUTE:
+			return "▶ 버퍼로 처형하세요"
+		_:
+			return TUTORIAL_CONFIRM_HINT
+
+
+# 상태 효과의 표시 이름. 출처는 StatusEffectDatabase 다(여기서 이름을 만들지 않는다).
+func _effect_name(effect_id: StringName) -> String:
+	var data := StatusEffectDatabase.get_effect(effect_id)
+	return data.display_name if data != null else String(effect_id)
 
 
 # 고유 스킬 판(#263). Q·E 의 남은 쿨타임과 지금 걸린 상태를 보여 준다.

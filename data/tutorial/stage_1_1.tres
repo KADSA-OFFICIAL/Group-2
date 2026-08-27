@@ -1,0 +1,71 @@
+[gd_resource type="Resource" script_class="TutorialSequenceData" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://entities/tutorial/TutorialSequenceData.gd" id="1_sequence"]
+[ext_resource type="Script" path="res://entities/tutorial/TutorialStepData.gd" id="2_step"]
+
+[sub_resource type="Resource" id="Step_synergy"]
+script = ExtResource("2_step")
+step_id = &"synergy_intro"
+title = "시너지 — 역할이 셋 다 켜졌다"
+body = "이 파티는 순혈 3인(미나·태희·설아)이라 탱커·원거리·버퍼가 각각 1카운트다.
+시너지는 정확히 1카운트나 3카운트에서만 켜지고 2카운트는 아무것도 켜지지 않는다 — 그래서 세 역할이 동시에 켜지는 파티는 이 조합뿐이다.
+오른쪽 시너지 판에서 세 줄이 모두 1단계인 것을 확인해라. 이 1단계가 곧 전투 메커니즘이다: 표식·평타 스택·처형."
+advance = 0
+required_count = 1
+
+[sub_resource type="Resource" id="Step_dash"]
+script = ExtResource("2_step")
+step_id = &"dash"
+title = "대시로 피한다"
+body = "벨로시랩터 수인은 파티보다 조금 느릴 뿐이라, 자리를 지키고 있으면 붙어서 난타한다.
+대시 키로 빠져나가라. 대시 중에는 이동 입력이 무시되지만 공격 입력은 그대로 받는다 — 피하면서 쏘는 것이 이 게임의 회피다.
+지금 대시를 한 번 해 보자."
+advance = 1
+required_count = 1
+
+[sub_resource type="Resource" id="Step_mark"]
+script = ExtResource("2_step")
+step_id = &"tank_mark"
+title = "탱커 — 표식을 남긴다"
+body = "체인의 시작은 탱커다. 미나(1번)를 잡고 적을 평타로 때리면 그 적에게 표식이 붙는다.
+표식은 탱커의 평타와 스킬만 붙일 수 있다. 탱커가 없는 파티에는 이 메커니즘이 아예 없다.
+미나로 적 하나에 표식을 붙여라."
+advance = 2
+effect_id = &"mark"
+required_count = 1
+
+[sub_resource type="Resource" id="Step_stun"]
+script = ExtResource("2_step")
+step_id = &"ranged_charge"
+title = "원거리 — 표식을 채워 기절시킨다"
+body = "표식은 붙인 사람이 아니라 파티 전체의 평타로 채워진다. 그래서 평타가 가장 빠른 태희(2번)가 채우는 속도를 정한다.
+태희는 평타를 맞출수록 공속·이속 스택이 쌓여 점점 더 빨라진다 — 원거리 1단계 메커니즘이다.
+표식이 임계치까지 차면 터지면서 기절 + 추가 피해가 들어간다. 표식이 붙은 적을 태희로 때려 터뜨려라."
+advance = 3
+effect_id = &"mark"
+required_count = 1
+
+[sub_resource type="Resource" id="Step_execute"]
+script = ExtResource("2_step")
+step_id = &"buffer_execute"
+title = "버퍼 — 디버프 걸린 적을 처형한다"
+body = "기절은 디버프다. 디버프가 걸린 적의 체력이 충분히 낮으면 버퍼가 처형할 수 있다.
+단 처형은 버퍼가 직접 때려야 발동한다 — 다른 파티원이 마무리하면 그냥 평타다. 설아(3번)를 잡고 그 적을 때려라.
+표식 → 기절 → 처형. 이 셋이 세 역할이 서로 먹여 주는 체인이다."
+advance = 4
+required_count = 1
+
+[sub_resource type="Resource" id="Step_wrap"]
+script = ExtResource("2_step")
+step_id = &"wrap_up"
+title = "정리"
+body = "탱커가 표식을 붙이고, 원거리가 그것을 빨리 채워 기절시키고, 버퍼가 낮아진 적을 처형한다.
+편성을 바꾸면 이 체인이 끊긴다. 특히 같은 역할을 둘만 모으면(2카운트) 그 역할의 메커니즘이 파티에서 사라진다 — 표식도, 스택도, 처형도 없어진다.
+남은 적을 정리해 스테이지를 끝내라."
+advance = 0
+required_count = 1
+
+[resource]
+script = ExtResource("1_sequence")
+stage_id = &"stage_1_1"
+steps = Array[ExtResource("2_step")]([SubResource("Step_synergy"), SubResource("Step_dash"), SubResource("Step_mark"), SubResource("Step_stun"), SubResource("Step_execute"), SubResource("Step_wrap")])

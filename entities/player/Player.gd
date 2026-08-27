@@ -1627,6 +1627,9 @@ func try_dash(direction: Vector2 = Vector2.ZERO) -> bool:
 	_dash_charges -= 1
 	if _dash_charges <= 0:
 		_dash_cooldown_left = CombatConfig.tuning.dash_cooldown
+
+	# 실제로 대시가 나간 지점에서만 알린다(#345) — 충전이 없어 막힌 입력은 대시가 아니다.
+	EventBus.player_dashed.emit(self)
 	return true
 
 
@@ -2252,6 +2255,9 @@ func _try_execute(target: Node) -> bool:
 	# take_damage **전에** 놓는다 — 그 호출이 대상을 죽여 queue_free() 하므로 뒤에서는
 	# global_position 을 믿고 읽을 수 없다.
 	_spawn_execute_mark(target.global_position)
+
+	# 표식과 같은 이유로 죽이기 **전에** 알린다(#345) — 듣는 쪽이 대상을 읽을 수 있어야 한다.
+	EventBus.enemy_executed.emit(target, self)
 
 	# 남은 체력을 확실히 넘기는 피해를 넣어 방어력에 막히지 않게 한다.
 	target.take_damage(target.max_hp * 100, self)

@@ -48,7 +48,11 @@ func load_room() -> void:
 	# 적이 놓인 뒤에 판정을 켠다. 순서가 바뀌면 진입하자마자 승리가 된다.
 	_begin_judging()
 
-# 파티가 비어 있을 때 쓰는 기본 편성.
+# 파티가 비어 있고 **스테이지가 강제 파티를 저작하지 않았을 때** 쓰는 기본 편성.
+#
+# 1-1 은 더 이상 이 값을 쓰지 않는다(#345): StageData.forced_party 로 순혈 3인
+# (미나·태희·설아)을 강제한다. 아래 [알려진 문제] 는 강제 파티가 없는 스테이지에
+# 그대로 남아 있다 — 기본 편성의 구성을 바꾸는 것은 여전히 별 이슈다.
 #
 # 역할 카운트는 **탱커 0 / 원거리 2 / 버퍼 2** 다 — 강지가 버퍼+원거리 겸직이고
 # 태희가 순혈 원거리, 설아가 순혈 버퍼이기 때문이다.
@@ -76,7 +80,14 @@ const DEFAULT_PARTY := [&"gangji", &"taehee", &"seola"]
 # 캐릭터 정의는 PartySystem(-> CharacterDatabase)이 출처이며 여기서 재정의하지 않는다.
 # 조종 여부도 PartySystem이 정하므로 노드에는 party_index만 넘긴다.
 func spawn_party():
-	if PartySystem.is_empty():
+	# 강제 파티가 저작된 스테이지는 **플레이어 편성을 덮어쓴다**(#345).
+	# 튜토리얼 스테이지(1-1)가 이것을 쓴다 — 가르치는 시너지 체인이 실제로 켜져 있어야
+	# 안내가 화면과 맞는다(설계 §8.2: 세 역할이 모두 켜지는 파티는 순혈 3인뿐이다).
+	# 강제 대상의 유효성(존재·편성 가능·중복)은 PartySystem 이 판정한다.
+	var stage := StageSystem.get_current_stage()
+	if stage != null and not stage.forced_party.is_empty():
+		PartySystem.set_party(stage.forced_party)
+	elif PartySystem.is_empty():
 		PartySystem.set_party(DEFAULT_PARTY)
 
 	_party_spawned = 0
