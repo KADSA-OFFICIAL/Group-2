@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="GoddessSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/goddess/GoddessSkillData.gd" id="1_goddess"]
+
+[resource]
+script = ExtResource("1_goddess")
+skill_id = &"time_stop"
+display_name = "시간 정지"
+description = "파티원을 제외한 모든 것의 시간을 멈춘다(#358). 적과 적이 쏜 투사체가 멈추고, 적에게 걸린 상태 효과의 지속시간도 흐르지 않는다. 파티원·파티 투사체·파티 지대는 그대로 움직이므로, 멈춘 사이에 붙어서 때리거나 포위를 빠져나온다. 기본 7초이며 여신 스킬 강화 배수(신앙심 + 거울)를 탄다 — 순혈 3인(설아 신앙 160)이면 배수 1.8 로 12.6초, 후다만티움 거울까지 끼우면 2.12 로 14.8초다. 스테이지당 1회. 기본값 7 은 [임시값]이다."
+kind = 0
+duration = 7.0
+scales_with_boost = true

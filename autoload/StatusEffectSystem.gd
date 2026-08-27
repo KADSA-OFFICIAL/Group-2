@@ -254,6 +254,13 @@ func _process(delta: float) -> void:
 		if not _is_valid_target(target):
 			_active.erase(target)
 			continue
+		# 멈춰 있는 대상은 상태 효과의 시간도 흐르지 않는다(#358 시간 정지).
+		#
+		# 특정 시스템에 묻지 않고 can_process() 를 보는 이유: "무엇이 이 노드를 멈췄는지"는
+		# 이 시스템의 관심사가 아니다. 노드가 처리되지 않는 동안 그 노드의 디버프
+		# 지속시간만 흘러가면, 멈춰 있는 사이에 표식·기절이 저절로 풀린다.
+		if target is Node and not (target as Node).can_process():
+			continue
 		_process_target(target, delta)
 
 

@@ -42,6 +42,7 @@ var _selected: Array[StringName] = []
 var _roster_grid: GridContainer
 var _slot_row: HBoxContainer
 var _synergy_body: VBoxContainer
+var _goddess_body: VBoxContainer
 var _confirm_button: Button
 var _count_label: Label
 
@@ -138,6 +139,10 @@ func _build_right() -> Control:
 	column.custom_minimum_size = Vector2(HUDKit.DETAIL_WIDTH, 0)
 	column.add_theme_constant_override("separation", 10)
 
+	# 여신의 스킬(#358): 파티 3명과 함께 **출격 전에 정하는 결정**이라 이 화면에 둔다.
+	# 시너지 위에 두는 이유: 시너지는 위 파티 선택의 결과 표시이고, 이쪽은 입력이다.
+	column.add_child(_build_goddess_panel())
+
 	var panel := HUDKit.make_panel("시너지 미리보기", "synergy preview", 14, false, "icon_synergy")
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(panel)
@@ -174,6 +179,7 @@ func _build_right() -> Control:
 func _refresh() -> void:
 	_refresh_slots()
 	_refresh_synergy()
+	_refresh_goddess()
 	_refresh_roster()
 	_refresh_confirm()
 
@@ -222,6 +228,79 @@ func _refresh_slots() -> void:
 			empty.add_child(hint)
 
 		_slot_row.add_child(slot)
+
+
+# ── 우: 여신의 스킬 (#358) ──
+#
+# 목록을 여기서 만들지 않는다 — GoddessSkillSystem 이 저작된 스킬의 출처다.
+# 그래서 스킬을 새로 저작하면 이 화면은 고치지 않아도 줄이 늘어난다.
+func _build_goddess_panel() -> Control:
+	var panel := HUDKit.make_panel("여신의 스킬", "goddess skill", 14)
+	_goddess_body = HUDKit.body_of(panel)
+	return panel
+
+
+func _refresh_goddess() -> void:
+	_clear(_goddess_body)
+
+	var ids := GoddessSkillSystem.get_all_ids()
+	if ids.is_empty():
+		_goddess_body.add_child(HUDKit.label("저작된 여신의 스킬이 없습니다", 12, HUDKit.text_3()))
+		return
+
+	_goddess_body.add_child(HUDKit.label("스테이지당 1회 · R 키", 11, HUDKit.text_3()))
+
+	var selected := GoddessSkillSystem.get_selected_id()
+	for id in ids:
+		var skill: GoddessSkillData = GoddessSkillSystem.get_skill(id)
+		if skill == null:
+			continue
+		var chosen: bool = id == selected
+
+		var button := Button.new()
+		button.toggle_mode = true
+		button.button_pressed = chosen
+		button.add_theme_stylebox_override("normal", HUDKit.card(chosen))
+		button.add_theme_stylebox_override("hover", HUDKit.card(true))
+		button.add_theme_stylebox_override("pressed", HUDKit.card(true))
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.text = "%s%s" % ["◆ " if chosen else "", skill.display_name]
+		button.tooltip_text = skill.description
+		# 같은 것을 다시 누르면 선택을 해제한다 — 들고 나가지 않는 선택도 가능해야 한다.
+		button.pressed.connect(func():
+			GoddessSkillSystem.select(&"" if chosen else id)
+			_refresh_goddess())
+		_goddess_body.add_child(button)
+
+	# 강화 배수는 파티 편성으로 바뀌므로 지금 고른 파티 기준으로 보여 준다.
+	var boost := _preview_boost()
+	var chosen_skill: GoddessSkillData = GoddessSkillSystem.get_selected()
+	if chosen_skill != null:
+		var line := ""
+		match chosen_skill.kind:
+			GoddessSkillData.Kind.TIME_STOP:
+				line = "지속 %.1f초 (기본 %.0f초 × 강화 %.2f×)" % [
+					chosen_skill.get_effective_duration(boost), chosen_skill.duration, boost]
+			GoddessSkillData.Kind.REVIVE:
+				line = "체력 %.0f%% (기본 %.0f%% × 강화 %.2f×)" % [
+					chosen_skill.get_effective_revive_percent(boost) * 100.0,
+					chosen_skill.revive_hp_percent * 100.0, boost]
+		_goddess_body.add_child(HUDKit.label(line, 11, HUDKit.accent_text()))
+
+
+# 지금 고른 파티(확정 전 임시 선택)의 여신 강화 배수. 판정 규칙은 시스템과 같은 "최고값"이다.
+#
+# GoddessSkillSystem.get_boost() 를 그대로 쓰지 못하는 이유: 그쪽은 **확정된 파티**
+# (PartySystem)를 본다. 이 화면은 확정 전 선택을 보여 줘야 하므로 같은 규칙을 임시 선택에 적용한다.
+func _preview_boost() -> float:
+	var best := 1.0
+	for character in _selected_characters():
+		if character == null:
+			continue
+		var boost: float = character.get_stats().get_goddess_skill_boost()
+		if boost > best:
+			best = boost
+	return best
 
 
 func _refresh_synergy() -> void:

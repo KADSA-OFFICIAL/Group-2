@@ -88,6 +88,15 @@ var _travelled: float = 0.0
 const CHAIN_ARC_SCENE := preload("res://entities/combat/ChainArc.tscn")
 
 
+# 그룹 이름의 단일 출처. 날아가는 탄을 밖에서 찾아야 하는 시스템이 이 이름으로 훑는다
+# (#358 시간 정지 — 적이 쏜 탄을 멈춘다). 지금까지는 그룹이 없어 전장 자식을 훑어야 했다.
+const GROUP := &"projectile"
+
+
+func _ready() -> void:
+	add_to_group(GROUP)
+
+
 # 발사 직후 한 번 호출한다. direction 은 정규화하지 않아도 된다.
 #
 # 뒤의 두 인자는 나중에 붙었다(#259). 기본값이 기존 동작(적 탄, 단일 대상)이라
