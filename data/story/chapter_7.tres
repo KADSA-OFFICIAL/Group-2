@@ -1,0 +1,176 @@
+[gd_resource type="Resource" script_class="StoryChapterData" load_steps=31 format=3]
+
+[ext_resource type="Script" path="res://entities/story/StoryChapterData.gd" id="1"]
+[ext_resource type="Script" path="res://entities/story/StoryLineData.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/village.png" id="bg_village"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/forest.png" id="bg_present"]
+
+[sub_resource type="Resource" id="L0"]
+script = ExtResource("2")
+text = "마을로 워프하게 된 주인공은 마을사람들에게 모든 이야기를 털어놓는다."
+
+[sub_resource type="Resource" id="L1"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "그렇게 되서 전 곧 미래로 돌아가게 돼요. 다들 모두 감사했어요."
+
+[sub_resource type="Resource" id="L2"]
+script = ExtResource("2")
+text = "주인공의 몸이 서서히 빛나기 시작한다."
+screen_effect = 3
+
+[sub_resource type="Resource" id="L3"]
+script = ExtResource("2")
+kind = 1
+speaker = "설아"
+character_id = &"seola"
+text = "다시 한번 말하지만 고마워. 기억할게."
+
+[sub_resource type="Resource" id="L4"]
+script = ExtResource("2")
+kind = 1
+speaker = "하랑"
+character_id = &"harang"
+text = "잘가요오~잊지 않을게요~"
+
+[sub_resource type="Resource" id="L5"]
+script = ExtResource("2")
+kind = 1
+speaker = "태희"
+character_id = &"taehee"
+text = "만약 다시 보게 되면 함 뜨자고!"
+
+[sub_resource type="Resource" id="L6"]
+script = ExtResource("2")
+kind = 1
+speaker = "미나"
+character_id = &"mina"
+text = "진심 아쉬워엉~쩔 수 없지.. 잘가아~"
+
+[sub_resource type="Resource" id="L7"]
+script = ExtResource("2")
+kind = 1
+speaker = "아린"
+character_id = &"arin"
+text = "잘가요~쿨…"
+
+[sub_resource type="Resource" id="L8"]
+script = ExtResource("2")
+kind = 1
+speaker = "강지"
+character_id = &"gangji"
+text = "그 곳으로 돌아가게 되도 우리를 기억해줘!"
+
+[sub_resource type="Resource" id="L9"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+character_id = &"childhood_friend"
+text = "..보고싶을거야! 미래에 내가 환생한다면! 기억할게!"
+
+[sub_resource type="Resource" id="L10"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "다들 고마웠어. 안녕!"
+
+[sub_resource type="Resource" id="L11"]
+script = ExtResource("2")
+text = "주인공이 사라진다."
+screen_effect = 3
+
+[sub_resource type="Resource" id="L12"]
+script = ExtResource("2")
+background = ExtResource("bg_present")
+text = "암전"
+screen_effect = 1
+
+[sub_resource type="Resource" id="L13"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "으윽..머리야..제대로 돌아왔나..?"
+
+[sub_resource type="Resource" id="L14"]
+script = ExtResource("2")
+text = "슴베찌르개를 맞았던 장소에서 일어난 주인공. 시간도 흐르지 않았다."
+
+[sub_resource type="Resource" id="L15"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "다 그대로니까 그곳에서 겪은 일이 꿈인지 현실인지 모르겠네.. 일단 집으로 돌아가자.."
+
+[sub_resource type="Resource" id="L16"]
+script = ExtResource("2")
+text = "집으로 돌아가는 주인공. 그의 길을 막아서는 여러 인영들."
+
+[sub_resource type="Resource" id="L17"]
+script = ExtResource("2")
+kind = 1
+speaker = "설아"
+character_id = &"seola"
+text = "오랜만이야."
+
+[sub_resource type="Resource" id="L18"]
+script = ExtResource("2")
+kind = 1
+speaker = "하랑"
+character_id = &"harang"
+text = "헤헤..안녕하세요."
+
+[sub_resource type="Resource" id="L19"]
+script = ExtResource("2")
+kind = 1
+speaker = "태희"
+character_id = &"taehee"
+text = "함 뜰까, 앙?"
+
+[sub_resource type="Resource" id="L20"]
+script = ExtResource("2")
+kind = 1
+speaker = "미나"
+character_id = &"mina"
+text = "진심 반가워어~"
+
+[sub_resource type="Resource" id="L21"]
+script = ExtResource("2")
+kind = 1
+speaker = "아린"
+character_id = &"arin"
+text = "오랜만이에요, 쿨~"
+
+[sub_resource type="Resource" id="L22"]
+script = ExtResource("2")
+kind = 1
+speaker = "강지"
+character_id = &"gangji"
+text = "더 강해져서 돌아왔네! 잘 왔어!"
+
+[sub_resource type="Resource" id="L23"]
+script = ExtResource("2")
+kind = 1
+speaker = "소꿉친구"
+character_id = &"childhood_friend"
+text = "왜케 늦었어! 보고싶어 죽는줄 알았다구!"
+
+[sub_resource type="Resource" id="L24"]
+script = ExtResource("2")
+kind = 1
+speaker = "주인공"
+text = "..모두들..! 다시 만나서 반가워!"
+
+[sub_resource type="Resource" id="L25"]
+script = ExtResource("2")
+text = "-The end-"
+screen_effect = 1
+
+[resource]
+script = ExtResource("1")
+background = ExtResource("bg_village")
+chapter_id = &"chapter_7"
+number = 7
+title = "다시 만난 우리"
+summary = "작별 뒤 현대로 돌아온 주인공은 환생한 친구들과 다시 만나 이야기를 마무리한다."
+lines = [SubResource("L0"), SubResource("L1"), SubResource("L2"), SubResource("L3"), SubResource("L4"), SubResource("L5"), SubResource("L6"), SubResource("L7"), SubResource("L8"), SubResource("L9"), SubResource("L10"), SubResource("L11"), SubResource("L12"), SubResource("L13"), SubResource("L14"), SubResource("L15"), SubResource("L16"), SubResource("L17"), SubResource("L18"), SubResource("L19"), SubResource("L20"), SubResource("L21"), SubResource("L22"), SubResource("L23"), SubResource("L24"), SubResource("L25")]
