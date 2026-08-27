@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/combat/StatusEffectData.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+kind = 0
+stacking = 0
+max_stacks = 1
+effect_id = &"queen_snare_zone"
+display_name = "속박 지대"
+description = "익룡 여왕의 속박 지대(AuraZone) 안에 서 있는 **파티원**이 받는 디버프(#391). 이동 속도 -55%. 강지 지대(gangji_zone)와 같은 부품(AuraZone)을 쓰지만 걸리는 쪽이 반대다 — AuraZone 은 MEMBER_GROUP 에 효과를 걸므로 아군 버프용으로 만들어졌어도 디버프를 넣으면 그대로 동작한다. 여기서 지대를 새로 만들지 않은 이유가 그것이다. **완전 봉인이 아니라 감속인 이유**: 여왕은 이미 4타째 강화탄으로 stun(2초, 이동·공격·스킬 전부 차단)을 건다. 지대까지 묶으면 손쓸 구간이 사라진다 — bubble_trap(이동만 봉인) 재사용도 검토했으나 같은 이유로 뺐다. 감속이면 '느려진 채로 거리를 좁힌다'가 되어 여왕의 공략(거리 좁히기)이 어려워질 뿐 사라지지 않는다. kind = STAT_MOD 이고 CONTROL 이 아니다 — 그래서 대시로 빠져나올 수 있다(대시는 이동 차단에 막히지만 감속은 배수라 대시 속도에도 곱해질 뿐이다). is_debuff = true: 파티원에게 걸리는 불리한 효과다. 지속시간 6.0 은 지대 수명과 같지만 시간 만료를 기대하지 않는다 — 밖으로 나가는 순간 AuraZone 이 직접 푼다(gangji_zone 과 같은 규약). 이 값은 그 경로가 실패했을 때의 보험이다. 중첩 REFRESH: 지대가 둘 겹쳐도 세기가 누적되지 않는다. -55% 는 [임시값]이다."
+is_debuff = true
+duration = 6.0
+stat_percent = {
+"move_speed": -0.55
+}
