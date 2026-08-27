@@ -75,6 +75,13 @@ func _on_healing_applied(target: Variant, amount: int) -> void:
 		_next_spawn_order += 1
 		number.play(amount, target_node.global_position, UITheme.POSITIVE, _next_spawn_order)
 
+	# **대상의 자식으로 붙인다** — vfx-guide §1.7("부모는 전장이다")에서 의도적으로 벗어난다.
+	#
+	# 그 규약이 막으려는 두 가지가 여기서는 문제가 아니거나 오히려 필요하다:
+	#   - "시전자가 움직이면 연출이 따라다닌다" → 회복은 **누가 회복됐는지**가 정보다.
+	#     착탄 자리에 남아야 하는 폭발과 달리 대상을 따라다니는 것이 맞다(StatusRing 과 같은 성격).
+	#   - "시전자가 죽으면 연출이 같이 사라진다" → 0.33초짜리 표시다. 죽은 순간
+	#     발밑에 회복 연출만 남아 있는 편이 더 이상하다.
 	var effect := SpriteSheetEffect.new()
 	effect.name = "HealEffect"
 	target_node.add_child(effect)
