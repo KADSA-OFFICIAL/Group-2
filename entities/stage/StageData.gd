@@ -147,7 +147,8 @@ enum Concept {
 # 임의의 기본값을 넣으면 나중에 밸런스를 정할 때 그 값이 근거처럼 남는다.
 #
 #   - 존 확보 시간, 존 위치, 리스폰 규칙 (§5.2 [미정])
-#   - **시간차 스폰**(N초 뒤 등장): 웨이브(#375)의 방아쇠는 "앞 웨이브 전멸" 하나뿐이다
+#   - **시간차 스폰**(N초 뒤 등장): 웨이브 방아쇠는 "앞 웨이브 전멸"(#375)과
+#     점령(StageWave.requires_capture, #442)뿐이다
 #   - 첫 클리어 보너스·별점·드랍 테이블: 보상 규칙이 아직 clear_rewards 하나뿐이다
 #   - "점령+전투" 에서 두 프리미티브를 순차/동시/보완 중 무엇으로 엮을지 (§5.2 [미정])
 #   - 잠입/전투 루트 선택의 실제 파라미터 (§7 [미정], 전투 화면 작업 범위 밖)
@@ -338,6 +339,24 @@ func validate() -> Array[String]:
 			continue
 		for problem in wave.validate():
 			problems.append("waves[%d]: %s" % [i, problem])
+
+		# 점령 조건 웨이브(#442)의 저작 실수 둘. 둘 다 **판이 영영 끝나지 않는**
+		# 교착 상태를 만들고, 플레이어에게는 원인이 전혀 보이지 않는다.
+		if wave.requires_capture:
+			# ① 존이 없으면 Stage._all_zones_captured() 가 항상 false 라 이 웨이브가
+			#    영원히 놓이지 않는다. 적이 없으니 소탕도 충족되지 않는다.
+			if not requires_capture():
+				problems.append(
+					"waves[%d]: requires_capture 인데 이 스테이지는 점령을 요구하지 않습니다(type=%s)."
+						% [i, get_type_name()])
+			# ② spawns 가 비어 있으면 진입 시 _advance_wave() 가 **게이트를 거치지 않고**
+			#    첫 웨이브를 놓는다. 거기에 게이트를 넣으면 적이 하나도 놓이지 않아
+			#    _begin_judging() 이 판정을 꺼 버린다. 그래서 이 조합 자체를 막는다.
+			#    (spawns 가 있으면 첫 웨이브 게이트는 정상이다 — 시작 배치를 치우고
+			#     점령한 뒤 1파가 온다.)
+			if i == 0 and spawns.is_empty():
+				problems.append(
+					"waves[0]: spawns 가 비어 있는데 requires_capture 입니다 — 진입 시 놓을 적이 없습니다.")
 
 	# 소탕이 조건인데 놓을 적이 아무 데도 없으면 진입하자마자 승리가 된다.
 	if requires_clear() and spawns.is_empty() and waves.is_empty():

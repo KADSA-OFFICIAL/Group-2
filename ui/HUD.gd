@@ -85,6 +85,11 @@ var _capture_panel: PanelContainer
 var _capture_count_label: Label
 var _capture_state_label: Label
 
+# 부대 판(#444). 웨이브가 저작된 스테이지에서만 보인다.
+var _wave_panel: PanelContainer
+var _wave_count_label: Label
+var _wave_state_label: Label
+
 # 튜토리얼 판(#345). TutorialSystem 이 단계를 알려줄 때만 보인다.
 var _tutorial_panel: PanelContainer
 var _tutorial_step_label: Label
@@ -127,6 +132,7 @@ func _process(_delta: float) -> void:
 	_update_synergy()
 	_update_goddess()
 	_update_capture()
+	_update_wave()
 	_update_enemies()
 
 
@@ -171,6 +177,9 @@ func _build() -> void:
 	left.add_child(_build_goddess_panel())
 	right.add_child(_build_synergy_panel())
 	right.add_child(_build_capture_panel())
+	# 부대 판은 점령 판 **아래**, 적 판 **위**에 둔다(#444) — 대기 안내가
+	# "이 게이지가 다음 부대를 막고 있다"를 뜻하므로 점령 판 바로 옆에 있어야 읽힌다.
+	right.add_child(_build_wave_panel())
 	right.add_child(_build_enemy_panel())
 
 	# 튜토리얼 판은 화면 아래 가운데에 따로 놓는다(#345). 위 두 열에 끼우면
@@ -240,6 +249,83 @@ func _update_capture() -> void:
 	else:
 		_capture_state_label.text = "%d%%  비어 있음" % roundi(slowest * 100.0)
 		_capture_state_label.add_theme_color_override("font_color", HUDKit.text_3())
+
+
+# 부대 판(#444). 몇 파 중 몇 파인지, 그리고 **다음 부대가 왜 안 오는지**를 알려 준다.
+#
+# 왜 필요한가: #442 로 웨이브에 점령 조건이 생겨, 1파를 치운 뒤 점을 확보해야
+# 다음 부대가 오는 구간이 생겼다. 그동안 전장에 적이 없고 게이지만 차는데 화면에
+# 설명이 없으면 "왜 아무것도 안 나오지"로 읽힌다.
+#
+# 왜 stage_wave_started 를 듣지 않는가: 전장이 HUD 보다 먼저 _ready 를 돌아 1파 신호를
+# 이미 쏘므로 그것을 놓친다(위 _ready 의 튜토리얼 주석과 같은 문제다). 그래서 매 프레임
+# 전장에 직접 묻는다 — 이 HUD 의 다른 판들과 같은 방식이다.
+func _build_wave_panel() -> PanelContainer:
+	var panel := HUDKit.make_panel("부대", "WAVE", 10, true)
+	var body := HUDKit.body_of(panel)
+
+	_wave_count_label = HUDKit.label("", 12, HUDKit.text_2())
+	body.add_child(_wave_count_label)
+
+	_wave_state_label = HUDKit.value("-", 13)
+	body.add_child(_wave_state_label)
+
+	_wave_panel = panel
+	return panel
+
+
+func _update_wave() -> void:
+	if _wave_panel == null:
+		return
+
+	var stage_node := _find_stage()
+	var total := stage_node.get_wave_total() if stage_node != null else 0
+	if stage_node == null or total <= 0:
+		# 웨이브를 쓰지 않는 스테이지(1-1 등)에서는 판째로 사라진다.
+		# 점령 판이 존 없는 스테이지에서 사라지는 것과 같은 규약이다.
+		_wave_panel.visible = false
+		return
+	_wave_panel.visible = true
+
+	var index: int = stage_node.get_wave_index()
+	var stage := StageSystem.get_current_stage()
+
+	# index 가 -1 이면 아직 시작 배치(spawns)를 치우는 중이다 — 파 번호를 붙일 수 없다.
+	if index < 0:
+		_wave_count_label.text = "%d파 · 시작 배치" % total
+	else:
+		var label := ""
+		if stage != null and index < stage.waves.size():
+			var wave: StageWave = stage.waves[index]
+			if wave != null and not wave.label.is_empty():
+				label = " · " + wave.label
+		_wave_count_label.text = "%d파 중 %d파%s" % [total, index + 1, label]
+
+	var remaining := GameManager.get_all_enemies().size()
+
+	if stage_node.is_waiting_for_capture():
+		# 이 이슈의 핵심. 적이 없는 이유가 "다 끝났다"가 아니라는 것을 말해 준다.
+		_wave_state_label.text = "거점을 확보해야 다음 부대가 온다"
+		_wave_state_label.add_theme_color_override("font_color", UITheme.HOSTILE)
+	elif remaining > 0:
+		_wave_state_label.text = "남은 적 %d" % remaining
+		_wave_state_label.add_theme_color_override("font_color", HUDKit.text_2())
+	elif index + 1 < total:
+		# 조건 없는 웨이브는 다음 프레임에 놓인다. 한 프레임짜리 상태지만,
+		# 여기서 "부대 전멸"을 보여 주면 아직 남은 파가 있는데 끝난 것처럼 보인다.
+		_wave_state_label.text = "다음 부대 오는 중"
+		_wave_state_label.add_theme_color_override("font_color", HUDKit.accent_text())
+	else:
+		_wave_state_label.text = "부대 전멸"
+		_wave_state_label.add_theme_color_override("font_color", HUDKit.up_color())
+
+
+# 전장 노드. 이름이 동적이라 그룹으로 찾는다(Stage.GROUP).
+func _find_stage() -> Stage:
+	for node in get_tree().get_nodes_in_group(Stage.GROUP):
+		if is_instance_valid(node) and node is Stage:
+			return node
+	return null
 
 
 # 여신의 스킬 판(#358). 무엇을 들고 왔는지 / 아직 쓸 수 있는지 / 정지 잔여 시간.

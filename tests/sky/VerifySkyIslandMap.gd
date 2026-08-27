@@ -112,6 +112,55 @@ func _ready() -> void:
 				_expect(islands.get_cell_source_id(cell) != -1,
 					"%s at %s floats in the void" % [child.name, child.position])
 
+	# ===== 허공 충돌 (#429) =====
+	#
+	# 섬 밖으로 나가지 못해야 한다. 물리 질의로 확인한다 -- 이동을 흉내내면
+	# 프레임 수·속도에 결과가 달라져 무엇을 검증했는지 알 수 없다.
+	var block := map.get_node_or_null("VoidBlock")
+	_expect(block is StaticBody2D, "VoidBlock static body must exist")
+	if block != null:
+		var void_cells := 0
+		for y in SkyIslandMap.MAP_SIZE.y:
+			for x in SkyIslandMap.MAP_SIZE.x:
+				if islands.get_cell_source_id(Vector2i(x, y)) == -1:
+					void_cells += 1
+		var shapes := block.get_child_count()
+		print("  허공 칸 %d개 -> 충돌 형상 %d개" % [void_cells, shapes])
+		# 칸마다 하나씩이면 병합이 안 된 것이다. 여유를 크게 둔다 -- 정확한 수는
+		# 섬 배치에 따라 달라지고, 여기서 검증할 것은 "합쳐졌다"는 사실뿐이다.
+		_expect(shapes > 0 and shapes < void_cells / 4,
+			"void collision must merge horizontal runs (%d shapes for %d cells)"
+				% [shapes, void_cells])
+
+	# 허공은 막히고, 섬 안쪽과 스폰 자리는 막히지 않아야 한다.
+	# 스폰 자리가 막히면 유닛이 첫 프레임부터 충돌 안에 끼어 밀려난다 -- 가장 위험한 실패다.
+	for point in SPAWN_POINTS:
+		_expect(not _is_blocked(map, point),
+			"spawn point %s must not be blocked by void collision" % point)
+
+	var island_interior := _find_island_interior(islands)
+	if island_interior != Vector2.INF:
+		_expect(not _is_blocked(map, island_interior),
+			"island interior %s must not be blocked" % island_interior)
+
+	var open_void := _find_open_void(islands)
+	if open_void != Vector2.INF:
+		_expect(_is_blocked(map, open_void),
+			"open void %s must be blocked" % open_void)
+
+	# 맵 네 변의 기존 경계는 그대로 있어야 한다.
+	#
+	# 이름으로 세지 않는 이유: `_add_boundary()` 가 넷 다 "MapBoundary" 로 짓지만
+	# Godot 은 중복 이름을 **통째로 갈아치운다** -- 실제 트리는
+	# ["MapBoundary", "@StaticBody2D@207", "@StaticBody2D@209", "@StaticBody2D@211"] 이다
+	# (실측). 그래서 이름 대신 "VoidBlock 이 아닌 StaticBody2D 자식"으로 센다.
+	# 세 맵이 다 같은 방식이라 이름이 사실상 하나만 남는 것은 이 이슈 범위 밖이다.
+	var boundaries := 0
+	for child in map.get_children():
+		if child is StaticBody2D and child.name != "VoidBlock":
+			boundaries += 1
+	_expect(boundaries == 4, "the 4 map boundaries must remain (got %d)" % boundaries)
+
 	if _failures.is_empty():
 		print("PASS: sky island map structure and collision contract")
 		get_tree().quit(0)
@@ -119,6 +168,52 @@ func _ready() -> void:
 		for failure in _failures:
 			push_error(failure)
 		get_tree().quit(1)
+
+
+# 이 맵 로컬 좌표에 충돌이 있는가. 맵이 원점에 놓여 있으므로 로컬 == 전역이다.
+#
+# 점 질의를 쓰는 이유: 유닛을 실제로 움직여 보면 프레임 수·속도·미끄러짐에 따라
+# 결과가 달라지고, 실패했을 때 충돌이 없는 것인지 이동이 모자란 것인지 알 수 없다.
+func _is_blocked(map: Node2D, local_point: Vector2) -> bool:
+	var space := map.get_world_2d().direct_space_state
+	var query := PhysicsPointQueryParameters2D.new()
+	query.position = map.to_global(local_point)
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	return not space.intersect_point(query, 1).is_empty()
+
+
+# 사방이 섬으로 둘러싸인 칸 하나의 중심. 테두리 칸을 고르면 타일 안쪽 흔들림 때문에
+# 충돌 경계(칸 격자)와 그림 경계가 몇 px 어긋나 판정이 흔들린다.
+func _find_island_interior(islands: TileMapLayer) -> Vector2:
+	for y in range(1, SkyIslandMap.MAP_SIZE.y - 1):
+		for x in range(1, SkyIslandMap.MAP_SIZE.x - 1):
+			var cell := Vector2i(x, y)
+			if islands.get_cell_source_id(cell) == -1:
+				continue
+			var surrounded := true
+			for offset in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+				if islands.get_cell_source_id(cell + offset) == -1:
+					surrounded = false
+			if surrounded:
+				return Vector2(float(x) + 0.5, float(y) + 0.5) * 24.0
+	return Vector2.INF
+
+
+# 사방이 허공인 칸 하나의 중심.
+func _find_open_void(islands: TileMapLayer) -> Vector2:
+	for y in range(1, SkyIslandMap.MAP_SIZE.y - 1):
+		for x in range(1, SkyIslandMap.MAP_SIZE.x - 1):
+			var cell := Vector2i(x, y)
+			if islands.get_cell_source_id(cell) != -1:
+				continue
+			var open := true
+			for offset in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+				if islands.get_cell_source_id(cell + offset) != -1:
+					open = false
+			if open:
+				return Vector2(float(x) + 0.5, float(y) + 0.5) * 24.0
+	return Vector2.INF
 
 
 func _find_object(map: Node, object_kind: int) -> SkyObject:
