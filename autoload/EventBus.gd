@@ -8,6 +8,8 @@ signal player_died
 @warning_ignore("unused_signal")
 signal damage_taken(target, damage, position)
 @warning_ignore("unused_signal")
+# amount 는 **실제로 오른 체력**이다(요청량이 아니다, #399). 만피에서 회복하면
+# 아예 나가지 않는다 — 화면에 "+500"이 뜨는데 체력이 그대로면 거짓말이 된다.
 signal healing_applied(target, amount)
 @warning_ignore("unused_signal")
 # 플레이어(직접 조작하는 캐릭터)가 적을 공격했다. 아군 AI 의 전투 진입 신호다(#257).
