@@ -1032,8 +1032,14 @@ func _fire_skill_effects(skill: SkillData, gauge_ratio: float) -> void:
 ## 부채꼴이 지나간 자리를 잠깐 그리는 표시. 판정은 시전 순간에 이미 끝난다.
 const CONE_EFFECT_SCENE := preload("res://entities/combat/ConeEffect.tscn")
 
+## 부채꼴에 맞은 적의 넉백 경로를 잔상과 먼지로 보여 준다(#348).
+const KNOCKBACK_EFFECT_SCENE := preload("res://entities/combat/KnockbackEffect.tscn")
+
 ## 낙뢰가 떨어진 자리를 잠깐 그리는 표시. 마찬가지로 판정하지 않는다.
 const STRIKE_EFFECT_SCENE := preload("res://entities/combat/StrikeEffect.tscn")
+
+## 아린 E의 시전·활성·종료 연출. 상태 효과 수치는 데이터에서 받아 온다(#348).
+const OVERLOAD_EFFECT_SCENE := preload("res://entities/combat/OverloadEffect.tscn")
 
 
 # 조준 방향으로 부채꼴 판정을 낸다(#336).
@@ -1073,6 +1079,7 @@ func _cast_cone_skill(skill: SkillData) -> void:
 		if not is_instance_valid(enemy) or not enemy.is_alive:
 			continue
 		if skill.knockback_distance > 0.0 and enemy.has_method("apply_knockback"):
+			_spawn_knockback_effect(enemy, origin, skill.knockback_distance)
 			enemy.apply_knockback(origin, skill.knockback_distance)
 		if skill.apply_effect_id != &"":
 			StatusEffectSystem.apply(enemy, skill.apply_effect_id, self)
@@ -1091,6 +1098,16 @@ func _spawn_cone_effect(origin: Vector2, forward: Vector2, skill: SkillData) -> 
 	fx.global_position = origin
 	fx.setup(forward, skill.cone_length, skill.get_cone_half_angle(),
 		data.tint if data != null else Color.WHITE)
+
+
+func _spawn_knockback_effect(target: Node2D, origin: Vector2, distance: float) -> void:
+	var host := get_parent()
+	if host == null:
+		return
+	var fx = KNOCKBACK_EFFECT_SCENE.instantiate()
+	host.add_child(fx)
+	fx.global_position = target.global_position
+	fx.setup(target, origin, distance, data.tint if data != null else Color.WHITE)
 
 
 # ===== 지대 (Aura zone) =====
@@ -1170,7 +1187,21 @@ func _cast_instant_aoe(skill: SkillData) -> void:
 # 되돌아올 때 "누가 넣은 피해인가"가 자기여야 한다. 자기 반사(_reflect_damage)와
 # 아군 AI 반격(_on_damaged_by)은 둘 다 source == self 를 이미 걸러 낸다.
 func _cast_self_effect(skill: SkillData) -> void:
-	StatusEffectSystem.apply(self, skill.self_effect_id, self)
+	if not StatusEffectSystem.apply(self, skill.self_effect_id, self):
+		return
+	if skill.skill_id == &"arin_overload":
+		_spawn_overload_effect(skill.self_effect_id)
+
+
+func _spawn_overload_effect(effect_id: StringName) -> void:
+	if get_node_or_null("OverloadEffect") != null:
+		return
+	var effect_data := StatusEffectDatabase.get_effect(effect_id)
+	if effect_data == null:
+		return
+	var fx = OVERLOAD_EFFECT_SCENE.instantiate()
+	fx.setup(effect_data.duration, data.tint if data != null else Color.WHITE)
+	add_child(fx)
 
 
 # ===== 파동 (Shockwave) =====

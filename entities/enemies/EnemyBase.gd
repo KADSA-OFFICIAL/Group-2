@@ -60,6 +60,9 @@ var _runtime_stats: PlayerStats = null
 # 워크 시트가 없는 적은 Sprite2D 정지 이미지(또는 도형 플레이스홀더)로 남는다.
 var _anim_sprite: AnimatedSprite2D = null
 
+## 감전은 지면 링이 아니라 적 몸에 붙는 전용 표시를 쓴다(#348).
+const SHOCK_STATUS_EFFECT_SCENE := preload("res://entities/combat/ShockStatusEffect.tscn")
+
 # 멈춤 판정 임계값과 방향 판정은 WalkAnimation이 소유한다(플레이어와 같은 규약).
 
 # 유효한 스텟 출처를 반환한다.
@@ -81,6 +84,8 @@ func _make_runtime_stats() -> PlayerStats:
 
 func _ready():
 	GameManager.register_enemy(self)
+	if EventBus and not EventBus.status_effect_applied.is_connected(_on_status_effect_applied):
+		EventBus.status_effect_applied.connect(_on_status_effect_applied)
 	_apply_data()
 	max_hp = get_stats().get_max_hp()
 	hp = max_hp
@@ -129,7 +134,17 @@ func _apply_data() -> void:
 			sprite.visible = false
 
 func _exit_tree():
+	if EventBus and EventBus.status_effect_applied.is_connected(_on_status_effect_applied):
+		EventBus.status_effect_applied.disconnect(_on_status_effect_applied)
 	GameManager.unregister_enemy(self)
+
+
+func _on_status_effect_applied(target, effect_id: StringName) -> void:
+	if target != self or effect_id != &"shock_stun":
+		return
+	if get_node_or_null("ShockStatusEffect") != null:
+		return
+	add_child(SHOCK_STATUS_EFFECT_SCENE.instantiate())
 
 
 # ===== AI (추적 / 공격) =====
