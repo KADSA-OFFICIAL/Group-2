@@ -300,7 +300,37 @@ func _advance_wave_if_cleared() -> void:
 		return
 	if not GameManager.get_all_enemies().is_empty():
 		return
+	if not _next_wave_unlocked(stage):
+		return
 	_advance_wave()
+
+
+# 다음 웨이브의 추가 조건이 채워졌는가 (#442).
+#
+# 지금 있는 조건은 StageWave.requires_capture 하나다 — 그 웨이브는 앞 무리 전멸에
+# 더해 **모든 거점 존 확보**까지 채워져야 놓인다.
+#
+# 왜 _advance_wave() 안이 아니라 여기인가: _advance_wave() 는 진입 시
+# spawn_enemies() 가 **직접** 부르는 경로에도 쓰인다(spawns 가 비었을 때).
+# 거기에 게이트를 넣으면 진입 시 적이 하나도 놓이지 않고, 그러면
+# _begin_judging() 이 "적이 없어 소탕을 판정하지 않습니다"로 판정을 꺼서
+# 판이 영영 끝나지 않는다. 그래서 게이트는 **진행 경로에만** 둔다.
+# (그 조합 자체는 StageData.validate() 가 저작 시점에 막는다.)
+#
+# 조건이 안 됐으면 그냥 기다린다. 전장에 적이 없고 점령 게이지만 차는 상태가 되며,
+# 점령이 미완이므로 _objectives_met() 가 false 라 승리로 끝나지도 않는다.
+func _next_wave_unlocked(stage: StageData) -> bool:
+	var next_index := _wave_index + 1
+	if next_index >= stage.waves.size():
+		return true
+	var wave := stage.waves[next_index]
+	if wave == null:
+		# 비어 있는 웨이브는 _advance_wave() 가 건너뛴다. 여기서 막으면 그 건너뜀이
+		# 일어나지 않아 판이 멈춘다.
+		return true
+	if wave.requires_capture and not _all_zones_captured():
+		return false
+	return true
 
 
 # 이 스테이지가 요구하는 프리미티브가 모두 충족됐는가.
