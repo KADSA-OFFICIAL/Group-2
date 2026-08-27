@@ -205,6 +205,13 @@ class_name CombatTuning
 ## 거점 존 확보에 필요한 시간(초).
 @export var capture_hold_seconds: float = 10.0
 
+## 존을 비웠을 때 진행도가 줄어드는 속도(차는 속도 대비 배수).
+##
+## 0.5 면 채울 때의 절반 속도로 줄어든다. 0 이면 진행도가 보존되고, 1 이면 채운 만큼
+## 그대로 되돌아간다. 진행도를 보존하지 않는 이유(#377): 밟고 빠지기를 반복해
+## 위험 없이 채우는 것을 막는다 — "살아서 지켜야 한다"가 점령의 값어치다.
+@export var capture_decay_multiplier: float = 0.5
+
 
 # 디버그/검증용: 모든 값을 Dictionary로 반환한다.
 func get_summary() -> Dictionary:
@@ -252,6 +259,7 @@ func get_summary() -> Dictionary:
 		"execute_hp_percent": execute_hp_percent,
 		"heal_to_damage_percent": heal_to_damage_percent,
 		"capture_hold_seconds": capture_hold_seconds,
+		"capture_decay_multiplier": capture_decay_multiplier,
 	}
 
 
@@ -304,6 +312,8 @@ func validate() -> Array[String]:
 		problems.append("ally_ai_engage_leash_ratio는 0보다 크고 1.0 이하여야 합니다.")
 	if capture_hold_seconds <= 0.0:
 		problems.append("capture_hold_seconds는 0보다 커야 합니다.")
+	if capture_decay_multiplier < 0.0:
+		problems.append("capture_decay_multiplier는 0 이상이어야 합니다.")
 
 	if damage_min < 0:
 		problems.append("damage_min은 0 이상이어야 합니다.")

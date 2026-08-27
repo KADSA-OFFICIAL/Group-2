@@ -79,6 +79,11 @@ var _goddess_panel: PanelContainer
 var _goddess_name_label: Label
 var _goddess_state_label: Label
 
+# 점령 판(#377). 거점 존이 있는 스테이지에서만 보인다.
+var _capture_panel: PanelContainer
+var _capture_count_label: Label
+var _capture_state_label: Label
+
 # 튜토리얼 판(#345). TutorialSystem 이 단계를 알려줄 때만 보인다.
 var _tutorial_panel: PanelContainer
 var _tutorial_step_label: Label
@@ -120,6 +125,7 @@ func _process(_delta: float) -> void:
 	_update_skills()
 	_update_synergy()
 	_update_goddess()
+	_update_capture()
 	_update_enemies()
 
 
@@ -163,11 +169,76 @@ func _build() -> void:
 	left.add_child(_build_skill_panel())
 	left.add_child(_build_goddess_panel())
 	right.add_child(_build_synergy_panel())
+	right.add_child(_build_capture_panel())
 	right.add_child(_build_enemy_panel())
 
 	# 튜토리얼 판은 화면 아래 가운데에 따로 놓는다(#345). 위 두 열에 끼우면
 	# 파티·시너지 판을 밀어내는데, 튜토리얼이 가리키는 것이 바로 그 판들이다.
 	root.add_child(_build_tutorial_layer())
+
+
+# 점령 판(#377). 설계 §6 의 "(스테이지 타입에 따라) 점령 게이지 / 거점 존 표시" 요구사항이다.
+#
+# 존 자체는 전장에 그려진다(CaptureZone._draw) — 존은 화면 좌표가 아니라 자리이기 때문이다.
+# 여기서는 같은 값을 **숫자로** 보여 준다: 몇 곳을 확보했고, 지금 채워지는지 멈췄는지.
+#
+# 값의 출처는 존 노드다(그룹 조회). 여기서 진행도를 계산하지 않는다.
+func _build_capture_panel() -> PanelContainer:
+	var panel := HUDKit.make_panel("점령", "CAPTURE", 10, true)
+	var body := HUDKit.body_of(panel)
+
+	_capture_count_label = HUDKit.label("", 12, HUDKit.text_2())
+	body.add_child(_capture_count_label)
+
+	_capture_state_label = HUDKit.value("-", 13)
+	body.add_child(_capture_state_label)
+
+	_capture_panel = panel
+	return panel
+
+
+func _update_capture() -> void:
+	if _capture_panel == null:
+		return
+
+	var zones := get_tree().get_nodes_in_group(CaptureZone.GROUP)
+	if zones.is_empty():
+		# 점령이 없는 스테이지에서는 판째로 사라진다(전투 타입에 빈 판을 남기지 않는다).
+		_capture_panel.visible = false
+		return
+	_capture_panel.visible = true
+
+	var captured := 0
+	var contested := 0
+	var occupied := 0
+	# 진행률은 **가장 덜 찬 존**을 보여 준다 — 전부 확보해야 끝나므로 그것이 남은 일이다.
+	var slowest := 1.0
+	for zone in zones:
+		if not is_instance_valid(zone):
+			continue
+		if zone.is_captured():
+			captured += 1
+			continue
+		slowest = minf(slowest, zone.get_progress_ratio())
+		if zone.is_contested():
+			contested += 1
+		elif zone.get_party_inside() > 0:
+			occupied += 1
+
+	_capture_count_label.text = "거점 %d / %d 확보" % [captured, zones.size()]
+
+	if captured >= zones.size():
+		_capture_state_label.text = "점령 완료"
+		_capture_state_label.add_theme_color_override("font_color", HUDKit.up_color())
+	elif contested > 0:
+		_capture_state_label.text = "%d%%  적이 지키고 있다" % roundi(slowest * 100.0)
+		_capture_state_label.add_theme_color_override("font_color", UITheme.HOSTILE)
+	elif occupied > 0:
+		_capture_state_label.text = "%d%%  확보 중" % roundi(slowest * 100.0)
+		_capture_state_label.add_theme_color_override("font_color", HUDKit.accent_text())
+	else:
+		_capture_state_label.text = "%d%%  비어 있음" % roundi(slowest * 100.0)
+		_capture_state_label.add_theme_color_override("font_color", HUDKit.text_3())
 
 
 # 여신의 스킬 판(#358). 무엇을 들고 왔는지 / 아직 쓸 수 있는지 / 정지 잔여 시간.
