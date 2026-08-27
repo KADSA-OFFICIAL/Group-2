@@ -83,9 +83,16 @@ func _flash_material(sprite: CanvasItem) -> ShaderMaterial:
 func _process(delta: float) -> void:
 	var finished: Array[Variant] = []
 	for raw_sprite: Variant in _active.keys():
+		# **캐스팅보다 유효성 검사가 먼저다**(#370). 대상이 죽으면 queue_free 로 스프라이트가
+		# 사라지는데, 해제된 객체는 `as` 로 걸러지지 않는다 — 캐스팅 시도 자체가
+		# "Trying to cast a freed object" 에러다. 아래 줄에서 걸러지긴 해도 그 전에 로그가 더러워진다.
+		if not is_instance_valid(raw_sprite):
+			finished.append(raw_sprite)
+			continue
+
 		var sprite: CanvasItem = raw_sprite as CanvasItem
 		var state: FlashState = _active.get(raw_sprite) as FlashState
-		if sprite == null or not is_instance_valid(sprite) or state == null:
+		if sprite == null or state == null:
 			finished.append(raw_sprite)
 			continue
 		# 다른 시스템이 material을 교체했다면 새 material을 덮어쓰거나 예전 것을 복원하지 않는다(#299).
