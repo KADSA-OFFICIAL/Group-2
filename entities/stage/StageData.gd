@@ -80,6 +80,16 @@ enum Type {
 # 여기에 스텟·역할을 적으면 같은 데이터가 두 곳에 생긴다.
 @export var forced_party: Array[StringName] = []
 
+# ===== 거점 존 (Capture zones) — #377 =====
+#
+# 점령(§5.1)이 걸리는 자리. 한 줄이 존 하나이며 **전부 확보해야** 점령 목표가 충족된다.
+#
+# 왜 spawns 와 나누는가: 배치는 "적을 어디에 몇 마리", 존은 "어디를 얼마나 오래 지키는가"다.
+# 둘을 한 배열에 섞으면 타입 검사로만 구별되고, 점령이 없는 스테이지에도 빈 자리가 생긴다.
+#
+# 비어 있는 것이 정상이다 — 전투(소탕) 타입 스테이지는 존을 갖지 않는다.
+@export var capture_zones: Array[CaptureZoneData] = []
+
 # ===== 보상 (Rewards) =====
 # 클리어 보상. 재화 id(String) -> 수량(int).
 # 키는 CurrencySystem.DEFAULT_CURRENCIES 의 재화 id 를 참조한다(단일 출처).
@@ -221,6 +231,21 @@ func validate() -> Array[String]:
 			problems.append("clear_rewards['%s']는 0 이상의 정수여야 합니다." % str(key))
 		elif not CurrencySystem.DEFAULT_CURRENCIES.has(str(key)):
 			problems.append("clear_rewards['%s']는 알 수 없는 재화입니다." % str(key))
+
+	# 점령 존(#377). 소탕과 같은 이유로 양쪽을 다 잡는다 —
+	# 존이 없으면 클리어 불가이고, 필요 없는데 저작돼 있으면 화면에 존이 뜨는데 아무 의미가 없다.
+	if requires_capture() and capture_zones.is_empty():
+		problems.append("점령이 필요한 스테이지인데 capture_zones가 비어 있습니다.")
+	if not requires_capture() and not capture_zones.is_empty():
+		problems.append("점령이 필요하지 않은데 capture_zones가 저작되어 있습니다(%d개)."
+			% capture_zones.size())
+	for i in range(capture_zones.size()):
+		var zone := capture_zones[i]
+		if zone == null:
+			problems.append("capture_zones[%d]가 비어 있습니다." % i)
+			continue
+		for problem in zone.validate():
+			problems.append("capture_zones[%d]: %s" % [i, problem])
 
 	# 강제 파티(#345). 편성이 거부되면 그 스테이지는 파티 없이 열려 아무것도 못 한다.
 	# 캐릭터 정의·편성 가능 여부의 출처는 CharacterDatabase 이므로 그쪽에 묻는다.

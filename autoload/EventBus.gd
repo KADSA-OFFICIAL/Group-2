@@ -108,3 +108,10 @@ signal time_stop_changed(active: bool, seconds_left: float)
 # 매 프레임 나온다 — 화면이 진행을 그릴 수 있어야 하고, 값이 계속 변한다.
 @warning_ignore("unused_signal")
 signal goddess_haste_changed(active: bool, seconds_left: float, ratio: float)
+
+# ----- 점령 (#377) -----
+
+# 거점 존이 확보됐다(진행도가 확보 시간에 닿은 순간 한 번). 승패 판정은 전장이 하고,
+# 이 신호는 연출·소리·통계가 듣는다.
+@warning_ignore("unused_signal")
+signal capture_zone_captured(zone)

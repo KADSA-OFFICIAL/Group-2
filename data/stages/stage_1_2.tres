@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="StageData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
+[ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
+[ext_resource type="Script" path="res://entities/stage/CaptureZoneData.gd" id="3_zone"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk.tscn" id="6_raptor"]
+[ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="5_mammoth"]
+
+[sub_resource type="Resource" id="StageSpawn_raptor"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_raptor")
+position = Vector2(620, 200)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="StageSpawn_mammoth"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("5_mammoth")
+position = Vector2(700, 300)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="CaptureZone_center"]
+script = ExtResource("3_zone")
+position = Vector2(660, 250)
+radius = 140.0
+hold_seconds = 0.0
+
+[resource]
+script = ExtResource("1_stagedata")
+stage_id = &"stage_1_2"
+display_name = "1-2 거점"
+description = "**점령+전투** 타입의 첫 스테이지(#377). 거점 존 하나(반경 140)가 적 스폰 자리 가운데에 놓여 있고, 승리하려면 **적 전멸 + 존 확보** 둘 다 채워야 한다. 존 안에 살아 있는 적이 있으면 진행이 멈추므로(보완 규칙) 지키는 적을 치우는 것과 자리를 잡는 것이 한 행동으로 엮인다. 존을 비우면 진행도가 차는 속도의 절반으로 줄어든다. 확보 시간은 CombatTuning.capture_hold_seconds(10초)를 따른다 — hold_seconds 를 0 으로 둔 것이 그 뜻이다. 존 위치·반경·적 구성·보상은 전부 [임시값]이며, 이 스테이지의 목적은 점령 구조가 실제로 도는지 확인하는 것이다. 강제 파티를 두지 않아 플레이어가 편성한 파티로 들어간다(1-1 과 다른 점)."
+type = 2
+clear_rewards = {
+"gold": 60,
+"protein": 60,
+"stone": 40
+}
+spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_raptor"), SubResource("StageSpawn_mammoth")])
+capture_zones = Array[ExtResource("3_zone")]([SubResource("CaptureZone_center")])
