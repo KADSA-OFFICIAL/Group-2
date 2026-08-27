@@ -15,7 +15,11 @@ func _ready() -> void:
 	_expect(map.get_node("Overlay") is TileMapLayer, "Overlay must be a TileMapLayer")
 	_expect(map.get_node("Detail") is TileMapLayer, "Detail must be a TileMapLayer")
 	_expect(map.get_node("Ground").tile_set.tile_size == Vector2i(24, 24), "world tile size must be 24x24")
-	_expect(map.get_node("Ground").get_used_cells().size() == 64 * 40, "ground must fill the 64x40 map")
+	# 맵 크기는 GrasslandMap.MAP_SIZE 가 출처다(#396). 여기에 숫자를 다시 적으면
+	# 맵을 넓힐 때마다 이 파일이 거짓이 되고, 실패 메시지가 크기 변경을 회귀로 보고한다.
+	var expected_cells: int = GrasslandMap.MAP_SIZE.x * GrasslandMap.MAP_SIZE.y
+	_expect(map.get_node("Ground").get_used_cells().size() == expected_cells,
+		"ground must fill the %dx%d map" % [GrasslandMap.MAP_SIZE.x, GrasslandMap.MAP_SIZE.y])
 	_expect(map.get_node("Overlay").get_used_cells().size() > 0, "dirt path overlay must exist")
 	_expect(map.get_node("Detail").get_used_cells().size() > 0, "sparse grass details must exist")
 	_expect(map.get_node("Objects").y_sort_enabled, "object layer must use Y-sort")

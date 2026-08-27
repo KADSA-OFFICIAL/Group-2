@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skilldef"]
+
+[resource]
+script = ExtResource("1_skilldef")
+skill_id = &"queen_retreat"
+display_name = "후퇴 사격"
+description = "익룡 여왕의 안무 1(#391). 체력 임계선을 지날 때, **가장 가까운 파티원 반대 방향**으로 0.5초 동안 물러난 뒤 사격을 재개한다. 왜 이것이 여왕의 첫 패턴인가: 여왕의 공략은 '거리를 좁히는 것'이다(사거리 320 에서 쏘고 이속 x0.75 로 물러나지 않는다). 그렇다면 보스가 그것을 **한 번 되돌리는 것**이 가장 직접적인 저항이고, 매머드 우두머리가 돌진으로 거리를 지우는 것과 정확히 반대 축이다. 피해가 없다 — target_max_hp_damage_percent 도 base_power 도 0 이다. 그래서 **예고도 없다**: 맞고 안 맞고가 없는데 예고를 띄우면 플레이어가 피할 것을 찾다가 아무 일도 일어나지 않는다. 대시(EnemyData.dash_*)와 같은 부품을 쓰지 않고 안무로 둔 이유: 대시는 '사거리 밖이면 따라붙는다'는 계약이라 방향이 반대다. 같은 필드에 방향 플래그를 얹으면 한 필드가 두 가지를 뜻하게 된다. 후퇴 속도는 여기 없다 — 피해가 아니라 이동이라 속도가 회피 가능성을 바꾸지 않으므로 거동값으로 보고 PterosaurQueen.RETREAT_SPEED 가 갖는다(vfx-guide §1.3 예외). cast_time 0.5 는 물러나는 **시간**이다(준비 시간이 아니다) — 속도 700 과 곱해 약 350px 를 물러난다. 사거리 320 보다 조금 크게 잡아, 붙어 있던 파티원이 한 번은 다시 걸어와야 하도록 했다. 0.5 는 [임시값]이다."
+base_power = 0
+scales_with_faith = false
+cast_time = 0.5

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skilldef"]
+
+[resource]
+script = ExtResource("1_skilldef")
+skill_id = &"queen_snare_field"
+display_name = "속박 지대"
+description = "익룡 여왕의 안무 3(#391). 체력 임계선을 지날 때, **대상이 서 있는 자리**에 반경 180 의 지대를 6초 동안 깐다. 안에 있는 파티원은 이동 속도가 크게 떨어진다(aura_effect_id -> data/status_effects/queen_snare_zone.tres). 여왕이 거리를 지키는 세 번째 방식이다 — 후퇴가 이미 벌어진 거리를 되돌리고, 관통 직선이 직선상의 접근을 막는다면, 지대는 **다가오는 길 자체를 늦춘다**. 지대를 여왕 발밑이 아니라 **대상 자리**에 까는 이유: 여왕 발밑에 깔면 붙지 않으면 그만이라 아무 일도 하지 않는다. 다가오는 쪽 발밑에 깔아야 '이미 온 사람'에게 대가가 된다. 강지 Q(gangji_field)와 같은 부품(AuraZone)을 쓴다 — 그쪽은 아군에게 버프를 걸고 이쪽은 파티원에게 디버프를 건다. AuraZone 이 MEMBER_GROUP 을 훑으므로 진영을 바꿀 필요가 없었다. **완전 봉인이 아니라 감속인 이유**는 queen_snare_zone.tres 에 적었다 — 여왕이 이미 stun 을 걸기 때문이다. 이 안무에는 예고가 없다. 지대 자체가 화면에 보이고(AuraZone 이 원을 그린다) 즉발 피해가 아니라 서 있으면 걸리는 것이라, 지대가 곧 자기 예고다. 피해도 없다 — target_max_hp_damage_percent 0. 여왕의 피해는 평타와 관통 직선이 낸다. 180 · 6초 는 [임시값]이다."
+base_power = 0
+scales_with_faith = false
+aura_radius = 180.0
+aura_duration = 6.0
+aura_effect_id = &"queen_snare_zone"
