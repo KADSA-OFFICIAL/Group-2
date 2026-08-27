@@ -19,14 +19,15 @@ class_name StageMaps
 
 # 컨셉 -> 맵 씬 경로.
 #
-# **하늘은 아직 없다.** 맵 씬이 만들어지면 여기에 한 줄을 더하면 되고,
-# 전장·스테이지 코드는 고치지 않는다.
+# 세 컨셉이 모두 채워졌다(#423 으로 하늘이 마지막이었다). 컨셉이 늘면 여기에
+# 한 줄을 더하면 되고, 전장·스테이지 코드는 고치지 않는다.
 #
 # 빈 칸을 남겨 두지 않고 키를 아예 두지 않는 이유: 빈 문자열을 넣어 두면
 # "등록됐지만 경로가 잘못됨"과 "아직 안 만들어짐"이 구별되지 않는다.
 const CONCEPT_SCENE := {
 	StageData.Concept.LAND: "res://stage/grassland/GrasslandMap.tscn",
 	StageData.Concept.SEA: "res://stage/beach/BeachMap.tscn",
+	StageData.Concept.SKY: "res://stage/sky/SkyIslandMap.tscn",
 }
 
 # 컨셉이 없거나(챕터 밖 스테이지) 아직 맵이 없는 컨셉일 때 놓을 맵.
