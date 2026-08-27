@@ -26,7 +26,7 @@ secondary_role = 0
 character_id = &"taehee"
 display_name = "태희"
 playable = true
-description = "로스터의 **순혈 원거리딜러** 슬롯(#263). 원래는 겸직(원거리+탱커)이었고, 그 자리는 플레이스홀더 ranged_tank 가 다시 이어받았다. 스텟은 이 슬롯을 들고 있던 플레이스홀더 ranged_pure 의 값을 그대로 물려받은 [임시값]이다(체력·방어가 낮고 근력이 높은 순혈 딜러 프로필). 초상화는 아직 없다. 평타는 **원거리 투사체**다 — 이 프로젝트의 첫 플레이어 원거리 평타이며, 사거리·속도·비거리는 CharacterData 의 basic_attack_* 가 소유한다. 고유 스킬 셋은 전부 '평타를 얼마나 많이 치느냐'로 값어치가 정해지도록 맞물려 있다. 평타 패시브 = 4타 광역탄(data/skills/taehee_quad_shot.tres): 평타 4회마다 그 탄이 착탄 지점에서 원형 광역으로 터진다. Q = 튕기는 탄(data/skills/taehee_chain_shot.tres): 5초 동안 평타가 최대 3명에게 추가로 튕긴다. E = 집속 레이저(data/skills/taehee_focus_laser.tres): 캐스트 뒤 직선 관통, 피해는 맞은 적의 현재 체력 비례, **시전 시간이 공속에 반비례**하고 **평타마다 쿨타임이 줄어든다**. 리듬은 평타(스택·공속↑) -> Q(난타) -> 그 난타가 E 를 당김 -> E 다. 게이지는 갖지 않는다 — 그 자원은 미나의 개성이다(#259). 개성 미정."
+description = "로스터의 **순혈 원거리딜러** 슬롯(#263). 원래는 겸직(원거리+탱커)이었고, 그 자리는 플레이스홀더 아린(그때는 슬롯 이름 ranged_tank 였고 #338 에서 이름을 받았다)이 다시 이어받았다. 스텟은 이 슬롯을 들고 있던 플레이스홀더 ranged_pure 의 값을 그대로 물려받은 [임시값]이다(체력·방어가 낮고 근력이 높은 순혈 딜러 프로필). 초상화는 아직 없다. 평타는 **원거리 투사체**다 — 이 프로젝트의 첫 플레이어 원거리 평타이며, 사거리·속도·비거리는 CharacterData 의 basic_attack_* 가 소유한다. 고유 스킬 셋은 전부 '평타를 얼마나 많이 치느냐'로 값어치가 정해지도록 맞물려 있다. 평타 패시브 = 4타 광역탄(data/skills/taehee_quad_shot.tres): 평타 4회마다 그 탄이 착탄 지점에서 원형 광역으로 터진다. Q = 튕기는 탄(data/skills/taehee_chain_shot.tres): 5초 동안 평타가 최대 3명에게 추가로 튕긴다. E = 집속 레이저(data/skills/taehee_focus_laser.tres): 캐스트 뒤 직선 관통, 피해는 맞은 적의 현재 체력 비례, **시전 시간이 공속에 반비례**하고 **평타마다 쿨타임이 줄어든다**. 리듬은 평타(스택·공속↑) -> Q(난타) -> 그 난타가 E 를 당김 -> E 다. 게이지는 갖지 않는다 — 그 자원은 미나의 개성이다(#259). 개성 미정."
 stats = SubResource("PlayerStats_taehee")
 skills = Array[ExtResource("11_skilldef")]([ExtResource("12_passive"), ExtResource("13_chain"), ExtResource("14_laser")])
 basic_attack_projectile_speed = 620.0

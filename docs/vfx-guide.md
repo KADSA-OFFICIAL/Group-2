@@ -319,7 +319,7 @@ HUD 미터만으로는 부족하다 — 게이지는 **Q 의 반경과 E 의 두
 - **[해소됨]** 고유 스킬은 **6명 전원** 저작되었다(#336). 남은 것은 각 스킬의 **이펙트**다
   ([`data/characters/README.md`](../data/characters/README.md)).
   지금 있는 것은 **범위를 보여 주는 도형**뿐이고, 아트는 없다:
-  - `BeamEffect`(태희 E) · `ConeEffect`(`ranged_tank` Q) · `StrikeEffect`(`ranged_tank` 평타)
+  - `BeamEffect`(태희 E) · `ConeEffect`(아린 Q) · `StrikeEffect`(아린 평타)
     — **판정하지 않는다.** 판정은 시전 순간에 이미 끝났고 그림만 남는다.
   - `Shockwave`(설아 Q) · `AuraZone`(강지 Q) — 반대로 **판정 노드가 직접 그린다.**
     저 원과 링이 곧 판정 범위이므로 연출로 흉내 내지 않는다(§1.7).
