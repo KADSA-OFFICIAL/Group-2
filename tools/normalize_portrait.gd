@@ -176,13 +176,25 @@ func _canvas_size(figure: Vector2i, is_bust: bool) -> Vector2i:
 	else:
 		height = float(figure.y) / FIGURE_HEIGHT_RATIO
 		width = height * CANVAS_ASPECT
-		# 팔을 벌린 포즈가 가로로 넘치면 캔버스를 넓힌다(비율은 유지하므로 세로도 는다).
-		# 이때 인물의 세로 점유율은 FIGURE_HEIGHT_RATIO 보다 낮아지는데, 가로로 넓은
-		# 인물은 실제로 덜 높게 서는 것이 맞다 — 잘라내는 것보다 낫다.
+		# 가로로 넓은 인물(팔을 벌린 포즈, 크게 퍼진 머리)은 캔버스를 **넓히기만** 한다.
+		#
+		# 예전에는 여기서 세로도 함께 늘려 캔버스 비율을 CANVAS_ASPECT 로 고정했다.
+		# 그러면 인물의 세로 점유율이 FIGURE_HEIGHT_RATIO 아래로 떨어지고, 화면은
+		# 칸에 비율 유지로 그리므로 **그 인물만 작게 선다.** 아린이 76%, 하랑이 78%
+		# 였고 나머지가 92% 라, 아린만 눈에 띄게 작았다.
+		#
+		# 세로 점유율을 지키는 쪽을 택한다. 캔버스 비율이 인물마다 달라지는 대신
+		# 모든 인물이 같은 높이로 선다 — 원래 이 규약이 노리던 것이다.
+		#
+		# **전제**: 이 방식은 캔버스가 화면 칸보다 좁을 때만 성립한다. 캔버스가 칸보다
+		# 넓으면 가로가 제약이 되어 그 인물만 다시 작아진다. 지금 초상을 그리는 칸 중
+		# **가장 좁은 것은 장비 화면의 190x280 = 0.679** 다(캐릭터 화면은 230x330 = 0.697).
+		# 실측 캔버스 비율은 아린 0.674 · 하랑 0.657 · 나머지 7장 0.556 이라 전부 그 아래다.
+		# 아린의 여유는 0.005 뿐이므로, **0.679 를 넘는 초상이 들어오면 이 전제가 깨진다** —
+		# 그때는 칸을 넓히거나 여기서 가로에 상한을 두어야 한다.
 		var min_width := float(figure.x) / FIGURE_HEIGHT_RATIO
 		if min_width > width:
 			width = min_width
-			height = width / CANVAS_ASPECT
 	return Vector2i(int(round(width)), int(round(height)))
 
 

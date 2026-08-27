@@ -58,6 +58,7 @@ var _gauge_label: Label
 var _gauge_fill: ColorRect
 var _gauge_track: Control
 var _execute_row: Control
+var _support_row: Control
 
 # 고유 스킬 쿨타임(#263). 스킬을 저작한 캐릭터를 잡았을 때만 보인다.
 var _skill_panel: PanelContainer
@@ -431,6 +432,11 @@ func _build_mechanics_panel() -> PanelContainer:
 	_execute_row = _make_icon_row("icon_execute", "처형 가능", "")
 	body.add_child(_execute_row)
 
+	# 버퍼 3단계(#369). 제공한 힐/보호막에서 쌓인, 다음 평타에 얹힐 피해.
+	# 쌓이는 것이 보여야 "지금 때리면 이만큼 더 들어간다"가 판단 재료가 된다.
+	_support_row = _make_icon_row("icon_execute", "보류 피해", "")
+	body.add_child(_support_row)
+
 	_mechanics_panel = panel
 	return panel
 
@@ -717,6 +723,7 @@ func _update_mechanics() -> void:
 	_update_stack(controlled)
 	_update_gauge(controlled)
 	_update_execute(controlled)
+	_update_support(controlled)
 
 	# 세 줄이 전부 숨었으면 제목만 남은 빈 판이 전장을 가린다. 판째로 숨긴다.
 	if _mechanics_panel != null:
@@ -724,7 +731,8 @@ func _update_mechanics() -> void:
 			(_mark_row != null and _mark_row.visible)
 			or (_stack_row != null and _stack_row.visible)
 			or (_gauge_row != null and _gauge_row.visible)
-			or (_execute_row != null and _execute_row.visible))
+			or (_execute_row != null and _execute_row.visible)
+			or (_support_row != null and _support_row.visible))
 
 
 
@@ -885,6 +893,25 @@ func _update_execute(controlled: Node) -> void:
 	_execute_row.visible = found
 	if found:
 		(_execute_row.get_meta("value") as Label).text = "가능"
+
+
+# 버퍼 3단계의 보류 피해(#369). 쌓인 것이 있을 때만 뜬다.
+#
+# 처형 줄과 나눠 두는 이유: 처형은 **적 쪽 조건**(디버프 + 체력)이라 때릴 대상이 있어야
+# 뜨지만, 이쪽은 **내가 쌓아 둔 것**이라 적이 없어도 있다. 한 줄로 묶으면 "지금 때리면
+# 이만큼 더 들어간다"가 적 상태에 가려진다.
+func _update_support(controlled: Node) -> void:
+	if _support_row == null:
+		return
+
+	if controlled == null or not controlled.has_method("get_buffer_pending_damage"):
+		_support_row.visible = false
+		return
+
+	var pending: int = controlled.get_buffer_pending_damage()
+	_support_row.visible = pending > 0
+	if pending > 0:
+		(_support_row.get_meta("value") as Label).text = "+%d" % pending
 
 
 # ===== 시너지 (Synergy) =====

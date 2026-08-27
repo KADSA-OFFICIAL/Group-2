@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skilldef"]
+
+[resource]
+script = ExtResource("1_skilldef")
+skill_id = &"boss_leap_slam"
+display_name = "3연 도약 내리찍기"
+description = "매머드 수인 보스의 특별 스킬 2(#376). 체력 임계선을 지날 때 발동한다. **3번**(repeat_count) 공중으로 뛰어 대상이 있는 쪽으로 내리찍는다. 착지 지점은 **그 도약이 시작될 때**의 대상 자리이고, 도약마다 다시 읽는다 — 그래서 첫 타를 맞아도 뒤 타는 예고를 보고 피할 수 있다. 공중에 떠 있는 시간은 cast_time(0.6초)이며 그 동안 착지 예고 원이 떠 있다(BossTelegraph). 판정은 반경 160 원(instant_aoe_radius)이고 예고가 **같은 크기**로 그려진다(vfx-guide §1.2). 판정 시점은 **착지하는 순간**이라, 예고 밖으로 나가 있으면 맞지 않는다. 피해는 착지마다 **대상 최대 체력의 30%**(target_max_hp_damage_percent). 셋을 다 맞으면 90% 라 거의 죽지만, 셋 다 피할 수 있는 것이 이 스킬의 계약이다 — 3연타로 만든 이유가 '한 번 실수해도 만회할 수 있게'다. 돌진(boss_charge)과 번갈아 나간다. aoe_radius 가 아니라 instant_aoe_radius 를 쓰는 이유: 시전 순간 한 번 터지는 범위이지 지속되는 장판이 아니다. 3회 · 0.6초 · 160 · 30% 는 전부 [임시값]이다."
+base_power = 0
+scales_with_faith = false
+cast_time = 0.6
+instant_aoe_radius = 160.0
+target_max_hp_damage_percent = 0.3
+repeat_count = 3
