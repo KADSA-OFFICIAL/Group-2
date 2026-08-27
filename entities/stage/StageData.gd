@@ -53,6 +53,18 @@ enum Type {
 # 비어 있어도 유효하다 — 적 없이 점령만 하는 스테이지가 가능하다.
 @export var spawns: Array[StageSpawn] = []
 
+# ===== 웨이브 (Waves) — #375 =====
+#
+# 순서대로 나오는 적 무리. 한 웨이브를 전멸시키면 다음 웨이브가 놓인다.
+#
+# 왜 spawns 와 따로인가: spawns 는 **시작 시 한 번에** 놓는 배치라는 뜻이 이미 굳어 있다.
+# 거기에 순서를 얹으면 한 필드가 두 가지를 뜻하게 되고, 웨이브를 쓰지 않는 기존
+# 스테이지(1-1)의 동작이 조용히 달라진다.
+#
+# 둘 다 있으면 **spawns 를 먼저 놓고, 그것을 전멸시킨 뒤 웨이브가 시작된다.**
+# 비어 있으면 웨이브 없는 스테이지다 — 지금까지 저작된 .tres 는 이 필드가 없어 그대로 동작한다.
+@export var waves: Array[StageWave] = []
+
 
 # ===== 강제 파티 (Forced party) — #345 =====
 #
@@ -98,7 +110,7 @@ enum Type {
 # 임의의 기본값을 넣으면 나중에 밸런스를 정할 때 그 값이 근거처럼 남는다.
 #
 #   - 존 확보 시간, 존 위치, 리스폰 규칙 (§5.2 [미정])
-#   - 웨이브(시간차 스폰): 위 spawns 는 시작 시 한 번에 놓는 배치만 담는다
+#   - **시간차 스폰**(N초 뒤 등장): 웨이브(#375)의 방아쇠는 "앞 웨이브 전멸" 하나뿐이다
 #   - 첫 클리어 보너스·별점·드랍 테이블: 보상 규칙이 아직 clear_rewards 하나뿐이다
 #   - "점령+전투" 에서 두 프리미티브를 순차/동시/보완 중 무엇으로 엮을지 (§5.2 [미정])
 #   - 잠입/전투 루트 선택의 실제 파라미터 (§7 [미정], 전투 화면 작업 범위 밖)
@@ -199,16 +211,26 @@ func validate() -> Array[String]:
 		for problem in spawn.validate():
 			problems.append("spawns[%d]: %s" % [i, problem])
 
+	# 웨이브도 같은 이유로 저작 시점에 검사한다. 빈 웨이브는 즉시 넘어가 버려
+	# "적이 안 나온다"로만 보이고 원인이 드러나지 않는다.
+	for i in range(waves.size()):
+		var wave := waves[i]
+		if wave == null:
+			problems.append("waves[%d]가 비어 있습니다." % i)
+			continue
+		for problem in wave.validate():
+			problems.append("waves[%d]: %s" % [i, problem])
+
+	# 소탕이 조건인데 놓을 적이 아무 데도 없으면 진입하자마자 승리가 된다.
+	if requires_clear() and spawns.is_empty() and waves.is_empty():
+		problems.append("소탕 스테이지인데 spawns 도 waves 도 비어 있습니다.")
+
 	# 보상 키/수량 검증. 잘못된 값은 지급 시점이 아니라 저작 시점에 드러나야 한다.
 	for key in clear_rewards:
 		if typeof(clear_rewards[key]) != TYPE_INT or int(clear_rewards[key]) < 0:
 			problems.append("clear_rewards['%s']는 0 이상의 정수여야 합니다." % str(key))
 		elif not CurrencySystem.DEFAULT_CURRENCIES.has(str(key)):
 			problems.append("clear_rewards['%s']는 알 수 없는 재화입니다." % str(key))
-
-	# 소탕이 필요한데 적이 없으면 클리어할 수 없다(저작 실수).
-	if requires_clear() and spawns.is_empty():
-		problems.append("소탕이 필요한 스테이지인데 spawns가 비어 있습니다.")
 
 	# 점령 존(#377). 소탕과 같은 이유로 양쪽을 다 잡는다 —
 	# 존이 없으면 클리어 불가이고, 필요 없는데 저작돼 있으면 화면에 존이 뜨는데 아무 의미가 없다.

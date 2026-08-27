@@ -1,0 +1,105 @@
+[gd_resource type="Resource" script_class="StageData" load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
+[ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
+[ext_resource type="Script" path="res://entities/stage/StageWave.gd" id="3_wave"]
+[ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="5_mammoth"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk.tscn" id="6_raptor"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk2.tscn" id="7_raptor2"]
+[ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="8_seoa"]
+[ext_resource type="PackedScene" path="res://entities/enemies/PterosaurQueen.tscn" id="9_queen"]
+
+[sub_resource type="Resource" id="Spawn_w1_raptor"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_raptor")
+position = Vector2(600, 200)
+count = 2
+offset = Vector2(90, 80)
+
+[sub_resource type="Resource" id="Spawn_w2_raptor2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_raptor2")
+position = Vector2(580, 180)
+count = 2
+offset = Vector2(70, 140)
+
+[sub_resource type="Resource" id="Spawn_w2_seoa"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("8_seoa")
+position = Vector2(760, 260)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w3_mammoth"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("5_mammoth")
+position = Vector2(620, 250)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w3_raptor"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_raptor")
+position = Vector2(700, 160)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_boss_queen"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("9_queen")
+position = Vector2(780, 240)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_boss_adds"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_raptor2")
+position = Vector2(600, 170)
+count = 2
+offset = Vector2(40, 150)
+
+[sub_resource type="Resource" id="Wave_1"]
+script = ExtResource("3_wave")
+label = "1파 — 정찰대"
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w1_raptor")])
+
+[sub_resource type="Resource" id="Wave_2"]
+script = ExtResource("3_wave")
+label = "2파 — 사수 엄호"
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w2_raptor2"), SubResource("Spawn_w2_seoa")])
+
+[sub_resource type="Resource" id="Wave_3"]
+script = ExtResource("3_wave")
+label = "3파 — 중장 돌격"
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w3_mammoth"), SubResource("Spawn_w3_raptor")])
+
+[sub_resource type="Resource" id="Wave_4"]
+script = ExtResource("3_wave")
+label = "보스 — 여왕"
+is_boss = true
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_boss_queen"), SubResource("Spawn_boss_adds")])
+
+[resource]
+script = ExtResource("1_stagedata")
+stage_id = &"stage_test"
+display_name = "테스트 스테이지"
+description = "**웨이브 + 보스 시험장**(#375). 1-1 이 시너지 체인 하나를 순혈 3인으로 보여 주는 튜토리얼이라면, 여기는 **플레이어가 짠 파티가 실제로 버티는지** 보는 자리다.
+
+forced_party 를 비워 둔다 — 편성은 자유다. 시너지는 강제되지 않고, 어떤 파티로 들어오느냐에 따라 웨이브별 난이도가 달라지는 것이 이 스테이지의 요점이다. 설계 §8.1 의 죽은 구간(역할 2카운트)에 걸린 파티는 3파에서 눈에 띄게 막힌다.
+
+웨이브 4개, 앞 웨이브를 전멸시켜야 다음이 놓인다(시간 방아쇠 없음). 각 파가 다른 것을 요구한다:
+  1파 정찰대 — 벨로시랩터 2. 물몸·고속. 처음 붙는 파라 조작 확인용이다.
+  2파 사수 엄호 — 벨로시랩터 2 + 서아 1. 근접이 붙는 동안 뒤에서 탄이 온다. 서아를 먼저 끊을지 앞을 정리할지 고르게 만든다.
+  3파 중장 돌격 — 매머드 1 + 벨로시랩터 1. 매머드의 3연타 뒤 기절을 탱커가 받아 내야 한다. 탱커 없는 파티가 처음 벽에 부딪히는 곳이다.
+  4파 보스 여왕 — 여왕 1 + 벨로시랩터 2. 여왕은 사거리 320 에서 물러나지 않고 쏘고, 4연타 뒤 원거리 기절을 건다. 잡졸이 발을 묶는 동안 거리를 좁혀야 해서 앞 세 파와 압박 방향이 반대다.
+
+spawns 는 비워 두고 전부 웨이브에 넣었다. 둘을 섞으면 시작 배치가 '0파'처럼 보이는데 화면에는 번호가 뜨지 않아, 플레이어가 세는 파 수와 저작된 수가 어긋난다.
+
+[임시값] 보상은 1-1(40/50/25) 의 3배다 — 웨이브가 4배 길고 보스가 붙었다는 것 말고 근거가 없다. 획득 속도 대비 제작 비용 밸런스는 별도 작업이다."
+type = 0
+clear_rewards = {
+"gold": 120,
+"protein": 150,
+"stone": 75
+}
+waves = Array[ExtResource("3_wave")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3"), SubResource("Wave_4")])
