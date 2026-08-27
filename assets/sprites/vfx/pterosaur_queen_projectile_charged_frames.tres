@@ -1,0 +1,23 @@
+[gd_resource type="SpriteFrames" load_steps=5 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/vfx/pterosaur_queen_projectile_charged.png" id="1_sheet"]
+
+[sub_resource type="AtlasTexture" id="Frame0"]
+atlas = ExtResource("1_sheet")
+region = Rect2(0, 0, 12, 12)
+
+[sub_resource type="AtlasTexture" id="Frame1"]
+atlas = ExtResource("1_sheet")
+region = Rect2(12, 0, 12, 12)
+
+[sub_resource type="AtlasTexture" id="Frame2"]
+atlas = ExtResource("1_sheet")
+region = Rect2(24, 0, 12, 12)
+
+[resource]
+animations = [{
+"frames": [{"duration": 1.0, "texture": SubResource("Frame0")}, {"duration": 1.0, "texture": SubResource("Frame1")}, {"duration": 1.0, "texture": SubResource("Frame2")}],
+"loop": true,
+"name": &"spin",
+"speed": 12.0
+}]
