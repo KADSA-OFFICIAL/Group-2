@@ -2055,6 +2055,10 @@ func _fire_attack_passive(skill: SkillData) -> void:
 	if amount <= 0 or skill.aoe_radius <= 0.0:
 		return
 
+	# 미나 패시브(3타 회복 폭발)의 광역도 폭발 연출을 쓴다 — 같은 사건이므로 같은 그림이다.
+	# 탄 폭발·보호막 폭발·하랑 대체 평타와 함께 burst.png 하나를 공유한다.
+	_spawn_burst(global_position, skill.aoe_radius)
+
 	for enemy in GameManager.get_all_enemies():
 		if enemy == null or not enemy.is_alive:
 			continue
