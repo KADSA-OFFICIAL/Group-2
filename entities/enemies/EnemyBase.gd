@@ -125,6 +125,11 @@ func _apply_data() -> void:
 		_anim_sprite.sprite_frames = data.walk_frames
 		_anim_sprite.scale = data.walk_sprite_scale
 		_anim_sprite.offset = data.walk_sprite_offset
+		# #419 시트는 네이티브 108px를 화면 108px로 그린다. 배율 1에서는 Nearest로
+		# 도트 1개를 화면 1px에 고정하고, 기존 축소 시트는 부모의 선형 필터·밉맵을 유지한다.
+		_anim_sprite.texture_filter = (CanvasItem.TEXTURE_FILTER_NEAREST
+			if data.walk_sprite_scale == Vector2.ONE
+			else CanvasItem.TEXTURE_FILTER_PARENT_NODE)
 		# 첫 프레임은 정면 정지 포즈로 둔다. animation을 지정하지 않으면 기본값 &"default"를
 		# 찾다가 없어서 경고가 난다.
 		_anim_sprite.animation = WalkAnimation.ANIMATIONS[WalkAnimation.DOWN]

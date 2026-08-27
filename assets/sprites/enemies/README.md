@@ -14,6 +14,8 @@
 | `velociraptor_beastfolk_2_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
 | `pterosaur_queen_walk.png` | 익룡 여왕 SD. 4방향 x 3프레임 워크 시트 (셀 96x96, 시트 288x384) |
 | `pterosaur_queen_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` (8fps) |
+| `seoa_walk.png` | 서아. 4방향 x 3프레임 워크 시트 (셀 128x128, 시트 384x512) |
+| `seoa_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` (8fps) |
 
 ## 시트 규약
 
@@ -108,3 +110,7 @@ godot --headless --path . --script res://tools/normalize_walk_sheet.gd -- <입�
 익룡 여왕은 SD 비율과 금장·헤드피스 디테일을 보존하기 위해 96x96 셀을 2배 확대한다.
 화면 키는 기존 설계와 같은 144px이다. `PterosaurQueen.tscn`의
 `AnimatedSprite2D.texture_filter`를 nearest로 고정해 경계가 흐려지지 않게 한다.
+
+서아는 #419 규격을 따른다. 셀 128x128, 인물 키 108px, 발 기준선 y=120
+(셀 중심 기준 +56), 배율 1이다. 충돌 캡슐의 바닥 F=14에 맞추면
+`walk_sprite_offset.y = 14 - 56 = -42`이고 화면 키는 108px다.

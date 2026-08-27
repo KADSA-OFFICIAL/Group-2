@@ -12,6 +12,10 @@
 | `mina_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
 | `taehee_walk.png` | 태희. 4방향 x 3프레임 워크 시트 (셀 420x448, 시트 1260x1792) |
 | `taehee_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+| `arin_walk.png` | 아린. 4방향 x 3프레임 워크 시트 (셀 128x128, 시트 384x512) |
+| `arin_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+| `gangji_walk.png` | 강지. 4방향 x 3프레임 워크 시트 (셀 128x128, 시트 384x512) |
+| `gangji_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
 
 > **`buffer_pure_walk.png` 의 이름은 역사적 흔적이다**(#276, #315). 이 아트를 쓰던 `buffer_pure` 는
 > 설아가 순혈 버퍼 슬롯을 이어받으면서 삭제됐고, 아트는 겸직 플레이스홀더 `buffer_ranged` 를 거쳐
@@ -28,6 +32,10 @@
 
 `taehee_walk.png` 도 셀 420x448 / 발 기준선 **+215** / 내용 높이 432 로 미나와 **완전히 같은 격자**다.
 `walk_sprite_offset.y = -155`, 화면 키 108px.
+
+`arin_walk.png`와 `gangji_walk.png`는 #419 규격이다. 셀 128x128, 인물 키 108px,
+발 기준선 y=120(셀 중심 기준 +56), 배율 1이다. 파티 충돌 캡슐의 바닥 F=15에 맞추면
+`walk_sprite_offset.y = 15 - 56 = -41`이고 화면 키는 108px다.
 
 ## 시트 규약
 
