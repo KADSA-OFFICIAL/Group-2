@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_skilldef"]
+
+[resource]
+script = ExtResource("1_skilldef")
+skill_id = &"queen_lance"
+display_name = "관통 직선"
+description = "익룡 여왕의 안무 2(#391). 체력 임계선을 지날 때, **1.5초 준비**(cast_time) 후 그 시작 시점의 대상 방향으로 길이 640 x 폭 110 의 띠를 한 번에 판정한다. 방향을 준비 시작에 굳히는 이유는 매머드 돌진(boss_charge)과 같다 — 쏠 때 다시 조준하면 준비 시간이 회피 창이 아니라 대기 시간이 된다. 예고(BossTelegraph)가 **같은 크기**로 그려진다(vfx-guide §1.2). 매머드 돌진과 판정 모양은 같지만 **보스가 움직이지 않는다** — 여왕은 자리를 지키는 쪽이고, 돌진하면 스스로 거리를 없애 버려 정체성이 뒤집힌다. 그리고 **거리에 따라 난이도가 반대로** 걸린다: 멀면 띠가 길어 옆으로 빠질 시간이 넉넉하고, 붙어 있으면 반응 시간이 짧다. 접근을 노리는 쪽에 대가를 물리는 것이 이 스킬의 값어치다. 피해는 **대상 최대 체력의 40%**(target_max_hp_damage_percent) — 매머드 돌진(60%)보다 낮다. 여왕은 거리로 피해를 피하는 보스라 한 방의 무게까지 같으면 판이 한쪽으로 기울고, 임계선 3회 중 이 안무가 두 번 나가기 때문이다(후퇴 -> 관통 -> 지대 순환이 아니라 3종을 돌리므로 실제로는 각 1회지만, 저작 순서가 바뀌면 달라질 수 있어 낮게 잡았다). 준비 1.5초는 매머드(2.0)보다 짧다 — 원거리 보스라 이미 거리가 회피를 돕는다. 640 · 110 · 1.5초 · 40% 는 전부 [임시값]이다."
+base_power = 0
+scales_with_faith = false
+cast_time = 1.5
+beam_length = 640.0
+beam_width = 110.0
+target_max_hp_damage_percent = 0.4
