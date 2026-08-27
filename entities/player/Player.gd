@@ -1267,7 +1267,8 @@ func _heal_lowest_ally(skill: SkillData) -> void:
 		return
 	var amount := skill.get_effective_ally_heal(get_stats().get_goddess_skill_boost())
 	if amount > 0:
-		target.heal(amount)
+		# 버퍼 3단계는 **들어간 만큼만** 센다(#369). 만피 아군에게 넘친 몫은 제공된 것이 아니다.
+		_credit_support_provided(target.heal(amount))
 
 
 # 파티에서 체력 비율이 가장 낮은 멤버. **자기 자신도 후보다.**
@@ -1521,6 +1522,12 @@ func _apply_skill_shield(skill: SkillData, caster: Node, gauge_ratio: float = 0.
 	_skill_shield_time_left = skill.shield_duration
 	_skill_shield_skill = skill
 	_skill_shield_caster = caster
+
+	# 버퍼 3단계(#369). 이 함수는 **받는 쪽** 노드 위에서 도므로 공은 caster 에게 간다 —
+	# 보호막을 얻은 사람이 아니라 건 사람이 제공자다. 자기 자신에게 걸 때는 caster 가 self 라
+	# 같은 경로로 처리된다.
+	if caster != null and is_instance_valid(caster) and caster.has_method("_credit_support_provided"):
+		caster._credit_support_provided(gained)
 
 
 # 지속시간 한 틱. 시간이 다 되면 그 자리에서 터진다.
@@ -1806,6 +1813,12 @@ func _resolve_attack_hit(target: Node, damage: int) -> void:
 	if _try_execute(target):
 		return
 
+	# 버퍼 3단계: 제공한 힐/보호막에서 쌓아 둔 보류 피해를 이 평타에 얹는다(#369).
+	#
+	# 처형 뒤에 두는 이유: 처형은 피해를 넣는 것이 아니라 대상을 없애는 것이라 얹을 자리가
+	# 없다. 거기서 소모하면 보류가 아무 일도 못 하고 사라진다 — 다음 평타를 위해 남긴다.
+	damage += _consume_buffer_pending_damage()
+
 	var dealt: int = target.take_damage(damage, self)
 
 	# 원거리 3단계: 실제로 준 피해에 비례해 회복한다(죽인 타격도 포함이다).
@@ -1949,7 +1962,8 @@ func _apply_attack_ally_heal(damage_dealt: int) -> void:
 			continue
 		var target := _lowest_health_ally()
 		if target != null:
-			target.heal(amount)
+			# 강지 수혈도 힐 제공이다 — 버퍼 3단계가 켜져 있으면 여기서도 쌓인다(#369).
+			_credit_support_provided(target.heal(amount))
 
 
 # ===== 평타 패시브 (Basic-attack passives) =====
@@ -2008,7 +2022,11 @@ func _fire_attack_passive(skill: SkillData) -> void:
 		var missing: int = max_hp - hp
 		healed = int(round(missing * skill.heal_missing_hp_percent))
 		if healed > 0:
-			heal(healed)
+			# 자기에게 거는 힐도 이 멤버가 제공한 것이다(#369).
+			# 아래 heal_to_aoe_damage_percent 와는 **별개 채널**이다(SkillData.gd:203) —
+			# 그쪽은 캐릭터 개성이라 항상 돌고, 이쪽은 파티 구성으로 켜진다. 둘 다 켜지면 각각 나간다.
+			healed = heal(healed)
+			_credit_support_provided(healed)
 
 	var amount := 0
 	if healed > 0 and skill.heal_to_aoe_damage_percent > 0.0:
@@ -2058,6 +2076,19 @@ var _skill_shield: int = 0
 var _skill_shield_time_left: float = 0.0
 var _skill_shield_skill: SkillData = null
 var _skill_shield_caster: Node = null
+
+# ----- 버퍼 3단계: 보류 피해 (Buffer tier-3 pending damage) -----
+# 이 멤버가 제공한 힐/보호막에서 나온, 아직 쓰지 않은 추가 피해(#369).
+#
+# 왜 즉시 넣지 않고 쌓아 두는가: 설계 §8.1 은 "힐/보호막을 제공할 때 그 양에 비례해
+# 추가 피해"까지만 [확정]했고 **누구에게 언제 들어가는지는 정하지 않았다.**
+# 즉시 광역으로 하면 반경 상수가 필요한데 설계에 근거가 없어 [임시값]이 하나 더 늘고,
+# "가장 가까운 적"은 근거 없는 대상 선정 규칙이 된다.
+#
+# 다음 평타에 얹으면 새 수치 없이 대상이 자연히 정해지고, 버퍼 1단계 처형이 "버퍼가
+# **직접** 공격해야 발동"하는 것과 계약이 같아진다 — 살리고, 그 값을 때려서 받는다.
+# 대가: 힐 직후에 때리지 않으면 피해가 대기 상태로 남는다. 그것이 이 선택의 성질이다.
+var _buffer_pending_damage: int = 0
 
 # 스킬별 남은 쿨타임. skill_id(StringName) -> 남은 초.
 # 항목이 없으면 쿨타임이 없다는 뜻이다(다 돌면 지운다).
@@ -2255,6 +2286,42 @@ func get_shield() -> int:
 	return _shield
 
 
+# --- 버퍼 3단계: 제공한 힐/보호막 -> 추가 피해 ---
+
+# 이 멤버가 힐 또는 보호막을 **실제로 제공했을 때** 부른다(#369, docs §8.1).
+#
+# amount 는 요청한 양이 아니라 **들어간 양**이다. 만피에 넘친 힐과 0 으로 막힌 보호막은
+# 제공된 것이 아니므로 세지 않는다 — 그러지 않으면 만피 파티를 계속 회복시키는 것만으로
+# 피해가 쌓인다.
+#
+# 부르는 쪽이 **제공한 본인**이어야 한다. 보호막은 받는 쪽 노드에서 걸리므로
+# (_apply_skill_shield 는 대상 위에서 돈다) 그쪽에서는 caster 에게 넘긴다.
+func _credit_support_provided(amount: int) -> void:
+	if amount <= 0:
+		return
+	# 배타 규칙(#73)은 is_tier3_active 에 이미 반영되어 있다 — 다른 역할이 3단계를
+	# 발동한 파티에서는 여기서 자동으로 꺼진다.
+	if not _is_role_tier3(CharacterData.Role.BUFFER):
+		return
+
+	var bonus := int(round(amount * CombatConfig.tuning.heal_to_damage_percent))
+	if bonus <= 0:
+		return
+	_buffer_pending_damage += bonus
+
+
+# 보류 피해를 꺼내 쓰고 0 으로 비운다. 평타가 **적중했을 때만** 부른다.
+func _consume_buffer_pending_damage() -> int:
+	var pending := _buffer_pending_damage
+	_buffer_pending_damage = 0
+	return pending
+
+
+# 아직 쓰지 않은 보류 피해(표시·검증용).
+func get_buffer_pending_damage() -> int:
+	return _buffer_pending_damage
+
+
 # --- 버퍼: 처형 ---
 
 # 처형 조건을 만족하면 대상을 즉시 쓰러뜨린다.
@@ -2441,15 +2508,24 @@ func take_damage(amount: int, source = null, ignore_defense: bool = false) -> in
 		die()
 	return dealt
 
-func heal(amount: int) -> void:
-	if not is_alive:
-		return
+# 회복시키고 **실제로 들어간 양**을 돌려준다(take_damage 가 dealt 를 돌려주는 것과 같은 규약).
+#
+# 왜 반환값이 필요한가: 만피 근처에서는 요청한 양과 들어간 양이 다르다. 버퍼 3단계는
+# "제공한 힐에 비례"라 넘친 몫까지 세면 만피인 파티를 계속 회복시키는 것만으로 피해가
+# 쌓인다. 부르는 쪽이 무시해도 되므로 기존 호출부는 그대로 동작한다.
+func heal(amount: int) -> int:
+	if not is_alive or amount <= 0:
+		return 0
 
+	var before := hp
 	hp += amount
 	hp = min(hp, max_hp)
+	var applied := hp - before
 
 	if EventBus:
 		EventBus.healing_applied.emit(self, amount)
+
+	return applied
 
 func die() -> void:
 	is_alive = false
