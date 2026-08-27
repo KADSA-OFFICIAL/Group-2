@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
+[ext_resource type="Texture2D" uid="uid://drnb52wly5ops" path="res://assets/sprites/enemies/portraits/girl_violet.png" id="4_portrait"]
+
+[sub_resource type="Resource" id="PlayerStats_velociraptor_beastfolk"]
+script = ExtResource("2_stats")
+hp = 600
+strength = 33
+defense = 60
+intelligence = 100
+faith = 100
+
+[resource]
+script = ExtResource("1_enemydata")
+enemy_id = &"velociraptor_beastfolk"
+display_name = "벨로시랩터 수인"
+description = "물몸·고이속·고공속 근접 개체(#340). 하이브리드 C 기준 표준 적(서아) 대비 HP x0.5, 공격 x0.5, 방어 x0.5 로 **한 방도 약하고 잘 죽는 대신** 이동 0.9(180px/s)·공속 1.4(쿨다운 0.36초)로 가장 먼저 붙어 난타한다. 매머드 수인(HP x2.0, 이동 0.35)의 정반대 축이다. DPS(방어 적용 전)는 33/0.36 ≈ 92 로 서아(78)·매머드(91)와 같은 급이지만 체력이 절반이라 교환이 성립한다. 이동 0.9 는 파티 기준 이동속도(200px/s)보다 조금 느리게 잡은 값이다 — 파티보다 빠르면 물러설 방법이 없어진다. 수치는 전부 [임시값]. 강화 평타·고유 스킬 없음, 개성/서사 미정. 워크 시트가 없어 전투에서 도형 플레이스홀더로 보인다. 초상은 전용 아트가 아니라 강지가 임시로 쓰던 girl_violet.png 를 이 적으로 옮겨 온 것이다(#340) — 강지는 초상 없이 두었다."
+stats = SubResource("PlayerStats_velociraptor_beastfolk")
+balance_tier = 1
+hp_multiplier = 0.5
+attack_multiplier = 0.5
+defense_multiplier = 0.5
+sprite_texture = ExtResource("9_shape")
+tint = Color(0.45, 0.75, 0.6, 1)
+sprite_scale = Vector2(1.2, 1.2)
+portrait = ExtResource("4_portrait")
+ai_enabled = true
+detection_range = 600.0
+attack_range = 45.0
+move_speed_multiplier = 0.9
+attack_speed_multiplier = 1.4
