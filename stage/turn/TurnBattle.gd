@@ -45,6 +45,21 @@ extends Node2D
 const HUD_LAYER: int = 1
 const FLASH_LAYER: int = 2
 
+# ===== 오의 컷인 구도 (캐릭터 아트 가이드 §4.1) =====
+#
+# 가이드는 2400×1350 캔버스 기준이고 이 화면은 1280×720 이라 0.533 배로 환산했다.
+## 아트 판의 좌단. 좌측 40%(x 0~512)는 타이포 영역이라 그림이 넘어오지 않게 둔다.
+const CUTIN_ART_X: float = 520.0
+## 아트 판의 폭. 화면 우단(1280)을 넘겨 **잘려 나갈 여유 200px**(환산 107)을 준다.
+const CUTIN_ART_W: float = 868.0
+## 슬라이드 인 거리. 이만큼 오른쪽에서 들어온다.
+const CUTIN_SLIDE: float = 130.0
+## 엠블럼 한 변. 가이드 §1 은 128px 라 하지만 **타이포 뒤 워터마크로 쓰므로 더 크게**
+## 둔다. 128px 단색 도형을 글자 옆에 두면 엠블럼이 아니라 길 잃은 색 판으로 보였다.
+const CUTIN_EMBLEM: float = 208.0
+## 엠블럼 알파. 글자를 읽는 데 방해가 되지 않는 선.
+const CUTIN_EMBLEM_ALPHA: float = 0.17
+
 var battle := TurnBattleManager.new()
 var hud: TurnBattleHUD = null
 
@@ -57,6 +72,14 @@ var _flash_layer: CanvasLayer = null
 var _numbers: Node2D = null
 ## 격파 타이포그래피.
 var _banner: Label = null
+
+## 오의 컷인 묶음. 아트·조명·엠블럼·타이포를 한 노드 아래 둬서 통째로 슬라이드시킨다.
+var _cutin: Control = null
+var _cutin_art: TextureRect = null
+var _cutin_light: ColorRect = null
+var _cutin_emblem: TextureRect = null
+var _cutin_name: Label = null
+var _cutin_skill: Label = null
 
 ## 연출을 재생 중인가. 재생 중에는 다음 턴으로 넘어가지 않는다.
 var _playing: bool = false
@@ -190,6 +213,66 @@ func _build_scene() -> void:
 	_banner.add_theme_font_size_override("font_size", 84)
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash_layer.add_child(_banner)
+
+	_build_cutin()
+
+
+# 오의 컷인 판. 한 번 만들어 두고 재생할 때마다 그림과 글자만 갈아 끼운다.
+#
+# 구도는 캐릭터 아트 가이드 §4.1 규격(2400×1350 기준)을 1280×720 으로 환산한 것이다.
+#   · 좌측 40%(x 0~512) — 타이포그래피 영역. **그림을 넣지 않는다**
+#   · 캐릭터 55~65%     — 우측에 대각선으로 서고, 화면 밖으로 잘려 나가도 된다
+#
+# **조명을 그림에 굽지 않는다** (§4.2). 원소색 조명은 여기서 `_cutin_light` 로 합성한다.
+# 그림은 중립 조명으로 그려진 투명 PNG 이므로, 속성이 바뀌어도 다시 그릴 필요가 없다.
+func _build_cutin() -> void:
+	_cutin = Control.new()
+	_cutin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cutin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.modulate = Color(1, 1, 1, 0)
+	_cutin.visible = false
+	_flash_layer.add_child(_cutin)
+
+	# 원소색 조명 판. 그림 뒤에 깔려 인물을 어두운 배경에서 떼어 낸다.
+	_cutin_light = ColorRect.new()
+	_cutin_light.color = Color(0, 0, 0, 0)
+	_cutin_light.size = Vector2(1280, 720)
+	_cutin_light.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.add_child(_cutin_light)
+
+	# 엠블럼 — 벡터 단색 실루엣. 타이포 뒤에 크게 얹는다.
+	_cutin_emblem = TextureRect.new()
+	_cutin_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_cutin_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_cutin_emblem.size = Vector2(CUTIN_EMBLEM, CUTIN_EMBLEM)
+	# 타이포그래피 묶음(y 300~400)의 뒤 가운데. 글자가 엠블럼 위에 얹힌다.
+	_cutin_emblem.position = Vector2(88, 244)
+	_cutin_emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.add_child(_cutin_emblem)
+
+	# 전신 아트. 우측에 두고 잘려 나갈 여유를 위해 화면 오른쪽 밖까지 폭을 준다.
+	_cutin_art = TextureRect.new()
+	_cutin_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_cutin_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_cutin_art.size = Vector2(CUTIN_ART_W, 720)
+	_cutin_art.position = Vector2(CUTIN_ART_X, 0)
+	_cutin_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.add_child(_cutin_art)
+
+	# 타이포그래피 — 캐릭터 이름과 오의 이름. 설계서 §4.10.4 의 -9° 기울기를 쓴다.
+	_cutin_name = Label.new()
+	_cutin_name.add_theme_font_size_override("font_size", 30)
+	_cutin_name.position = Vector2(104, 300)
+	_cutin_name.rotation = deg_to_rad(-9.0)
+	_cutin_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.add_child(_cutin_name)
+
+	_cutin_skill = Label.new()
+	_cutin_skill.add_theme_font_size_override("font_size", 62)
+	_cutin_skill.position = Vector2(96, 336)
+	_cutin_skill.rotation = deg_to_rad(-9.0)
+	_cutin_skill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.add_child(_cutin_skill)
 
 
 # ===== 전투 개시 (Start) =====
@@ -613,8 +696,16 @@ func _play_cutin(data: Dictionary) -> void:
 	# 0.08s 스피드라인 — Phase 0은 색 띠로 대체한다.
 	_screen_flash(color, 0.45, 0.12)
 
-	# 0.45s 키네틱 타이포그래피. **글자 자체가 연출이 되면 3D 카메라가 없어도 강렬하다.**
-	await _play_banner("%s / %s" % [unit.display_name, skill.display_name], color, 0.55, 52)
+	# 0.45s 컷인. 아트가 있으면 전신 일러스트 + 엠블럼 + 타이포, 없으면 예전 배너로 떨어진다.
+	# **타이밍은 어느 쪽이든 같다** — 0.55s 를 쓴다.
+	if _setup_cutin(unit, skill, color):
+		# 컷인은 화면을 통째로 쓰는 순간이다. HUD 를 남겨 두면 초상 카드와 스킬 목록이
+		# 일러스트 위에 겹쳐 컷인이 "그림이 뜬 전투 화면"으로 보인다.
+		_fade_hud(0.0, 0.18)
+		await _play_cutin_slide(0.55)
+	else:
+		await _play_banner("%s / %s" % [unit.display_name, skill.display_name],
+			color, 0.55, 52)
 
 	# 1.10s 오의 모션 — 시전자를 크게 키웠다 되돌린다.
 	var shape: Node2D = _shapes.get(unit.unit_id)
@@ -626,6 +717,68 @@ func _play_cutin(data: Dictionary) -> void:
 	_camera_zoom(1.6, 0.25)
 	await _wait(0.25)
 	_camera_zoom(1.0, 0.25)
+	_hide_cutin(0.25)
+	_fade_hud(1.0, 0.25)
+
+
+# 컷인에 이 오의의 그림·색·글자를 채운다. 쓸 아트가 없으면 false.
+func _setup_cutin(unit: TurnUnit, skill: SkillData, color: Color) -> bool:
+	if _cutin == null or unit.character == null:
+		return false
+
+	# 어떤 그림을 쓸지는 PortraitSystem 이 정한다. 여기서 character.portrait 를 직접
+	# 읽으면 편성 화면에서 고른 초상과 컷인이 어긋난다.
+	var art := PortraitSystem.get_portrait(unit.character)
+	if art == null:
+		return false
+	# 투명 여백을 잘라 낸 판을 쓴다. 여백째로 넣으면 인물이 화면에서 작아진다.
+	_cutin_art.texture = HUDKit.trimmed_texture(art)
+
+	# 원소색 조명을 **코드로** 합성한다. 그림에는 구워 넣지 않는다 (가이드 §4.2).
+	_cutin_light.color = Color(color.r, color.g, color.b, 0.16)
+
+	var emblem_path := UITheme.role_emblem_path(unit.character.role)
+	_cutin_emblem.texture = load(emblem_path) if not emblem_path.is_empty() else null
+	# 단색 실루엣이므로 색은 여기서 입힌다. 흰 도형에 곱해야 원소색 그대로 나온다.
+	_cutin_emblem.modulate = Color(color.r, color.g, color.b, CUTIN_EMBLEM_ALPHA)
+
+	_cutin_name.text = unit.display_name
+	_cutin_name.modulate = TurnCombat.COLOR_TEXT_DIM
+	_cutin_skill.text = skill.display_name
+	_cutin_skill.modulate = color
+	return true
+
+
+# 컷인을 오른쪽에서 밀어 넣는다. 글자와 그림이 같은 시간에 자리를 잡는다.
+func _play_cutin_slide(duration: float) -> void:
+	_cutin.visible = true
+	_cutin.modulate = Color(1, 1, 1, 0)
+	_cutin_art.position = Vector2(CUTIN_ART_X + CUTIN_SLIDE, 0)
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(_cutin, "modulate:a", 1.0, _scaled(duration * 0.28))
+	tween.tween_property(_cutin_art, "position", Vector2(CUTIN_ART_X, 0),
+		_scaled(duration)).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	await _wait(duration)
+
+
+# HUD 를 부드럽게 내리거나 올린다. 노드를 숨기지 않고 알파만 건드린다 —
+# `visible` 을 끄면 `_draw()` 가 멈춰 히트존이 비고, 컷인이 끝난 첫 프레임에 클릭이 샌다.
+func _fade_hud(target_alpha: float, duration: float) -> void:
+	if hud == null:
+		return
+	var tween := create_tween()
+	tween.tween_property(hud, "modulate:a", target_alpha, _scaled(duration))
+
+
+func _hide_cutin(duration: float) -> void:
+	if _cutin == null or not _cutin.visible:
+		return
+	var tween := create_tween()
+	tween.tween_property(_cutin, "modulate:a", 0.0, _scaled(duration))
+	await tween.finished
+	_cutin.visible = false
 
 
 func _play_death(data: Dictionary) -> void:

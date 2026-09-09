@@ -30,8 +30,11 @@ class_name TurnBattleHUD
 #
 # ## 2차 패널로 옮긴 정보 (삭제한 것이 아니다)
 #
-# - **스킬 목록** — 상시 노출에서 액션 버튼 호버 시 펼치는 패널로. 기본 상태의 액션
-#   입력 요소는 버튼 1개다.
+# - **스킬 목록** — 처음에는 액션 버튼 호버 시에만 펼쳤다("액션 입력 버튼 1개" 조항).
+#   되돌렸다: 화면에 **누를 수 있는 것이 하나도 보이지 않았다.** 무엇을 쓸 수 있는지
+#   알려면 포인터를 정확히 버튼 위에 올려야 했고, 그 전까지는 조작 가능한 UI 가
+#   없는 화면으로 보였다. 지금은 **내 턴일 때만** 펼쳐 둔다 — 누를 수 있을 때만
+#   보이므로 적 턴에는 여전히 버튼 1개다.
 # - **적 행동 예고 문장** — 적 머리 위 상시 패널에서 **조준 중인 적 1체**에 한해
 #   하단 밴드 우측 스트립으로. 예고의 요구 조건 자체는 분절 바가 항상 보여준다.
 #
@@ -85,6 +88,8 @@ const TIMELINE_GAP := 6.0
 const TIMELINE_COUNT := 5          # 앞으로 5개 유닛
 ## 고스트는 칩 **옆에** 나란히 둔다. 칩 폭보다 작게 밀면 글자가 겹쳐 둘 다 못 읽는다.
 const TIMELINE_GHOST_DX := TIMELINE_CHIP_W + TIMELINE_GAP
+## 칩 안 초상 패치 폭. 강조선 3 + 26 + 문양 자리를 남긴다.
+const CHIP_ART_W := 26.0
 
 # --- 적 클러스터 ---
 #
@@ -152,6 +157,10 @@ var battle: TurnBattleManager = null
 
 ## 마우스가 올라간 행동. 여기가 바뀌면 타임라인 프리뷰가 갱신된다 (설계서 §4.2.5).
 var hovered_action: int = -1
+## 지금 고른 행동. **호버와 달리 마우스가 떠나도 남는다.**
+## 호버만 있던 동안에는 스킬을 고르고 액션 버튼으로 손을 옮기는 순간 선택이 풀려서,
+## 큰 버튼이 항상 첫 행동(일반공격)만 확정했다.
+var selected_action: int = 0
 ## 플레이어가 조준 중인 적.
 var selected_target: TurnUnit = null
 ## 프리뷰 결과. `{"order": Array[TurnUnit], "expected": Dictionary, "locks": int}`
@@ -160,18 +169,25 @@ var preview: Dictionary = {}
 var speed: float = 1.0
 var auto: bool = false
 
-## 스킬 2차 패널이 펼쳐져 있는가. 액션 버튼이나 패널 위에 포인터가 있으면 펼친다.
-var _skills_open: bool = false
 ## 오의 준비 스트립의 발광 위상. 형태는 그대로 두고 밝기만 흔든다.
 var _glow_phase: float = 0.0
 
 var _font: Font = null
 var _hit_zones: Array[Dictionary] = []
+## 유닛별 머리 크롭 텍스처. `unit_id` -> Texture2D 또는 null(아트 없음).
+## `_draw()` 가 매 프레임 돌므로 초상 조회를 프레임마다 반복하지 않는다.
+var _head_art: Dictionary = {}
 
 
 func _ready() -> void:
 	name = "TurnBattleHUD"
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# **`set_anchors_preset()` 만 부르면 안 된다.** 그쪽은 앵커를 바꾸면서 현재 사각형을
+	# 유지하도록 오프셋을 다시 계산한다. 이 노드는 `CanvasLayer` 의 직속 자식이라 컨테이너가
+	# 크기를 잡아 주지 않고, `_ready()` 시점 사각형이 0×0 이므로 오프셋이 0×0 에 고정된다.
+	# 그러면 `_draw()` 는 (사각형 밖으로도 그리므로) 정상으로 보이는데 **마우스 입력만
+	# 전부 사라진다** — `gui_get_hovered_control()` 이 계속 null 이고 버튼이 하나도 눌리지
+	# 않았다. 오프셋까지 함께 잡아야 한다.
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_font = ThemeDB.fallback_font
 
@@ -304,12 +320,22 @@ func _draw_timeline() -> void:
 			draw_rect(Rect2(pos + Vector2(size.x - 6.0, 3.0), Vector2(2.0, size.y - 6.0)),
 				TurnCombat.COLOR_TEXT_DIM * Color(1, 1, 1, alpha))
 
-		# 원소 문양 + 두 글자. 색맹 대응으로 색과 형태를 함께 쓴다.
+		# 초상 + 원소 문양. **얼굴이 있으면 이름 두 글자는 지운다** — 42px 생존 규칙의
+		# 요지가 "머리색·실루엣·눈 위치로 알아본다"이고, 60×32 칩에 얼굴과 글자를 함께
+		# 넣으면 둘 다 못 읽는다.
 		var ink := TurnCombat.COLOR_TEXT_ACTIVE * Color(1, 1, 1, alpha)
-		_text(pos + Vector2(8.0, size.y * 0.5 + 4.0),
+		var art := _portrait_of(unit)
+		var text_x := 24.0
+		if art != null:
+			_skewed_texture(pos + Vector2(TIMELINE_RAIL_W + 1.0, 1.0),
+				Vector2(CHIP_ART_W, size.y - 2.0), art, Color(1, 1, 1, alpha))
+			text_x = TIMELINE_RAIL_W + CHIP_ART_W + 4.0
+		_text(pos + Vector2(text_x, size.y * 0.5 + 4.0),
 			TurnCombat.element_glyph(unit.element),
 			TurnCombat.element_color(unit.element) * Color(1, 1, 1, alpha), 12)
-		_text(pos + Vector2(24.0, size.y * 0.5 + 4.0), unit.display_name.substr(0, 2), ink, 12)
+		if art == null:
+			_text(pos + Vector2(text_x + 16.0, size.y * 0.5 + 4.0),
+				unit.display_name.substr(0, 2), ink, 12)
 
 		# CR 막대 — 초보자를 위한 두 번째 층위 (설계서 §4.2.2).
 		var charge := battle.timeline.get_charge_ratio(unit)
@@ -325,7 +351,11 @@ func _draw_timeline() -> void:
 	#
 	# 앞당김/지연이 포함된 스킬이면 칩이 이동하는 것을 반투명으로 겹쳐 보여준다.
 	# 조준·선택을 뜻하는 백색을 쓴다 — 지금 고른 행동의 결과이기 때문이다.
-	if ghost.is_empty():
+	#
+	# **포인터를 올리고 있는 동안만** 그린다. 선택이 유지되도록 바꾼 뒤로는 프리뷰가 항상
+	# 살아 있어서, 고스트를 늘 그리면 타임라인이 두 줄로 보여 어느 쪽이 실제 순서인지
+	# 읽을 수 없었다.
+	if ghost.is_empty() or hovered_action < 0:
 		return
 	var gy := TIMELINE_Y
 	for i in mini(ghost.size(), count):
@@ -486,11 +516,19 @@ func _draw_party_band() -> void:
 			frame_line = TurnCombat.COLOR_BORDER_IDLE
 		elif unit == battle.active_unit:
 			frame_line = TurnCombat.COLOR_AIM  # 백색 = 지금 선택된 유닛
-		_skewed(frame, PORTRAIT, frame_fill, frame_line)
+		# 색 판을 먼저 깔고 그 위에 얼굴을 얹는다. 초상에 투명 여백이 있어도 칸이 비지 않는다.
+		_skewed(frame, PORTRAIT, frame_fill)
+		var art := _portrait_of(unit)
+		if art != null:
+			_skewed_texture(frame, PORTRAIT, art,
+				Color(1, 1, 1, 1) if alive else Color(0.45, 0.5, 0.6, 0.8))
+		# 테두리는 얼굴 위에 그린다 — 어두운 UI 배경에서 인물을 떼어 내는 림 라이트다.
+		_skewed(frame, PORTRAIT, Color(0, 0, 0, 0), frame_line)
 
 		var ink := TurnCombat.COLOR_TEXT_ACTIVE if alive else TurnCombat.COLOR_TEXT_DIM
-		_text_centered(frame + Vector2(PORTRAIT.x * 0.5, PORTRAIT.y * 0.5 + 6.0),
-			unit.display_name.substr(0, 2), ink, 15)
+		if art == null:
+			_text_centered(frame + Vector2(PORTRAIT.x * 0.5, PORTRAIT.y * 0.5 + 6.0),
+				unit.display_name.substr(0, 2), ink, 15)
 		_text(frame + Vector2(4.0, 11.0), TurnCombat.element_glyph(unit.element),
 			TurnCombat.element_color(unit.element) if alive else TurnCombat.COLOR_TEXT_DIM, 11)
 
@@ -588,10 +626,11 @@ func _draw_action() -> void:
 			TurnCombat.COLOR_BORDER_IDLE, ACTION_BORDER)
 		return
 
-	if _skills_open:
-		_draw_skill_panel(actions)
+	# 내 턴이면 스킬 목록을 펼쳐 둔다. 누를 수 있는 것이 보여야 조작 가능한 화면이다.
+	_draw_skill_panel(actions)
 
-	var chosen := clampi(hovered_action if hovered_action >= 0 else 0, 0, actions.size() - 1)
+	var chosen := clampi(hovered_action if hovered_action >= 0 else selected_action,
+		0, actions.size() - 1)
 	var entry: Dictionary = actions[chosen]
 	var skill: SkillData = entry["skill"]
 	var usable := bool(entry["ok"])
@@ -616,8 +655,6 @@ func _draw_action() -> void:
 
 	if usable:
 		_register_hit(Rect2(ACTION_ORIGIN, ACTION_SIZE), "confirm", {"skill": skill})
-	else:
-		_register_hit(Rect2(ACTION_ORIGIN, ACTION_SIZE), "action_hub", {})
 
 
 # 스킬 2차 패널. 액션 버튼 위로 쌓는다. 세로 간격이 히트박스 최소 변과 같아 판정이
@@ -632,8 +669,8 @@ func _draw_skill_panel(actions: Array[Dictionary]) -> void:
 		var ok := bool(entry["ok"])
 		var pos := SKILL_ORIGIN - Vector2(0.0, SKILL_STEP * float(i))
 		var border := TurnCombat.COLOR_BORDER_IDLE
-		if i == hovered_action:
-			border = TurnCombat.COLOR_AIM
+		if i == hovered_action or (hovered_action < 0 and i == selected_action):
+			border = TurnCombat.COLOR_AIM   # 백색 = 지금 고른 것
 		elif ok:
 			border = TurnCombat.COLOR_PANEL_LINE
 		_skewed(pos, SKILL_SIZE, TurnCombat.COLOR_PANEL, border)
@@ -658,8 +695,11 @@ func _draw_skill_panel(actions: Array[Dictionary]) -> void:
 				Vector2(4.0, 4.0)),
 				TurnCombat.COLOR_ULT_READY if gain else TurnCombat.COLOR_TOUGHNESS)
 
+		# **스트립 자체가 버튼이다.** 고르는 것과 확정하는 것을 나누면 두 번 눌러야 하고,
+		# 큰 버튼만 누를 수 있는 화면에서는 스킬 목록이 장식으로 보였다.
 		_register_hit(Rect2(pos + Vector2(0.0, (SKILL_SIZE.y - SKILL_STEP) * 0.5),
-			Vector2(SKILL_SIZE.x, SKILL_STEP)), "action", {"index": i, "skill": skill})
+			Vector2(SKILL_SIZE.x, SKILL_STEP)), "action",
+			{"index": i, "skill": skill, "ok": ok})
 
 
 # --- 조준 프레임 (요소 ⑥에 포함) ---
@@ -680,9 +720,10 @@ func _draw_aim_frames() -> void:
 	_aim_at(_aim_center(selected_target), 1.0)
 
 	var actions := battle.available_actions()
-	if hovered_action < 0 or hovered_action >= actions.size():
+	var index := hovered_action if hovered_action >= 0 else selected_action
+	if index < 0 or index >= actions.size():
 		return
-	var skill: SkillData = actions[hovered_action]["skill"]
+	var skill: SkillData = actions[index]["skill"]
 	for entry in battle.ranks.expand_targets(battle.active_unit, skill, selected_target, null):
 		var unit: TurnUnit = entry[0]
 		if unit == selected_target or unit == null or unit.is_ally():
@@ -719,12 +760,13 @@ func _gui_input(event: InputEvent) -> void:
 
 	match String(zone["kind"]):
 		"action":
-			hovered_action = int(zone["data"]["index"])
-			_refresh_preview()
-
-		"action_hub":
-			# 쓸 수 없는 행동이 골라져 있으면 버튼 누름이 패널만 펼친다.
-			_skills_open = true
+			# 쓸 수 있으면 바로 실행한다. 못 쓰면 고르기만 해서 이유가 읽히게 둔다.
+			selected_action = int(zone["data"]["index"])
+			hovered_action = selected_action
+			if bool(zone["data"].get("ok", false)):
+				_emit_action(zone["data"]["skill"])
+			else:
+				_refresh_preview()
 
 		"confirm":
 			_emit_action(zone["data"]["skill"])
@@ -762,7 +804,7 @@ func _emit_action(skill: SkillData) -> void:
 	action_chosen.emit(skill, target)
 	selected_target = null
 	hovered_action = -1
-	_skills_open = false
+	selected_action = 0
 	preview = {}
 
 
@@ -773,9 +815,10 @@ func _emit_action(skill: SkillData) -> void:
 func _update_hover(position: Vector2) -> void:
 	var zone := _zone_at(position)
 	var kind := String(zone["kind"]) if not zone.is_empty() else ""
-	_skills_open = kind == "action" or kind == "confirm" or kind == "action_hub"
-
 	var index := int(zone["data"]["index"]) if kind == "action" else -1
+	# 스킬 위를 지나가면 그것이 **고른 것으로 남는다.** 마우스가 떠나면 프리뷰만 걷힌다.
+	if index >= 0:
+		selected_action = index
 	if index != hovered_action:
 		hovered_action = index
 		_refresh_preview()
@@ -786,9 +829,10 @@ func _refresh_preview() -> void:
 	if battle == null or battle.phase != TurnBattleManager.Phase.AWAITING_INPUT:
 		return
 	var actions := battle.available_actions()
-	if hovered_action < 0 or hovered_action >= actions.size():
+	var index := hovered_action if hovered_action >= 0 else selected_action
+	if index < 0 or index >= actions.size():
 		return
-	var skill: SkillData = actions[hovered_action]["skill"]
+	var skill: SkillData = actions[index]["skill"]
 	preview = battle.preview_action(skill, selected_target)
 
 
@@ -835,6 +879,86 @@ func _skewed(pos: Vector2, size: Vector2, fill: Color,
 		var closed := points.duplicate()
 		closed.append(points[0])
 		draw_polyline(closed, border, width)
+
+
+# 이 유닛의 머리 크롭 텍스처. 없으면 null.
+#
+# 어떤 그림을 쓸지는 `PortraitSystem` 이 정하고(화면에서 고른 선택 > 저작 기본값),
+# 어떻게 자를지는 `HUDKit` 이 정한다(저작된 머리 범위 `data/portraits/portrait_meta.tres`).
+# **여기서 `character.portrait` 를 직접 읽거나 크롭을 다시 계산하지 않는다** — 그러면
+# 전투 화면만 다른 그림·다른 크롭이 뜬다.
+func _portrait_of(unit: TurnUnit) -> Texture2D:
+	if _head_art.has(unit.unit_id):
+		return _head_art[unit.unit_id]
+
+	var source: Texture2D = null
+	if unit.character != null:
+		source = PortraitSystem.get_portrait(unit.character)
+	elif unit.enemy != null:
+		source = unit.enemy.portrait
+
+	var cropped: Texture2D = null
+	if source != null:
+		cropped = HUDKit.head_texture(source)
+	_head_art[unit.unit_id] = cropped
+	return cropped
+
+
+# 초상을 기울어진 칸에 채운다. **늘리지 않는다.**
+#
+# 머리 크롭은 정사각이고 칸은 42×36 이나 26×30 이다. 텍스처를 칸 비율로 늘리면 얼굴이
+# 찌그러지므로(가이드 §3.4), 칸 비율과 같은 창을 UV 로 잘라 낸다. 세로 중심을 살짝
+# 위로 두는 것은 정가운데로 자르면 턱이 먼저 잘려 나가기 때문이다.
+func _skewed_texture(pos: Vector2, size: Vector2, texture: Texture2D,
+		tint: Color = Color.WHITE, center_v: float = 0.46) -> void:
+	if texture == null:
+		return
+	var offset := size.y * SKEW
+	var points := PackedVector2Array([
+		pos + Vector2(-offset, 0.0),
+		pos + Vector2(size.x - offset, 0.0),
+		pos + Vector2(size.x, size.y),
+		pos + Vector2(0.0, size.y),
+	])
+
+	# `HUDKit.head_texture()` 는 `AtlasTexture` 를 돌려준다. **UV 는 아틀라스 원본 기준이라
+	# 잘라 둔 영역을 자동으로 따르지 않는다** — 그대로 0~1 을 쓰면 머리가 아니라 전신이
+	# 들어온다(실제로 칩과 카드에 통짜 전신이 찍혔다). 영역을 직접 원본 좌표로 환산한다.
+	var base := texture
+	var region := Rect2(Vector2.ZERO, texture.get_size())
+	if texture is AtlasTexture:
+		var atlas := texture as AtlasTexture
+		if atlas.atlas != null:
+			base = atlas.atlas
+			region = atlas.region
+
+	var sheet := base.get_size()
+	if sheet.x <= 0.0 or sheet.y <= 0.0 or region.size.y <= 0.0:
+		return
+
+	# 칸 비율과 같은 창을 영역 안에서 잘라 낸다. 늘리면 얼굴이 찌그러진다.
+	var quad_aspect := size.x / size.y
+	var win := region.size
+	if win.x / win.y > quad_aspect:
+		win.x = win.y * quad_aspect
+	else:
+		win.y = win.x / quad_aspect
+	# 창의 세로 중심을 영역의 `center_v` 지점에 둔다. 0.5(정가운데)로 두면 잘라 둔 머리
+	# 영역에서도 어깨가 절반을 차지해 얼굴이 아래로 밀린다.
+	var win_pos := Vector2(
+		region.position.x + (region.size.x - win.x) * 0.5,
+		clampf(region.position.y + region.size.y * center_v - win.y * 0.5,
+			region.position.y, region.position.y + region.size.y - win.y))
+
+	var u0 := win_pos / sheet
+	var u1 := (win_pos + win) / sheet
+	var uvs := PackedVector2Array([
+		Vector2(u0.x, u0.y),
+		Vector2(u1.x, u0.y),
+		Vector2(u1.x, u1.y),
+		Vector2(u0.x, u1.y),
+	])
+	draw_colored_polygon(points, tint, uvs, base)
 
 
 # 텍스트는 패널과 **반대로** `skewX +12°` 기울인다. 그래야 기울인 판 위에서 글자가
