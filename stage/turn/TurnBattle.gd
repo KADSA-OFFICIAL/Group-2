@@ -63,6 +63,10 @@ const CUTIN_EMBLEM_ALPHA: float = 0.17
 # ===== 무대 (Stage) =====
 ## 지면 밴드 높이. 아래에서 이만큼이 바닥이다.
 const GROUND_H: float = 420.0
+## 유닛 몸 칸. 발밑이 노드 원점이다 (`position = -box * (0.5, 1)`).
+## 스프라이트를 저작할 때 이 비율을 맞춘다 — docs/turn-battle-sprite-prompts.md
+const ALLY_BODY := Vector2(56.0, 84.0)
+const ENEMY_BODY := Vector2(62.0, 78.0)
 ## 중앙 충돌선의 아래에서 잰 시작 높이.
 const DIVIDER_FROM_BOTTOM: float = 540.0
 
@@ -89,6 +93,12 @@ var _cutin_skill: Label = null
 
 ## 연출을 재생 중인가. 재생 중에는 다음 턴으로 넘어가지 않는다.
 var _playing: bool = false
+## 일시정지 중인가. 진행 루프와 연출 재생이 여기서 멈춘다.
+##
+## `get_tree().paused` 를 쓰지 않는 이유: 그쪽은 트리 전체를 멈춰서 HUD 의 `_process`
+## 와 입력까지 죽는다. 일시정지를 **풀 수 없는** 일시정지가 된다.
+## (`ScreenManager` 가 메타 화면용으로 이미 그 스위치를 쓰고 있기도 하다.)
+var _paused: bool = false
 ## 이 전투가 물고 있는 스테이지. `use_stage` 가 켜져 있을 때만 채워진다.
 var _stage: StageData = null
 ## 스테이지의 웨이브 정의. 번호 -> `StageWave`. `stage_wave_started` 에 실어 보낸다.
@@ -202,6 +212,7 @@ func _build_scene() -> void:
 	hud.action_chosen.connect(_on_action_chosen)
 	hud.ultimate_requested.connect(_on_ultimate_requested)
 	hud.speed_changed.connect(_on_speed_changed)
+	hud.pause_toggled.connect(_on_pause_toggled)
 	hud.auto_toggled.connect(_on_auto_toggled)
 
 	# 플래시 / 암전 레이어는 HUD 위에 온다 — 격파 순간에는 UI까지 덮어야 한다.
@@ -422,21 +433,41 @@ func _on_wave_started(index: int, total: int) -> void:
 	EventBus.stage_wave_started.emit(String(_stage.stage_id), index, total, wave)
 
 
-# 유닛마다 도형을 하나 만든다. Phase 0은 도형으로 감각을 검증한다.
+# 유닛마다 몸을 하나 만든다.
+#
+# `battle_sprite` 가 저작되어 있으면 그 그림을 세우고, 없으면 `tint` 색 네모를 세운다
+# (Phase 0 플레이스홀더). **아트가 들어와도 스크립트를 고칠 필요가 없다** —
+# `.tres` 에 텍스처만 넣으면 네모가 그림으로 바뀐다.
+# 생성 프롬프트: docs/turn-battle-sprite-prompts.md
 func _build_shapes() -> void:
 	for unit in battle.units:
 		var shape := Node2D.new()
 		shape.z_index = 10
 
-		var body := ColorRect.new()
-		var tint := Color("C8402F")
-		if unit.is_ally() and unit.character != null:
-			tint = unit.character.tint
-		body.color = tint
-		body.size = Vector2(56, 84) if unit.is_ally() else Vector2(62, 78)
-		body.position = -body.size * Vector2(0.5, 1.0)
-		body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		shape.add_child(body)
+		var box := ALLY_BODY if unit.is_ally() else ENEMY_BODY
+		var art := _battle_sprite_of(unit)
+		if art != null:
+			# 늘리지 않는다 — 비율이 다른 그림은 칸 안에서 맞춰 들어간다.
+			var picture := TextureRect.new()
+			picture.texture = art
+			picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			picture.size = box
+			picture.position = -box * Vector2(0.5, 1.0)
+			picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			shape.add_child(picture)
+		else:
+			var body := ColorRect.new()
+			var tint := Color("C8402F")
+			if unit.is_ally() and unit.character != null:
+				tint = unit.character.tint
+			elif unit.enemy != null:
+				tint = unit.enemy.tint
+			body.color = tint
+			body.size = box
+			body.position = -box * Vector2(0.5, 1.0)
+			body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			shape.add_child(body)
 
 		# 접지 그림자 — 없으면 캐릭터가 떠 보인다 (설계서 §4.10.2).
 		var shadow := ColorRect.new()
@@ -460,6 +491,15 @@ func _build_shapes() -> void:
 		_shapes[unit.unit_id] = shape
 
 	_sync_shapes()
+
+
+# 이 유닛의 턴제 전투 정지 스프라이트. 저작되지 않았으면 null (네모로 떨어진다).
+func _battle_sprite_of(unit: TurnUnit) -> Texture2D:
+	if unit.character != null:
+		return unit.character.battle_sprite
+	if unit.enemy != null:
+		return unit.enemy.battle_sprite
+	return null
 
 
 # 도형을 랭크 위치로 옮긴다. 밀치기·끌기가 실제로 눈에 보여야 위치 전술이 성립한다.
@@ -497,6 +537,7 @@ func _play() -> void:
 	_playing = true
 
 	while true:
+		await _await_unpause()
 		await _drain_presentation()
 		_sync_shapes(true)
 		hud.refresh()
@@ -527,6 +568,7 @@ func _drain_presentation() -> void:
 		return
 
 	while not queue.is_empty():
+		await _await_unpause()
 		var entry := queue.pop()
 		var event: int = entry["event"]
 		var data: Dictionary = entry["data"]
@@ -602,12 +644,18 @@ func _play_hit(data: Dictionary) -> void:
 			home + Vector2(direction * knock, 0), _scaled(0.06))
 		tween.tween_property(target_shape, "position", home, _scaled(0.12))
 		# 피격 명멸.
+		# 피격 명멸. 네모는 `color`, 그림은 `modulate` 를 흔든다 — 그림의 `color` 를
+		# 흰색으로 만들면 그림이 사라진다.
 		var body := target_shape.get_child(0)
+		var flash_tween := create_tween()
 		if body is ColorRect:
-			var original: Color = body.color
-			var flash_tween := create_tween()
+			var original: Color = (body as ColorRect).color
 			flash_tween.tween_property(body, "color", Color.WHITE, _scaled(0.04))
 			flash_tween.tween_property(body, "color", original, _scaled(0.12))
+		elif body is CanvasItem:
+			flash_tween.tween_property(body, "modulate", Color(3.0, 3.0, 3.0, 1.0),
+				_scaled(0.04))
+			flash_tween.tween_property(body, "modulate", Color.WHITE, _scaled(0.12))
 
 	_shake(float(feedback.get("shake_px", 0.0)), float(feedback.get("shake_time", 0.0)))
 	_screen_flash(Color.WHITE, float(feedback.get("flash", 0.0)), 0.12)
@@ -910,6 +958,23 @@ func _on_speed_changed(new_speed: float) -> void:
 	# **로직을 건드리지 않는다.** 연출 큐의 재생 시간만 나눈다.
 	if battle.presentation != null:
 		battle.presentation.speed = new_speed
+
+
+# 일시정지가 풀릴 때까지 붙잡는다.
+#
+# 연출 한 조각이 끝난 **경계**에서만 멈춘다. 트윈 도중에 끊으면 캐릭터가 어중간한
+# 위치에 남고, 재개 시 그 트윈이 이미 끝나 있어 연출이 한 칸 건너뛴다.
+func _await_unpause() -> void:
+	while _paused:
+		await get_tree().process_frame
+
+
+func _on_pause_toggled(enabled: bool) -> void:
+	_paused = enabled
+	if not enabled:
+		# 멈춘 사이에 턴이 넘어가 있을 수 있다. 루프가 이미 돌고 있으면 `_play()` 가
+		# 스스로 빠져나오므로 중복 실행되지 않는다.
+		_play()
 
 
 func _on_auto_toggled(enabled: bool) -> void:

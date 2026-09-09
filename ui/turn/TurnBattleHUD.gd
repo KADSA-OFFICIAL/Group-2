@@ -10,6 +10,8 @@ class_name TurnBattleHUD
 #   2. 가장자리 흡착 — 모든 UI가 화면 4변에 붙는다
 #   3. 형태 언어 2종만 — 평행사변형(`skewX -12°`)과 막대. 원형·마름모·육각형 전부 금지
 #   4. 텍스트 역기울기 — 글자는 `skewX +12°`로 되돌려 읽을 수 있게 한다
+#      **그림도 기울이지 않는다.** 초상은 기울인 프레임 **안에 축 정렬로** 얹는다 —
+#      사각형 UV 를 평행사변형에 사상하면 그것이 곧 전단이라 얼굴이 일그러진다
 #   5. 요소 종류 상한 6종 — ①타임라인 칩 ②적 분절바+HP바 ③아군 초상+오의 스트립
 #      ④아군 HP바+상태 점 ⑤공명 핍 ⑥액션 버튼. 넘으면 통합한다
 #   6. 글자 라벨 금지 — "HP"·"인성치"·"SP" 같은 글자를 쓰지 않는다. **색과 위치가 라벨**
@@ -71,6 +73,8 @@ signal ultimate_requested(unit: TurnUnit)
 signal speed_changed(speed: float)
 ## 자동 전투가 켜지거나 꺼졌다.
 signal auto_toggled(enabled: bool)
+## 일시정지가 켜지거나 꺼졌다.
+signal pause_toggled(enabled: bool)
 
 # ===== 형태 언어 =====
 
@@ -140,6 +144,12 @@ const CARD_FROM_BOTTOM := 98.0
 const CARD_STEP := 62.0          # 지터 없음. 확정 규격은 균일 간격이다
 const ULT_STRIP := Vector2(4.0, 36.0)
 const PORTRAIT := Vector2(42.0, 36.0)
+## 기울인 프레임(42×36) 안에 들어가는 **축 정렬** 직사각형.
+##
+## 평행사변형의 내접 직사각형은 가로가 기울기만큼 줄어든다: 42 - 36×tan12° = 34.3.
+## 초상을 프레임 모양대로 기울여 그렸더니 **얼굴이 그대로 전단됐다** — 그림은
+## 기울이지 않는다.
+const PORTRAIT_ART := Vector2(34.0, 36.0)
 const ALLY_HP_SIZE := Vector2(42.0, 4.0)
 const ALLY_HP_GAP := 5.0         # 프레임 아래 5px
 const STATUS_DOT := Vector2(5.0, 7.0)
@@ -196,6 +206,9 @@ var preview: Dictionary = {}
 
 var speed: float = 1.0
 var auto: bool = false
+## 일시정지 중인가. 켜져 있으면 행동 입력을 받지 않는다 —
+## 멈춘 척만 하고 클릭이 통하면 그것은 일시정지가 아니다.
+var paused: bool = false
 
 ## 오의 준비 스트립의 발광 위상. 형태는 그대로 두고 밝기만 흔든다.
 var _glow_phase: float = 0.0
@@ -322,10 +335,11 @@ func _draw_toggles() -> void:
 	_register_hit(Rect2(auto_pos, TOGGLE_SIZE), "auto", {})
 
 	var pause_pos := origin + Vector2(TOGGLE_STEP * 2.0, 0.0)
-	_skewed(pause_pos, TOGGLE_SIZE, TurnCombat.COLOR_PANEL, TurnCombat.COLOR_BORDER_IDLE)
+	_skewed(pause_pos, TOGGLE_SIZE, TurnCombat.COLOR_PANEL,
+		TurnCombat.COLOR_AIM if paused else TurnCombat.COLOR_BORDER_IDLE)
 	for i in 2:
 		draw_rect(Rect2(pause_pos + Vector2(14.0 + float(i) * 9.0, 5.0), Vector2(4.0, 11.0)),
-			TurnCombat.COLOR_TEXT_DIM)
+			TurnCombat.COLOR_TEXT_ACTIVE if paused else TurnCombat.COLOR_TEXT_DIM)
 	_register_hit(Rect2(pause_pos, TOGGLE_SIZE), "pause", {})
 
 
@@ -376,13 +390,14 @@ func _draw_timeline() -> void:
 		_skewed(pos, size, fill, border * Color(1, 1, 1, alpha))
 
 		# 좌측 강조선 — **아군/적 구분은 이 색 하나가 전부다.**
+		# 칩과 같은 기울기로 그려야 칩 왼쪽 변에 딱 붙는다. 축 정렬로 뒀을 때는
+		# 칩이 기울어진 위쪽에서 강조선이 칩 밖으로 빠져나왔다.
 		var rail := TurnCombat.COLOR_ALLY_HP if unit.is_ally() else TurnCombat.COLOR_ENEMY_HP
-		draw_rect(Rect2(pos + Vector2(0.0, 2.0),
-			Vector2(TIMELINE_RAIL_W, size.y - 4.0)), rail * Color(1, 1, 1, alpha))
+		_skewed(pos, Vector2(TIMELINE_RAIL_W, size.y), rail * Color(1, 1, 1, alpha))
 		# 소환체는 강조선을 두 줄로 쪼갠다. 색을 늘리지 않고 형태로 구분한다.
 		if unit.is_summon:
-			draw_rect(Rect2(pos + Vector2(0.0, size.y * 0.5 - 1.0),
-				Vector2(TIMELINE_RAIL_W, 2.0)), TurnCombat.COLOR_BACKDROP)
+			_skewed(pos + Vector2(0.0, size.y * 0.5 - 1.0),
+				Vector2(TIMELINE_RAIL_W, 2.0), TurnCombat.COLOR_BACKDROP)
 
 		# 추가 행동은 칩 안에 얇은 막대를 덧댄다 (패턴 배경 대신).
 		if bool(entry["extra"]):
@@ -394,11 +409,12 @@ func _draw_timeline() -> void:
 		# 넣으면 둘 다 못 읽는다.
 		var ink := TurnCombat.COLOR_TEXT_ACTIVE * Color(1, 1, 1, alpha)
 		var art := _portrait_of(unit)
+		var art_x := _skew_inset(size.y) + TIMELINE_RAIL_W + 1.0
 		var text_x := 24.0
 		if art != null:
-			_skewed_texture(pos + Vector2(TIMELINE_RAIL_W + 1.0, 1.0),
+			_portrait_patch(pos + Vector2(art_x, 1.0),
 				Vector2(CHIP_ART_W, size.y - 2.0), art, Color(1, 1, 1, alpha))
-			text_x = TIMELINE_RAIL_W + CHIP_ART_W + 4.0
+			text_x = art_x + CHIP_ART_W + 4.0
 		_text(pos + Vector2(text_x, size.y * 0.5 + 4.0),
 			TurnCombat.element_glyph(unit.element),
 			TurnCombat.element_color(unit.element) * Color(1, 1, 1, alpha), 12)
@@ -438,7 +454,7 @@ func _draw_timeline() -> void:
 			# 글자였더니 바뀐 순서를 두 칸씩 눈으로 짝지어야 읽을 수 있었다.
 			var ghost_art := _portrait_of(unit)
 			if ghost_art != null:
-				_skewed_texture(pos + Vector2(TIMELINE_RAIL_W + 1.0, 1.0),
+				_portrait_patch(pos + Vector2(_skew_inset(chip.y) + TIMELINE_RAIL_W + 1.0, 1.0),
 					Vector2(CHIP_ART_W, chip.y - 2.0), ghost_art, Color(1, 1, 1, 0.85))
 			else:
 				_text(pos + Vector2(8.0, chip.y * 0.5 + 4.0),
@@ -593,7 +609,7 @@ func _draw_party_band() -> void:
 			strip_color = TurnCombat.COLOR_ULT_READY * Color(pulse, pulse, pulse, 1.0)
 		draw_rect(Rect2(strip_pos + Vector2(0.0, ULT_STRIP.y - fill_h),
 			Vector2(ULT_STRIP.x, fill_h)), strip_color)
-		if ready:
+		if ready and not paused:
 			_register_hit(Rect2(strip_pos, ULT_STRIP), "ultimate", {"unit": unit})
 
 		# --- 초상 프레임 (요소 ③) ---
@@ -610,7 +626,8 @@ func _draw_party_band() -> void:
 		_skewed(frame, PORTRAIT, frame_fill)
 		var art := _portrait_of(unit)
 		if art != null:
-			_skewed_texture(frame, PORTRAIT, art,
+			# **축 정렬**로 얹는다. 프레임은 기울어져 있고 그림은 서 있다.
+			_portrait_patch(frame + Vector2(_skew_inset(PORTRAIT.y), 0.0), PORTRAIT_ART, art,
 				Color(1, 1, 1, 1) if alive else Color(0.45, 0.5, 0.6, 0.8))
 		# 테두리는 얼굴 위에 그린다 — 어두운 UI 배경에서 인물을 떼어 내는 림 라이트다.
 		_skewed(frame, PORTRAIT, Color(0, 0, 0, 0), frame_line)
@@ -707,7 +724,7 @@ func _draw_intent_strip() -> void:
 # 우하단 평행사변형 하나. **기본 상태의 액션 입력 요소는 이것뿐이다.**
 # 포인터가 올라가면 위로 스킬 2차 패널이 펼쳐진다.
 func _draw_action() -> void:
-	var awaiting := battle.phase == TurnBattleManager.Phase.AWAITING_INPUT
+	var awaiting := battle.phase == TurnBattleManager.Phase.AWAITING_INPUT and not paused
 	var actions: Array[Dictionary] = []
 	if awaiting:
 		actions = battle.available_actions()
@@ -801,7 +818,7 @@ func _draw_skill_panel(actions: Array[Dictionary]) -> void:
 # 회전 원형 크로스헤어를 없애고 **58×54 백색 사각 프레임 4변**으로 바꿨다.
 # 확산/광역 스킬 선택 시 부수 대상에는 흐린 같은 프레임을 표시한다.
 func _draw_aim_frames() -> void:
-	if battle.phase != TurnBattleManager.Phase.AWAITING_INPUT:
+	if paused or battle.phase != TurnBattleManager.Phase.AWAITING_INPUT:
 		return
 
 	# 적을 클릭할 수 있게 히트존을 등록한다.
@@ -882,7 +899,10 @@ func _gui_input(event: InputEvent) -> void:
 			auto_toggled.emit(auto)
 
 		"pause":
-			pass
+			# **실제로 멈춘다.** 예전에는 `pass` 라 눌러도 아무 일이 없었다.
+			# 연출 재생과 턴 진행을 전투 화면이 붙잡고, 그동안 행동 입력도 닫힌다.
+			paused = not paused
+			pause_toggled.emit(paused)
 
 
 func _emit_action(skill: SkillData) -> void:
@@ -975,6 +995,14 @@ func _skewed(pos: Vector2, size: Vector2, fill: Color,
 		draw_polyline(closed, border, width)
 
 
+# 높이 h 인 평행사변형 안에 축 정렬 사각형을 넣을 때 좌측에 필요한 여백.
+#
+# `_skewed()` 는 위쪽 변을 오른쪽으로 `h * -SKEW` 만큼 밀므로, 그만큼 안쪽에서
+# 시작해야 사각형의 좌상단이 도형 밖으로 삐져나오지 않는다.
+func _skew_inset(h: float) -> float:
+	return ceilf(h * -SKEW)
+
+
 # 이 유닛의 머리 크롭 텍스처. 없으면 null.
 #
 # 어떤 그림을 쓸지는 `PortraitSystem` 이 정하고(화면에서 고른 선택 > 저작 기본값),
@@ -998,20 +1026,23 @@ func _portrait_of(unit: TurnUnit) -> Texture2D:
 	return cropped
 
 
-# 초상을 기울어진 칸에 채운다. **늘리지 않는다.**
+# 초상을 칸에 채운다. **늘리지도, 기울이지도 않는다.**
 #
-# 머리 크롭은 정사각이고 칸은 42×36 이나 26×30 이다. 텍스처를 칸 비율로 늘리면 얼굴이
-# 찌그러지므로(가이드 §3.4), 칸 비율과 같은 창을 UV 로 잘라 낸다. 세로 중심을 살짝
-# 위로 두는 것은 정가운데로 자르면 턱이 먼저 잘려 나가기 때문이다.
-func _skewed_texture(pos: Vector2, size: Vector2, texture: Texture2D,
+# 늘리지 않는 이유: 머리 크롭은 정사각이고 칸은 34×36 이나 26×30 이다. 텍스처를 칸
+# 비율로 늘리면 얼굴이 찌그러지므로(가이드 §3.4), 칸 비율과 같은 창을 UV 로 잘라 낸다.
+# 세로 중심을 살짝 위로 두는 것은 정가운데로 자르면 턱이 먼저 잘려 나가기 때문이다.
+#
+# 기울이지 않는 이유: 사각형 UV 를 평행사변형 폴리곤에 사상하면 그 사상 자체가 전단이다.
+# 처음에는 프레임과 같은 기울기로 그렸는데 **얼굴이 그대로 기울어져 보였다.** 기울기는
+# 프레임(크롬)이 담당하고 그림은 그 안에 축 정렬로 선다.
+func _portrait_patch(pos: Vector2, size: Vector2, texture: Texture2D,
 		tint: Color = Color.WHITE, center_v: float = 0.46) -> void:
 	if texture == null:
 		return
-	var offset := size.y * SKEW
 	var points := PackedVector2Array([
-		pos + Vector2(-offset, 0.0),
-		pos + Vector2(size.x - offset, 0.0),
-		pos + Vector2(size.x, size.y),
+		pos,
+		pos + Vector2(size.x, 0.0),
+		pos + size,
 		pos + Vector2(0.0, size.y),
 	])
 
