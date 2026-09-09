@@ -45,15 +45,22 @@ const TIMELINE_INDENT := 7.0  # 아래로 갈수록 오른쪽으로 — 사선 �
 const TIMELINE_DECAY := 0.94  # 크기 감쇠
 
 const ENEMY_ROW_Y := 268.0
-const ENEMY_SLOT_X := 716.0
-const ENEMY_SLOT_STEP := 88.0
+const ENEMY_SLOT_X := 700.0
+## 적 5체가 겹치지 않을 간격. 클러스터 폭(`ENEMY_CLUSTER_WIDTH`)보다 커야 한다.
+const ENEMY_SLOT_STEP := 112.0
+const ENEMY_CLUSTER_WIDTH := 98.0
+## 클러스터 Y를 랭크 홀짝으로 어긋나게 둔다. 5체가 한 줄에 서면 바와 아이콘이 붙어
+## 어느 것이 누구 것인지 읽을 수 없다.
+const ENEMY_CLUSTER_Y := -104.0
+const ENEMY_CLUSTER_STAGGER := -18.0
 
 const ALLY_ROW_Y := 452.0
 const ALLY_SLOT_X := 556.0
 const ALLY_SLOT_STEP := -84.0
 
-const CARD_ORIGIN := Vector2(56.0, 612.0)
-const CARD_STEP := 148.0
+const CARD_ORIGIN := Vector2(48.0, 606.0)
+## 4장이 공명 핍(x 640)에 닿지 않을 간격. 마지막 카드 우단이 x 620 을 넘지 않아야 한다.
+const CARD_STEP := 136.0
 ## 카드마다 Y를 6~10px 어긋나게 둔다. **완벽한 정렬은 게임 UI를 죽인다.**
 const CARD_JITTER: Array[float] = [0.0, -8.0, 4.0, -6.0]
 const CARD_GAP_JITTER: Array[float] = [0.0, 6.0, -4.0, 8.0]
@@ -126,6 +133,7 @@ func _draw() -> void:
 	_draw_top_strip()
 	_draw_timeline()
 	_draw_enemy_clusters()
+	_draw_expected_damage()
 	_draw_party_cards()
 	_draw_resonance()
 	_draw_heat()
@@ -241,14 +249,17 @@ func _draw_enemy_clusters() -> void:
 	var order := _threat_order()
 
 	for unit in battle.enemies():
-		var base := unit_position(unit) + Vector2(-58, -86)
-		var width := 116.0
+		var threat := int(order.get(unit.unit_id, 0))
+		var stagger := ENEMY_CLUSTER_STAGGER if unit.rank % 2 == 0 else 0.0
+		var base := unit_position(unit) \
+			+ Vector2(-ENEMY_CLUSTER_WIDTH * 0.5, ENEMY_CLUSTER_Y + stagger)
+		var width := ENEMY_CLUSTER_WIDTH
 
 		# --- 1층: 인성치 바 + 자물쇠 분절 ---
 		#
 		# **인성치 바를 HP 바보다 짧고 얇게**, 색은 백색 계열.
 		# 자물쇠를 분절 칸으로 표현하는 것이 중앙 개방과의 절충안이다 (§4.9.5).
-		var tough_size := Vector2(width * 0.78, 6.0)
+		var tough_size := Vector2(width * 0.74, 6.0)
 		draw_rect(Rect2(base, tough_size), Color(0, 0, 0, 0.55))
 		if unit.is_broken:
 			# 격파 상태 — 바가 깨진 것을 색으로 알린다.
@@ -264,7 +275,6 @@ func _draw_enemy_clusters() -> void:
 				var seg: Dictionary = segments[i]
 				var lock: TurnLock = seg["lock"]
 				var seg_pos := base + Vector2(seg_width * float(i), 0)
-				# 분절 경계선.
 				if i > 0:
 					draw_line(seg_pos, seg_pos + Vector2(0, tough_size.y),
 						Color(0, 0, 0, 0.8), 1.0)
@@ -272,29 +282,28 @@ func _draw_enemy_clusters() -> void:
 				var glyph_color := lock.color()
 				if lock.cleared:
 					glyph_color = Color(glyph_color.r, glyph_color.g, glyph_color.b, 0.25)
-				_text(seg_pos + Vector2(seg_width * 0.5 - 4, -4), lock.glyph(), glyph_color, 12)
+				_text(seg_pos + Vector2(seg_width * 0.5 - 4, -3), lock.glyph(), glyph_color, 11)
 
 		# 약점 아이콘을 **바 우측에 인라인**으로. 별도 줄을 만들지 않는다.
-		var weak_x := base.x + tough_size.x + 5.0
+		var weak_x := base.x + tough_size.x + 4.0
 		for e in unit.weak_elements:
 			_text(Vector2(weak_x, base.y + 7), TurnCombat.element_glyph(e),
-				TurnCombat.element_color(e), 12)
-			weak_x += 12.0
+				TurnCombat.element_color(e), 11)
+			weak_x += 10.0
 		for p in unit.weak_physical:
 			_text(Vector2(weak_x, base.y + 7), TurnCombat.physical_glyph(p),
-				TurnCombat.COLOR_NEUTRAL, 12)
-			weak_x += 12.0
+				TurnCombat.COLOR_NEUTRAL, 11)
+			weak_x += 10.0
 
 		# --- 2층: HP 바 + 순번 배지 ---
-		var hp_pos := base + Vector2(14, 10)
-		var hp_size := Vector2(width - 14.0, 8.0)
+		var hp_pos := base + Vector2(13, 10)
+		var hp_size := Vector2(width - 13.0, 8.0)
 		draw_rect(Rect2(hp_pos, hp_size), Color(0, 0, 0, 0.6))
 		draw_rect(Rect2(hp_pos, Vector2(hp_size.x * unit.get_hp_ratio(), hp_size.y)),
 			TurnCombat.COLOR_ENEMY_HP)
 
 		# 순번 배지 — **타임라인을 보지 않아도 위협 순서를 안다.**
 		var badge_center := base + Vector2(6, 14)
-		var threat := int(order.get(unit.unit_id, 0))
 		draw_circle(badge_center, 8.0, Color(0.05, 0.07, 0.12, 0.9))
 		draw_arc(badge_center, 8.0, 0, TAU, 20, TurnCombat.COLOR_ENEMY_HP, 1.5)
 		if threat > 0:
@@ -302,31 +311,60 @@ func _draw_enemy_clusters() -> void:
 				TurnCombat.COLOR_TOUGHNESS, 11)
 
 		# --- 3층: 상태이상 아이콘 (지속 턴 수를 숫자로) ---
-		var status_x := base.x + 14.0
+		var status_x := base.x + 13.0
 		for status in unit.statuses:
-			_text(Vector2(status_x, base.y + 32), status.format_badge(), status.color(), 11)
-			status_x += float(status.format_badge().length()) * 7.0 + 6.0
+			var badge := status.format_badge()
+			_text(Vector2(status_x, base.y + 32), badge, status.color(), 10)
+			status_x += float(badge.length()) * 6.0 + 4.0
 
 		# --- 행동 예고 ---
 		#
-		# 완전 정보 공개. 정보 표시 단계에 따라 얼마나 보여줄지 정한다.
-		if unit.intent != null:
-			var detail := TurnCombatConfig.info_detail
-			var text := unit.intent.describe(detail)
-			var panel_width := float(text.length()) * 8.0 + 24.0
-			_skewed_panel(base + Vector2(0, -30), Vector2(panel_width, 24),
-				Color(0.35, 0.08, 0.06, 0.78), Color(1, 0.5, 0.4, 0.5))
-			_text(base + Vector2(12, -13), "⚠ " + text, Color(1, 0.86, 0.8), 12)
+		# **전체 예고 패널은 한 번에 하나만 띄운다.** 5체가 각자 긴 패널을 띄우면 서로
+		# 겹쳐 아무것도 읽을 수 없다 — 처음 그렸을 때 실제로 그렇게 됐다.
+		# 곧 행동할 적(위협 1순위)과 지금 조준 중인 적만 전체로 보여주고,
+		# 나머지는 자물쇠 열만 압축해 보여준다.
+		if unit.intent == null:
+			continue
 
-			if detail != TurnCombat.InfoDetail.CHALLENGE and unit.intent.total_locks() > 0:
-				_text(base + Vector2(12, -36),
-					"🔒 " + unit.intent.format_locks(), TurnCombat.COLOR_WARN, 13)
+		var detail := TurnCombatConfig.info_detail
+		var expanded := threat == 1 or unit == selected_target
 
-		# --- 예상 피해 프리뷰 (호버 중인 스킬 기준) ---
-		var expected: Dictionary = preview.get("expected", {})
-		if expected.has(unit.unit_id):
-			_text(base + Vector2(width + 16, 18),
-				"-%d" % int(expected[unit.unit_id]), TurnCombat.COLOR_WARN, 15)
+		# 자물쇠는 **인성치 바의 분절 칸에만** 그린다. 처음에 별도 줄로도 그렸더니
+		# 약점 아이콘과 섞여 어느 것이 봉인 조건인지 구분되지 않았다 (설계서 §4.9.5 절충안).
+
+		if not expanded:
+			continue
+
+		# 예고 패널은 **클러스터 위 고정 높이**에 띄운다. 적 위치에 붙이면 옆 적의
+		# 클러스터를 덮는다 — 처음 그렸을 때 실제로 그렇게 됐다.
+		var text := unit.intent.describe(detail)
+		var panel_width := minf(float(text.length()) * 8.4 + 26.0, 460.0)
+		var panel_x := clampf(unit_position(unit).x - panel_width * 0.5,
+			560.0, 1268.0 - panel_width)
+		var panel_y := ENEMY_ROW_Y + ENEMY_CLUSTER_Y + ENEMY_CLUSTER_STAGGER - 40.0
+		_skewed_panel(Vector2(panel_x, panel_y), Vector2(panel_width, 26),
+			Color(0.35, 0.08, 0.06, 0.86), Color(1, 0.5, 0.4, 0.6))
+		_text(Vector2(panel_x + 12, panel_y + 18), "⚠ " + text, Color(1, 0.86, 0.8), 12)
+		# 어느 적의 예고인지 잇는 선. 패널이 고정 위치이므로 연결이 보여야 한다.
+		draw_line(Vector2(panel_x + panel_width * 0.5, panel_y + 26),
+			Vector2(unit_position(unit).x, base.y - 2), Color(1, 0.5, 0.4, 0.35), 1.0)
+
+
+# 호버 중인 스킬의 예상 피해를 모든 대상 위에 표시한다.
+#
+# 예고 패널과 달리 이것은 **전부 보여야 한다** — 확산·전체 공격이 누구에게 얼마나
+# 들어가는지가 판단의 핵심이고, 숫자 하나는 겹칠 만큼 크지 않다.
+func _draw_expected_damage() -> void:
+	var expected: Dictionary = preview.get("expected", {})
+	if expected.is_empty():
+		return
+	for unit in battle.enemies():
+		if not expected.has(unit.unit_id):
+			continue
+		var stagger := ENEMY_CLUSTER_STAGGER if unit.rank % 2 == 0 else 0.0
+		var pos := unit_position(unit) \
+			+ Vector2(ENEMY_CLUSTER_WIDTH * 0.5 + 6.0, ENEMY_CLUSTER_Y + stagger + 20.0)
+		_text(pos, "-%d" % int(expected[unit.unit_id]), TurnCombat.COLOR_WARN, 15)
 
 
 # 적의 위협 순서 (타임라인 등장 순). `unit_id` -> 1부터의 순번.
@@ -366,10 +404,11 @@ func _draw_party_cards() -> void:
 			Color.WHITE, 15)
 
 		# 원소 문양 — 색맹 대응으로 색과 형태를 함께 쓴다.
-		_text(portrait + Vector2(-30, -14), TurnCombat.element_glyph(unit.element),
+		_text(portrait + Vector2(-30, -16), TurnCombat.element_glyph(unit.element),
 			TurnCombat.element_color(unit.element), 13)
 		# 랭크 표시. 위치가 전술이므로 항상 보여야 한다.
-		_text(portrait + Vector2(-32, 18), "A%d" % unit.rank, TurnCombat.COLOR_NEUTRAL, 11)
+		# 초상 **위**에 둔다 — 아래는 HP 수치 자리이고, 처음 그렸을 때 두 글자가 겹쳤다.
+		_text(portrait + Vector2(-30, -30), "A%d" % unit.rank, TurnCombat.COLOR_NEUTRAL, 11)
 
 		# 원형 오의 엠블럼 (40px) — 초상과 살짝 겹쳐 배치.
 		var ult_center := origin + Vector2(58, 30)
@@ -392,9 +431,9 @@ func _draw_party_cards() -> void:
 			_text_centered(ult_center + Vector2(0, 4), "%d" % unit.energy,
 				TurnCombat.COLOR_NEUTRAL, 12)
 
-		# HP 수치(우측 정렬) + HP 바 (시안). 라벨 없음.
-		_text(origin + Vector2(0, 60), str(unit.current_hp), Color.WHITE, 14)
-		var hp_pos := origin + Vector2(0, 66)
+		# HP 수치 + HP 바 (시안). 라벨 없음 — 색과 위치가 라벨이다.
+		_text(origin + Vector2(2, 64), str(unit.current_hp), Color.WHITE, 14)
+		var hp_pos := origin + Vector2(0, 70)
 		draw_rect(Rect2(hp_pos, Vector2(84, 5)), Color(0, 0, 0, 0.6))
 		draw_rect(Rect2(hp_pos, Vector2(84.0 * unit.get_hp_ratio(), 5)),
 			TurnCombat.COLOR_ALLY_HP)
@@ -409,12 +448,12 @@ func _draw_party_cards() -> void:
 		# 버프/디버프 아이콘 행 (작은 사선 사각형).
 		var badge_x := origin.x
 		for status in unit.statuses:
-			_skewed_panel(Vector2(badge_x, origin.y + 74), Vector2(11, 11),
+			_skewed_panel(Vector2(badge_x, origin.y + 78), Vector2(11, 11),
 				status.color() * Color(1, 1, 1, 0.75))
 			badge_x += 14.0
 
 		if not unit.alive:
-			_text(origin + Vector2(0, 96), "전투 불능", TurnCombat.COLOR_DANGER, 12)
+			_text(origin + Vector2(0, 100), "전투 불능", TurnCombat.COLOR_DANGER, 12)
 
 
 # --- 공명 포인트 (설계서 §4.9.2 (E)) ---
