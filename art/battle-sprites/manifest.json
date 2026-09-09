@@ -1,0 +1,266 @@
+[
+  {
+    "id": "harang",
+    "source": "res://art/battle-sprites/source-plates/harang.png",
+    "width": 224,
+    "height": 336,
+    "palette": [
+      "D2E2D6",
+      "83A78B",
+      "4C6472",
+      "E8E8E8"
+    ],
+    "accent_region": [
+      0.07,
+      0.01,
+      0.34,
+      0.35
+    ],
+    "output": "res://assets/sprites/characters/battle/char_harang_battle.png",
+    "data": "res://data/characters/harang.tres",
+    "side": "ally",
+    "direction": "right"
+  },
+  {
+    "id": "mina",
+    "source": "res://art/battle-sprites/source-plates/mina.png",
+    "width": 224,
+    "height": 336,
+    "palette": [
+      "F6E8CE",
+      "C6A16C",
+      "714B49",
+      "FF6B35"
+    ],
+    "accent_region": [
+      0.8,
+      0.3,
+      0.15,
+      0.2
+    ],
+    "output": "res://assets/sprites/characters/battle/char_mina_battle.png",
+    "data": "res://data/characters/mina.tres",
+    "side": "ally",
+    "direction": "right"
+  },
+  {
+    "id": "seola",
+    "source": "res://art/battle-sprites/source-plates/seola.png",
+    "width": 224,
+    "height": 336,
+    "palette": [
+      "E4ECED",
+      "ACC9E4",
+      "645D79",
+      "4FC3F7"
+    ],
+    "accent_region": [
+      0.84,
+      0.14,
+      0.14,
+      0.13
+    ],
+    "output": "res://assets/sprites/characters/battle/char_seola_battle.png",
+    "data": "res://data/characters/seola.tres",
+    "side": "ally",
+    "direction": "right"
+  },
+  {
+    "id": "taehee",
+    "source": "res://art/battle-sprites/source-plates/taehee.png",
+    "width": 224,
+    "height": 336,
+    "palette": [
+      "E4E2DB",
+      "666674",
+      "A94555",
+      "7C4DFF"
+    ],
+    "accent_region": [
+      0.32,
+      0.44,
+      0.1,
+      0.08
+    ],
+    "output": "res://assets/sprites/characters/battle/char_taehee_battle.png",
+    "data": "res://data/characters/taehee.tres",
+    "side": "ally",
+    "direction": "right"
+  },
+  {
+    "id": "arin",
+    "source": "res://art/battle-sprites/source-plates/arin.png",
+    "width": 224,
+    "height": 336,
+    "palette": [
+      "F5E6CB",
+      "D1AD64",
+      "69554E",
+      "B388FF"
+    ],
+    "accent_region": [
+      0.86,
+      0.31,
+      0.12,
+      0.08
+    ],
+    "output": "res://assets/sprites/characters/battle/char_arin_battle.png",
+    "data": "res://data/characters/arin.tres",
+    "side": "ally",
+    "direction": "right"
+  },
+  {
+    "id": "gangji",
+    "source": "res://art/battle-sprites/source-plates/gangji.png",
+    "width": 224,
+    "height": 336,
+    "palette": [
+      "F1E4CC",
+      "AF866B",
+      "58604A",
+      "FFD54F"
+    ],
+    "accent_region": [
+      0.81,
+      0.165,
+      0.15,
+      0.105
+    ],
+    "output": "res://assets/sprites/characters/battle/char_gangji_battle.png",
+    "data": "res://data/characters/gangji.tres",
+    "side": "ally",
+    "direction": "right"
+  },
+  {
+    "id": "mammoth_beastfolk",
+    "source": "res://art/battle-sprites/source-plates/mammoth_beastfolk.png",
+    "width": 248,
+    "height": 312,
+    "palette": [
+      "E8D7B7",
+      "96745D",
+      "594D49",
+      "E8E8E8"
+    ],
+    "accent_region": [
+      0.12,
+      0.5,
+      0.135,
+      0.12
+    ],
+    "output": "res://assets/sprites/enemies/battle/enemy_mammoth_beastfolk_battle.png",
+    "data": "res://data/enemies/mammoth_beastfolk.tres",
+    "side": "enemy",
+    "direction": "left"
+  },
+  {
+    "id": "mammoth_boss",
+    "source": "res://art/battle-sprites/source-plates/mammoth_boss.png",
+    "width": 248,
+    "height": 312,
+    "palette": [
+      "E8D7B7",
+      "A58266",
+      "594D49",
+      "FF6B35"
+    ],
+    "accent_region": [
+      0.5,
+      0.505,
+      0.075,
+      0.055
+    ],
+    "output": "res://assets/sprites/enemies/battle/enemy_mammoth_boss_battle.png",
+    "data": "res://data/enemies/mammoth_boss.tres",
+    "side": "enemy",
+    "direction": "left"
+  },
+  {
+    "id": "velociraptor_beastfolk",
+    "source": "res://art/battle-sprites/source-plates/velociraptor_beastfolk.png",
+    "width": 248,
+    "height": 312,
+    "palette": [
+      "EEE4DA",
+      "A59BBE",
+      "565470",
+      "E8E8E8"
+    ],
+    "accent_region": [
+      0.54,
+      0.445,
+      0.08,
+      0.065
+    ],
+    "output": "res://assets/sprites/enemies/battle/enemy_velociraptor_beastfolk_battle.png",
+    "data": "res://data/enemies/velociraptor_beastfolk.tres",
+    "side": "enemy",
+    "direction": "left"
+  },
+  {
+    "id": "velociraptor_beastfolk_2",
+    "source": "res://art/battle-sprites/source-plates/velociraptor_beastfolk_2.png",
+    "width": 248,
+    "height": 312,
+    "palette": [
+      "EEE4DA",
+      "D4B2D5",
+      "565470",
+      "E8E8E8"
+    ],
+    "accent_region": [
+      0.597,
+      0.493,
+      0.07,
+      0.067
+    ],
+    "output": "res://assets/sprites/enemies/battle/enemy_velociraptor_beastfolk_2_battle.png",
+    "data": "res://data/enemies/velociraptor_beastfolk_2.tres",
+    "side": "enemy",
+    "direction": "left"
+  },
+  {
+    "id": "seoa",
+    "source": "res://art/battle-sprites/source-plates/seoa.png",
+    "width": 248,
+    "height": 312,
+    "palette": [
+      "F0DEC8",
+      "B28E75",
+      "614B47",
+      "FFD54F"
+    ],
+    "accent_region": [
+      0.095,
+      0.09,
+      0.065,
+      0.12
+    ],
+    "output": "res://assets/sprites/enemies/battle/enemy_seoa_battle.png",
+    "data": "res://data/enemies/seoa.tres",
+    "side": "enemy",
+    "direction": "left"
+  },
+  {
+    "id": "pterosaur_queen",
+    "source": "res://art/battle-sprites/source-plates/pterosaur_queen.png",
+    "width": 248,
+    "height": 312,
+    "palette": [
+      "E3DCCD",
+      "957DAF",
+      "564E6C",
+      "66D9A6"
+    ],
+    "accent_region": [
+      0.36,
+      0.17,
+      0.045,
+      0.075
+    ],
+    "output": "res://assets/sprites/enemies/battle/enemy_pterosaur_queen_battle.png",
+    "data": "res://data/enemies/pterosaur_queen.tres",
+    "side": "enemy",
+    "direction": "left"
+  }
+]
