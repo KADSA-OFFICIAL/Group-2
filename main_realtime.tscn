@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://brt1mn4realtime"]
+[gd_scene format=3 uid="uid://c7tfv6y5q71cy"]
 
 [ext_resource type="PackedScene" uid="uid://d87uv8f6k3n8" path="res://stage/Stage1_1.tscn" id="1_stage"]
 [ext_resource type="Script" path="res://camera/GameCamera.gd" id="2_cam"]
