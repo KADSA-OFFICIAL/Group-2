@@ -119,14 +119,14 @@ func _tuning() -> TurnCombatTuning:
 func _build_scene() -> void:
 	# 배경 — Phase 0이므로 단색 + 지면선만 둔다. 패럴랙스 5레이어는 Phase 3다.
 	var background := ColorRect.new()
-	background.color = Color("11141C")
+	background.color = TurnCombat.COLOR_BACKDROP
 	background.size = Vector2(1280, 720)
 	background.z_index = -100
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
 
 	var ground := ColorRect.new()
-	ground.color = Color("1A2030")
+	ground.color = TurnCombat.COLOR_STAGE_FLOOR
 	ground.position = Vector2(0, 300)
 	ground.size = Vector2(1280, 420)
 	ground.z_index = -99
