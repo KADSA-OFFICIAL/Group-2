@@ -1,5 +1,6 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=11 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=12 format=3]
 
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/enemy_seoa_battle.png" id="60_battle"]
 [ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
 [ext_resource type="Script" path="res://entities/character/SkillData.gd" id="40_skilldef"]
 [ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_ranged.tres" id="60_turn"]
@@ -21,6 +22,7 @@ speed = 104
 
 [resource]
 script = ExtResource("1_enemydata")
+battle_sprite = ExtResource("60_battle")
 enemy_id = &"seoa"
 display_name = "서아"
 description = "원거리 추적형 적. 탐지 범위(600) 안의 가장 가까운 파티 멤버를 쫓아가 사거리 250 에서 멈추고 투사체를 쏜다. 탄은 유도하지 않으므로 옆으로 움직이면 빗나간다. 밀고 들어와도 물러나지 않는다. 개성/고유 스킬 미정."

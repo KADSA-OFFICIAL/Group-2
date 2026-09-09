@@ -1,5 +1,6 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=15 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=16 format=3]
 
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/char_seola_battle.png" id="60_battle"]
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 [ext_resource type="Texture2D" uid="uid://c3mw0ogq7drhf" path="res://assets/sprites/placeholder/shape_buffer.svg" id="9_shape"]
@@ -31,6 +32,7 @@ energy_recharge = 0.1
 
 [resource]
 script = ExtResource("1_chardata")
+battle_sprite = ExtResource("60_battle")
 role = 2
 secondary_role = 0
 character_id = &"seola"
