@@ -393,4 +393,125 @@ func validate() -> Array[String]:
 	for anim in WalkAnimation.missing_animations(walk_frames):
 		problems.append("walk_frames에 '%s' 애니메이션이 없습니다." % anim)
 
+	# 턴제 필드(#450). 저작하지 않은 기존 .tres 는 기본값이라 아무 문제도 보고되지 않는다.
+	problems.append_array(validate_turn())
+
+	return problems
+
+
+# =====================================================================
+# 턴제 (Turn-based) — #450
+# =====================================================================
+#
+# 캐릭터 정의의 단일 출처는 `CharacterData` 하나다(SYSTEM_CONVENTIONS §2). 턴제 전투용
+# 로스터를 별도 파일/딕셔너리로 다시 정의하지 않고 여기에 얹는다.
+#
+# 기존 `role`/`secondary_role`(탱커/원거리/버퍼)은 **그대로 둔다.** 그 축은 실시간 전투와
+# `SynergySystem`의 역할 카운트가 쓰고 있고, 턴제 8역할과는 다른 분류다. 둘은 나란히 존재한다.
+#
+# 기본값의 원칙: 전부 표준 유닛에 해당하는 값이다. 그래서 이 섹션을 모르는 기존 6인의
+# `.tres`가 경고 없이 로드되고, 턴제에서도 "충격 / 참격 / 파괴자 / 전열 선호"로 동작한다.
+
+@export_group("턴제")
+
+## 원소. 약점 격파와 자물쇠 해제의 축이다.
+@export var element: TurnCombat.Element = TurnCombat.Element.IMPACT
+
+## 물리 타입. 원소와 독립된 두 번째 상성 축이다.
+@export var physical_type: TurnCombat.PhysicalType = TurnCombat.PhysicalType.SLASH
+
+## 턴제 역할(8종). 아이콘 하나로 역할을 소통하기 위한 분류다.
+@export var battle_class: TurnCombat.BattleClass = TurnCombat.BattleClass.BREAKER
+
+## 선호 랭크(1~4). 편성 화면이 자동 배치할 때 쓰고, 벗어나면 UI가 경고만 한다
+## (강제하지 않는다 — 위치를 옮기는 것 자체가 전술이므로 금지하면 시스템이 죽는다).
+@export var preferred_ranks: Array[int] = [1, 2]
+
+## 이 캐릭터의 턴제 스킬. `skills`(실시간 Q/E/패시브)와 **별도 배열**이다.
+##
+## 왜 나눴는가: 같은 배열에 섞으면 실시간 HUD가 오의를 Q 슬롯으로 집어 오고, 턴제
+## 액션 바가 투사체 패시브를 스킬 버튼으로 띄운다. 둘 다 `SkillData`이므로 **정의 출처는
+## 하나**이고, 나뉜 것은 "어느 전투가 이 스킬을 쓰는가"라는 소속뿐이다.
+@export var turn_skills: Array[SkillData] = []
+
+
+# ===== 턴제 스킬 조회 (Turn skill accessors) =====
+
+# 지정한 행동 종류의 스킬을 반환한다. 없으면 null.
+#
+# 오의·평타는 캐릭터당 하나라는 전제다(설계서 §4.3.2 — 오의 버튼은 하나뿐이다).
+func get_turn_skill(kind: TurnCombat.ActionKind) -> SkillData:
+	for skill in turn_skills:
+		if skill != null and skill.turn_action == kind:
+			return skill
+	return null
+
+
+# 지정한 행동 종류의 스킬 전부. 전투 스킬과 특성은 여러 개일 수 있다.
+func get_turn_skills(kind: TurnCombat.ActionKind) -> Array[SkillData]:
+	var out: Array[SkillData] = []
+	for skill in turn_skills:
+		if skill != null and skill.turn_action == kind:
+			out.append(skill)
+	return out
+
+
+func get_turn_basic() -> SkillData:
+	return get_turn_skill(TurnCombat.ActionKind.BASIC)
+
+
+func get_turn_ultimate() -> SkillData:
+	return get_turn_skill(TurnCombat.ActionKind.ULTIMATE)
+
+
+# 턴제 전투에 참여할 수 있는가. 평타가 없으면 차례가 와도 할 수 있는 일이 없다.
+func is_turn_ready() -> bool:
+	return get_turn_basic() != null
+
+
+func get_battle_class_name() -> String:
+	return TurnCombat.class_name_of(battle_class)
+
+
+func get_element_name() -> String:
+	return TurnCombat.element_name(element)
+
+
+func get_physical_type_name() -> String:
+	return TurnCombat.physical_name(physical_type)
+
+
+# 선호 랭크를 벗어난 자리인가. UI가 경고 색을 칠하는 데만 쓴다.
+func is_off_preferred_rank(rank: int) -> bool:
+	if preferred_ranks.is_empty():
+		return false
+	return not preferred_ranks.has(rank)
+
+
+# 턴제 데이터의 무결성 점검. `validate()`가 호출한다.
+#
+# 별도 함수로 둔 이유: 위쪽 `validate()`는 실시간 필드를 검사하고 있고, 두 검사를 한 함수에
+# 뭉치면 어느 축이 깨졌는지 메시지만 보고 알기 어렵다.
+func validate_turn() -> Array[String]:
+	var problems: Array[String] = []
+
+	for rank in preferred_ranks:
+		if rank < 1 or rank > TurnCombat.ALLY_RANK_COUNT:
+			problems.append("preferred_ranks에 아군 랭크 범위(1~%d) 밖의 값이 있습니다: %d"
+				% [TurnCombat.ALLY_RANK_COUNT, rank])
+
+	# 턴제 스킬을 저작했다면 최소한 평타는 있어야 한다. 없으면 차례가 와도 할 수 있는 일이 없다.
+	if not turn_skills.is_empty() and get_turn_basic() == null:
+		problems.append("turn_skills에 일반공격(ActionKind.BASIC)이 없습니다.")
+
+	# 오의를 저작했는데 게이지 최대치가 0이면 영원히 발동되지 않는다.
+	if get_turn_ultimate() != null and get_stats().get_energy_max() <= 0:
+		problems.append("오의가 있는데 stats.energy_max가 0입니다(영원히 발동되지 않습니다).")
+
+	# 같은 행동 종류가 둘 이상이면 액션 버튼이 어느 쪽을 띄울지 코드 분기 순서에 숨는다.
+	if get_turn_skills(TurnCombat.ActionKind.BASIC).size() > 1:
+		problems.append("일반공격이 둘 이상입니다(하나여야 합니다).")
+	if get_turn_skills(TurnCombat.ActionKind.ULTIMATE).size() > 1:
+		problems.append("오의가 둘 이상입니다(하나여야 합니다).")
+
 	return problems

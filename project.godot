@@ -48,6 +48,7 @@ GuideSystem="*res://autoload/GuideSystem.gd"
 TutorialSystem="*res://autoload/TutorialSystem.gd"
 GoddessSkillSystem="*res://autoload/GoddessSkillSystem.gd"
 MusicSystem="*res://autoload/MusicSystem.gd"
+TurnCombatConfig="*res://autoload/TurnCombatConfig.gd"
 
 [display]
 
