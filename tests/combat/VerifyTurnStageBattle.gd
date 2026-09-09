@@ -293,6 +293,8 @@ func _test_stage_battle_lifecycle() -> void:
 	_expect(not _seen_waves.is_empty(),
 		"첫 웨이브에 stage_wave_started 가 나가야 한다")
 
+	_check_hud_below_meta_screens(node)
+
 	# 강제 파티가 저작된 스테이지면 그 파티가 적용되어야 한다.
 	var stage: StageData = StageDatabase.get_stage(target)
 	if stage != null and not stage.forced_party.is_empty():
@@ -347,6 +349,29 @@ func _test_stage_battle_lifecycle() -> void:
 	node.queue_free()
 	await get_tree().process_frame
 	TurnCombatConfig.tuning.presentation_enabled = was_enabled
+
+
+# 전투 UI 가 메타 화면(메인화면/편성/결과)보다 **아래**에 있어야 한다.
+#
+# 왜 검사하는가: 전투 HUD 를 `ScreenManager.SCREEN_LAYER` 와 같은 번호(10)에 두었더니
+# 로비 화면 위로 전투 UI 가 그대로 겹쳐 보였다. 번호가 같으면 트리 순서가 앞뒤를 정하고,
+# ScreenManager 는 autoload 라 메인 씬보다 먼저 붙어 아래로 깔린다. 눈으로만 잡히는
+# 종류의 회귀라 여기서 번호를 붙잡아 둔다.
+#
+# 상수만 보지 않고 **만들어진 CanvasLayer** 를 훑는 이유: 상수가 맞아도 대입을 빠뜨리면
+# 같은 증상이 그대로 돌아온다.
+func _check_hud_below_meta_screens(node: Node) -> void:
+	var layers: Array[int] = []
+	for child in node.get_children():
+		if child is CanvasLayer:
+			layers.append((child as CanvasLayer).layer)
+
+	_expect(layers.size() >= 2,
+		"전투 화면이 HUD·플래시 CanvasLayer 를 만들어야 한다 (실제 %d개)" % layers.size())
+	for value in layers:
+		_expect(value < ScreenManager.SCREEN_LAYER,
+			"전투 UI 레이어(%d)는 메타 화면 레이어(%d)보다 낮아야 한다 — 같거나 높으면 로비에 전투 UI 가 겹쳐 보인다"
+				% [value, ScreenManager.SCREEN_LAYER])
 
 
 # ===== 헬퍼 =====

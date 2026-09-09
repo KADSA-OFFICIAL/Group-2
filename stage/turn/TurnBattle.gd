@@ -37,6 +37,14 @@ extends Node2D
 ## 선공(1) / 일반(0) / 피습(-1).
 @export var ambush: int = 0
 
+# 전투 UI 가 올라가는 CanvasLayer 번호.
+#
+# 둘 다 `ScreenManager.SCREEN_LAYER`(10) 아래여야 한다 — 메타 화면이 전투 위에 얹히는
+# 구조이므로, 이보다 위에 두면 로비 화면에 전투 UI 가 겹쳐 보인다.
+# (`main_realtime.tscn` 의 HUD 1 / DebugOverlay 2 와 같은 자리다.)
+const HUD_LAYER: int = 1
+const FLASH_LAYER: int = 2
+
 var battle := TurnBattleManager.new()
 var hud: TurnBattleHUD = null
 
@@ -144,8 +152,16 @@ func _build_scene() -> void:
 	add_child(_numbers)
 
 	# HUD (CanvasLayer 위에 둬야 카메라 흔들림에 함께 흔들리지 않는다).
+	#
+	# 레이어 번호는 `ScreenManager.SCREEN_LAYER`(10) 보다 **낮아야 한다.** 메타 화면
+	# (메인화면/편성/결과)은 게임플레이 위에 얹히는 오버레이라, 전투 HUD 가 그 위로
+	# 올라오면 로비에 전투 UI 가 그대로 겹쳐 보인다.
+	#
+	# 같은 번호(10)로 두는 것도 안 된다. 번호가 같으면 트리 순서가 앞뒤를 정하고,
+	# ScreenManager 는 autoload 라 메인 씬보다 **먼저** 붙으므로 전투 HUD 가 위로 온다.
+	# 실제로 그렇게 겹쳐 보였다.
 	var hud_layer := CanvasLayer.new()
-	hud_layer.layer = 10
+	hud_layer.layer = HUD_LAYER
 	add_child(hud_layer)
 
 	hud = TurnBattleHUD.new()
@@ -156,8 +172,9 @@ func _build_scene() -> void:
 	hud.auto_toggled.connect(_on_auto_toggled)
 
 	# 플래시 / 암전 레이어는 HUD 위에 온다 — 격파 순간에는 UI까지 덮어야 한다.
+	# 단 메타 화면보다는 아래다(위 HUD 주석과 같은 이유).
 	_flash_layer = CanvasLayer.new()
-	_flash_layer.layer = 20
+	_flash_layer.layer = FLASH_LAYER
 	add_child(_flash_layer)
 
 	_flash = ColorRect.new()
