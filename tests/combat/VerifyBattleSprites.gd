@@ -1,0 +1,103 @@
+extends Node
+
+# #480: Validate authored PNGs AND actual TurnBattle TextureRects, not just paths.
+# godot --headless --path . res://tests/combat/VerifyBattleSprites.tscn
+# For rendered evidence, omit --headless and append -- --capture <directory>.
+var failures: Array[String] = []
+var checks := 0
+var seen: Dictionary = {}
+
+func expect(ok: bool, message: String) -> void:
+	checks += 1
+	if not ok: failures.append(message)
+
+func _ready() -> void:
+	await get_tree().process_frame
+	var manifest: Array = JSON.parse_string(FileAccess.get_file_as_string("res://art/battle-sprites/manifest.json"))
+	expect(manifest.size() == 12, "Expected 12 authored sprites")
+	for entry in manifest: verify_asset(entry)
+	await verify_scene([&"harang", &"mina", &"seola", &"taehee"],
+		[&"mammoth_beastfolk", &"velociraptor_beastfolk", &"velociraptor_beastfolk_2", &"seoa"], "battle-party-a.png")
+	await verify_scene([&"arin", &"gangji", &"harang", &"mina"],
+		[&"mammoth_boss", &"pterosaur_queen"], "battle-party-b.png")
+	expect(seen.size() == 12, "All 12 units must be observed with textures in TurnBattle")
+	for failure in failures: push_error(failure)
+	print("%s: battle sprite verification %d checks, %d unique units, %d failures" %
+		["PASS" if failures.is_empty() else "FAIL", checks, seen.size(), failures.size()])
+	get_tree().quit(0 if failures.is_empty() else 1)
+
+func verify_asset(entry: Dictionary) -> void:
+	var data: Resource = load(entry.data)
+	expect(data != null, entry.id+": data loads")
+	if data == null: return
+	var texture: Texture2D = data.get("battle_sprite")
+	expect(texture != null, entry.id+": battle_sprite assigned")
+	if texture == null: return
+	expect(texture.resource_path == entry.output, entry.id+": correct texture assigned")
+	expect(FileAccess.file_exists(entry.output+".import"), entry.id+": import sidecar exists")
+	var img := Image.load_from_file(ProjectSettings.globalize_path(entry.output))
+	expect(img.get_size() == Vector2i(entry.width,entry.height), entry.id+": exact dimensions")
+	var bounds := img.get_used_rect()
+	expect(bounds.end.y == img.get_height(), entry.id+": sole on bottom edge")
+	expect(bounds.position.y >= ceili(img.get_height()*0.05), entry.id+": top clearance")
+	expect(bounds.position.x >= ceili(img.get_width()*0.05) and bounds.end.x <= floori(img.get_width()*0.95), entry.id+": side clearance")
+	var colors: Dictionary = {}
+	var has_transparent := false
+	var accent_count := 0
+	var accent := Color(entry.palette[3]).to_html(false)
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x,y)
+			if c.a == 0:
+				has_transparent = true
+				continue
+			var rgb := c.to_html(false)
+			colors[rgb] = true
+			if rgb == accent: accent_count += 1
+	expect(has_transparent and img.get_pixel(0,0).a == 0, entry.id+": real transparent background")
+	expect(colors.size() <= 4 and not colors.has("000000"), entry.id+": four colors, no black shadows")
+	expect(accent_count > 2, entry.id+": elemental ornament survives export")
+	var element := int(data.get("element")) if entry.side == "ally" else int(data.get("turn_element"))
+	expect(accent == TurnCombat.element_color(element).to_html(false), entry.id+": accent matches current game element")
+
+func verify_scene(party: Array[StringName], enemies: Array[StringName], filename: String) -> void:
+	var scene := load("res://stage/turn/TurnBattle.tscn") as PackedScene
+	var node := scene.instantiate()
+	node.set("use_stage",false)
+	node.set("party_ids",party)
+	node.set("enemy_ids",enemies)
+	node.set("battle_seed",480)
+	# Hold presentation at the initial battle state without leaving a suspended
+	# pause coroutine behind when this verification scene is freed.
+	node.set("_playing",true)
+	add_child(node)
+	node.call("_sync_shapes")
+	(node.get("hud") as TurnBattleHUD).refresh()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var battle: TurnBattleManager = node.get("battle")
+	expect(battle.units.size() == party.size()+enemies.size(), "Requested encounter size")
+	var shapes: Dictionary = node.get("_shapes")
+	for unit in battle.units:
+		var shape: Node2D = shapes.get(unit.unit_id)
+		expect(shape != null, "Unit has a stage node")
+		if shape == null: continue
+		var picture := shape.get_child(0) as TextureRect
+		expect(picture != null and picture.texture != null, "Stage uses art instead of colored placeholder")
+		if picture == null: continue
+		var data: Resource = unit.character if unit.is_ally() else unit.enemy
+		var id: StringName = data.get("character_id") if unit.is_ally() else data.get("enemy_id")
+		seen[id] = true
+		expect(picture.texture == data.get("battle_sprite"), String(id)+": stage uses authored resource")
+		var expected := Vector2(56,84) if unit.is_ally() else Vector2(62,78)
+		expect(picture.size == expected and picture.position == -expected*Vector2(0.5,1), String(id)+": original display size and feet anchor")
+	var args := OS.get_cmdline_user_args()
+	if args.size() == 2 and args[0] == "--capture":
+		expect(DisplayServer.get_name() != "headless", "Capture requires rendering")
+		if DisplayServer.get_name() != "headless":
+			await RenderingServer.frame_post_draw
+			DirAccess.make_dir_recursive_absolute(args[1])
+			var result := get_viewport().get_texture().get_image().save_png(args[1]+"/"+filename)
+			expect(result == OK, "Saved rendered battle evidence")
+	node.queue_free()
+	await get_tree().process_frame

@@ -170,6 +170,17 @@ func has_strike_basic_attack() -> bool:
 ## 시트 셀이 캐릭터보다 크므로 이 값이 없으면 스프라이트가 발밑이 아니라 몸 한가운데에 걸린다.
 @export var walk_sprite_offset: Vector2 = Vector2.ZERO
 
+# ----- 턴제 전투 정지 스프라이트 (Turn-battle standing sprite) -----
+# 턴제 전투 화면(`stage/turn/TurnBattle.tscn`)이 세우는 **측면 전투 자세 한 장**이다.
+#
+# 워크 시트(`walk_frames`)와 용도가 다르다: 그쪽은 실시간 화면의 4방향 이동이고,
+# 이쪽은 제자리에 서서 턴을 기다리는 측면 포즈다. 턴제 화면에서 워크 시트의 한 컷을
+# 빌려 쓰면 걷다 멈춘 자세로 굳어 보인다.
+#
+# 비어 있으면 전투 화면이 `tint` 색 네모를 세운다(Phase 0 플레이스홀더).
+# 저작 규약과 생성 프롬프트: docs/turn-battle-sprite-prompts.md
+@export var battle_sprite: Texture2D = null
+
 # 메타 화면(메인화면 등)에서 크게 보여주는 전신 일러스트.
 # 전투용 sprite_texture 와 용도가 다르므로 필드를 나눈다.
 # 기본값 null 이며, 비어 있으면 화면이 tint 색 플레이스홀더로 대체한다.

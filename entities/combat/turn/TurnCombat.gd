@@ -214,7 +214,18 @@ const COLOR_ENEMY_HP := Color("E0473B")    # 적 HP — 적색
 const COLOR_TOUGHNESS := Color("F0F4FA")   # 인성치 — 백색 계열
 const COLOR_ULT_READY := Color("3BE07A")   # 오의 준비 — 녹색 발광
 const COLOR_PANEL := Color(0.039, 0.055, 0.094, 0.72)  # rgba(10,14,24,0.72)
-const COLOR_PANEL_LINE := Color(1, 1, 1, 0.55)
+const COLOR_PANEL_LINE := Color(1, 1, 1, 0.5)
+const COLOR_AIM := Color("FFFFFF")         # 선택·조준 — 백색
+
+# 무채색 크롬 (문서 §4.9.3). **색은 의미에만 쓴다**는 규율의 나머지 절반이다.
+# UI 자체의 배경·테두리·빈 게이지·글자는 전부 여기서 가져온다. 여기에 원소색이나
+# 상태색이 섞이면 "색 = 의미"가 깨져서 화면을 색으로 읽을 수 없게 된다.
+const COLOR_TEXT_ACTIVE := Color("EAF0FA")   # 활성 텍스트
+const COLOR_TEXT_DIM := Color("7E8CA3")      # 비활성 텍스트
+const COLOR_GAUGE_EMPTY := Color("243146")   # 빈 게이지
+const COLOR_BORDER_IDLE := Color("48566E")   # 비활성 테두리
+const COLOR_STAGE_FLOOR := Color("141C2C")   # 장면 바닥
+const COLOR_BACKDROP := Color("0C111C")      # 배경
 
 # UI 기울기. 텍스트는 반대로 되돌려 읽을 수 있게 한다 (문서 §4.9.3).
 const UI_SKEW_DEGREES := -12.0

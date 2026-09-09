@@ -45,6 +45,31 @@ extends Node2D
 const HUD_LAYER: int = 1
 const FLASH_LAYER: int = 2
 
+# ===== 오의 컷인 구도 (캐릭터 아트 가이드 §4.1) =====
+#
+# 가이드는 2400×1350 캔버스 기준이고 이 화면은 1280×720 이라 0.533 배로 환산했다.
+## 아트 판의 좌단(캔버스 폭 비율). 좌측 40%는 타이포 영역이라 그림이 넘어오지 않게 둔다.
+const CUTIN_ART_LEFT_RATIO: float = 0.406
+## 아트 판이 화면 우단을 넘겨 나가는 폭. **잘려 나갈 여유 200px**(0.533 환산)이다.
+const CUTIN_ART_BLEED: float = 108.0
+## 슬라이드 인 거리. 이만큼 오른쪽에서 들어온다.
+const CUTIN_SLIDE: float = 130.0
+## 엠블럼 한 변. 가이드 §1 은 128px 라 하지만 **타이포 뒤 워터마크로 쓰므로 더 크게**
+## 둔다. 128px 단색 도형을 글자 옆에 두면 엠블럼이 아니라 길 잃은 색 판으로 보였다.
+const CUTIN_EMBLEM: float = 208.0
+## 엠블럼 알파. 글자를 읽는 데 방해가 되지 않는 선.
+const CUTIN_EMBLEM_ALPHA: float = 0.17
+
+# ===== 무대 (Stage) =====
+## 지면 밴드 높이. 아래에서 이만큼이 바닥이다.
+const GROUND_H: float = 420.0
+## 유닛 몸 칸. 발밑이 노드 원점이다 (`position = -box * (0.5, 1)`).
+## 스프라이트를 저작할 때 이 비율을 맞춘다 — docs/turn-battle-sprite-prompts.md
+const ALLY_BODY := Vector2(56.0, 84.0)
+const ENEMY_BODY := Vector2(62.0, 78.0)
+## 중앙 충돌선의 아래에서 잰 시작 높이.
+const DIVIDER_FROM_BOTTOM: float = 540.0
+
 var battle := TurnBattleManager.new()
 var hud: TurnBattleHUD = null
 
@@ -58,14 +83,34 @@ var _numbers: Node2D = null
 ## 격파 타이포그래피.
 var _banner: Label = null
 
+## 오의 컷인 묶음. 아트·조명·엠블럼·타이포를 한 노드 아래 둬서 통째로 슬라이드시킨다.
+var _cutin: Control = null
+var _cutin_art: TextureRect = null
+var _cutin_light: ColorRect = null
+var _cutin_emblem: TextureRect = null
+var _cutin_name: Label = null
+var _cutin_skill: Label = null
+
 ## 연출을 재생 중인가. 재생 중에는 다음 턴으로 넘어가지 않는다.
 var _playing: bool = false
+## 일시정지 중인가. 진행 루프와 연출 재생이 여기서 멈춘다.
+##
+## `get_tree().paused` 를 쓰지 않는 이유: 그쪽은 트리 전체를 멈춰서 HUD 의 `_process`
+## 와 입력까지 죽는다. 일시정지를 **풀 수 없는** 일시정지가 된다.
+## (`ScreenManager` 가 메타 화면용으로 이미 그 스위치를 쓰고 있기도 하다.)
+var _paused: bool = false
 ## 이 전투가 물고 있는 스테이지. `use_stage` 가 켜져 있을 때만 채워진다.
 var _stage: StageData = null
 ## 스테이지의 웨이브 정의. 번호 -> `StageWave`. `stage_wave_started` 에 실어 보낸다.
 var _waves: Array[StageWave] = []
 ## 승패를 이미 알렸는가. 결과 화면이 두 번 뜨는 것을 막는다.
 var _outcome_reported: bool = false
+## 캔버스 크기를 따라야 하는 배경 조각들. 창 비율이 16:9 가 아니면 캔버스가
+## 1280×720 보다 커지므로 고정 크기로 두면 오른쪽에 덮이지 않은 띠가 남는다.
+var _background: ColorRect = null
+var _ground: ColorRect = null
+var _divider: ColorRect = null
+
 ## 카메라 흔들림 상태.
 var _shake_amount: float = 0.0
 var _shake_time: float = 0.0
@@ -118,33 +163,31 @@ func _tuning() -> TurnCombatTuning:
 
 func _build_scene() -> void:
 	# 배경 — Phase 0이므로 단색 + 지면선만 둔다. 패럴랙스 5레이어는 Phase 3다.
-	var background := ColorRect.new()
-	background.color = Color("11141C")
-	background.size = Vector2(1280, 720)
-	background.z_index = -100
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(background)
+	#
+	# 크기는 `_fit_backdrop()` 이 캔버스에 맞춘다. 1280×720 으로 고정해 뒀더니
+	# 1366×720 캔버스(1920×1012 창)에서 **오른쪽 86px 에 창 배경색 띠가 그대로 보였다.**
+	_background = ColorRect.new()
+	_background.color = TurnCombat.COLOR_BACKDROP
+	_background.z_index = -100
+	_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_background)
 
-	var ground := ColorRect.new()
-	ground.color = Color("1A2030")
-	ground.position = Vector2(0, 300)
-	ground.size = Vector2(1280, 420)
-	ground.z_index = -99
-	ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(ground)
+	_ground = ColorRect.new()
+	_ground.color = TurnCombat.COLOR_STAGE_FLOOR
+	_ground.z_index = -99
+	_ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_ground)
 
-	# 중앙 충돌선 — 아군과 적을 가르는 기준선.
+	# 중앙 충돌선 — 아군과 적을 가르는 기준선. 캔버스 가로 중심에 선다.
 	var divider := ColorRect.new()
 	divider.color = Color(1, 1, 1, 0.05)
-	divider.position = Vector2(636, 180)
 	divider.size = Vector2(2, 380)
+	_divider = divider
 	divider.z_index = -98
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(divider)
 
 	_camera = Camera2D.new()
-	_camera.position = Vector2(640, 360)
-	_camera_home = _camera.position
 	add_child(_camera)
 
 	_numbers = Node2D.new()
@@ -169,6 +212,7 @@ func _build_scene() -> void:
 	hud.action_chosen.connect(_on_action_chosen)
 	hud.ultimate_requested.connect(_on_ultimate_requested)
 	hud.speed_changed.connect(_on_speed_changed)
+	hud.pause_toggled.connect(_on_pause_toggled)
 	hud.auto_toggled.connect(_on_auto_toggled)
 
 	# 플래시 / 암전 레이어는 HUD 위에 온다 — 격파 순간에는 UI까지 덮어야 한다.
@@ -179,7 +223,6 @@ func _build_scene() -> void:
 
 	_flash = ColorRect.new()
 	_flash.color = Color(1, 1, 1, 0)
-	_flash.size = Vector2(1280, 720)
 	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash_layer.add_child(_flash)
 
@@ -190,6 +233,101 @@ func _build_scene() -> void:
 	_banner.add_theme_font_size_override("font_size", 84)
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash_layer.add_child(_banner)
+
+	_build_cutin()
+
+	# 캔버스 크기에 맞춘다. 창 비율이 바뀌면 다시 맞춘다 — 배경·지면·중앙선·카메라와
+	# 유닛 도형이 모두 캔버스 크기에서 나온 좌표를 쓴다.
+	get_viewport().size_changed.connect(_on_canvas_resized)
+	_fit_backdrop()
+
+
+# 배경·지면·중앙선·카메라를 현재 캔버스에 맞춘다.
+#
+# 지면선은 **아래에서 420** 이고, 이 값이 `TurnBattleHUD` 의 줄 높이
+# (`ENEMY_ROW_FROM_BOTTOM` / `ALLY_ROW_FROM_BOTTOM`)와 같은 기준을 쓴다.
+func _fit_backdrop() -> void:
+	var canvas: Vector2 = get_viewport_rect().size
+	if _background != null:
+		_background.size = canvas
+	if _ground != null:
+		_ground.position = Vector2(0.0, canvas.y - GROUND_H)
+		_ground.size = Vector2(canvas.x, GROUND_H)
+	if _divider != null:
+		_divider.position = Vector2(canvas.x * 0.5 - 1.0, canvas.y - DIVIDER_FROM_BOTTOM)
+	if _camera != null:
+		_camera.position = canvas * 0.5
+		_camera_home = _camera.position
+	if _flash != null:
+		_flash.size = canvas
+	if _cutin_light != null:
+		_cutin_light.size = canvas
+	if _cutin_art != null:
+		# 아트 판의 좌단은 캔버스 좌측 40%(타이포 영역) 밖이고, 우단은 화면 밖까지 나간다.
+		_cutin_art.position = Vector2(canvas.x * CUTIN_ART_LEFT_RATIO, 0.0)
+		_cutin_art.size = Vector2(canvas.x - _cutin_art.position.x + CUTIN_ART_BLEED, canvas.y)
+
+
+func _on_canvas_resized() -> void:
+	_fit_backdrop()
+	# 도형 좌표는 HUD 가 캔버스 크기에서 계산한다. 다시 놓지 않으면 UI 만 옮겨간다.
+	if hud != null and not _shapes.is_empty():
+		_sync_shapes()
+
+
+# 오의 컷인 판. 한 번 만들어 두고 재생할 때마다 그림과 글자만 갈아 끼운다.
+#
+# 구도는 캐릭터 아트 가이드 §4.1 규격(2400×1350 기준)을 1280×720 으로 환산한 것이다.
+#   · 좌측 40%(x 0~512) — 타이포그래피 영역. **그림을 넣지 않는다**
+#   · 캐릭터 55~65%     — 우측에 대각선으로 서고, 화면 밖으로 잘려 나가도 된다
+#
+# **조명을 그림에 굽지 않는다** (§4.2). 원소색 조명은 여기서 `_cutin_light` 로 합성한다.
+# 그림은 중립 조명으로 그려진 투명 PNG 이므로, 속성이 바뀌어도 다시 그릴 필요가 없다.
+func _build_cutin() -> void:
+	_cutin = Control.new()
+	_cutin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cutin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.modulate = Color(1, 1, 1, 0)
+	_cutin.visible = false
+	_flash_layer.add_child(_cutin)
+
+	# 원소색 조명 판. 그림 뒤에 깔려 인물을 어두운 배경에서 떼어 낸다.
+	_cutin_light = ColorRect.new()
+	_cutin_light.color = Color(0, 0, 0, 0)
+	_cutin_light.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.add_child(_cutin_light)
+
+	# 엠블럼 — 벡터 단색 실루엣. 타이포 뒤에 크게 얹는다.
+	_cutin_emblem = TextureRect.new()
+	_cutin_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_cutin_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_cutin_emblem.size = Vector2(CUTIN_EMBLEM, CUTIN_EMBLEM)
+	# 타이포그래피 묶음(y 300~400)의 뒤 가운데. 글자가 엠블럼 위에 얹힌다.
+	_cutin_emblem.position = Vector2(88, 244)
+	_cutin_emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.add_child(_cutin_emblem)
+
+	# 전신 아트. 우측에 두고 잘려 나갈 여유를 위해 화면 오른쪽 밖까지 폭을 준다.
+	_cutin_art = TextureRect.new()
+	_cutin_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_cutin_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_cutin_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.add_child(_cutin_art)
+
+	# 타이포그래피 — 캐릭터 이름과 오의 이름. 설계서 §4.10.4 의 -9° 기울기를 쓴다.
+	_cutin_name = Label.new()
+	_cutin_name.add_theme_font_size_override("font_size", 30)
+	_cutin_name.position = Vector2(104, 300)
+	_cutin_name.rotation = deg_to_rad(-9.0)
+	_cutin_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.add_child(_cutin_name)
+
+	_cutin_skill = Label.new()
+	_cutin_skill.add_theme_font_size_override("font_size", 62)
+	_cutin_skill.position = Vector2(96, 336)
+	_cutin_skill.rotation = deg_to_rad(-9.0)
+	_cutin_skill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cutin.add_child(_cutin_skill)
 
 
 # ===== 전투 개시 (Start) =====
@@ -295,21 +433,41 @@ func _on_wave_started(index: int, total: int) -> void:
 	EventBus.stage_wave_started.emit(String(_stage.stage_id), index, total, wave)
 
 
-# 유닛마다 도형을 하나 만든다. Phase 0은 도형으로 감각을 검증한다.
+# 유닛마다 몸을 하나 만든다.
+#
+# `battle_sprite` 가 저작되어 있으면 그 그림을 세우고, 없으면 `tint` 색 네모를 세운다
+# (Phase 0 플레이스홀더). **아트가 들어와도 스크립트를 고칠 필요가 없다** —
+# `.tres` 에 텍스처만 넣으면 네모가 그림으로 바뀐다.
+# 생성 프롬프트: docs/turn-battle-sprite-prompts.md
 func _build_shapes() -> void:
 	for unit in battle.units:
 		var shape := Node2D.new()
 		shape.z_index = 10
 
-		var body := ColorRect.new()
-		var tint := Color("C8402F")
-		if unit.is_ally() and unit.character != null:
-			tint = unit.character.tint
-		body.color = tint
-		body.size = Vector2(56, 84) if unit.is_ally() else Vector2(62, 78)
-		body.position = -body.size * Vector2(0.5, 1.0)
-		body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		shape.add_child(body)
+		var box := ALLY_BODY if unit.is_ally() else ENEMY_BODY
+		var art := _battle_sprite_of(unit)
+		if art != null:
+			# 늘리지 않는다 — 비율이 다른 그림은 칸 안에서 맞춰 들어간다.
+			var picture := TextureRect.new()
+			picture.texture = art
+			picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			picture.size = box
+			picture.position = -box * Vector2(0.5, 1.0)
+			picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			shape.add_child(picture)
+		else:
+			var body := ColorRect.new()
+			var tint := Color("C8402F")
+			if unit.is_ally() and unit.character != null:
+				tint = unit.character.tint
+			elif unit.enemy != null:
+				tint = unit.enemy.tint
+			body.color = tint
+			body.size = box
+			body.position = -box * Vector2(0.5, 1.0)
+			body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			shape.add_child(body)
 
 		# 접지 그림자 — 없으면 캐릭터가 떠 보인다 (설계서 §4.10.2).
 		var shadow := ColorRect.new()
@@ -333,6 +491,15 @@ func _build_shapes() -> void:
 		_shapes[unit.unit_id] = shape
 
 	_sync_shapes()
+
+
+# 이 유닛의 턴제 전투 정지 스프라이트. 저작되지 않았으면 null (네모로 떨어진다).
+func _battle_sprite_of(unit: TurnUnit) -> Texture2D:
+	if unit.character != null:
+		return unit.character.battle_sprite
+	if unit.enemy != null:
+		return unit.enemy.battle_sprite
+	return null
 
 
 # 도형을 랭크 위치로 옮긴다. 밀치기·끌기가 실제로 눈에 보여야 위치 전술이 성립한다.
@@ -370,6 +537,7 @@ func _play() -> void:
 	_playing = true
 
 	while true:
+		await _await_unpause()
 		await _drain_presentation()
 		_sync_shapes(true)
 		hud.refresh()
@@ -400,6 +568,7 @@ func _drain_presentation() -> void:
 		return
 
 	while not queue.is_empty():
+		await _await_unpause()
 		var entry := queue.pop()
 		var event: int = entry["event"]
 		var data: Dictionary = entry["data"]
@@ -475,12 +644,18 @@ func _play_hit(data: Dictionary) -> void:
 			home + Vector2(direction * knock, 0), _scaled(0.06))
 		tween.tween_property(target_shape, "position", home, _scaled(0.12))
 		# 피격 명멸.
+		# 피격 명멸. 네모는 `color`, 그림은 `modulate` 를 흔든다 — 그림의 `color` 를
+		# 흰색으로 만들면 그림이 사라진다.
 		var body := target_shape.get_child(0)
+		var flash_tween := create_tween()
 		if body is ColorRect:
-			var original: Color = body.color
-			var flash_tween := create_tween()
+			var original: Color = (body as ColorRect).color
 			flash_tween.tween_property(body, "color", Color.WHITE, _scaled(0.04))
 			flash_tween.tween_property(body, "color", original, _scaled(0.12))
+		elif body is CanvasItem:
+			flash_tween.tween_property(body, "modulate", Color(3.0, 3.0, 3.0, 1.0),
+				_scaled(0.04))
+			flash_tween.tween_property(body, "modulate", Color.WHITE, _scaled(0.12))
 
 	_shake(float(feedback.get("shake_px", 0.0)), float(feedback.get("shake_time", 0.0)))
 	_screen_flash(Color.WHITE, float(feedback.get("flash", 0.0)), 0.12)
@@ -613,8 +788,16 @@ func _play_cutin(data: Dictionary) -> void:
 	# 0.08s 스피드라인 — Phase 0은 색 띠로 대체한다.
 	_screen_flash(color, 0.45, 0.12)
 
-	# 0.45s 키네틱 타이포그래피. **글자 자체가 연출이 되면 3D 카메라가 없어도 강렬하다.**
-	await _play_banner("%s / %s" % [unit.display_name, skill.display_name], color, 0.55, 52)
+	# 0.45s 컷인. 아트가 있으면 전신 일러스트 + 엠블럼 + 타이포, 없으면 예전 배너로 떨어진다.
+	# **타이밍은 어느 쪽이든 같다** — 0.55s 를 쓴다.
+	if _setup_cutin(unit, skill, color):
+		# 컷인은 화면을 통째로 쓰는 순간이다. HUD 를 남겨 두면 초상 카드와 스킬 목록이
+		# 일러스트 위에 겹쳐 컷인이 "그림이 뜬 전투 화면"으로 보인다.
+		_fade_hud(0.0, 0.18)
+		await _play_cutin_slide(0.55)
+	else:
+		await _play_banner("%s / %s" % [unit.display_name, skill.display_name],
+			color, 0.55, 52)
 
 	# 1.10s 오의 모션 — 시전자를 크게 키웠다 되돌린다.
 	var shape: Node2D = _shapes.get(unit.unit_id)
@@ -626,6 +809,69 @@ func _play_cutin(data: Dictionary) -> void:
 	_camera_zoom(1.6, 0.25)
 	await _wait(0.25)
 	_camera_zoom(1.0, 0.25)
+	_hide_cutin(0.25)
+	_fade_hud(1.0, 0.25)
+
+
+# 컷인에 이 오의의 그림·색·글자를 채운다. 쓸 아트가 없으면 false.
+func _setup_cutin(unit: TurnUnit, skill: SkillData, color: Color) -> bool:
+	if _cutin == null or unit.character == null:
+		return false
+
+	# 어떤 그림을 쓸지는 PortraitSystem 이 정한다. 여기서 character.portrait 를 직접
+	# 읽으면 편성 화면에서 고른 초상과 컷인이 어긋난다.
+	var art := PortraitSystem.get_portrait(unit.character)
+	if art == null:
+		return false
+	# 투명 여백을 잘라 낸 판을 쓴다. 여백째로 넣으면 인물이 화면에서 작아진다.
+	_cutin_art.texture = HUDKit.trimmed_texture(art)
+
+	# 원소색 조명을 **코드로** 합성한다. 그림에는 구워 넣지 않는다 (가이드 §4.2).
+	_cutin_light.color = Color(color.r, color.g, color.b, 0.16)
+
+	var emblem_path := UITheme.role_emblem_path(unit.character.role)
+	_cutin_emblem.texture = load(emblem_path) if not emblem_path.is_empty() else null
+	# 단색 실루엣이므로 색은 여기서 입힌다. 흰 도형에 곱해야 원소색 그대로 나온다.
+	_cutin_emblem.modulate = Color(color.r, color.g, color.b, CUTIN_EMBLEM_ALPHA)
+
+	_cutin_name.text = unit.display_name
+	_cutin_name.modulate = TurnCombat.COLOR_TEXT_DIM
+	_cutin_skill.text = skill.display_name
+	_cutin_skill.modulate = color
+	return true
+
+
+# 컷인을 오른쪽에서 밀어 넣는다. 글자와 그림이 같은 시간에 자리를 잡는다.
+func _play_cutin_slide(duration: float) -> void:
+	_cutin.visible = true
+	_cutin.modulate = Color(1, 1, 1, 0)
+	var home := _cutin_art.position
+	_cutin_art.position = home + Vector2(CUTIN_SLIDE, 0.0)
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(_cutin, "modulate:a", 1.0, _scaled(duration * 0.28))
+	tween.tween_property(_cutin_art, "position", home,
+		_scaled(duration)).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	await _wait(duration)
+
+
+# HUD 를 부드럽게 내리거나 올린다. 노드를 숨기지 않고 알파만 건드린다 —
+# `visible` 을 끄면 `_draw()` 가 멈춰 히트존이 비고, 컷인이 끝난 첫 프레임에 클릭이 샌다.
+func _fade_hud(target_alpha: float, duration: float) -> void:
+	if hud == null:
+		return
+	var tween := create_tween()
+	tween.tween_property(hud, "modulate:a", target_alpha, _scaled(duration))
+
+
+func _hide_cutin(duration: float) -> void:
+	if _cutin == null or not _cutin.visible:
+		return
+	var tween := create_tween()
+	tween.tween_property(_cutin, "modulate:a", 0.0, _scaled(duration))
+	await tween.finished
+	_cutin.visible = false
 
 
 func _play_death(data: Dictionary) -> void:
@@ -678,7 +924,8 @@ func _show_result() -> void:
 	panel.name = "ResultSummary"
 	panel.text = "\n".join(lines)
 	panel.add_theme_font_size_override("font_size", 20)
-	panel.position = Vector2(420, 250)
+	var canvas: Vector2 = get_viewport_rect().size
+	panel.position = Vector2(canvas.x * 0.5 - 220.0, canvas.y * 0.5 - 110.0)
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash_layer.add_child(panel)
 
@@ -711,6 +958,23 @@ func _on_speed_changed(new_speed: float) -> void:
 	# **로직을 건드리지 않는다.** 연출 큐의 재생 시간만 나눈다.
 	if battle.presentation != null:
 		battle.presentation.speed = new_speed
+
+
+# 일시정지가 풀릴 때까지 붙잡는다.
+#
+# 연출 한 조각이 끝난 **경계**에서만 멈춘다. 트윈 도중에 끊으면 캐릭터가 어중간한
+# 위치에 남고, 재개 시 그 트윈이 이미 끝나 있어 연출이 한 칸 건너뛴다.
+func _await_unpause() -> void:
+	while _paused:
+		await get_tree().process_frame
+
+
+func _on_pause_toggled(enabled: bool) -> void:
+	_paused = enabled
+	if not enabled:
+		# 멈춘 사이에 턴이 넘어가 있을 수 있다. 루프가 이미 돌고 있으면 `_play()` 가
+		# 스스로 빠져나오므로 중복 실행되지 않는다.
+		_play()
 
 
 func _on_auto_toggled(enabled: bool) -> void:
@@ -766,7 +1030,10 @@ func _play_banner(text: String, color: Color, duration: float, size: int) -> voi
 	# 비스듬한 각도 — 설계서 §4.10.4 의 타이포그래피 규격(-8° ~ -12°).
 	_banner.rotation = deg_to_rad(-9.0)
 	_banner.pivot_offset = Vector2.ZERO
-	_banner.position = Vector2(360, 320)
+	# 캔버스 중심 기준. 1280 기준 (360, 320) 과 같은 자리다 — 절대 좌표로 두면
+	# 넓은 창에서 배너가 화면 왼쪽으로 치우친다.
+	var canvas: Vector2 = get_viewport_rect().size
+	_banner.position = Vector2(canvas.x * 0.5 - 280.0, canvas.y * 0.5 - 40.0)
 
 	var tween := create_tween()
 	tween.set_parallel(true)
