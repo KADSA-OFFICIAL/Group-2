@@ -1,0 +1,47 @@
+{
+  "alpha": "straight",
+  "frames": {
+    "arin": {
+      "height": 256,
+      "width": 256,
+      "x": 272,
+      "y": 8
+    },
+    "gangji": {
+      "height": 256,
+      "width": 256,
+      "x": 8,
+      "y": 8
+    },
+    "harang": {
+      "height": 256,
+      "width": 256,
+      "x": 536,
+      "y": 8
+    },
+    "mina": {
+      "height": 256,
+      "width": 256,
+      "x": 8,
+      "y": 272
+    },
+    "seola": {
+      "height": 256,
+      "width": 256,
+      "x": 536,
+      "y": 272
+    },
+    "taehee": {
+      "height": 256,
+      "width": 256,
+      "x": 272,
+      "y": 272
+    }
+  },
+  "image": "portrait-atlas.png",
+  "padding": 8,
+  "size": [
+    1024,
+    1024
+  ]
+}

@@ -1,0 +1,648 @@
+{
+  "checks": [
+    {
+      "bounds": [
+        20,
+        23,
+        215,
+        209
+      ],
+      "file": "gangji/char_gangji_portrait_square.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        1,
+        0,
+        40,
+        36
+      ],
+      "file": "gangji/char_gangji_portrait_hud.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        42,
+        36
+      ]
+    },
+    {
+      "bounds": [
+        0,
+        0,
+        60,
+        32
+      ],
+      "file": "gangji/char_gangji_portrait_wide.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        60,
+        32
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        23,
+        215,
+        209
+      ],
+      "file": "gangji/char_gangji_silhouette.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        359,
+        220,
+        681,
+        1760
+      ],
+      "file": "gangji/char_gangji_fullbody.png",
+      "has_alpha": true,
+      "minimum_10_percent_margin": true,
+      "ok": true,
+      "size": [
+        1400,
+        2200
+      ]
+    },
+    {
+      "bounds": [
+        960,
+        0,
+        1189,
+        1350
+      ],
+      "file": "gangji/char_gangji_cutin.png",
+      "has_alpha": true,
+      "left_40_percent_empty": true,
+      "ok": true,
+      "size": [
+        2400,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        1160,
+        0,
+        1189,
+        1350
+      ],
+      "file": "gangji/char_gangji_cutin_overscan.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        2800,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        30,
+        215,
+        196
+      ],
+      "file": "arin/char_arin_portrait_square.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        1,
+        0,
+        39,
+        36
+      ],
+      "file": "arin/char_arin_portrait_hud.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        42,
+        36
+      ]
+    },
+    {
+      "bounds": [
+        0,
+        0,
+        60,
+        32
+      ],
+      "file": "arin/char_arin_portrait_wide.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        60,
+        32
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        30,
+        215,
+        196
+      ],
+      "file": "arin/char_arin_silhouette.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        341,
+        220,
+        718,
+        1760
+      ],
+      "file": "arin/char_arin_fullbody.png",
+      "has_alpha": true,
+      "minimum_10_percent_margin": true,
+      "ok": true,
+      "size": [
+        1400,
+        2200
+      ]
+    },
+    {
+      "bounds": [
+        960,
+        0,
+        1190,
+        1350
+      ],
+      "file": "arin/char_arin_cutin.png",
+      "has_alpha": true,
+      "left_40_percent_empty": true,
+      "ok": true,
+      "size": [
+        2400,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        1160,
+        0,
+        1190,
+        1350
+      ],
+      "file": "arin/char_arin_cutin_overscan.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        2800,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        25,
+        215,
+        205
+      ],
+      "file": "harang/char_harang_portrait_square.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        1,
+        0,
+        40,
+        36
+      ],
+      "file": "harang/char_harang_portrait_hud.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        42,
+        36
+      ]
+    },
+    {
+      "bounds": [
+        0,
+        0,
+        60,
+        32
+      ],
+      "file": "harang/char_harang_portrait_wide.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        60,
+        32
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        25,
+        215,
+        205
+      ],
+      "file": "harang/char_harang_silhouette.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        295,
+        220,
+        810,
+        1760
+      ],
+      "file": "harang/char_harang_fullbody.png",
+      "has_alpha": true,
+      "minimum_10_percent_margin": true,
+      "ok": true,
+      "size": [
+        1400,
+        2200
+      ]
+    },
+    {
+      "bounds": [
+        960,
+        0,
+        1201,
+        1350
+      ],
+      "file": "harang/char_harang_cutin.png",
+      "has_alpha": true,
+      "left_40_percent_empty": true,
+      "ok": true,
+      "size": [
+        2400,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        1160,
+        0,
+        1201,
+        1350
+      ],
+      "file": "harang/char_harang_cutin_overscan.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        2800,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        22,
+        215,
+        212
+      ],
+      "file": "mina/char_mina_portrait_square.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        1,
+        0,
+        40,
+        36
+      ],
+      "file": "mina/char_mina_portrait_hud.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        42,
+        36
+      ]
+    },
+    {
+      "bounds": [
+        0,
+        0,
+        60,
+        32
+      ],
+      "file": "mina/char_mina_portrait_wide.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        60,
+        32
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        22,
+        215,
+        212
+      ],
+      "file": "mina/char_mina_silhouette.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        261,
+        220,
+        878,
+        1760
+      ],
+      "file": "mina/char_mina_fullbody.png",
+      "has_alpha": true,
+      "minimum_10_percent_margin": true,
+      "ok": true,
+      "size": [
+        1400,
+        2200
+      ]
+    },
+    {
+      "bounds": [
+        960,
+        0,
+        1196,
+        1350
+      ],
+      "file": "mina/char_mina_cutin.png",
+      "has_alpha": true,
+      "left_40_percent_empty": true,
+      "ok": true,
+      "size": [
+        2400,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        1160,
+        0,
+        1196,
+        1350
+      ],
+      "file": "mina/char_mina_cutin_overscan.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        2800,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        22,
+        215,
+        212
+      ],
+      "file": "taehee/char_taehee_portrait_square.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        1,
+        0,
+        40,
+        36
+      ],
+      "file": "taehee/char_taehee_portrait_hud.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        42,
+        36
+      ]
+    },
+    {
+      "bounds": [
+        0,
+        0,
+        60,
+        32
+      ],
+      "file": "taehee/char_taehee_portrait_wide.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        60,
+        32
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        22,
+        215,
+        212
+      ],
+      "file": "taehee/char_taehee_silhouette.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        287,
+        220,
+        826,
+        1760
+      ],
+      "file": "taehee/char_taehee_fullbody.png",
+      "has_alpha": true,
+      "minimum_10_percent_margin": true,
+      "ok": true,
+      "size": [
+        1400,
+        2200
+      ]
+    },
+    {
+      "bounds": [
+        960,
+        0,
+        1205,
+        1350
+      ],
+      "file": "taehee/char_taehee_cutin.png",
+      "has_alpha": true,
+      "left_40_percent_empty": true,
+      "ok": true,
+      "size": [
+        2400,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        1160,
+        0,
+        1205,
+        1350
+      ],
+      "file": "taehee/char_taehee_cutin_overscan.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        2800,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        23,
+        215,
+        210
+      ],
+      "file": "seola/char_seola_portrait_square.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        1,
+        0,
+        40,
+        36
+      ],
+      "file": "seola/char_seola_portrait_hud.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        42,
+        36
+      ]
+    },
+    {
+      "bounds": [
+        0,
+        0,
+        58,
+        32
+      ],
+      "file": "seola/char_seola_portrait_wide.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        60,
+        32
+      ]
+    },
+    {
+      "bounds": [
+        20,
+        23,
+        215,
+        210
+      ],
+      "file": "seola/char_seola_silhouette.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "bounds": [
+        370,
+        220,
+        659,
+        1760
+      ],
+      "file": "seola/char_seola_fullbody.png",
+      "has_alpha": true,
+      "minimum_10_percent_margin": true,
+      "ok": true,
+      "size": [
+        1400,
+        2200
+      ]
+    },
+    {
+      "bounds": [
+        960,
+        0,
+        1370,
+        1350
+      ],
+      "file": "seola/char_seola_cutin.png",
+      "has_alpha": true,
+      "left_40_percent_empty": true,
+      "ok": true,
+      "size": [
+        2400,
+        1350
+      ]
+    },
+    {
+      "bounds": [
+        1160,
+        0,
+        1370,
+        1350
+      ],
+      "file": "seola/char_seola_cutin_overscan.png",
+      "has_alpha": true,
+      "ok": true,
+      "size": [
+        2800,
+        1350
+      ]
+    }
+  ],
+  "failed": 0,
+  "scope": "file dimensions, non-opaque alpha, cutin typography clearance, fullbody canvas margins; artistic checks are in README.md"
+}

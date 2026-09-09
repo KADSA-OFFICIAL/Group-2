@@ -1,0 +1,81 @@
+[
+  {
+    "id": "gangji",
+    "name": "강지",
+    "features": "warm light-brown chin-length layered bob, small braid and green leaf sprig on viewer-right temple, crossed small hairpins on viewer-left, green eyes, pale peach skin; long cream cable-knit cardigan with dark tied lacing on sleeves, olive ribbed crop top, brown pleated short skirt over dark shorts, brown crossbody satchel with leaf decoration, cream socks and brown lace-up boots",
+    "motif": "leaf",
+    "palette": [
+      "#B98867",
+      "#EFE0C6",
+      "#665039",
+      "#728047"
+    ],
+    "reference": "assets/sprites/characters/portraits/gangji.png"
+  },
+  {
+    "id": "arin",
+    "name": "아린",
+    "features": "bright golden blonde straight chin-length bob with tidy blunt fringe, golden eyes, paired small metallic hairpins on viewer-left and angular gold clips on viewer-right, pale peach skin; oversized cream cable-knit buttoned cardigan, white V-neck top, dark brown shorts, thin crossbody chain strap, cream rectangular satchel with round brass camera-like accessory, white socks and cream sneakers",
+    "motif": "spark",
+    "palette": [
+      "#DEB756",
+      "#F1E4CA",
+      "#55483E",
+      "#C99B3C"
+    ],
+    "reference": "assets/sprites/characters/portraits/arin.png"
+  },
+  {
+    "id": "harang",
+    "name": "하랑",
+    "features": "pale mint-white hair in two side spiral buns, short soft bangs and side tendrils, ONE small pale pink horn centered above the forehead, golden eyes, pale peach skin; green-and-cream zip-front cropped sweatshirt with triangular yellow dorsal accents on outer sleeves, blue denim high-waisted shorts with suspenders, white slouch socks and green boots, long green dinosaur tail; preserve cute dinosaur design; exclude bowl and spoon from portrait",
+    "motif": "horn",
+    "palette": [
+      "#E4EDE2",
+      "#8CB696",
+      "#7597AD",
+      "#E8C86B"
+    ],
+    "reference": "assets/sprites/characters/portraits/harang.png"
+  },
+  {
+    "id": "mina",
+    "name": "미나",
+    "features": "long honey-blonde hair with one high side ponytail on viewer-left and flowing long back hair, purple eyes, cheerful little fang smile, pale peach skin; white short-sleeve collared cropped shirt with red necktie, terracotta pleated skirt, small pale peach membrane wings at hips, pale peach asymmetric dinosaur-patterned legwear and large cream slouch leg warmers, dark reddish-brown shoes. Preserve reference outfit identity with shirt fully and opaquely covering entire bust, no underboob",
+    "motif": "wing",
+    "palette": [
+      "#D8BA78",
+      "#F2E7D2",
+      "#AE6255",
+      "#E9B89B"
+    ],
+    "reference": "assets/sprites/characters/portraits/mina.png"
+  },
+  {
+    "id": "taehee",
+    "name": "태희",
+    "features": "white-silver hair with long thin low twin tails and a straight soft fringe, black sclera and RED spiral pupils, pale pinkish skin; huge gray high scarf wrapping lower face, with a band of bold white triangular tooth motifs, sleeveless plain near-black dress, gray dinosaur claw-like forearms with three long ivory claws, large gray curved dinosaur tail, bare feet. Keep scarf covering mouth as signature; do not invent a human smile or normal eyes",
+    "motif": "tooth",
+    "palette": [
+      "#E4E3E6",
+      "#85808A",
+      "#292A32",
+      "#B62235"
+    ],
+    "reference": "assets/sprites/characters/portraits/taehee.png"
+  },
+  {
+    "id": "seola",
+    "name": "설아",
+    "features": "very long icy pale-blue hair with soft straight fringe, sides drawn back, red eyes, pale cool peach skin, small lavender fish-fin ears; cool slate-blue and pale-blue aquatic sleeveless fantasy bodice with central pale panel and scalloped edges, long pale-blue fin-like forearm coverings with white fin ridges, long broad pale blue fishlike tail behind legs, bare feet. Preserve aquatic motifs and reference silhouette, opaque complete bodice coverage, tasteful neutral pose",
+    "motif": "fin",
+    "palette": [
+      "#D7E9F4",
+      "#A8C7DE",
+      "#6D809B",
+      "#A95766"
+    ],
+    "reference": "assets/sprites/characters/portraits/seola.png"
+  }
+]
+
