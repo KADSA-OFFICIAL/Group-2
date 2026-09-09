@@ -29,7 +29,7 @@
 
 | | 실시간 | 턴제 |
 |---|---|---|
-| 진입 | `main.tscn` → `stage/Stage1_1.tscn` | `stage/turn/TurnBattle.tscn` |
+| 진입 | `main_realtime.tscn` (또는 `stage/Stage1_1.tscn` 단독) | **`main.tscn` ← 게임의 기본 진입** |
 | 튜닝 | `CombatConfig` / `data/combat/combat_tuning.tres` | `TurnCombatConfig` / `data/combat/turn_combat_tuning.tres` |
 | 스텟 | `PlayerStats` 실시간 파생 (`get_physical_attack()` 등) | `PlayerStats` 턴제 파생 (`get_speed()`, `get_crit_rate()` 등) |
 | 스킬 | `CharacterData.skills` | `CharacterData.turn_skills` |
@@ -42,6 +42,30 @@
 
 **나눈 것**: 튜닝 리소스 · 스킬 배열 · 상태 효과 지속시간 · EventBus 시그널 이름(`turn_` 접두어).
 나눈 이유는 각 항목의 코드 주석에 적혀 있고, 요지는 "합치면 한쪽 밸런싱이 다른 쪽을 흔든다"다.
+
+### 진입 경로 (#472)
+
+`main.tscn` 이 **턴제 전투**를 연다. 실시간 전투는 `main_realtime.tscn` 으로 통째로 남아
+있으므로 되돌리려면 그 씬을 실행하거나 `project.godot` 의 `run/main_scene` 을 바꾸면 된다.
+
+```
+main.tscn
+ ├ TurnBattle             ← 턴제 전장 (stage/turn/TurnBattle.tscn)
+ ├ MainScreenLauncher     ← 메인화면을 얹는다
+ └ StageResultLauncher    ← 승패 시 결과 화면을 연다
+
+main_realtime.tscn        ← 지금까지의 구성 (Stage1_1 + GameCamera + HUD + DebugOverlay)
+```
+
+출격 흐름은 **손대지 않았다.** 실시간 전장과 같은 규약을 쓴다:
+
+```
+스테이지 선택 → 편성 → 출격
+  → StageSystem.request_stage(id)
+  → stage_requested 신호
+  → TurnBattle 이 그 스테이지로 전투를 다시 만든다
+  → 마지막 웨이브 전멸 → EventBus.stage_completed → 결과 화면 + StageProgress
+```
 
 ---
 
@@ -467,6 +491,45 @@ HP를 수만으로 둬도 몇십 초에 끝난다. 턴제는 한 사이클에 �
 구현된 보스 패턴: **대형 파괴형**(「낚아채기」로 후열을 끌어냄) · **디버프 압박형**
 (「쇠약의 낙인」) · **전멸기**(「멸절의 낙뢰」 오의).
 
+### 스테이지 → 턴제 조우 (#472)
+
+실시간 전장은 `StageSpawn.enemy_scene`(PackedScene)을 좌표에 인스턴스한다. 턴제는 좌표가
+없고 랭크만 있으므로 **정의(`EnemyData`)**가 필요하다. `TurnStageEncounter` 가 그 번역을 맡는다.
+
+- 적 씬의 루트(`EnemyBase`)가 `data` 로 `EnemyData` 를 들고 있으므로 **그것을 읽는다.**
+  씬 경로 → 적 id 매핑표를 만들지 않는다 — 두 곳을 고쳐야 하고, 한쪽을 빼먹으면
+  **조용히 다른 적이 나온다.**
+- `PackedScene.get_state()` 로 저장된 프로퍼티만 읽는다. **씬을 인스턴스하지 않는다.**
+- `StageSpawn.count` 를 그대로 펼치고, 적 랭크 5개를 넘치는 분은 버린다.
+- 웨이브가 저작되지 않은 스테이지는 `spawns` 전체를 한 웨이브로 본다.
+- **적이 하나도 없는 웨이브는 버린다.** 남기면 전투가 즉시 "전멸"로 판정해 화면에는
+  아무 일도 없이 웨이브 번호만 올라간다.
+
+전부 `static` 이라 노드 없이 호출되고, 그래서 헤드리스에서 "저작된 스테이지 전부가 적이 있는
+조우로 풀리는가"를 직접 검사할 수 있다.
+
+실측 (`VerifyTurnStageBattle`):
+
+| 스테이지 | 웨이브 | 적 |
+|---|---|---|
+| stage_1_1 (1-1 시험장) | 1 | 3체 |
+| stage_1_2 (1-2 거점) | 3 | 12체 |
+| stage_1_3 (1-3 우두머리의 자리) | 2 | 5체 |
+| stage_2_1 (2-1 밀물 해안) | 1 | 4체 |
+| stage_test | 4 | 10체 |
+
+### 웨이브
+
+한 무리를 전멸시키면 다음 무리가 등장하고, **아군의 HP·오의 게이지·상태이상은 그대로
+이어진다** — 무리마다 회복시켜 주면 웨이브가 그냥 별개 전투 여러 개가 된다.
+
+웨이브를 `TurnBattleManager` 가 소유하는 이유: `_check_end()` 가 "적이 없으면 승리"를
+판정하는데 그 판단에 "남은 웨이브가 있는가"가 함께 들어가야 한다. 밖에서 콜백으로
+끼워 넣으면 **승리 신호가 웨이브마다 나가 결과 화면이 여러 번 뜬다.**
+
+새 웨이브의 적 `unit_id` 에는 웨이브 번호가 들어간다 — 같은 적이 웨이브마다 나오면 id 가
+겹치고, 타임라인의 AV 딕셔너리가 앞 웨이브의 값을 그대로 쓴다.
+
 ### 적 정보 공개
 
 ```
@@ -680,6 +743,9 @@ godot --headless --path . --import
 # 턴제 코어 (411개 검사, 헤드리스)
 godot --headless --path . res://tests/combat/VerifyTurnCombat.tscn
 
+# 스테이지 연동 (132개 검사, 헤드리스)
+godot --headless --path . res://tests/combat/VerifyTurnStageBattle.tscn
+
 # 회귀
 godot --headless --path . res://tests/stage/VerifyStageMaps.tscn
 godot --headless --path . res://tests/story/VerifyStoryChapters.tscn
@@ -696,11 +762,20 @@ godot --headless --path . res://tests/story/VerifyStoryChapters.tscn
 - 같은 시드의 전투 재현 — 리플레이·버그 재현의 전제
 - **표준 조우 자동 전투 승률** — 자동 전투 정책이 회복 스킬을 빼먹는 회귀를 잡는다
 
+`VerifyTurnStageBattle` 이 검사하는 것:
+
+- 적 씬 6종 전부에서 `EnemyData` 를 꺼낼 수 있는지 — 못 꺼내면 그 웨이브가 조용히 비워진다
+- 저작된 스테이지 전부가 **적이 있는** 웨이브로 풀리는지, 저작된 웨이브 수가 다 살아남는지
+- 웨이브가 순서대로 알려지고, 중간 웨이브에서 승리 신호가 나가지 않는지
+- 웨이브가 넘어갈 때 아군 HP·오의가 **이어지는지**
+- 승패 신호가 **정확히 한 번** 나가는지 (여러 번이면 결과 화면이 겹친다)
+- **`stage_started` 가 나가지 않는지** — 나가면 실시간 튜토리얼이 활성화되어 진행 불가로 멈춘다
+
 수동 확인:
 
-- `stage/turn/TurnBattle.tscn`을 F6으로 실행 → 4 vs 3 전투를 끝까지
+- `main.tscn` 실행 → 메인화면 → 출격 → 스테이지 → 턴제 전투 → 결과 화면
 - 타임라인 프리뷰 · 자물쇠 해제 · 격파 9단계 · 배속 2x/3x
-- `main.tscn` 실행 → 실시간 전투에 변화 없음
+- `main_realtime.tscn` 실행 → 실시간 전투에 변화 없음
 
 ---
 
@@ -708,7 +783,10 @@ godot --headless --path . res://tests/story/VerifyStoryChapters.tscn
 
 | 항목 | 왜 | 언제 |
 |---|---|---|
-| 실시간 전투 삭제 | 턴제가 검증되기 전에 지우면 되돌아갈 자리가 없다 | 별도 이슈 |
+| 실시간 전투 삭제 | 파일은 그대로 남기고 진입만 옮겼다(#472). 되돌아갈 자리를 남긴다 | 별도 이슈 |
+| **실시간 전투 튜토리얼** | 진행 조건이 대시·처형 같은 실시간 행동이라 턴제에서 충족되지 않는다. 그래서 턴제는 `stage_started` 를 쏘지 않고 튜토리얼은 활성화되지 않는다 (활성화되면 진행 불가로 멈춘다) | 별도 이슈 |
+| **점령(거점 확보) 승리 조건** | 턴제에 맵 좌표와 존이 없어 대응물이 없다. 1-2 · 1-3 은 **전멸만으로 클리어**된다 — 원래 조건보다 쉽다 | 별도 이슈 |
+| **여신의 스킬** (시간 정지 · 부활) | 실시간 전용 메커니즘 | 별도 이슈 |
 | Spine 애니메이션 · 컷인 일러스트 · 패럴랙스 배경 | Phase 0은 도형으로 감각을 검증한다 | Phase 3 |
 | 성장 시스템 (특성 트리 3중 택 1 · 각인 무기 · 유물 6부위 · 조율 토큰) | 전투가 재밌는지가 먼저다 | Phase 2 |
 | 엔드게임 3축 (첨탑 · 범람 · 각인 시련) + 주간 변수 | 콘텐츠는 시스템 위에 얹는다 | Phase 4 |

@@ -21,9 +21,16 @@ extends Node2D
 #
 # 참고: docs/turn-combat-design.md §연출
 
-## 이 전투에 출전할 파티. 비우면 로스터에서 앞 4명을 데려온다.
+## **저작된 스테이지를 읽어 전투를 만든다.** 껐을 때만 아래 `party_ids`/`enemy_ids` 를 쓴다.
+##
+## 켜면: `StageSystem` 의 현재 스테이지에서 웨이브별 적을 뽑고, `forced_party` 를 적용하고,
+## 승패를 `EventBus.stage_completed` / `stage_failed` 로 알려 결과 화면·진행도와 이어진다.
+## 즉 **출격 흐름이 그대로 턴제 전투로 이어진다** (#472).
+@export var use_stage: bool = true
+
+## 이 전투에 출전할 파티. 비우면 편성 파티 → 로스터 순으로 채운다.
 @export var party_ids: Array[StringName] = []
-## 이 전투의 적. 비우면 기본 조우를 만든다.
+## 이 전투의 적. `use_stage` 가 꺼져 있을 때만 쓴다. 비우면 기본 조우를 만든다.
 @export var enemy_ids: Array[StringName] = []
 ## 결정론적 RNG 시드. 0이면 시간으로 정한다.
 @export var battle_seed: int = 0
@@ -45,6 +52,12 @@ var _banner: Label = null
 
 ## 연출을 재생 중인가. 재생 중에는 다음 턴으로 넘어가지 않는다.
 var _playing: bool = false
+## 이 전투가 물고 있는 스테이지. `use_stage` 가 켜져 있을 때만 채워진다.
+var _stage: StageData = null
+## 스테이지의 웨이브 정의. 번호 -> `StageWave`. `stage_wave_started` 에 실어 보낸다.
+var _waves: Array[StageWave] = []
+## 승패를 이미 알렸는가. 결과 화면이 두 번 뜨는 것을 막는다.
+var _outcome_reported: bool = false
 ## 카메라 흔들림 상태.
 var _shake_amount: float = 0.0
 var _shake_time: float = 0.0
@@ -56,6 +69,36 @@ var _camera: Camera2D = null
 func _ready() -> void:
 	name = "TurnBattle"
 	_build_scene()
+
+	# 출격(스테이지 선택 → 편성 → 출격)이 이 신호를 쏜다. 실시간 `Stage1_1` 과 같은 규약이라
+	# 출격 화면은 어느 전장이 떠 있는지 몰라도 된다.
+	if use_stage:
+		StageSystem.stage_requested.connect(_on_stage_requested)
+
+	_start_battle()
+
+
+# 다른 스테이지로 출격했다. 전투를 그 스테이지로 다시 만든다.
+func _on_stage_requested(_stage_id: StringName) -> void:
+	_restart()
+
+
+# 전투를 처음부터 다시 만든다. 도형과 연출 잔여물을 치우고 새로 시작한다.
+func _restart() -> void:
+	for child in _numbers.get_children():
+		child.queue_free()
+	for id in _shapes:
+		var shape: Node2D = _shapes[id]
+		if shape != null:
+			shape.queue_free()
+	_shapes.clear()
+
+	var stale := _flash_layer.get_node_or_null("ResultSummary")
+	if stale != null:
+		stale.queue_free()
+
+	battle = TurnBattleManager.new()
+	_outcome_reported = false
 	_start_battle()
 
 
@@ -135,10 +178,18 @@ func _build_scene() -> void:
 # ===== 전투 개시 (Start) =====
 
 func _start_battle() -> void:
-	var party := _resolve_party()
-	var enemies := _resolve_enemies()
+	_stage = StageSystem.get_current_stage() if use_stage else null
+	_waves.clear()
 
-	if party.is_empty() or enemies.is_empty():
+	# 강제 파티는 파티를 뽑기 **전에** 적용해야 한다 — `PartySystem` 에서 읽어 오므로
+	# 순서가 뒤집히면 강제 편성이 다음 전투에나 반영된다.
+	if _stage != null and not _stage.forced_party.is_empty():
+		PartySystem.set_party(_stage.forced_party)
+
+	var party := _resolve_party()
+	var waves := _resolve_waves()
+
+	if party.is_empty() or waves.is_empty():
 		push_error("TurnBattle: 파티나 적을 구성할 수 없습니다.")
 		return
 
@@ -146,7 +197,10 @@ func _start_battle() -> void:
 	if use_seed == 0:
 		use_seed = int(Time.get_unix_time_from_system())
 
-	battle.start(party, enemies, ambush, use_seed, PlayerProfile.deltoid_level)
+	# 첫 웨이브로 시작하고 나머지는 전투에 맡긴다. 아군 상태는 웨이브 사이에 이어진다.
+	battle.pending_waves = waves.slice(1)
+	battle.on_wave_started = _on_wave_started
+	battle.start(party, waves[0], ambush, use_seed)
 	hud.battle = battle
 
 	_build_shapes()
@@ -190,19 +244,38 @@ func _resolve_party() -> Array[CharacterData]:
 	return out
 
 
-func _resolve_enemies() -> Array[EnemyData]:
-	var out: Array[EnemyData] = []
-	var ids := enemy_ids
-	if ids.is_empty():
-		# 기본 조우 — 잡몹 2 + 정예 1. 설계서 §4.8.1 의 잡몹/정예 구성이다.
-		ids = [&"velociraptor_beastfolk", &"velociraptor_beastfolk_2", &"mammoth_beastfolk"]
-	for id in ids:
-		if out.size() >= TurnCombat.ENEMY_RANK_COUNT:
-			break
-		var enemy: EnemyData = EnemyDatabase.get_enemy(id)
-		if enemy != null:
-			out.append(enemy)
-	return out
+# 이 전투의 웨이브들. 각 원소가 그 웨이브의 적 목록이다.
+#
+# 번역은 `TurnStageEncounter` 가 한다 — 노드 없이 호출되므로 헤드리스에서 직접 검증된다.
+# 반환 타입이 `Array[Array[EnemyData]]` 가 아닌 이유: GDScript 는 중첩 타입 배열을 지원하지 않는다.
+func _resolve_waves() -> Array:
+	var out: Array = []
+
+	if _stage != null:
+		for entry in TurnStageEncounter.waves_for(_stage):
+			out.append(entry["enemies"])
+			_waves.append(entry["wave"])
+		if not out.is_empty():
+			return out
+		push_warning("TurnBattle: 스테이지 %s 에서 적을 뽑을 수 없어 기본 조우로 대체합니다."
+			% _stage.stage_id)
+
+	var fallback := TurnStageEncounter.fallback_enemies(enemy_ids)
+	if fallback.is_empty():
+		return out
+	_waves.append(null)
+	return [fallback]
+
+
+# 웨이브가 놓였다. 스테이지 도메인의 신호로 옮겨 쏜다.
+#
+# 전투는 `StageWave` 를 모르고 번호만 알린다 — 그 경계를 지켜야 전투를 스테이지 없이도
+# 굴릴 수 있다(헤드리스 테스트와 `use_stage = false` 가 그렇게 쓴다).
+func _on_wave_started(index: int, total: int) -> void:
+	if _stage == null:
+		return
+	var wave: StageWave = _waves[index] if index < _waves.size() else null
+	EventBus.stage_wave_started.emit(String(_stage.stage_id), index, total, wave)
 
 
 # 유닛마다 도형을 하나 만든다. Phase 0은 도형으로 감각을 검증한다.
@@ -556,19 +629,36 @@ func _show_result() -> void:
 	var summary := battle.result_summary()
 	var victory := bool(summary["victory"])
 
+	# **승패를 스테이지 도메인으로 알린다.** 이 신호로 결과 화면(`stage_result_launcher`)과
+	# 진행도·보상(`StageProgress`)이 굴러간다 — 실시간 `Stage1_1` 과 같은 규약이라
+	# 그 두 시스템은 어느 전장이 떠 있었는지 몰라도 된다.
+	#
+	# `stage_started` 는 **쏘지 않는다.** 그 신호로 `TutorialSystem` 이 활성화되는데,
+	# 저작된 튜토리얼 단계의 진행 조건이 대시·처형 같은 **실시간 행동**이라 턴제에서는
+	# 영원히 충족되지 않고 진행 불가로 멈춘다 (#472 Consequences 1).
+	if _stage != null and not _outcome_reported:
+		_outcome_reported = true
+		var stage_name := String(_stage.stage_id)
+		if victory:
+			EventBus.stage_completed.emit(stage_name)
+		else:
+			EventBus.stage_failed.emit(stage_name)
+
 	await _play_banner("VICTORY" if victory else "DEFEAT",
 		TurnCombat.COLOR_ULT_READY if victory else TurnCombat.COLOR_DANGER, 1.2, 88)
 
 	# 전투 결과 요약 — 캐릭터별 딜량 / 격파 횟수 / 사이클 수 (설계서 §11.4).
 	var lines: Array[String] = []
-	lines.append("%d 사이클  ·  %d턴  ·  격파 %d회  ·  자물쇠 %d개 해제  ·  무산 %d회"
-		% [int(summary["cycles"]), int(summary["turns"]), int(summary["breaks"]),
+	lines.append("%d/%d 웨이브  ·  %d 사이클  ·  %d턴  ·  격파 %d회  ·  자물쇠 %d개 해제  ·  무산 %d회"
+		% [int(summary["waves"]), int(summary["wave_total"]),
+			int(summary["cycles"]), int(summary["turns"]), int(summary["breaks"]),
 			int(summary["locks_cleared"]), int(summary["nullified"])])
 	var damage: Dictionary = summary["damage"]
 	for name_key in damage:
 		lines.append("%s  %d" % [name_key, int(damage[name_key])])
 
 	var panel := Label.new()
+	panel.name = "ResultSummary"
 	panel.text = "\n".join(lines)
 	panel.add_theme_font_size_override("font_size", 20)
 	panel.position = Vector2(420, 250)

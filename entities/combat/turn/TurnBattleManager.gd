@@ -89,6 +89,30 @@ var cycle_limit: int = 0
 ## 유닛별 누적 턴 수. `unit_id` -> 턴 수. 특성 주기 판정이 읽는다.
 var _turn_counts: Dictionary = {}
 
+# ===== 웨이브 (Waves) =====
+#
+# 전투는 "적 여러 무리"일 수 있다. 한 무리를 전멸시키면 다음 무리가 등장하고,
+# **아군의 HP·오의 게이지·상태이상은 그대로 이어진다** — 웨이브 구조의 의미가 그것이다
+# (무리마다 회복시켜 주면 웨이브가 그냥 별개 전투 여러 개가 된다).
+#
+# 웨이브를 전투가 소유하는 이유: `_check_end()` 가 "적이 없으면 승리"를 판정하는데,
+# 그 판단에 "남은 웨이브가 있는가"가 함께 들어가야 한다. 밖에서 콜백으로 끼워 넣으면
+# 승리 신호가 웨이브마다 한 번씩 나가 결과 화면이 여러 번 뜬다.
+#
+# `Array[Array[EnemyData]]` 로 두고 싶지만 GDScript 는 중첩 타입 배열을 지원하지 않는다.
+var pending_waves: Array = []
+
+## 지금 몇 번째 웨이브인가 (0부터).
+var wave_index: int = 0
+## 이 전투의 전체 웨이브 수.
+var wave_total: int = 1
+
+## 웨이브가 놓였을 때. `func(index: int, total: int) -> void`.
+##
+## 전투는 스테이지를 모른다 — `StageWave` 리소스를 아는 것은 화면 쪽이므로,
+## 여기서는 번호만 알리고 `EventBus.stage_wave_started` 는 화면이 쏜다.
+var on_wave_started: Callable = Callable()
+
 
 func _tuning() -> TurnCombatTuning:
 	return PlayerStats.get_tuning_turn()
@@ -148,6 +172,8 @@ func start(party: Array[CharacterData], enemies: Array[EnemyData],
 	units.clear()
 	battle_log.clear()
 	_turn_counts.clear()
+	wave_index = 0
+	wave_total = 1 + pending_waves.size()
 	stats = {
 		"cycles": 1, "turns": 0, "breaks": 0, "locks_cleared": 0,
 		"nullified": 0, "damage_by_unit": {}, "kills": 0,
@@ -241,6 +267,8 @@ func start(party: Array[CharacterData], enemies: Array[EnemyData],
 		_note("권장 행동: " + resources.recommendation_label())
 
 	presentation.push(PresentationQueue.Event.CYCLE_START, {"cycle": 1})
+	if on_wave_started.is_valid():
+		on_wave_started.call(wave_index, wave_total)
 	_signal(&"turn_battle_started", [seed_value])
 	_signal(&"turn_cycle_started", [1])
 	_signal(&"turn_resonance_changed", [resources.resonance, resources.resonance_max])
@@ -304,15 +332,33 @@ func begin_battle() -> void:
 
 # ===== 턴 루프 (Turn loop) =====
 
-# 다음 행동자를 찾아 턴 시작 트리거까지 처리한다.
+## 한 번의 `advance()` 가 처리할 턴 수 상한. 넘으면 경고하고 멈춘다.
+##
+## 무한 루프 방지용 안전장치다. 정상 전투는 수십 턴이고, 교착은 `cycle_limit` 이 잡는다.
+const ADVANCE_GUARD := 4000
+
+# 아군 입력이 필요한 지점까지, 또는 전투가 끝날 때까지 진행한다.
 #
-# 결과에 따라 `phase`가 바뀐다:
-#   - 아군 차례 → `AWAITING_INPUT` (화면이 `act()`를 불러 줄 때까지 멈춘다)
-#   - 적 차례   → 즉시 처리하고 다음으로 넘어간다
-#   - 한쪽 전멸 → `VICTORY` / `DEFEAT`
+# **루프이고 재귀가 아니다.** 처음에는 `_end_turn()` 이 다시 `advance()` 를 부르는 재귀였는데,
+# 자동 전투에서 턴마다 스택이 3프레임씩 쌓여 긴 전투가 GDScript 호출 깊이 상한(1024)에
+# 부딪혔다. 게다가 `begin_battle()` 한 번에 전투 전체가 동기적으로 끝나 버려서,
+# 화면이 연출을 재생할 틈이 없었다.
 func advance() -> void:
+	var guard := 0
+	while guard < ADVANCE_GUARD:
+		guard += 1
+		if not _step():
+			return
+	push_warning("TurnBattleManager: 한 번의 advance() 가 %d턴을 넘겼습니다(중단)."
+		% ADVANCE_GUARD)
+
+
+# 한 턴을 진행한다.
+#
+# 반환: 계속 진행해야 하면 true. 아군 입력 대기나 전투 종료면 false.
+func _step() -> bool:
 	if _check_end():
-		return
+		return false
 
 	var previous_cycle := timeline.current_cycle()
 
@@ -320,7 +366,7 @@ func advance() -> void:
 	if active_unit == null:
 		_note("행동할 수 있는 유닛이 없습니다.")
 		phase = Phase.DEFEAT
-		return
+		return false
 
 	active_is_extra = timeline.is_pending_extra(active_unit)
 
@@ -338,7 +384,7 @@ func advance() -> void:
 	_turn_start(active_unit)
 
 	if _check_end():
-		return
+		return false
 
 	# 턴 시작 트리거로 죽거나 행동 불가가 되었으면 턴을 넘긴다.
 	if not active_unit.alive or not active_unit.can_act():
@@ -346,7 +392,7 @@ func advance() -> void:
 			_note("%s 는 행동할 수 없다 (%s)"
 				% [active_unit.display_name, active_unit.blocked_reason()])
 		_end_turn()
-		return
+		return true
 
 	stats["turns"] = int(stats["turns"]) + 1
 	resources.on_turn_start(active_unit)
@@ -362,17 +408,19 @@ func advance() -> void:
 	_absorb_all(resolver.fire_traits(active_unit,
 		SkillData.TraitTrigger.TURN_START, null, turn_index))
 	if _check_end():
-		return
+		return false
 
 	if active_unit.is_enemy():
 		_enemy_turn()
-		return
+		return true
 
 	if auto_battle:
 		_auto_ally_turn()
-		return
+		return true
 
+	# **아군 차례 — 입력 대기.** 여기서 멈춘다. 입력 제한시간은 없다.
 	phase = Phase.AWAITING_INPUT
+	return false
 
 
 # 턴 시작 트리거: 지속 피해 → 지속시간 감소 → 격파 기절/회복.
@@ -416,7 +464,11 @@ func act(skill: SkillData, target: TurnUnit = null) -> Dictionary:
 
 	if bool(result["consumed_turn"]):
 		_end_turn()
+		# 다음 아군 입력 지점(또는 전투 종료)까지 진행한다. 화면은 이 사이에 쌓인
+		# 연출 큐를 재생한다.
+		advance()
 	else:
+		# 턴을 소모하지 않는 행동(오의)이면 같은 유닛의 입력 대기로 돌아온다.
 		phase = Phase.AWAITING_INPUT
 
 	return result
@@ -542,10 +594,10 @@ func _absorb(result: Dictionary) -> void:
 
 # ===== 턴 종료 (Turn end) =====
 
+# 턴을 마무리한다. **다음 턴으로 넘어가지 않는다** — 진행은 `advance()` 의 루프가 한다.
 func _end_turn() -> void:
 	if active_unit == null:
 		phase = Phase.TURN_END
-		advance()
 		return
 
 	presentation.push(PresentationQueue.Event.TURN_END, {"unit": active_unit})
@@ -557,9 +609,51 @@ func _end_turn() -> void:
 	active_is_extra = false
 
 	phase = Phase.TURN_END
-	if _check_end():
-		return
-	advance()
+
+
+# ===== 웨이브 (Waves) =====
+
+# 다음 웨이브를 투입한다. 아군은 그대로 두고 적만 새로 놓는다.
+func _advance_wave() -> void:
+	var wave: Array = pending_waves.pop_front()
+	wave_index += 1
+
+	# 남아 있는 적을 정리한다(전멸했으므로 보통 비어 있지만, 안전하게 비운다).
+	for unit in units.duplicate():
+		if unit.is_enemy():
+			ranks.remove(unit)
+			timeline.remove_unit(unit)
+
+	var index := 1
+	for data in wave:
+		if data == null:
+			continue
+		if index > TurnCombat.ENEMY_RANK_COUNT:
+			break
+		# `unit_id` 에 웨이브 번호를 넣는다 — 같은 적이 웨이브마다 나오면 id 가 겹치고,
+		# 타임라인의 AV 딕셔너리가 앞 웨이브의 값을 그대로 쓴다.
+		var unit := TurnUnit.from_enemy(data, index, "#w%d_%d" % [wave_index, index])
+		units.append(unit)
+		statuses.reset(unit)
+		index += 1
+
+	ranks.place(units)
+
+	for unit in units:
+		if not unit.is_enemy():
+			continue
+		# 초기 AV 를 최대치의 60% 로 둔다. 0이면 등장 즉시 행동해 억울하고,
+		# 최대치면 한 사이클을 통째로 낭비한다.
+		timeline.add_unit(unit, 0.6)
+		unit.intent = ai.build_intent(unit, units)
+
+	_note("─── %d/%d 웨이브 ───" % [wave_index + 1, wave_total])
+	presentation.push(PresentationQueue.Event.CYCLE_START,
+		{"cycle": timeline.current_cycle(), "wave": wave_index + 1})
+	if on_wave_started.is_valid():
+		on_wave_started.call(wave_index, wave_total)
+
+	phase = Phase.TURN_END
 
 
 # ===== 종료 판정 (End check) =====
@@ -570,6 +664,10 @@ func _check_end() -> bool:
 
 	var allies := ranks.living(TurnCombat.Side.ALLY)
 	var enemies := ranks.living(TurnCombat.Side.ENEMY)
+
+	if enemies.is_empty() and not pending_waves.is_empty():
+		_advance_wave()
+		return false
 
 	if enemies.is_empty():
 		phase = Phase.VICTORY
@@ -747,6 +845,8 @@ func result_summary() -> Dictionary:
 
 	return {
 		"victory": phase == Phase.VICTORY,
+		"waves": wave_index + 1,
+		"wave_total": wave_total,
 		"cycles": timeline.current_cycle(),
 		"turns": stats["turns"],
 		"breaks": stats["breaks"],

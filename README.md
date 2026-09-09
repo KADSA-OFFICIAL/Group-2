@@ -16,9 +16,25 @@ cd Group-2
 
 Godot을 실행한 뒤 **Import** → 클론한 폴더의 `project.godot` 파일을 선택합니다.
 
+### 전투는 턴제입니다 (#450 · #472)
+
+`main.tscn`(기본 진입)을 실행하면 **턴제 전투**가 열립니다. 메인화면 → 출격 → 편성 →
+출격을 누르면 고른 스테이지가 턴제 조우로 열리고, 마지막 웨이브를 정리하면 결과 화면과
+보상이 그대로 나옵니다.
+
+- 전투 전장만 따로 보려면 `stage/turn/TurnBattle.tscn`을 `F6`으로 실행합니다.
+- 설계·수치·연출 규격은 [docs/turn-combat-design.md](docs/turn-combat-design.md)에 있습니다.
+
+**실시간 액션 전투는 지워지지 않았습니다.** `main_realtime.tscn`을 실행하면 지금까지의
+구성(전장 + 카메라 + 실시간 HUD + 디버그 오버레이)이 그대로 열립니다. 되돌리려면
+`project.godot`의 `run/main_scene`을 그 씬으로 바꾸면 됩니다.
+
+> 실시간 전용 기능(전투 튜토리얼 · 거점 점령 승리 조건 · 여신의 스킬)은 턴제 경로에서
+> 동작하지 않습니다. 이유와 대응 계획은 위 문서 §18에 적혀 있습니다.
+
 ### 1-1 초원 맵 확인
 
-`stage/Stage1_1.tscn`을 열고 현재 씬 실행(`F6`)을 누르면 전투 화면에서 초원 맵을
+`stage/Stage1_1.tscn`을 열고 현재 씬 실행(`F6`)을 누르면 실시간 전투 화면에서 초원 맵을
 확인할 수 있습니다. 맵 전체를 편집하려면 `stage/grassland/GrasslandMap.tscn`을
 2D 편집기에서 엽니다. 움집·목책·나무·돌 같은 배치물은 `Objects` 아래의 독립 씬
 인스턴스라 각각 선택해 이동할 수 있습니다.
@@ -32,6 +48,8 @@ Godot을 실행한 뒤 **Import** → 클론한 폴더의 `project.godot` 파일
 ## 폴더 구조
 
 ```
+├── main.tscn     # 기본 진입 — 턴제 전투
+├── main_realtime.tscn  # 실시간 액션 전투 구성 (되돌아갈 자리)
 ├── scenes/       # 게임 씬 (.tscn)
 ├── scripts/      # GDScript 파일 (.gd)
 ├── assets/
@@ -45,13 +63,14 @@ Godot을 실행한 뒤 **Import** → 클론한 폴더의 `project.godot` 파일
 
 ## GitHub 작업 흐름
 
-이 프로젝트는 `issue -> branch -> commit -> PR to dev -> PR to main` 흐름으로 작업합니다.
+이 프로젝트는 `issue -> branch -> commit -> PR to main` 흐름으로 작업합니다.
 
 - 안정 버전은 `main` 브랜치에 둡니다.
-- 새 기능, 개선, 버그 수정은 `dev`에서 작업 브랜치를 만들어 진행합니다.
+- 새 기능, 개선, 버그 수정은 **`main`에서** 작업 브랜치를 만들어 진행합니다.
 - 작업 브랜치 이름은 `feat-12-player-jump`, `fix-18-camera-bug`, `issue-20-folder-cleanup`처럼 이슈 번호를 포함합니다.
-- 작업 PR은 먼저 `dev`로 올립니다.
-- `dev`에서 문제가 없으면 같은 작업 브랜치에서 `main`으로 PR을 올립니다.
+- 작업 PR은 **`main`으로** 올립니다. `main`은 브랜치 보호가 걸려 있어 사람이 승인하고 머지합니다.
+- **`dev` 브랜치는 더 쓰지 않습니다.** 2단계가 느려서 접었고, 그 사이 `dev`가 뒤처져
+  브랜치마다 보이는 내용이 달라지는 문제가 있었습니다. 자세한 경위는 [CLAUDE.md](CLAUDE.md)에 있습니다.
 
 자세한 규칙과 로컬 명령은 [docs/github-workflow.md](docs/github-workflow.md)를 확인하세요.
 
@@ -60,7 +79,9 @@ Godot을 실행한 뒤 **Import** → 클론한 폴더의 `project.godot` 파일
 - 작업 전 최신 변경사항을 `git pull`로 받아오세요.
 - 기능 하나당 브랜치 하나 (`feat-<번호>-설명` 형식).
 - 씬 파일(.tscn)을 동시에 수정하면 충돌이 나기 쉬우니 담당자를 나눠서 작업하세요.
-- PR은 `dev` → `main` 순서로 머지합니다.
+- PR은 `main`으로 올립니다.
+- 브랜치를 갈아탄 직후에는 반드시 `godot --headless --path . --import`를 먼저 돌리세요.
+  캐시가 새 파일을 모르면 멀쩡한 코드에서 가짜 파스 에러가 납니다.
 
 ## 팀원
 
