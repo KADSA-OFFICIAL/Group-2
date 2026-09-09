@@ -1,10 +1,15 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 
 [ext_resource type="Texture2D" uid="uid://c3mw0ogq7drhf" path="res://assets/sprites/placeholder/shape_buffer.svg" id="9_shape"]
 [ext_resource type="Script" path="res://entities/character/SkillData.gd" id="11_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/turn/gangji_turn_basic.tres" id="50_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/gangji_turn_skill.tres" id="51_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/gangji_turn_cleanse.tres" id="52_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/gangji_turn_ult.tres" id="53_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/gangji_turn_trait.tres" id="54_turn"]
 [ext_resource type="Resource" path="res://data/skills/gangji_transfusion.tres" id="12_passive"]
 [ext_resource type="Resource" path="res://data/skills/gangji_field.tres" id="13_field"]
 [ext_resource type="Resource" path="res://data/skills/gangji_immunity.tres" id="14_immunity"]
@@ -17,6 +22,11 @@ strength = 100
 defense = 90
 intelligence = 100
 faith = 140
+speed = 100
+energy_max = 120
+crit_rate = 0.05
+crit_damage = 0.5
+heal_boost = 0.25
 
 [resource]
 script = ExtResource("1_chardata")
@@ -32,3 +42,8 @@ sprite_texture = ExtResource("9_shape")
 portrait = ExtResource("20_portrait")
 tint = Color(0, 0.5, 1, 1)
 sprite_scale = Vector2(2, 2)
+element = 6
+physical_type = 2
+battle_class = 6
+preferred_ranks = Array[int]([4])
+turn_skills = Array[ExtResource("11_skilldef")]([ExtResource("50_turn"), ExtResource("51_turn"), ExtResource("52_turn"), ExtResource("53_turn"), ExtResource("54_turn")])

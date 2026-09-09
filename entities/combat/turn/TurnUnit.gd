@@ -140,9 +140,9 @@ static func from_enemy(data: EnemyData, unit_rank: int, id_suffix: String = "") 
 	unit.battle_class = TurnCombat.BattleClass.BREAKER
 
 	unit.stats = data.get_stats().duplicate(true) as PlayerStats
-	# 밸런스 배수(하이브리드 C)를 복제본에 적용한다. 원본에 적용하면 전투를 반복할 때마다
-	# 같은 배수가 다시 곱해져 적이 계속 강해진다.
-	_apply_enemy_balance(unit.stats, data)
+	# 턴제 스텟을 복제본에 심는다. 원본에 쓰면 전투를 반복할 때마다 값이 다시 덮이고,
+	# 실시간 전투가 읽는 저작 데이터가 오염된다.
+	_apply_turn_baseline(unit.stats, data)
 
 	unit.current_hp = unit.stats.get_max_hp()
 	unit.energy = 0
@@ -161,15 +161,33 @@ static func from_enemy(data: EnemyData, unit_rank: int, id_suffix: String = "") 
 	return unit
 
 
-# 적 밸런스 배수를 스텟 복제본에 적용한다.
+# 턴제 기준 스텟을 스텟 복제본에 심는다.
 #
-# `EnemyData.apply_balance()`를 쓰지 않는 이유: 그 함수는 **자기 `stats`를 제자리에서**
-# 고치므로 저작 리소스를 오염시킨다(실시간 전투는 스폰마다 새로 로드해 문제가 없었지만,
-# 턴제는 같은 정의로 여러 유닛을 만든다).
-static func _apply_enemy_balance(target: PlayerStats, data: EnemyData) -> void:
-	target.hp = int(round(float(target.hp) * data.hp_multiplier))
-	target.strength = int(round(float(target.strength) * data.attack_multiplier))
-	target.defense = int(round(float(target.defense) * data.defense_multiplier))
+# **왜 실시간 스텟에 배수를 곱하지 않는가**: 실시간 HP 는 연속 DPS 기준으로 잡혀 있어
+# 턴제에서는 수백 턴이 된다(자세한 이유는 `TurnCombatTuning` 의 "적 기준 스탯" 주석).
+# 그래서 레벨·등급에서 파생한 값을 쓴다.
+#
+# `strength`/`defense` 를 직접 쓰지 않고 **역산**하는 이유: 파생 규칙(근력 -> 공격력,
+# 근력+방어력 -> 방어력)의 소유자는 `PlayerStats` 이고 계수는 `CombatTuning` 이다.
+# 여기서 공격력을 직접 대입하면 그 규칙을 우회하는 두 번째 경로가 생긴다. 원하는
+# 파생값이 나오는 기초 스텟을 계산해 넣으면 규칙은 하나로 남는다.
+static func _apply_turn_baseline(target: PlayerStats, data: EnemyData) -> void:
+	var coefficients := PlayerStats.get_tuning()
+
+	target.hp = data.get_turn_hp()
+
+	# 공격력 = 근력 x strength_to_phys_atk
+	var want_attack := float(data.get_turn_attack())
+	target.strength = maxi(int(round(want_attack / maxf(coefficients.strength_to_phys_atk, 0.01))), 1)
+
+	# 방어력 = 근력 x strength_to_phys_def + 방어력 x defense_to_phys_def
+	var want_defense := float(data.get_turn_defense())
+	var from_strength := float(target.strength) * coefficients.strength_to_phys_def
+	target.defense = maxi(int(round((want_defense - from_strength)
+		/ maxf(coefficients.defense_to_phys_def, 0.01))), 0)
+
+	# 성장 배수는 적에게 걸리지 않는다 — 삼각근 Lv.은 플레이어의 진행도다.
+	target.growth_multiplier = 1.0
 
 
 # ===== 스텟 조회 (Stat accessors) =====
@@ -321,11 +339,21 @@ func has_status_kind(kind: int) -> bool:
 
 
 # 격파 상태이상 하나를 찾는다. 원소별 격파가 건 것과 스킬이 건 것이 같은 목록에 있다.
+#
+# `kind` 로 거르지 않는 이유: 격파 상태이상은 종류가 갈린다 — 동결은 `STUN`, 연소는 `DOT`,
+# 각인은 스탯 변화다. `DOT` 만 보면 동결이 조회되지 않아 "한기 격파가 걸리지 않은 것처럼"
+# 보인다. **격파 상태이상의 정체성은 `break_status` 하나다.**
 func find_break_status(break_status: int) -> TurnStatus:
 	for status in statuses:
-		if status.kind == TurnStatus.Kind.DOT and status.break_status == break_status:
+		if status.break_status == break_status and _is_break_status(status):
 			return status
 	return null
+
+
+# 이 상태가 격파 상태이상인가. 버프/보호막의 기본값(`break_status = BLEED`)을 열상으로
+# 오인하지 않기 위해 종류를 함께 본다.
+func _is_break_status(status: TurnStatus) -> bool:
+	return status.kind == TurnStatus.Kind.DOT or status.kind == TurnStatus.Kind.STUN
 
 
 func get_break_status_stacks(break_status: int) -> int:

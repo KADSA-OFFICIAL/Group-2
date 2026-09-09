@@ -1,6 +1,9 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="40_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_ranged.tres" id="60_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_curse.tres" id="61_turn"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 [ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
 [ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/stone_spearman_walk_frames.tres" id="10_walk"]
@@ -14,6 +17,7 @@ strength = 65
 defense = 120
 intelligence = 100
 faith = 100
+speed = 104
 
 [resource]
 script = ExtResource("1_enemydata")
@@ -37,3 +41,12 @@ attack_speed_multiplier = 0.6
 projectile_scene = ExtResource("11_projectile")
 projectile_speed = 320.0
 projectile_hit_radius = 14.0
+tier = 1
+turn_level = 22
+turn_element = 6
+turn_physical_type = 0
+weak_elements = Array[int]([5, 2, 0])
+weak_physical = Array[int]([0])
+toughness = 70
+turn_skills = Array[ExtResource("40_skilldef")]([ExtResource("60_turn"), ExtResource("61_turn")])
+preferred_ranks = Array[int]([2, 3])

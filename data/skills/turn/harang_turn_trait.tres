@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_pyfw7"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_hfu2j"]
+
+[sub_resource type="Resource" id="Resource_m6h82"]
+script = ExtResource("2_hfu2j")
+kind = 13
+scope = 2
+amount = 8
+
+[resource]
+script = ExtResource("1_pyfw7")
+skill_id = &"harang_turn_trait"
+display_name = "파단의 여열"
+summary = "약점을 찌를 때마다 자신의 오의 게이지 +8. (턴당 최대 2회)"
+turn_action = 3
+turn_effects = Array[ExtResource("2_hfu2j")]([SubResource("Resource_m6h82")])
+trait_trigger = 4
+trait_per_turn_cap = 2

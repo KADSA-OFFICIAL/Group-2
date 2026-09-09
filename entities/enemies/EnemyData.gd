@@ -276,6 +276,24 @@ func validate() -> Array[String]:
 ## 격파 저항(0.0~1.0). 보스가 갖는다. 행동 불가 턴을 줄이고 인성치 회복을 빠르게 한다.
 @export var break_resistance: float = 0.0
 
+# ===== 턴제 개성 배수 (Turn personality) =====
+#
+# 턴제 스텟은 **레벨과 등급에서 파생**하고(`TurnCombatTuning.enemy_base_*`), 이 배수가
+# 그 위에 개성을 얹는다. "물몸 고속"인 벨로시랩터는 0.5, "단단한 벽"인 매머드는 1.5다.
+#
+# 실시간 `hp_multiplier` / `attack_multiplier` / `defense_multiplier`와 **별도 채널**인 이유:
+# 실시간 배수는 실시간 기준값(연속 DPS 기준 HP) 위에 얹혀 있고, 등급 배수와 함께 곱하면
+# 이중 계산이 된다 — 매머드 보스는 실시간 배수 x8 에 등급 배수 x12 가 곱해 96배가 됐다.
+@export var turn_hp_multiplier: float = 1.0
+@export var turn_attack_multiplier: float = 1.0
+@export var turn_defense_multiplier: float = 1.0
+
+## 절대 지정. 0보다 크면 레벨·등급 파생 대신 이 값을 쓴다.
+## 보스 하나를 손으로 맞춰야 할 때를 위한 탈출구다.
+@export var turn_hp_override: int = 0
+@export var turn_attack_override: int = 0
+@export var turn_defense_override: int = 0
+
 ## 격파가 풀리기까지의 턴 수. 0이면 튜닝 기본값(2턴).
 @export var break_recover_turns: int = 0
 
@@ -313,6 +331,30 @@ func get_lock_count_range() -> Vector2i:
 			return t.lock_count_elite
 		_:
 			return t.lock_count_minion
+
+
+# 이 적의 턴제 HP. 절대 지정이 있으면 그것을, 없으면 레벨·등급 파생값에 개성 배수를 곱한다.
+func get_turn_hp() -> int:
+	if turn_hp_override > 0:
+		return turn_hp_override
+	var base := PlayerStats.get_tuning_turn().enemy_base_hp(turn_level, tier)
+	return maxi(int(round(float(base) * maxf(turn_hp_multiplier, 0.01))), 1)
+
+
+# 이 적의 턴제 공격력. `PlayerStats.get_physical_attack()`이 돌려줄 목표값이다.
+func get_turn_attack() -> int:
+	if turn_attack_override > 0:
+		return turn_attack_override
+	var base := PlayerStats.get_tuning_turn().enemy_base_attack(turn_level, tier)
+	return maxi(int(round(float(base) * maxf(turn_attack_multiplier, 0.01))), 1)
+
+
+# 이 적의 턴제 방어력. `PlayerStats.get_physical_defense()`가 돌려줄 목표값이다.
+func get_turn_defense() -> int:
+	if turn_defense_override > 0:
+		return turn_defense_override
+	var base := PlayerStats.get_tuning_turn().enemy_base_defense(turn_level)
+	return maxi(int(round(float(base) * maxf(turn_defense_multiplier, 0.0))), 0)
 
 
 func get_break_recover_turns() -> int:
@@ -363,6 +405,12 @@ func validate_turn() -> Array[String]:
 				% [str(key), value])
 	if break_recover_turns < 0:
 		problems.append("break_recover_turns는 0 이상이어야 합니다.")
+	if turn_hp_multiplier <= 0.0:
+		problems.append("turn_hp_multiplier는 0보다 커야 합니다.")
+	if turn_attack_multiplier <= 0.0:
+		problems.append("turn_attack_multiplier는 0보다 커야 합니다.")
+	if turn_defense_multiplier < 0.0:
+		problems.append("turn_defense_multiplier는 0 이상이어야 합니다.")
 
 	for rank in preferred_ranks:
 		if rank < 1 or rank > TurnCombat.ENEMY_RANK_COUNT:

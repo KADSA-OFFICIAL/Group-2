@@ -199,6 +199,11 @@ func heat_zone() -> int:
 	return 0
 
 
+# 열기 시스템이 켜져 있는가. **선택적 시스템**이라 UI가 이것을 보고 게이지를 그릴지 정한다.
+func heat_enabled() -> bool:
+	return _tuning().heat_enabled
+
+
 func heat_zone_name() -> String:
 	match heat_zone():
 		-1:

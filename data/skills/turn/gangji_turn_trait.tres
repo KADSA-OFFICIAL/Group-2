@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_ukp4q"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_40ej7"]
+
+[sub_resource type="Resource" id="Resource_lum7v"]
+script = ExtResource("2_40ej7")
+label = "넣은 피해의 35% 회복"
+kind = 2
+scope = 6
+
+[resource]
+script = ExtResource("1_ukp4q")
+skill_id = &"gangji_turn_trait"
+display_name = "수혈"
+summary = "자신이 피해를 넣으면 그 피해의 35%만큼 가장 위태로운 아군을 회복시킨다."
+turn_action = 3
+turn_effects = Array[ExtResource("2_40ej7")]([SubResource("Resource_lum7v")])
+trait_trigger = 3
+trait_per_turn_cap = 3
+trait_damage_ratio = 0.35

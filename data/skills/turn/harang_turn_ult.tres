@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_ll1hg"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_11msy"]
+
+[sub_resource type="Resource" id="Resource_m27t5"]
+script = ExtResource("2_11msy")
+multiplier = 2.6
+toughness_damage = 35
+
+[sub_resource type="Resource" id="Resource_4j4du"]
+script = ExtResource("2_11msy")
+label = "자기 회복 (공격력 30%)"
+kind = 2
+scope = 2
+multiplier = 0.3
+
+[resource]
+script = ExtResource("1_ll1hg")
+skill_id = &"harang_turn_ult"
+display_name = "해일의 일격"
+summary = "적 전체에 공격력 260% 충격 피해. 인성치 -35. 자신을 크게 회복한다."
+turn_action = 2
+energy_cost = 120
+turn_targeting = 2
+turn_effects = Array[ExtResource("2_11msy")]([SubResource("Resource_m27t5"), SubResource("Resource_4j4du")])

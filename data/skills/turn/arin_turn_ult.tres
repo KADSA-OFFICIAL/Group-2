@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_di8p6"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_elaot"]
+
+[sub_resource type="Resource" id="Resource_d861t"]
+script = ExtResource("2_elaot")
+multiplier = 4.2
+toughness_damage = 45
+
+[sub_resource type="Resource" id="Resource_6al67"]
+script = ExtResource("2_elaot")
+label = "처형 (HP 35% 이하)"
+multiplier = 1.5
+require_target_hp_below = 0.35
+
+[resource]
+script = ExtResource("1_di8p6")
+skill_id = &"arin_turn_ult"
+display_name = "낙뢰 처형"
+summary = "단일 대상에 공격력 420% 전격 피해. 인성치 -45. 대상의 HP가 35% 이하면 공격력 150%의 처형 피해를 추가한다."
+turn_action = 2
+energy_cost = 120
+turn_effects = Array[ExtResource("2_elaot")]([SubResource("Resource_d861t"), SubResource("Resource_6al67")])

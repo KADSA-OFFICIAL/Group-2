@@ -120,6 +120,41 @@ class_name TurnCombatTuning
 ## 초격파: 격파 상태의 적에게 넣은 인성치 피해 1점이 전환되는 피해 계수.
 @export var overbreak_conversion: float = 12.0
 
+# ===== 적 기준 스탯 (Enemy baseline) =====
+#
+# **왜 실시간 스텟을 그대로 쓰지 않는가** (실제로 겪은 문제):
+# 실시간 전투의 적 HP 는 **연속 DPS** 를 기준으로 잡혀 있다. 평타 쿨다운 0.5초면 1분에
+# 120번 때리므로 HP 를 수만으로 둬도 몇십 초에 끝난다. 턴제는 한 사이클에 파티 전체가
+# 4~6번 행동할 뿐이라 **같은 HP 가 수백 턴이 된다.** 자동 전투로 돌려 보니 보스가
+# 76,800 HP 에 파티 한 방이 100 이어서 768번을 때려야 했다.
+#
+# 그래서 턴제 적 스텟은 **레벨과 등급에서 파생**한다. 출처는 설계서 §4.15 의 표
+# (Lv20 HP 1,800 / Lv40 6,500 / Lv60 18,000 / Lv80 42,000 등)이고, 표에 없는 레벨에서
+# 값이 튀지 않게 지수 곡선으로 근사했다. 전부 **[임시값]**이다.
+#
+# 실시간 필드(`hp_multiplier` 등)는 **건드리지 않는다.** 실시간 전투가 계속 쓰고 있고,
+# 턴제는 `EnemyData.turn_*_multiplier`라는 별도 채널로 개성을 표현한다.
+@export_group("적 기준 스탯")
+## `기준 HP = enemy_hp_at_1 x 레벨 ^ enemy_hp_exponent`
+@export var enemy_hp_at_1: float = 2.47
+@export var enemy_hp_exponent: float = 2.2
+## `기준 공격력 = enemy_attack_at_1 x 레벨 ^ enemy_attack_exponent`
+@export var enemy_attack_at_1: float = 2.21
+@export var enemy_attack_exponent: float = 1.564
+## `기준 방어력 = enemy_defense_at_1 x 레벨 ^ enemy_defense_exponent`
+@export var enemy_defense_at_1: float = 9.25
+@export var enemy_defense_exponent: float = 1.183
+
+## 등급별 HP 배수 (설계서 §4.8.1). 보스는 12~25 범위의 아래쪽을 쓴다 —
+## 프로토타입에서 보스전이 30사이클을 넘으면 감각을 검증할 수 없다.
+@export var enemy_hp_tier_minion: float = 1.0
+@export var enemy_hp_tier_elite: float = 2.2
+@export var enemy_hp_tier_boss: float = 7.0
+## 등급별 공격력 배수. HP 만큼 벌리지 않는다 — 보스가 한 방에 파티를 지우면 안 된다.
+@export var enemy_attack_tier_minion: float = 1.0
+@export var enemy_attack_tier_elite: float = 1.15
+@export var enemy_attack_tier_boss: float = 1.4
+
 # ===== 어그로 (Aggro) =====
 @export_group("어그로")
 ## 랭크별 어그로 가중치 계수 (A1, A2, A3, A4 순서). 설계서 §4.8.4.
@@ -209,6 +244,15 @@ func validate() -> Array[String]:
 		problems.append("effect_res_cap은 0과 1 사이여야 합니다.")
 	if presentation_speed <= 0.0:
 		problems.append("presentation_speed는 0보다 커야 합니다.")
+	if enemy_hp_at_1 <= 0.0 or enemy_hp_exponent <= 0.0:
+		problems.append("enemy_hp_at_1 / enemy_hp_exponent는 0보다 커야 합니다.")
+	if enemy_attack_at_1 <= 0.0 or enemy_attack_exponent <= 0.0:
+		problems.append("enemy_attack_at_1 / enemy_attack_exponent는 0보다 커야 합니다.")
+	if enemy_defense_at_1 < 0.0:
+		problems.append("enemy_defense_at_1은 0 이상이어야 합니다.")
+	if enemy_hp_tier_minion <= 0.0 or enemy_hp_tier_elite <= 0.0 \
+			or enemy_hp_tier_boss <= 0.0:
+		problems.append("등급별 HP 배수는 0보다 커야 합니다.")
 
 	return problems
 
@@ -259,6 +303,50 @@ func speed_to_next_breakpoint(speed: float, cycles: int = 3) -> int:
 		needed_speed = float(speed_softcap) \
 			+ (needed_speed - float(speed_softcap)) / maxf(speed_softcap_efficiency, 0.01)
 	return maxi(int(ceil(needed_speed - speed)), 1)
+
+# ===== 적 기준 스탯 파생 (Enemy baseline) =====
+
+# 레벨과 등급이 정하는 기준 HP.
+func enemy_base_hp(level: int, tier: int) -> int:
+	var base := enemy_hp_at_1 * pow(float(maxi(level, 1)), enemy_hp_exponent)
+	return maxi(int(round(base * _hp_tier(tier))), 1)
+
+
+# 레벨과 등급이 정하는 기준 공격력. `PlayerStats.get_physical_attack()`이 돌려줄 값이다.
+func enemy_base_attack(level: int, tier: int) -> int:
+	var base := enemy_attack_at_1 * pow(float(maxi(level, 1)), enemy_attack_exponent)
+	return maxi(int(round(base * _attack_tier(tier))), 1)
+
+
+# 레벨이 정하는 기준 방어력. `PlayerStats.get_physical_defense()`가 돌려줄 값이다.
+#
+# 등급 배수를 걸지 않는 이유: 방어력은 방어계수 곡선에서 이미 체감이 크고, 여기에
+# 등급 배수까지 곱하면 보스에게 딜이 아예 들어가지 않는다. 보스의 단단함은 HP 와
+# 격파 저항으로 표현한다.
+func enemy_base_defense(level: int) -> int:
+	var base := enemy_defense_at_1 * pow(float(maxi(level, 1)), enemy_defense_exponent)
+	return maxi(int(round(base)), 0)
+
+
+func _hp_tier(tier: int) -> float:
+	match tier:
+		TurnCombat.EnemyTier.BOSS:
+			return enemy_hp_tier_boss
+		TurnCombat.EnemyTier.ELITE:
+			return enemy_hp_tier_elite
+		_:
+			return enemy_hp_tier_minion
+
+
+func _attack_tier(tier: int) -> float:
+	match tier:
+		TurnCombat.EnemyTier.BOSS:
+			return enemy_attack_tier_boss
+		TurnCombat.EnemyTier.ELITE:
+			return enemy_attack_tier_elite
+		_:
+			return enemy_attack_tier_minion
+
 
 # 주어진 누적 AV 창 안에서 몇 번 행동하는가.
 func actions_in_window(speed: float, window_av: float) -> int:

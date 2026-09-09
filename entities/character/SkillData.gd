@@ -711,6 +711,58 @@ func get_effective_ally_heal(faith_boost: float = 1.0) -> int:
 ## 이 스킬이 일으키는 효과들. **순서대로** 적용된다(피해 → 밀치기 → 버프).
 @export var turn_effects: Array[TurnSkillEffect] = []
 
+# ===== 특성 발동 조건 (Trait trigger) =====
+#
+# 특성(`ActionKind.TRAIT`)은 플레이어가 누르는 것이 아니라 **조건부로 자동 발동**한다.
+# 그 조건이 무엇인지가 여기 있다. 특성이 아닌 스킬에서는 읽지 않는다.
+#
+# 이 축이 만드는 것: "턴 수를 늘리지 않고 **행동 수**를 늘리는 우회로"(추가공격 팀)와
+# 반격 팀(적 속도가 빠를수록 강해지는 역설적 팀)이 여기서 나온다.
+
+enum TraitTrigger {
+	NONE,               # 발동하지 않는다 (수동 조회용 패시브)
+	TURN_START,         # 자신의 턴이 시작될 때
+	ON_DAMAGE_TAKEN,    # 피격했을 때 (반격)
+	ON_DAMAGE_DEALT,    # 자신이 피해를 넣었을 때 (강지의 수혈 같은 것)
+	ON_WEAKNESS_HIT,    # 약점을 찔렀을 때 (추가공격 · 배턴)
+	ON_KILL,            # 적을 처치했을 때
+}
+
+@export var trait_trigger: TraitTrigger = TraitTrigger.NONE
+
+## 발동 주기(턴). 0이나 1이면 조건을 만족할 때마다, 2면 2턴마다 1회.
+## `TURN_START` 특성에서만 의미가 있다.
+@export var trait_turn_period: int = 0
+
+## 한 턴에 발동할 수 있는 최대 횟수. 0이면 제한 없음.
+## 반격이 무한 연쇄하지 않게 하는 장치다(설계서 §4.14 ① — "턴당 최대 2회").
+@export var trait_per_turn_cap: int = 0
+
+## 자신이 이 상태일 때만 발동한다. 「반격의 잔불」이 "도발 상태에서 피격 시"인 것처럼,
+## 반격 특성은 어그로를 모으는 것과 짝을 이뤄야 성립한다 — 조건이 없으면 후열
+## 캐릭터도 반격해서 도발의 값어치가 사라진다.
+@export var trait_require_self_status: bool = false
+@export var trait_self_status_kind: TurnStatus.Kind = TurnStatus.Kind.TAUNT
+
+## 이 특성이 넣는 피해가 **자신이 넣은 피해에 비례**하는가.
+## 강지의 수혈("평타로 들어간 피해의 비율만큼 회복")이 이 경로를 쓴다.
+## 0이면 쓰지 않는다.
+@export var trait_damage_ratio: float = 0.0
+
+
+func is_turn_trait() -> bool:
+	return turn_action == TurnCombat.ActionKind.TRAIT \
+		and trait_trigger != TraitTrigger.NONE
+
+
+# 이 특성이 이번 턴/이번 사이클에 발동할 차례인가.
+#
+# `turn_index`: 이 유닛이 지금까지 행동한 턴 수(1부터).
+func trait_ready(turn_index: int) -> bool:
+	if trait_turn_period <= 1:
+		return true
+	return turn_index % trait_turn_period == 1
+
 
 # ===== 턴제 조회 (Turn accessors) =====
 

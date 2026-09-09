@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_oxqch"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_vigdf"]
+
+[sub_resource type="Resource" id="Resource_alwuc"]
+script = ExtResource("2_vigdf")
+multiplier = 0.8
+
+[sub_resource type="Resource" id="Resource_r1y4t"]
+script = ExtResource("2_vigdf")
+kind = 8
+
+[resource]
+script = ExtResource("1_oxqch")
+skill_id = &"enemy_turn_drag"
+display_name = "낚아채기"
+summary = "후열 아군 1명에게 공격력 80% 피해를 주고 앞으로 1칸 끌어당긴다."
+turn_action = 1
+target_ranks = Array[int]([3, 4])
+turn_effects = Array[ExtResource("2_vigdf")]([SubResource("Resource_alwuc"), SubResource("Resource_r1y4t")])

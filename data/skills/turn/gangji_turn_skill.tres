@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_yqyhp"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_iuag4"]
+
+[sub_resource type="Resource" id="Resource_edh2m"]
+script = ExtResource("2_iuag4")
+label = "전체 회복 (마공 60%)"
+kind = 2
+scope = 4
+multiplier = 0.6
+scaling = 3
+
+[resource]
+script = ExtResource("1_yqyhp")
+skill_id = &"gangji_turn_skill"
+display_name = "수혈 처방"
+summary = "아군 전체를 마법 공격력 60%만큼 회복시킨다."
+turn_action = 1
+rp_cost = 1
+turn_targeting = 7
+turn_effects = Array[ExtResource("2_iuag4")]([SubResource("Resource_edh2m")])

@@ -117,3 +117,70 @@ signal goddess_haste_changed(active: bool, seconds_left: float, ratio: float)
 # 이 신호는 연출·소리·통계가 듣는다.
 @warning_ignore("unused_signal")
 signal capture_zone_captured(zone)
+
+
+# ===== 턴제 전투 (#450) =====
+#
+# 기존 실시간 전투 시그널은 하나도 지우지 않았다. 턴제는 별개 축이라 이름을
+# `turn_` 으로 접두어를 붙여 나눈다 — `damage_taken` 처럼 같은 이름을 공유하면
+# 실시간 HUD 가 턴제 전투의 피해에 반응해 존재하지 않는 노드를 흔든다.
+
+# 턴제 전투가 시작됐다. seed 는 결정론적 RNG 시드다(리플레이/재현).
+@warning_ignore("unused_signal")
+signal turn_battle_started(seed_value: int)
+
+# 턴제 전투가 끝났다. summary 는 `TurnBattleManager.result_summary()`다.
+@warning_ignore("unused_signal")
+signal turn_battle_ended(victory: bool, summary: Dictionary)
+
+# 사이클이 넘어갔다. 사이클은 "시간 = 점수"의 환율 단위다.
+@warning_ignore("unused_signal")
+signal turn_cycle_started(cycle: int)
+
+# 유닛의 턴이 시작/종료됐다. unit 은 TurnUnit.
+@warning_ignore("unused_signal")
+signal turn_started(unit)
+@warning_ignore("unused_signal")
+signal turn_ended(unit)
+
+# 피해가 확정됐다. context 는 DamageContext — 계산 내역까지 들어 있어
+# 연출·전투 로그·통계가 같은 객체를 읽는다(시그널 인자를 늘리지 않으려는 것이다).
+@warning_ignore("unused_signal")
+signal turn_damage_dealt(context)
+
+# 자물쇠 한 칸이 해제됐다. index/total 은 해제음을 상승 음계로 만들기 위한 것이다.
+@warning_ignore("unused_signal")
+signal turn_lock_cleared(unit, lock, index: int, total: int)
+
+# 적 행동이 무산됐다(자물쇠 전부 해제).
+@warning_ignore("unused_signal")
+signal turn_action_nullified(unit)
+
+# 약점 격파가 발동했다. 9단계 연출이 이 신호로 시작한다.
+@warning_ignore("unused_signal")
+signal turn_weakness_broken(unit, element: int)
+
+# 격파가 풀렸다(인성치 전량 회복).
+@warning_ignore("unused_signal")
+signal turn_break_recovered(unit)
+
+# 공명 포인트가 바뀌었다. 파티 공유 자원이므로 유닛 인자가 없다.
+@warning_ignore("unused_signal")
+signal turn_resonance_changed(current: int, maximum: int)
+
+# 열기가 바뀌었다. zone 은 -1 냉각 / 0 최적 / 1 과열.
+@warning_ignore("unused_signal")
+signal turn_heat_changed(heat: float, zone: int)
+
+# 오의 게이지가 바뀌었다.
+@warning_ignore("unused_signal")
+signal turn_energy_changed(unit, energy: int, maximum: int)
+
+# 유닛이 랭크를 옮겼다(밀치기·끌기·자리바꿈). 대형 붕괴 연출이 듣는다.
+@warning_ignore("unused_signal")
+signal turn_rank_changed(unit, from_rank: int, to_rank: int)
+
+# 턴제 전투에서 유닛이 전투 불능이 됐다. 실시간 `enemy_died`/`player_died` 와 별개다 —
+# 그쪽을 재사용하면 실시간 HUD·스테이지 로직이 턴제 전투에 반응한다.
+@warning_ignore("unused_signal")
+signal turn_death(unit)
