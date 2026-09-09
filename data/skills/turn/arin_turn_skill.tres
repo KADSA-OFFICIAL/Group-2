@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_0hotq"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_0rpx5"]
+
+[sub_resource type="Resource" id="Resource_4m8dj"]
+script = ExtResource("2_0rpx5")
+multiplier = 1.2
+toughness_damage = 18
+
+[resource]
+script = ExtResource("1_0hotq")
+skill_id = &"arin_turn_skill"
+display_name = "사냥의 표식"
+summary = "단일 대상에 공격력 120% 전격 피해를 2회. 인성치 -18 x 2회. 히트당 자물쇠 1개를 열 수 있다."
+turn_action = 1
+rp_cost = 1
+usable_ranks = Array[int]([2, 3, 4])
+turn_hits = 2
+turn_effects = Array[ExtResource("2_0rpx5")]([SubResource("Resource_4m8dj")])

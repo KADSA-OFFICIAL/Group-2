@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_u7q0b"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_rua46"]
+
+[sub_resource type="Resource" id="Resource_yvmro"]
+script = ExtResource("2_rua46")
+multiplier = 0.7
+toughness_damage = 20
+
+[resource]
+script = ExtResource("1_u7q0b")
+skill_id = &"seola_turn_basic"
+display_name = "측정 사격"
+summary = "단일 대상에 공격력 70% 한기 피해. 인성치 -20. 관통이라 후열 타격이 가능하다."
+usable_ranks = Array[int]([3, 4])
+turn_effects = Array[ExtResource("2_rua46")]([SubResource("Resource_yvmro")])

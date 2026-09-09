@@ -1,6 +1,8 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="40_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_strike.tres" id="60_turn"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 [ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
 [ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/velociraptor_beastfolk_2_walk_frames.tres" id="10_walk"]
@@ -13,6 +15,7 @@ strength = 33
 defense = 60
 intelligence = 100
 faith = 100
+speed = 126
 
 [resource]
 script = ExtResource("1_enemydata")
@@ -36,3 +39,15 @@ detection_range = 600.0
 attack_range = 45.0
 move_speed_multiplier = 0.9
 attack_speed_multiplier = 1.4
+tier = 0
+turn_level = 20
+turn_element = 0
+turn_physical_type = 0
+weak_elements = Array[int]([3])
+weak_physical = Array[int]([1])
+toughness = 40
+turn_skills = Array[ExtResource("40_skilldef")]([ExtResource("60_turn")])
+preferred_ranks = Array[int]([1, 2])
+turn_hp_multiplier = 0.55
+turn_attack_multiplier = 0.8
+turn_defense_multiplier = 0.6

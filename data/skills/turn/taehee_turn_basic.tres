@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_3sp1j"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_0yrl6"]
+
+[sub_resource type="Resource" id="Resource_j0e7o"]
+script = ExtResource("2_0yrl6")
+multiplier = 0.9
+toughness_damage = 18
+
+[sub_resource type="Resource" id="Resource_elb0e"]
+script = ExtResource("2_0yrl6")
+label = "[속박] 1중첩 (60%)"
+kind = 6
+duration = 3
+chance = 0.6
+break_status = 5
+
+[resource]
+script = ExtResource("1_3sp1j")
+skill_id = &"taehee_turn_basic"
+display_name = "덧칠"
+summary = "단일 대상에 공격력 90% 침식 피해. 인성치 -18. 60% 확률로 [속박] 1중첩."
+usable_ranks = Array[int]([2, 3, 4])
+target_ranks = Array[int]([1, 2])
+turn_effects = Array[ExtResource("2_0yrl6")]([SubResource("Resource_j0e7o"), SubResource("Resource_elb0e")])

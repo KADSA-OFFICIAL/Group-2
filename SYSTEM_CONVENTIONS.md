@@ -31,8 +31,46 @@
 | TutorialSequenceData | `entities/tutorial/TutorialSequenceData.gd` | 스테이지 하나의 튜토리얼 단계 묶음 (Resource) | 튜토리얼 단계 정의 |
 | GoddessSkillSystem | `autoload/GoddessSkillSystem.gd` | 여신의 스킬 — 선택·스테이지당 1회·시전(시간 정지/부활) | 선택 상태 / `data/goddess_skills/*.tres` |
 | GoddessSkillData | `entities/goddess/GoddessSkillData.gd` | 여신의 스킬 정의 (Resource) | 여신 스킬 정의 |
+| TurnCombatConfig | `autoload/TurnCombatConfig.gd` | 턴제 전투 튜닝 수치 제공 · 정보 표시 단계 | `data/combat/turn_combat_tuning.tres` |
+| TurnCombatTuning | `entities/combat/turn/TurnCombatTuning.gd` | 턴제 튜닝 스키마 (Resource) | 턴제 수치 정의 |
+| TurnCombat | `entities/combat/turn/TurnCombat.gd` | 턴제 어휘 (원소 7 · 물리 3 · 역할 8 · 버킷 A~G · 색상) | 턴제 열거형/상수 |
+| TurnSkillEffect | `entities/combat/turn/TurnSkillEffect.gd` | 턴제 스킬 효과 하나 (Resource) | 스킬 효과 정의 |
+| TurnBattleManager | `entities/combat/turn/TurnBattleManager.gd` | 턴제 전투 흐름 상태 기계 | 진행 중인 턴제 전투 |
+| TimelineSystem | `entities/combat/turn/TimelineSystem.gd` | 행동값(AV) · 행동 순서 · 프리뷰 | 행동 순서 |
+| RankSystem | `entities/combat/turn/RankSystem.gd` | 랭크 배치 · 위치 조작 · 어그로 | 유닛 위치 |
+| TurnResourceSystem | `entities/combat/turn/TurnResourceSystem.gd` | 공명 포인트 · 오의 게이지 · 열기 | 턴제 자원 |
+| DamagePipeline | `entities/combat/turn/DamagePipeline.gd` | 턴제 피해 계산 (버킷 A~G) | 턴제 피해 공식 |
+| ToughnessSystem | `entities/combat/turn/ToughnessSystem.gd` | 인성치 · 자물쇠 · 격파 · 초격파 | 격파 판정 |
+| TurnStatusSystem | `entities/combat/turn/TurnStatusSystem.gd` | 턴 단위 버프/디버프/DoT · 격파 상태이상 7종 | 턴제 상태 효과 |
+| TurnEnemyAI | `entities/combat/turn/TurnEnemyAI.gd` | 적 행동 선택 · 예고 생성 · 자동 전투 정책 | 적 행동 결정 |
+| PresentationQueue | `entities/combat/turn/PresentationQueue.gd` | 연출 큐 · 피드백 규격표 · 격파 9단계 | 턴제 연출 규격 |
+| TurnStageEncounter | `entities/combat/turn/TurnStageEncounter.gd` | 저작 스테이지 → 턴제 조우 번역 (웨이브·적 정의) | 스테이지→턴제 대응 |
 
 > 새 autoload/시스템을 추가하면 **이 표에 한 줄 추가**한다.
+
+### 턴제 전투와 실시간 전투는 **나란히 존재한다**
+
+턴제 전투(#450)는 실시간 전투를 대체하지 않았다. 두 축이 같은 기초 시스템
+(`PlayerStats` · `CharacterData` · `SkillData` · `EnemyData` · `EventBus`)을 **공유**하고,
+아래만 나눠 갖는다. 나눈 이유는 각 파일 주석에 있고 요지는 "합치면 한쪽 밸런싱이 다른 쪽을
+흔든다"다.
+
+| 항목 | 실시간 | 턴제 |
+|---|---|---|
+| 튜닝 | `CombatConfig` / `combat_tuning.tres` | `TurnCombatConfig` / `turn_combat_tuning.tres` |
+| 캐릭터 스킬 배열 | `CharacterData.skills` | `CharacterData.turn_skills` |
+| 상태 효과 | `StatusEffectSystem` (초 단위) | `TurnStatusSystem` (턴 단위) |
+| EventBus 시그널 | 기존 이름 | `turn_` 접두어 |
+| 진입 씬 | `main_realtime.tscn` | **`main.tscn`** (기본 진입, #472) |
+
+**둘 중 하나를 지우는 것은 별도 이슈에서 합의한다.** #472 는 진입만 옮겼고 실시간 파일은
+전부 남겨 두었다 — `main_realtime.tscn` 을 실행하면 지금까지의 구성이 그대로 열린다.
+
+`stage_started` **신호는 턴제 전투가 쏘지 않는다.** 그 신호로 `TutorialSystem` 이 활성화되고,
+저작된 단계의 진행 조건이 대시·처형 같은 실시간 행동이라 턴제에서는 진행 불가로 멈춘다.
+승패는 `stage_completed` / `stage_failed` 로 알린다(결과 화면·진행도가 그것을 듣는다).
+
+설계 정본: [docs/turn-combat-design.md](docs/turn-combat-design.md)
 
 ---
 

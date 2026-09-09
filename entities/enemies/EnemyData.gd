@@ -230,4 +230,203 @@ func validate() -> Array[String]:
 	for anim in WalkAnimation.missing_animations(walk_frames):
 		problems.append("walk_frames에 '%s' 애니메이션이 없습니다." % anim)
 
+	# 턴제 필드(#450). 저작하지 않은 기존 .tres 는 기본값이라 아무 문제도 보고되지 않는다.
+	problems.append_array(validate_turn())
+
+	return problems
+
+
+# =====================================================================
+# 턴제 (Turn-based) — #450
+# =====================================================================
+#
+# 적 정의의 출처는 `EnemyData` 하나다. 턴제 전투용 적 목록을 따로 만들지 않고 여기에 얹는다.
+# 실시간 AI 필드(`detection_range`, `dash_*`, `projectile_*`)는 하나도 지우지 않았다.
+#
+# 기본값의 원칙: 이 섹션을 모르는 기존 6종의 `.tres`가 그대로 로드되고,
+# 턴제에서 "Lv.20 잡몹 / 충격·참격 / 인성치 40 / 약점 없음"으로 동작한다.
+# 약점이 비어 있으면 인성치를 깎을 방법이 없으므로, 저작 시 최소 1개는 채워야 한다
+# (`validate_turn()`이 잡는다).
+
+@export_group("턴제")
+
+## 등급. 인성치·자물쇠 개수·페이즈의 기준이 된다.
+@export var tier: TurnCombat.EnemyTier = TurnCombat.EnemyTier.MINION
+
+## 레벨. 방어 계수의 분모와 격파 데미지 기준값이 쓴다.
+@export var turn_level: int = 20
+
+## 이 적이 공격에 쓰는 원소.
+@export var turn_element: TurnCombat.Element = TurnCombat.Element.IMPACT
+## 이 적이 공격에 쓰는 물리 타입.
+@export var turn_physical_type: TurnCombat.PhysicalType = TurnCombat.PhysicalType.SLASH
+
+## 약점 원소. **이 원소의 공격만 인성치를 깎는다.**
+@export var weak_elements: Array[TurnCombat.Element] = []
+## 약점 물리 타입.
+@export var weak_physical: Array[TurnCombat.PhysicalType] = []
+
+## 기초 인성치. 0이면 등급 기본값(잡몹 40 / 정예 60 / 보스 112)을 쓴다.
+@export var toughness: int = 0
+
+## 원소 저항. `TurnCombat.Element`(정수) -> 비율(0.2 = 20% 감소). 버킷 C가 읽는다.
+## 비워 두면 모든 원소에 저항 0이다 — 저항은 특정 적의 성질이지 기본값이 아니다.
+@export var element_resistances: Dictionary = {}
+
+## 격파 저항(0.0~1.0). 보스가 갖는다. 행동 불가 턴을 줄이고 인성치 회복을 빠르게 한다.
+@export var break_resistance: float = 0.0
+
+# ===== 턴제 개성 배수 (Turn personality) =====
+#
+# 턴제 스텟은 **레벨과 등급에서 파생**하고(`TurnCombatTuning.enemy_base_*`), 이 배수가
+# 그 위에 개성을 얹는다. "물몸 고속"인 벨로시랩터는 0.5, "단단한 벽"인 매머드는 1.5다.
+#
+# 실시간 `hp_multiplier` / `attack_multiplier` / `defense_multiplier`와 **별도 채널**인 이유:
+# 실시간 배수는 실시간 기준값(연속 DPS 기준 HP) 위에 얹혀 있고, 등급 배수와 함께 곱하면
+# 이중 계산이 된다 — 매머드 보스는 실시간 배수 x8 에 등급 배수 x12 가 곱해 96배가 됐다.
+@export var turn_hp_multiplier: float = 1.0
+@export var turn_attack_multiplier: float = 1.0
+@export var turn_defense_multiplier: float = 1.0
+
+## 절대 지정. 0보다 크면 레벨·등급 파생 대신 이 값을 쓴다.
+## 보스 하나를 손으로 맞춰야 할 때를 위한 탈출구다.
+@export var turn_hp_override: int = 0
+@export var turn_attack_override: int = 0
+@export var turn_defense_override: int = 0
+
+## 격파가 풀리기까지의 턴 수. 0이면 튜닝 기본값(2턴).
+@export var break_recover_turns: int = 0
+
+## 이 적의 턴제 행동표. 실시간 `skills`와 별도 배열이다.
+## 비우면 `TurnEnemyAI`가 기본 평타(공격력 100% 단일)를 만들어 쓴다 —
+## 저작되지 않은 적이 아무것도 하지 않고 서 있는 것보다 낫다.
+@export var turn_skills: Array[SkillData] = []
+
+## 선호 랭크(1~5). 배치 시 참고한다.
+@export var preferred_ranks: Array[int] = [1, 2]
+
+
+# 등급별 기초 인성치. 설계서 §4.15 표(Lv.20 잡몹 40)와 §4.8.1 배수를 합친 값이다.
+const TIER_BASE_TOUGHNESS := {
+	TurnCombat.EnemyTier.MINION: 40,
+	TurnCombat.EnemyTier.ELITE: 60,
+	TurnCombat.EnemyTier.BOSS: 112,
+}
+
+
+# 실제로 쓰는 인성치. 저작값이 있으면 그것을 쓰고, 없으면 등급 기본값이다.
+func get_effective_toughness() -> int:
+	if toughness > 0:
+		return toughness
+	return int(TIER_BASE_TOUGHNESS.get(tier, 40))
+
+
+# 이 적이 예고에 붙일 자물쇠 개수 범위. 등급이 정한다(설계서 §4.8.1).
+func get_lock_count_range() -> Vector2i:
+	var t := PlayerStats.get_tuning_turn()
+	match tier:
+		TurnCombat.EnemyTier.BOSS:
+			return t.lock_count_boss
+		TurnCombat.EnemyTier.ELITE:
+			return t.lock_count_elite
+		_:
+			return t.lock_count_minion
+
+
+# 이 적의 턴제 HP. 절대 지정이 있으면 그것을, 없으면 레벨·등급 파생값에 개성 배수를 곱한다.
+func get_turn_hp() -> int:
+	if turn_hp_override > 0:
+		return turn_hp_override
+	var base := PlayerStats.get_tuning_turn().enemy_base_hp(turn_level, tier)
+	return maxi(int(round(float(base) * maxf(turn_hp_multiplier, 0.01))), 1)
+
+
+# 이 적의 턴제 공격력. `PlayerStats.get_physical_attack()`이 돌려줄 목표값이다.
+func get_turn_attack() -> int:
+	if turn_attack_override > 0:
+		return turn_attack_override
+	var base := PlayerStats.get_tuning_turn().enemy_base_attack(turn_level, tier)
+	return maxi(int(round(float(base) * maxf(turn_attack_multiplier, 0.01))), 1)
+
+
+# 이 적의 턴제 방어력. `PlayerStats.get_physical_defense()`가 돌려줄 목표값이다.
+func get_turn_defense() -> int:
+	if turn_defense_override > 0:
+		return turn_defense_override
+	var base := PlayerStats.get_tuning_turn().enemy_base_defense(turn_level)
+	return maxi(int(round(float(base) * maxf(turn_defense_multiplier, 0.0))), 0)
+
+
+func get_break_recover_turns() -> int:
+	if break_recover_turns > 0:
+		return break_recover_turns
+	return PlayerStats.get_tuning_turn().break_recover_turns
+
+
+func get_turn_skills(kind: TurnCombat.ActionKind) -> Array[SkillData]:
+	var out: Array[SkillData] = []
+	for skill in turn_skills:
+		if skill != null and skill.turn_action == kind:
+			out.append(skill)
+	return out
+
+
+# 자물쇠에 넣을 수 있는 타입 후보. 약점 목록에서 뽑는다.
+#
+# 왜 약점에서만 뽑는가: 약점이 아닌 타입을 자물쇠에 넣으면 그 칸은 인성치를 깎지 못하는
+# 채로 열려야 하고, "자물쇠 해제 = 인성치 감소"라는 규칙이 깨진다. 그러면 격파 팀이
+# 자물쇠를 다 열어도 격파가 나지 않는다.
+#
+# 반환: `[[is_element(bool), value(int)], ...]`
+func get_lock_candidates() -> Array:
+	var out: Array = []
+	for e in weak_elements:
+		out.append([true, int(e)])
+	for p in weak_physical:
+		out.append([false, int(p)])
+	return out
+
+
+# 턴제 데이터의 무결성 점검. `validate()`가 호출한다.
+func validate_turn() -> Array[String]:
+	var problems: Array[String] = []
+
+	if turn_level < 1:
+		problems.append("turn_level은 1 이상이어야 합니다.")
+	if toughness < 0:
+		problems.append("toughness는 0 이상이어야 합니다.")
+	if break_resistance < 0.0 or break_resistance > 1.0:
+		problems.append("break_resistance는 0과 1 사이여야 합니다.")
+
+	for key in element_resistances:
+		var value := float(element_resistances[key])
+		if value < 0.0 or value > 1.0:
+			problems.append("element_resistances[%s]는 0과 1 사이여야 합니다: %.2f"
+				% [str(key), value])
+	if break_recover_turns < 0:
+		problems.append("break_recover_turns는 0 이상이어야 합니다.")
+	if turn_hp_multiplier <= 0.0:
+		problems.append("turn_hp_multiplier는 0보다 커야 합니다.")
+	if turn_attack_multiplier <= 0.0:
+		problems.append("turn_attack_multiplier는 0보다 커야 합니다.")
+	if turn_defense_multiplier < 0.0:
+		problems.append("turn_defense_multiplier는 0 이상이어야 합니다.")
+
+	for rank in preferred_ranks:
+		if rank < 1 or rank > TurnCombat.ENEMY_RANK_COUNT:
+			problems.append("preferred_ranks에 적 랭크 범위(1~%d) 밖의 값이 있습니다: %d"
+				% [TurnCombat.ENEMY_RANK_COUNT, rank])
+
+	# 턴제로 저작했다면 약점이 최소 1개는 있어야 한다. 없으면 인성치를 깎을 방법이
+	# 없어 영원히 격파되지 않는 적이 된다.
+	if not turn_skills.is_empty() and weak_elements.is_empty() and weak_physical.is_empty():
+		problems.append("턴제 행동표가 있는데 약점(weak_elements / weak_physical)이 비어 있습니다.")
+
+	for skill in turn_skills:
+		if skill == null:
+			problems.append("turn_skills에 빈 항목이 있습니다.")
+			continue
+		for problem in skill.validate_turn():
+			problems.append("turn_skills(%s): %s" % [skill.skill_id, problem])
+
 	return problems

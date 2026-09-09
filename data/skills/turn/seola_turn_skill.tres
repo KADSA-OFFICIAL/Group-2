@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_xbxui"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_3r33b"]
+
+[sub_resource type="Resource" id="Resource_nuwta"]
+script = ExtResource("2_3r33b")
+kind = 10
+value = 0.4
+
+[sub_resource type="Resource" id="Resource_hdkb7"]
+script = ExtResource("2_3r33b")
+label = "치명타 피해 +32%"
+kind = 4
+value = 0.32
+duration = 3
+stat_key = &"crit_damage"
+bucket = 5
+
+[resource]
+script = ExtResource("1_xbxui")
+skill_id = &"seola_turn_skill"
+display_name = "좌표 재정렬"
+summary = "아군 1명의 행동을 40% 앞당기고, 3턴간 치명타 피해 +32%를 부여한다."
+turn_action = 1
+rp_cost = 1
+usable_ranks = Array[int]([3, 4])
+turn_targeting = 6
+turn_effects = Array[ExtResource("2_3r33b")]([SubResource("Resource_nuwta"), SubResource("Resource_hdkb7")])

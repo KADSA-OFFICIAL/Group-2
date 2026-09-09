@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_d6pog"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_xcs5e"]
+
+[sub_resource type="Resource" id="Resource_ig7cl"]
+script = ExtResource("2_xcs5e")
+label = "[속박] 1중첩"
+kind = 6
+duration = 3
+break_status = 5
+
+[resource]
+script = ExtResource("1_d6pog")
+skill_id = &"taehee_turn_trait"
+display_name = "스며드는 안료"
+summary = "약점을 찌를 때마다 [속박] 1중첩 추가 (최대 6중첩). [속박] 중첩당 대상이 받는 피해 +2.5%."
+turn_action = 3
+turn_effects = Array[ExtResource("2_xcs5e")]([SubResource("Resource_ig7cl")])
+trait_trigger = 4
+trait_per_turn_cap = 2

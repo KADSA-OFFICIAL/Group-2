@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_4uka6"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_soo61"]
+
+[sub_resource type="Resource" id="Resource_odfv4"]
+script = ExtResource("2_soo61")
+multiplier = 1.2
+toughness_damage = 30
+
+[sub_resource type="Resource" id="Resource_db5li"]
+script = ExtResource("2_soo61")
+label = "방어력 -32%"
+kind = 5
+value = 0.32
+duration = 3
+stat_key = &"defense_reduction"
+bucket = 2
+
+[sub_resource type="Resource" id="Resource_6hc7r"]
+script = ExtResource("2_soo61")
+label = "방어력 -16% (인접)"
+kind = 5
+scope = 1
+value = 0.16
+duration = 3
+stat_key = &"defense_reduction"
+bucket = 2
+
+[resource]
+script = ExtResource("1_4uka6")
+skill_id = &"taehee_turn_skill"
+display_name = "부식의 화폭"
+summary = "대상 + 좌우 인접에 공격력 120% / 60% 침식 피해. 인성치 -30 / -15. 대상에게 3턴간 방어력 -32%, 인접에는 -16%."
+turn_action = 1
+rp_cost = 1
+usable_ranks = Array[int]([2, 3, 4])
+turn_targeting = 1
+turn_effects = Array[ExtResource("2_soo61")]([SubResource("Resource_odfv4"), SubResource("Resource_db5li"), SubResource("Resource_6hc7r")])

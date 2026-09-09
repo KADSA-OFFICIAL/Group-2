@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_whhv3"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_4to67"]
+
+[sub_resource type="Resource" id="Resource_ivrpg"]
+script = ExtResource("2_4to67")
+multiplier = 2.0
+toughness_damage = 45
+
+[sub_resource type="Resource" id="Resource_wiq0m"]
+script = ExtResource("2_4to67")
+label = "[속박] 폭발 후 2중첩 재부여"
+kind = 6
+scope = 3
+duration = 3
+stacks = 2
+break_status = 5
+require_status = true
+per_stack_multiplier = 0.55
+consume_status = true
+
+[resource]
+script = ExtResource("1_whhv3")
+skill_id = &"taehee_turn_ult"
+display_name = "완성된 초상"
+summary = "적 전체에 공격력 200% 침식 피해. 인성치 -45. 적 전체의 [속박] 중첩을 즉시 폭발시켜 중첩당 공격력 55% 추가 피해. 폭발 후 [속박]을 2중첩 재부여한다."
+turn_action = 2
+energy_cost = 140
+turn_targeting = 2
+turn_effects = Array[ExtResource("2_4to67")]([SubResource("Resource_ivrpg"), SubResource("Resource_wiq0m")])

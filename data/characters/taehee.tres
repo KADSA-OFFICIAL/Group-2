@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
@@ -6,6 +6,10 @@
 [ext_resource type="Texture2D" uid="uid://12fmoppm4cam" path="res://assets/sprites/placeholder/shape_ranged.svg" id="9_shape"]
 [ext_resource type="SpriteFrames" path="res://assets/sprites/characters/taehee_walk_frames.tres" id="10_walk"]
 [ext_resource type="Script" path="res://entities/character/SkillData.gd" id="11_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/turn/taehee_turn_basic.tres" id="50_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/taehee_turn_skill.tres" id="51_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/taehee_turn_ult.tres" id="52_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/taehee_turn_trait.tres" id="53_turn"]
 [ext_resource type="Resource" path="res://data/skills/taehee_quad_shot.tres" id="12_passive"]
 [ext_resource type="Resource" path="res://data/skills/taehee_chain_shot.tres" id="13_chain"]
 [ext_resource type="Resource" path="res://data/skills/taehee_focus_laser.tres" id="14_laser"]
@@ -18,6 +22,12 @@ strength = 130
 defense = 60
 intelligence = 100
 faith = 100
+speed = 108
+energy_max = 140
+crit_rate = 0.05
+crit_damage = 0.5
+effect_hit = 0.25
+energy_recharge = 0.1
 
 [resource]
 script = ExtResource("1_chardata")
@@ -39,3 +49,8 @@ sprite_scale = Vector2(2, 2)
 walk_frames = ExtResource("10_walk")
 walk_sprite_scale = Vector2(0.25, 0.25)
 walk_sprite_offset = Vector2(0, -155)
+element = 5
+physical_type = 0
+battle_class = 4
+preferred_ranks = Array[int]([2, 3, 4])
+turn_skills = Array[ExtResource("11_skilldef")]([ExtResource("50_turn"), ExtResource("51_turn"), ExtResource("52_turn"), ExtResource("53_turn")])

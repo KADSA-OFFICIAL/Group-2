@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_2udih"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_gvbx1"]
+
+[sub_resource type="Resource" id="Resource_m57lw"]
+script = ExtResource("2_gvbx1")
+multiplier = 0.6
+scaling = 1
+toughness_damage = 10
+
+[resource]
+script = ExtResource("1_2udih")
+skill_id = &"mina_turn_trait"
+display_name = "반격의 잔불"
+summary = "도발 상태에서 피격 시 공격자에게 방어력 60% 화염 피해로 반격 (턴당 최대 2회). 인성치 -10."
+turn_action = 3
+turn_effects = Array[ExtResource("2_gvbx1")]([SubResource("Resource_m57lw")])
+trait_trigger = 2
+trait_per_turn_cap = 2
+trait_require_self_status = true

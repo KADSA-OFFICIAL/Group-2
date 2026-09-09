@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_85ugi"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_efyfr"]
+
+[sub_resource type="Resource" id="Resource_aeidf"]
+script = ExtResource("2_efyfr")
+label = "배턴 양도"
+kind = 17
+
+[sub_resource type="Resource" id="Resource_raf6n"]
+script = ExtResource("2_efyfr")
+kind = 13
+amount = 20
+
+[resource]
+script = ExtResource("1_85ugi")
+skill_id = &"arin_turn_baton"
+display_name = "표적 인계"
+summary = "아군 1명에게 배턴을 넘긴다. 그 아군은 즉시 추가 턴을 얻고 배턴 중첩당 피해가 20% 증가한다 (최대 3중첩 = +60%). 오의 게이지 +20."
+turn_action = 1
+rp_cost = 1
+turn_targeting = 6
+turn_effects = Array[ExtResource("2_efyfr")]([SubResource("Resource_aeidf"), SubResource("Resource_raf6n")])

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_tgxnl"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_7jeku"]
+
+[sub_resource type="Resource" id="Resource_1f7da"]
+script = ExtResource("2_7jeku")
+kind = 14
+scope = 2
+amount = 1
+
+[resource]
+script = ExtResource("1_tgxnl")
+skill_id = &"seola_turn_trait"
+display_name = "연산 보조"
+summary = "자신의 턴 시작 시 공명 포인트 +1 (2턴마다 1회)."
+turn_action = 3
+turn_effects = Array[ExtResource("2_7jeku")]([SubResource("Resource_1f7da")])
+trait_trigger = 1
+trait_turn_period = 2
