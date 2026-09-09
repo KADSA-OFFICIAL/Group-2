@@ -45,6 +45,17 @@ class_name TurnBattleHUD
 # 커져 적 간격 112px(`ENEMY_SLOT_STEP`)를 넘어 5체의 바가 서로 겹친다. 적 간격은
 # 랭크 배치 = 전투 시스템의 소유이므로 UI 작업 범위에서 건드릴 수 없다.
 #
+# ## 화면 크기는 1280×720 이 아니다
+#
+# 프로젝트는 `canvas_items` + `expand` 스트레치를 쓴다. **창 비율이 16:9 가 아니면
+# 캔버스가 기준 해상도보다 커진다** — 1920×1012 창에서 실측 캔버스는 1366×720 이었다.
+# 그래서 우하단·우상단 UI 를 x 1160 처럼 절대 좌표로 두면 화면 오른쪽 끝에서 114px
+# 안쪽에 떠 있게 되고, "가장자리 흡착"이 깨진다(녹화 영상에서 그렇게 보였다).
+#
+# 규칙: **크기는 상수, 위치는 변 기준 여백**이다. 오른쪽·아래에 붙는 것은 `size` 에서
+# 빼고, 전장(적·아군 줄)은 캔버스 가로 중심에서 잰다. `size` 는 `_ready()` 의
+# 전체 사각형 프리셋이 잡아 주므로 캔버스 크기와 같다.
+#
 # 왜 `_draw()`로 직접 그리는가: `Control`에는 skew 가 없어서 기울어진 평행사변형을
 # 노드 조합으로 만들 수 없다. 문법의 핵심이 `skewX(-12°)`이므로 폴리곤을 직접 그린다.
 #
@@ -94,11 +105,23 @@ const CHIP_ART_W := 26.0
 # --- 적 클러스터 ---
 #
 # `unit_position()` 은 전투 화면이 도형·연출을 놓는 좌표이기도 하다. **바꾸지 않는다.**
-const ENEMY_ROW_Y := 268.0
-const ENEMY_SLOT_X := 700.0
+## 적 줄의 바닥에서 잰 높이. 지면선(아래에서 420)보다 위에 선다.
+const ENEMY_ROW_FROM_BOTTOM := 452.0
+## 적 줄의 가로 위치는 캔버스 **중심 기준**이다. 1280 기준 x 700 과 같은 값.
+const ENEMY_CENTER_DX := 60.0
 const ENEMY_SLOT_STEP := 112.0
 const CLUSTER_W := 100.0
-const CLUSTER_DY := -76.0        # 적 머리 위
+## 적 도형 높이(62×78). 클러스터를 이 위로 올려야 바가 몸통에 겹치지 않는다.
+const ENEMY_BODY_H := 78.0
+## 클러스터 밑변을 도형 정수리에서 이만큼 더 띄운다.
+##
+## -76 이었을 때 클러스터가 도형 상단 27px 를 덮었고, **적 HP 바(#E0473B)가 적 도형
+## (#C8402F) 위에 얹혀 빨강 위 빨강이 되어 남은 체력을 읽을 수 없었다.**
+##
+## 값의 근거: 전투 화면이 원소 문양 라벨을 발밑 기준 -112 에 놓고 그 글자가 22px 라
+## 발밑 -112 ~ -90 을 쓴다. 6px 만 띄웠을 때 클러스터 밑변(-84)이 그 문양과 겹쳤다.
+## 문양 위로 넘기려면 정수리(-78)에서 46 이상 띄워야 한다.
+const CLUSTER_GAP := 46.0
 const SEG_SIZE := Vector2(22.0, 8.0)
 const SEG_GAP := 4.0             # 22×4 + 4×3 = 100 — 클러스터 폭과 정확히 같다
 const ENEMY_HP_SIZE := Vector2(100.0, 5.0)
@@ -111,8 +134,9 @@ const AIM_BORDER := 2.0
 const AIM_DY := -39.0
 
 # --- 아군 하단 밴드 ---
-const BAND_H := 112.0            # 하단 밴드 높이 112 → y 608 부터
-const CARD_ORIGIN := Vector2(40.0, 622.0)
+const BAND_H := 112.0            # 하단 밴드 높이 112
+const CARD_LEFT := 40.0
+const CARD_FROM_BOTTOM := 98.0
 const CARD_STEP := 62.0          # 지터 없음. 확정 규격은 균일 간격이다
 const ULT_STRIP := Vector2(4.0, 36.0)
 const PORTRAIT := Vector2(42.0, 36.0)
@@ -123,31 +147,35 @@ const STATUS_GAP := 3.0
 const STATUS_MAX := 4
 
 # --- 공명 / 열기 / 예고 (하단 밴드 우측) ---
-const RESONANCE_ORIGIN := Vector2(312.0, 620.0)
+const RESONANCE_LEFT := 312.0
+const RESONANCE_FROM_BOTTOM := 100.0
 const RESONANCE_PIP := Vector2(7.0, 13.0)
 const RESONANCE_GAP := 5.0
-const HEAT_ORIGIN := Vector2(312.0, 644.0)
+const HEAT_FROM_BOTTOM := 76.0
 const HEAT_SIZE := Vector2(100.0, 4.0)
-const INTENT_ORIGIN := Vector2(312.0, 662.0)
+const INTENT_FROM_BOTTOM := 58.0
 const INTENT_H := 24.0
 const INTENT_MAX_W := 600.0
 
 # --- 액션 버튼 (우하단) ---
-const ACTION_ORIGIN := Vector2(1160.0, 630.0)
 const ACTION_SIZE := Vector2(92.0, 66.0)
 const ACTION_BORDER := 3.0
-## 스킬 2차 패널. 세로 간격을 히트박스 최소 변(56)에 맞춰 판정이 겹치지 않게 한다.
-const SKILL_ORIGIN := Vector2(1128.0, 596.0)
+const ACTION_FROM_RIGHT := 120.0
+const ACTION_FROM_BOTTOM := 90.0
+## 스킬 스트립. 세로 간격을 히트박스 최소 변(56)에 맞춰 판정이 겹치지 않게 한다.
 const SKILL_SIZE := Vector2(124.0, 34.0)
 const SKILL_STEP := HIT_MIN
+const SKILL_FROM_RIGHT := 152.0
+const SKILL_FROM_BOTTOM := 124.0
 
 # --- 아군 도형 위치 (전투 화면이 쓰는 좌표) ---
-const ALLY_ROW_Y := 452.0
-const ALLY_SLOT_X := 556.0
+const ALLY_ROW_FROM_BOTTOM := 268.0
+const ALLY_CENTER_DX := -84.0
 const ALLY_SLOT_STEP := -84.0
 
 # --- 우상단 토글 3개 ---
-const TOGGLE_ORIGIN := Vector2(1104.0, 16.0)
+const TOGGLE_TOP := 16.0
+const TOGGLE_FROM_RIGHT := 176.0
 const TOGGLE_SIZE := Vector2(40.0, 20.0)
 const TOGGLE_STEP := HIT_MIN     # 판정이 서로 겹치지 않는 최소 간격
 
@@ -198,14 +226,54 @@ func _process(delta: float) -> void:
 
 
 # ===== 좌표 (Layout) =====
+#
+# **크기는 상수, 위치는 변 기준**이다. 캔버스가 1280×720 보다 커질 수 있으므로
+# (헤더 "화면 크기는 1280×720 이 아니다" 참고) 절대 좌표를 쓰지 않는다.
 
 func enemy_position(rank: int) -> Vector2:
-	return Vector2(ENEMY_SLOT_X + ENEMY_SLOT_STEP * float(rank - 1), ENEMY_ROW_Y)
+	return Vector2(size.x * 0.5 + ENEMY_CENTER_DX + ENEMY_SLOT_STEP * float(rank - 1),
+		size.y - ENEMY_ROW_FROM_BOTTOM)
 
 
 func ally_position(rank: int) -> Vector2:
 	# 전투 화면이 도형을 놓는 좌표다. 하단 밴드의 카드 배치와는 별개다.
-	return Vector2(ALLY_SLOT_X + ALLY_SLOT_STEP * float(rank - 1), ALLY_ROW_Y)
+	return Vector2(size.x * 0.5 + ALLY_CENTER_DX + ALLY_SLOT_STEP * float(rank - 1),
+		size.y - ALLY_ROW_FROM_BOTTOM)
+
+
+# 적 클러스터 밑변. 적 도형 정수리보다 위다.
+func cluster_origin(unit: TurnUnit) -> Vector2:
+	var cluster_h := SEG_SIZE.y + 4.0 + ENEMY_HP_SIZE.y + 3.0 + STATUS_DOT.y
+	return unit_position(unit) + Vector2(-CLUSTER_W * 0.5,
+		-ENEMY_BODY_H - CLUSTER_GAP - cluster_h)
+
+
+func toggle_origin() -> Vector2:
+	return Vector2(size.x - TOGGLE_FROM_RIGHT, TOGGLE_TOP)
+
+
+func card_origin() -> Vector2:
+	return Vector2(CARD_LEFT, size.y - CARD_FROM_BOTTOM)
+
+
+func resonance_origin() -> Vector2:
+	return Vector2(RESONANCE_LEFT, size.y - RESONANCE_FROM_BOTTOM)
+
+
+func heat_origin() -> Vector2:
+	return Vector2(RESONANCE_LEFT, size.y - HEAT_FROM_BOTTOM)
+
+
+func intent_origin() -> Vector2:
+	return Vector2(RESONANCE_LEFT, size.y - INTENT_FROM_BOTTOM)
+
+
+func action_origin() -> Vector2:
+	return Vector2(size.x - ACTION_FROM_RIGHT, size.y - ACTION_FROM_BOTTOM)
+
+
+func skill_origin() -> Vector2:
+	return Vector2(size.x - SKILL_FROM_RIGHT, size.y - SKILL_FROM_BOTTOM)
 
 
 func unit_position(unit: TurnUnit) -> Vector2:
@@ -237,7 +305,8 @@ func _draw() -> void:
 # 글자 라벨을 쓰지 않는다. 배속은 채워진 막대 핍 개수, 자동은 막대 하나의 점등,
 # 일시정지는 막대 두 개 — 형태만으로 구분된다.
 func _draw_toggles() -> void:
-	var speed_pos := TOGGLE_ORIGIN
+	var origin := toggle_origin()
+	var speed_pos := origin
 	_skewed(speed_pos, TOGGLE_SIZE, TurnCombat.COLOR_PANEL, TurnCombat.COLOR_BORDER_IDLE)
 	for i in 3:
 		var on := float(i) < speed
@@ -245,14 +314,14 @@ func _draw_toggles() -> void:
 			TurnCombat.COLOR_TEXT_ACTIVE if on else TurnCombat.COLOR_GAUGE_EMPTY)
 	_register_hit(Rect2(speed_pos, TOGGLE_SIZE), "speed", {})
 
-	var auto_pos := TOGGLE_ORIGIN + Vector2(TOGGLE_STEP, 0.0)
+	var auto_pos := origin + Vector2(TOGGLE_STEP, 0.0)
 	_skewed(auto_pos, TOGGLE_SIZE, TurnCombat.COLOR_PANEL,
 		TurnCombat.COLOR_AIM if auto else TurnCombat.COLOR_BORDER_IDLE)
 	draw_rect(Rect2(auto_pos + Vector2(8.0, 8.0), Vector2(24.0, 4.0)),
 		TurnCombat.COLOR_TEXT_ACTIVE if auto else TurnCombat.COLOR_GAUGE_EMPTY)
 	_register_hit(Rect2(auto_pos, TOGGLE_SIZE), "auto", {})
 
-	var pause_pos := TOGGLE_ORIGIN + Vector2(TOGGLE_STEP * 2.0, 0.0)
+	var pause_pos := origin + Vector2(TOGGLE_STEP * 2.0, 0.0)
 	_skewed(pause_pos, TOGGLE_SIZE, TurnCombat.COLOR_PANEL, TurnCombat.COLOR_BORDER_IDLE)
 	for i in 2:
 		draw_rect(Rect2(pause_pos + Vector2(14.0 + float(i) * 9.0, 5.0), Vector2(4.0, 11.0)),
@@ -363,10 +432,17 @@ func _draw_timeline() -> void:
 		var unit: TurnUnit = ghost[i]
 		if unit != entries[i]["unit"]:
 			var pos := Vector2(TIMELINE_X + TIMELINE_GHOST_DX, gy)
-			var size := Vector2(TIMELINE_CHIP_W, height)
-			_skewed(pos, size, Color(1, 1, 1, 0.14), Color(1, 1, 1, 0.7))
-			_text(pos + Vector2(8.0, size.y * 0.5 + 4.0), unit.display_name.substr(0, 2),
-				TurnCombat.COLOR_AIM, 12)
+			var chip := Vector2(TIMELINE_CHIP_W, height)
+			_skewed(pos, chip, Color(1, 1, 1, 0.14), Color(1, 1, 1, 0.7))
+			# 고스트도 실제 칩과 **같은 것**을 보여야 한다. 한쪽은 얼굴, 다른 쪽은
+			# 글자였더니 바뀐 순서를 두 칸씩 눈으로 짝지어야 읽을 수 있었다.
+			var ghost_art := _portrait_of(unit)
+			if ghost_art != null:
+				_skewed_texture(pos + Vector2(TIMELINE_RAIL_W + 1.0, 1.0),
+					Vector2(CHIP_ART_W, chip.y - 2.0), ghost_art, Color(1, 1, 1, 0.85))
+			else:
+				_text(pos + Vector2(8.0, chip.y * 0.5 + 4.0),
+					unit.display_name.substr(0, 2), TurnCombat.COLOR_AIM, 12)
 		gy += height + TIMELINE_GAP
 
 
@@ -378,7 +454,15 @@ func _draw_timeline() -> void:
 #   3층: 상태이상 색 점 (5×7 기울인 슬래시)
 func _draw_enemy_clusters() -> void:
 	for unit in battle.enemies():
-		var base := unit_position(unit) + Vector2(-CLUSTER_W * 0.5, CLUSTER_DY)
+		var base := cluster_origin(unit)
+
+		# 클러스터가 도형에서 46px 위로 떨어져 있으므로 **어느 적의 것인지 잇는다.**
+		# 5체가 나란히 서면 어느 바가 누구 것인지 위치만으로는 확신할 수 없다.
+		var foot := unit_position(unit)
+		var tick_top := base.y + ENEMY_STATUS_DY + STATUS_DOT.y + 2.0
+		draw_rect(Rect2(Vector2(foot.x - 0.5, tick_top),
+			Vector2(1.0, foot.y - ENEMY_BODY_H - tick_top - 2.0)),
+			TurnCombat.COLOR_BORDER_IDLE)
 
 		_draw_segment_bar(unit, base)
 
@@ -400,11 +484,10 @@ func _draw_enemy_clusters() -> void:
 #
 # 이렇게 묶어야 약점 아이콘 줄을 따로 만들지 않고도 "무엇을 넣어야 하는가"가 보인다.
 func _draw_segment_bar(unit: TurnUnit, base: Vector2) -> void:
-	var row := Rect2(base, Vector2(CLUSTER_W, SEG_SIZE.y))
-	draw_rect(row, TurnCombat.COLOR_GAUGE_EMPTY)
-
-	# 격파 상태는 칸을 전부 비운다. 빈 게이지색이 곧 "인성치가 없다"는 뜻이다.
+	# 격파 상태는 클러스터 폭만큼 빈 게이지를 둔다 — 빈 칸이 곧 "인성치가 없다"다.
 	if unit.is_broken:
+		draw_rect(Rect2(base, Vector2(CLUSTER_W, SEG_SIZE.y)),
+			TurnCombat.COLOR_GAUGE_EMPTY)
 		return
 
 	var cells: Array[Dictionary] = []
@@ -423,6 +506,9 @@ func _draw_segment_bar(unit: TurnUnit, base: Vector2) -> void:
 			weak.append({"color": TurnCombat.COLOR_TOUGHNESS,
 				"glyph": TurnCombat.physical_glyph(p), "off": false})
 		if weak.is_empty():
+			# 약점도 예고도 없으면 남은 인성치 비율만 막대로 보여준다.
+			draw_rect(Rect2(base, Vector2(CLUSTER_W, SEG_SIZE.y)),
+				TurnCombat.COLOR_GAUGE_EMPTY)
 			draw_rect(Rect2(base, Vector2(CLUSTER_W * ratio, SEG_SIZE.y)),
 				TurnCombat.COLOR_TOUGHNESS)
 			return
@@ -431,11 +517,16 @@ func _draw_segment_bar(unit: TurnUnit, base: Vector2) -> void:
 			weak[i]["off"] = i >= lit
 		cells = weak
 
+	# **칸 폭은 22 로 고정한다.** 폭을 클러스터에 맞춰 나누면 자물쇠 1개짜리 적이
+	# 100px 짜리 통짜 바로 보여서 "인성치가 가득하다"로 읽힌다 — 여기서 정보는
+	# **칸의 개수**다. 칸이 4개를 넘어 폭을 넘길 때만 줄인다.
 	var count := cells.size()
-	var seg_w := (CLUSTER_W - SEG_GAP * float(count - 1)) / float(count)
+	var seg_w := minf(SEG_SIZE.x,
+		(CLUSTER_W - SEG_GAP * float(count - 1)) / float(count))
 	for i in count:
 		var cell: Dictionary = cells[i]
 		var pos := base + Vector2((seg_w + SEG_GAP) * float(i), 0.0)
+		draw_rect(Rect2(pos, Vector2(seg_w, SEG_SIZE.y)), TurnCombat.COLOR_GAUGE_EMPTY)
 		var color: Color = cell["color"]
 		if bool(cell["off"]):
 			# 어두워짐 = 해제 완료 / 이미 깎인 칸. 색상은 남겨 무엇이었는지 읽히게 한다.
@@ -474,8 +565,7 @@ func _draw_expected_damage() -> void:
 	for unit in battle.enemies():
 		if not expected.has(unit.unit_id):
 			continue
-		var pos := unit_position(unit) \
-			+ Vector2(CLUSTER_W * 0.5 + 6.0, CLUSTER_DY + ENEMY_HP_DY + 6.0)
+		var pos := cluster_origin(unit) + Vector2(CLUSTER_W + 6.0, ENEMY_HP_DY + 6.0)
 		_text(pos, "-%d" % int(expected[unit.unit_id]), TurnCombat.COLOR_ENEMY_HP, 15)
 
 
@@ -487,7 +577,7 @@ func _draw_party_band() -> void:
 	# **카드 슬롯은 랭크가 정한다** (루프 순서가 아니다). 누가 쓰러져도 남은 카드가
 	# 왼쪽으로 밀리지 않아야 "위치 = 랭크"가 라벨 역할을 계속 한다.
 	for unit in battle.allies():
-		var origin := CARD_ORIGIN + Vector2(CARD_STEP * float(unit.rank - 1), 0.0)
+		var origin := card_origin() + Vector2(CARD_STEP * float(unit.rank - 1), 0.0)
 		var alive := unit.alive
 
 		# --- 오의 스트립 (요소 ③) — 초상 프레임 좌측 변, 아래에서 위로 찬다 ---
@@ -559,7 +649,8 @@ func _draw_resonance() -> void:
 	var empty := TurnCombat.COLOR_ENEMY_HP if bankrupt else TurnCombat.COLOR_GAUGE_EMPTY
 
 	for i in resources.resonance_max:
-		var pos := RESONANCE_ORIGIN + Vector2(float(i) * (RESONANCE_PIP.x + RESONANCE_GAP), 0.0)
+		var pos := resonance_origin() \
+			+ Vector2(float(i) * (RESONANCE_PIP.x + RESONANCE_GAP), 0.0)
 		var filled := i < resources.resonance
 		_skewed(pos, RESONANCE_PIP, TurnCombat.COLOR_TOUGHNESS if filled else empty)
 
@@ -573,12 +664,13 @@ func _draw_heat() -> void:
 		return
 
 	var t := TurnCombatConfig.tuning
-	draw_rect(Rect2(HEAT_ORIGIN, HEAT_SIZE), TurnCombat.COLOR_GAUGE_EMPTY)
+	var origin := heat_origin()
+	draw_rect(Rect2(origin, HEAT_SIZE), TurnCombat.COLOR_GAUGE_EMPTY)
 
 	# 최적 구간을 배경으로 표시한다 — 어디를 노려야 하는지 보여야 한다.
 	var lo := HEAT_SIZE.x * t.heat_optimal_min / t.heat_max
 	var hi := HEAT_SIZE.x * t.heat_optimal_max / t.heat_max
-	draw_rect(Rect2(HEAT_ORIGIN + Vector2(lo, 0.0), Vector2(hi - lo, HEAT_SIZE.y)),
+	draw_rect(Rect2(origin + Vector2(lo, 0.0), Vector2(hi - lo, HEAT_SIZE.y)),
 		TurnCombat.COLOR_ULT_READY * Color(1, 1, 1, 0.28))
 
 	var zone := resources.heat_zone()
@@ -587,7 +679,7 @@ func _draw_heat() -> void:
 		color = TurnCombat.COLOR_TEXT_DIM      # 냉각 — 무채색
 	elif zone > 0:
 		color = TurnCombat.COLOR_ENEMY_HP      # 과열 — 경고
-	draw_rect(Rect2(HEAT_ORIGIN,
+	draw_rect(Rect2(origin,
 		Vector2(HEAT_SIZE.x * resources.heat / t.heat_max, HEAT_SIZE.y)), color)
 
 
@@ -603,9 +695,10 @@ func _draw_intent_strip() -> void:
 	if text.is_empty():
 		return
 	var width := minf(float(text.length()) * 8.4 + 24.0, INTENT_MAX_W)
-	_skewed(INTENT_ORIGIN, Vector2(width, INTENT_H), TurnCombat.COLOR_PANEL,
+	var origin := intent_origin()
+	_skewed(origin, Vector2(width, INTENT_H), TurnCombat.COLOR_PANEL,
 		TurnCombat.COLOR_ENEMY_HP)
-	_text(INTENT_ORIGIN + Vector2(12.0, INTENT_H - 8.0), text,
+	_text(origin + Vector2(12.0, INTENT_H - 8.0), text,
 		TurnCombat.COLOR_TEXT_ACTIVE, 12)
 
 
@@ -621,8 +714,9 @@ func _draw_action() -> void:
 
 	# 입력 대기가 아니거나 쓸 행동이 없으면 **비활성 테두리**로 둔다.
 	# "적 행동 중" 같은 글자를 쓰지 않는다 — 누를 수 없음은 무채색이 말한다.
+	var origin := action_origin()
 	if actions.is_empty():
-		_skewed(ACTION_ORIGIN, ACTION_SIZE, TurnCombat.COLOR_PANEL,
+		_skewed(origin, ACTION_SIZE, TurnCombat.COLOR_PANEL,
 			TurnCombat.COLOR_BORDER_IDLE, ACTION_BORDER)
 		return
 
@@ -635,13 +729,13 @@ func _draw_action() -> void:
 	var skill: SkillData = entry["skill"]
 	var usable := bool(entry["ok"])
 
-	_skewed(ACTION_ORIGIN, ACTION_SIZE, TurnCombat.COLOR_PANEL,
+	_skewed(origin, ACTION_SIZE, TurnCombat.COLOR_PANEL,
 		TurnCombat.COLOR_ULT_READY if usable else TurnCombat.COLOR_BORDER_IDLE,
 		ACTION_BORDER)
 
 	# 고른 행동의 원소 문양. 대상 범위는 조준 프레임이 실물로 보여주므로 글자가 필요없다.
 	var element := skill.resolve_element(battle.active_unit.element)
-	_text_centered(ACTION_ORIGIN + Vector2(ACTION_SIZE.x * 0.5, 38.0),
+	_text_centered(origin + Vector2(ACTION_SIZE.x * 0.5, 38.0),
 		TurnCombat.element_glyph(element),
 		TurnCombat.element_color(element) if usable else TurnCombat.COLOR_TEXT_DIM, 26)
 
@@ -649,12 +743,12 @@ func _draw_action() -> void:
 	var gain := skill.is_turn_basic() and skill.rp_cost <= 0
 	var cost := 1 if gain else skill.rp_cost
 	for i in mini(cost, 6):
-		draw_rect(Rect2(ACTION_ORIGIN + Vector2(14.0 + float(i) * 8.0, 50.0),
+		draw_rect(Rect2(origin + Vector2(14.0 + float(i) * 8.0, 50.0),
 			Vector2(5.0, 3.0)),
 			TurnCombat.COLOR_ULT_READY if gain else TurnCombat.COLOR_TOUGHNESS)
 
 	if usable:
-		_register_hit(Rect2(ACTION_ORIGIN, ACTION_SIZE), "confirm", {"skill": skill})
+		_register_hit(Rect2(origin, ACTION_SIZE), "confirm", {"skill": skill})
 
 
 # 스킬 2차 패널. 액션 버튼 위로 쌓는다. 세로 간격이 히트박스 최소 변과 같아 판정이
@@ -667,7 +761,7 @@ func _draw_skill_panel(actions: Array[Dictionary]) -> void:
 		var entry: Dictionary = actions[i]
 		var skill: SkillData = entry["skill"]
 		var ok := bool(entry["ok"])
-		var pos := SKILL_ORIGIN - Vector2(0.0, SKILL_STEP * float(i))
+		var pos := skill_origin() - Vector2(0.0, SKILL_STEP * float(i))
 		var border := TurnCombat.COLOR_BORDER_IDLE
 		if i == hovered_action or (hovered_action < 0 and i == selected_action):
 			border = TurnCombat.COLOR_AIM   # 백색 = 지금 고른 것

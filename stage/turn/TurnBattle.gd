@@ -48,10 +48,10 @@ const FLASH_LAYER: int = 2
 # ===== 오의 컷인 구도 (캐릭터 아트 가이드 §4.1) =====
 #
 # 가이드는 2400×1350 캔버스 기준이고 이 화면은 1280×720 이라 0.533 배로 환산했다.
-## 아트 판의 좌단. 좌측 40%(x 0~512)는 타이포 영역이라 그림이 넘어오지 않게 둔다.
-const CUTIN_ART_X: float = 520.0
-## 아트 판의 폭. 화면 우단(1280)을 넘겨 **잘려 나갈 여유 200px**(환산 107)을 준다.
-const CUTIN_ART_W: float = 868.0
+## 아트 판의 좌단(캔버스 폭 비율). 좌측 40%는 타이포 영역이라 그림이 넘어오지 않게 둔다.
+const CUTIN_ART_LEFT_RATIO: float = 0.406
+## 아트 판이 화면 우단을 넘겨 나가는 폭. **잘려 나갈 여유 200px**(0.533 환산)이다.
+const CUTIN_ART_BLEED: float = 108.0
 ## 슬라이드 인 거리. 이만큼 오른쪽에서 들어온다.
 const CUTIN_SLIDE: float = 130.0
 ## 엠블럼 한 변. 가이드 §1 은 128px 라 하지만 **타이포 뒤 워터마크로 쓰므로 더 크게**
@@ -59,6 +59,12 @@ const CUTIN_SLIDE: float = 130.0
 const CUTIN_EMBLEM: float = 208.0
 ## 엠블럼 알파. 글자를 읽는 데 방해가 되지 않는 선.
 const CUTIN_EMBLEM_ALPHA: float = 0.17
+
+# ===== 무대 (Stage) =====
+## 지면 밴드 높이. 아래에서 이만큼이 바닥이다.
+const GROUND_H: float = 420.0
+## 중앙 충돌선의 아래에서 잰 시작 높이.
+const DIVIDER_FROM_BOTTOM: float = 540.0
 
 var battle := TurnBattleManager.new()
 var hud: TurnBattleHUD = null
@@ -89,6 +95,12 @@ var _stage: StageData = null
 var _waves: Array[StageWave] = []
 ## 승패를 이미 알렸는가. 결과 화면이 두 번 뜨는 것을 막는다.
 var _outcome_reported: bool = false
+## 캔버스 크기를 따라야 하는 배경 조각들. 창 비율이 16:9 가 아니면 캔버스가
+## 1280×720 보다 커지므로 고정 크기로 두면 오른쪽에 덮이지 않은 띠가 남는다.
+var _background: ColorRect = null
+var _ground: ColorRect = null
+var _divider: ColorRect = null
+
 ## 카메라 흔들림 상태.
 var _shake_amount: float = 0.0
 var _shake_time: float = 0.0
@@ -141,33 +153,31 @@ func _tuning() -> TurnCombatTuning:
 
 func _build_scene() -> void:
 	# 배경 — Phase 0이므로 단색 + 지면선만 둔다. 패럴랙스 5레이어는 Phase 3다.
-	var background := ColorRect.new()
-	background.color = TurnCombat.COLOR_BACKDROP
-	background.size = Vector2(1280, 720)
-	background.z_index = -100
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(background)
+	#
+	# 크기는 `_fit_backdrop()` 이 캔버스에 맞춘다. 1280×720 으로 고정해 뒀더니
+	# 1366×720 캔버스(1920×1012 창)에서 **오른쪽 86px 에 창 배경색 띠가 그대로 보였다.**
+	_background = ColorRect.new()
+	_background.color = TurnCombat.COLOR_BACKDROP
+	_background.z_index = -100
+	_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_background)
 
-	var ground := ColorRect.new()
-	ground.color = TurnCombat.COLOR_STAGE_FLOOR
-	ground.position = Vector2(0, 300)
-	ground.size = Vector2(1280, 420)
-	ground.z_index = -99
-	ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(ground)
+	_ground = ColorRect.new()
+	_ground.color = TurnCombat.COLOR_STAGE_FLOOR
+	_ground.z_index = -99
+	_ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_ground)
 
-	# 중앙 충돌선 — 아군과 적을 가르는 기준선.
+	# 중앙 충돌선 — 아군과 적을 가르는 기준선. 캔버스 가로 중심에 선다.
 	var divider := ColorRect.new()
 	divider.color = Color(1, 1, 1, 0.05)
-	divider.position = Vector2(636, 180)
 	divider.size = Vector2(2, 380)
+	_divider = divider
 	divider.z_index = -98
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(divider)
 
 	_camera = Camera2D.new()
-	_camera.position = Vector2(640, 360)
-	_camera_home = _camera.position
 	add_child(_camera)
 
 	_numbers = Node2D.new()
@@ -202,7 +212,6 @@ func _build_scene() -> void:
 
 	_flash = ColorRect.new()
 	_flash.color = Color(1, 1, 1, 0)
-	_flash.size = Vector2(1280, 720)
 	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash_layer.add_child(_flash)
 
@@ -215,6 +224,44 @@ func _build_scene() -> void:
 	_flash_layer.add_child(_banner)
 
 	_build_cutin()
+
+	# 캔버스 크기에 맞춘다. 창 비율이 바뀌면 다시 맞춘다 — 배경·지면·중앙선·카메라와
+	# 유닛 도형이 모두 캔버스 크기에서 나온 좌표를 쓴다.
+	get_viewport().size_changed.connect(_on_canvas_resized)
+	_fit_backdrop()
+
+
+# 배경·지면·중앙선·카메라를 현재 캔버스에 맞춘다.
+#
+# 지면선은 **아래에서 420** 이고, 이 값이 `TurnBattleHUD` 의 줄 높이
+# (`ENEMY_ROW_FROM_BOTTOM` / `ALLY_ROW_FROM_BOTTOM`)와 같은 기준을 쓴다.
+func _fit_backdrop() -> void:
+	var canvas: Vector2 = get_viewport_rect().size
+	if _background != null:
+		_background.size = canvas
+	if _ground != null:
+		_ground.position = Vector2(0.0, canvas.y - GROUND_H)
+		_ground.size = Vector2(canvas.x, GROUND_H)
+	if _divider != null:
+		_divider.position = Vector2(canvas.x * 0.5 - 1.0, canvas.y - DIVIDER_FROM_BOTTOM)
+	if _camera != null:
+		_camera.position = canvas * 0.5
+		_camera_home = _camera.position
+	if _flash != null:
+		_flash.size = canvas
+	if _cutin_light != null:
+		_cutin_light.size = canvas
+	if _cutin_art != null:
+		# 아트 판의 좌단은 캔버스 좌측 40%(타이포 영역) 밖이고, 우단은 화면 밖까지 나간다.
+		_cutin_art.position = Vector2(canvas.x * CUTIN_ART_LEFT_RATIO, 0.0)
+		_cutin_art.size = Vector2(canvas.x - _cutin_art.position.x + CUTIN_ART_BLEED, canvas.y)
+
+
+func _on_canvas_resized() -> void:
+	_fit_backdrop()
+	# 도형 좌표는 HUD 가 캔버스 크기에서 계산한다. 다시 놓지 않으면 UI 만 옮겨간다.
+	if hud != null and not _shapes.is_empty():
+		_sync_shapes()
 
 
 # 오의 컷인 판. 한 번 만들어 두고 재생할 때마다 그림과 글자만 갈아 끼운다.
@@ -236,7 +283,6 @@ func _build_cutin() -> void:
 	# 원소색 조명 판. 그림 뒤에 깔려 인물을 어두운 배경에서 떼어 낸다.
 	_cutin_light = ColorRect.new()
 	_cutin_light.color = Color(0, 0, 0, 0)
-	_cutin_light.size = Vector2(1280, 720)
 	_cutin_light.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cutin.add_child(_cutin_light)
 
@@ -254,8 +300,6 @@ func _build_cutin() -> void:
 	_cutin_art = TextureRect.new()
 	_cutin_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_cutin_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_cutin_art.size = Vector2(CUTIN_ART_W, 720)
-	_cutin_art.position = Vector2(CUTIN_ART_X, 0)
 	_cutin_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cutin.add_child(_cutin_art)
 
@@ -753,12 +797,13 @@ func _setup_cutin(unit: TurnUnit, skill: SkillData, color: Color) -> bool:
 func _play_cutin_slide(duration: float) -> void:
 	_cutin.visible = true
 	_cutin.modulate = Color(1, 1, 1, 0)
-	_cutin_art.position = Vector2(CUTIN_ART_X + CUTIN_SLIDE, 0)
+	var home := _cutin_art.position
+	_cutin_art.position = home + Vector2(CUTIN_SLIDE, 0.0)
 
 	var tween := create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(_cutin, "modulate:a", 1.0, _scaled(duration * 0.28))
-	tween.tween_property(_cutin_art, "position", Vector2(CUTIN_ART_X, 0),
+	tween.tween_property(_cutin_art, "position", home,
 		_scaled(duration)).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	await _wait(duration)
 
@@ -831,7 +876,8 @@ func _show_result() -> void:
 	panel.name = "ResultSummary"
 	panel.text = "\n".join(lines)
 	panel.add_theme_font_size_override("font_size", 20)
-	panel.position = Vector2(420, 250)
+	var canvas: Vector2 = get_viewport_rect().size
+	panel.position = Vector2(canvas.x * 0.5 - 220.0, canvas.y * 0.5 - 110.0)
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash_layer.add_child(panel)
 
@@ -919,7 +965,10 @@ func _play_banner(text: String, color: Color, duration: float, size: int) -> voi
 	# 비스듬한 각도 — 설계서 §4.10.4 의 타이포그래피 규격(-8° ~ -12°).
 	_banner.rotation = deg_to_rad(-9.0)
 	_banner.pivot_offset = Vector2.ZERO
-	_banner.position = Vector2(360, 320)
+	# 캔버스 중심 기준. 1280 기준 (360, 320) 과 같은 자리다 — 절대 좌표로 두면
+	# 넓은 창에서 배너가 화면 왼쪽으로 치우친다.
+	var canvas: Vector2 = get_viewport_rect().size
+	_banner.position = Vector2(canvas.x * 0.5 - 280.0, canvas.y * 0.5 - 40.0)
 
 	var tween := create_tween()
 	tween.set_parallel(true)
