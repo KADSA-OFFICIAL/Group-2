@@ -5,12 +5,14 @@ extends Node
 # 책임: 플레이어가 고른 설정 값을 보유하고, 실제 시스템에 적용한다.
 #
 # 여기 있는 값은 **게임 밸런스가 아니라 실제 시스템 값**이다.
-# 창 모드는 DisplayServer, 볼륨은 AudioServer 가 실제로 적용받는다.
+# 볼륨은 AudioServer 가 실제로 적용받는다.
 # 그래서 임의 수치를 만들 여지가 없다(기획 대기 항목이 아니다).
+#
+# 창 모드(전체화면/창)는 다루지 않는다. 모바일에는 그 개념이 없다.
 #
 # 단일 출처 원칙:
 #   - 화면(설정 화면)은 이 시스템에서 읽고 이 시스템에 시킨다.
-#     DisplayServer / AudioServer 를 화면이 직접 만지지 않는다.
+#     AudioServer 를 화면이 직접 만지지 않는다.
 #   - 저장은 SaveSystem 제공자로 등록한다. 화면이 파일을 쓰지 않는다.
 
 # 저장 스키마에서 설정이 들어가는 키.
@@ -24,9 +26,6 @@ const SILENT_DB := -80.0
 
 # 설정이 바뀔 때. 화면은 이 신호로만 갱신한다.
 signal settings_changed()
-
-# 전체화면인가. false 면 창 모드.
-var fullscreen: bool = false
 
 # 마스터 볼륨 (0.0 ~ 1.0). 데시벨 변환은 이 시스템이 감춘다.
 var master_volume: float = 1.0
@@ -43,14 +42,6 @@ func _ready() -> void:
 
 # ===== 변경 (Mutation) =====
 
-func set_fullscreen(value: bool) -> void:
-	if value == fullscreen:
-		return
-	fullscreen = value
-	_apply_window_mode()
-	settings_changed.emit()
-
-
 # 0.0 ~ 1.0 밖의 값은 잘라 넣는다.
 func set_master_volume(value: float) -> void:
 	var clamped := clampf(value, 0.0, 1.0)
@@ -65,14 +56,7 @@ func set_master_volume(value: float) -> void:
 # 실제 시스템에 밀어 넣는 곳. 화면은 이 함수를 부르지 않는다(set_* 가 대신 부른다).
 
 func apply_all() -> void:
-	_apply_window_mode()
 	_apply_volume()
-
-
-func _apply_window_mode() -> void:
-	# 헤드리스에서는 창이 없다. 그때 호출해도 안전하다(Godot 이 무시한다).
-	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
-	DisplayServer.window_set_mode(mode)
 
 
 func _apply_volume() -> void:
@@ -94,14 +78,13 @@ func _apply_volume() -> void:
 
 func to_save_dict() -> Dictionary:
 	return {
-		"fullscreen": fullscreen,
 		"master_volume": master_volume,
 	}
 
 
 func from_save_dict(data: Dictionary) -> void:
 	# 없는 키는 현재 값을 유지한다(구 세이브 호환).
-	fullscreen = bool(data.get("fullscreen", fullscreen))
+	# 구 세이브에 남아 있는 "fullscreen" 키는 읽지 않고 버린다.
 	master_volume = clampf(float(data.get("master_volume", master_volume)), 0.0, 1.0)
 	# 복원 직후 실제 시스템에 반영한다. _ready() 보다 먼저 불릴 수 있어 여기서도 적용한다.
 	apply_all()

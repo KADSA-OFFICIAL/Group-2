@@ -6,7 +6,7 @@ extends Control
 #
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
 #   설정 값        -> SettingsSystem
-#   실제 적용       -> SettingsSystem (DisplayServer/AudioServer 를 여기서 만지지 않는다)
+#   실제 적용       -> SettingsSystem (AudioServer 를 여기서 만지지 않는다)
 #   저장           -> SaveSystem (SettingsSystem 이 제공자로 등록되어 있다)
 #   색·조각        -> UITheme / HUDKit
 #
@@ -46,7 +46,7 @@ func _build() -> void:
 
 	root.add_child(HUDKit.make_header("설정", "settings", "icon_settings"))
 
-	# 설정은 항목이 두 개뿐이라 화면 폭을 다 쓰면 라벨과 조작부가 너무 멀어진다.
+	# 설정은 항목이 적어서 화면 폭을 다 쓰면 라벨과 조작부가 너무 멀어진다.
 	# 가운데로 폭을 제한한다.
 	var center := HBoxContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -81,32 +81,7 @@ func _refresh() -> void:
 	if not is_instance_valid(_rows):
 		return
 	_clear(_rows)
-	_rows.add_child(_build_fullscreen_row())
-	_rows.add_child(HUDKit.rule())
 	_rows.add_child(_build_volume_row())
-
-
-# 창 모드: 두 값뿐이므로 토글 버튼 하나로 둔다.
-func _build_fullscreen_row() -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	row.custom_minimum_size = Vector2(0, 56)
-
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 0)
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(box)
-	box.add_child(HUDKit.label("화면 모드", 15, HUDKit.text_1(), 600))
-	box.add_child(HUDKit.caption("display mode"))
-
-	# 켜진 상태만 CTA(액센트 채움)로 둔다. 지금 어느 쪽인지가 버튼 모양으로 드러난다.
-	var on := SettingsSystem.fullscreen
-	var button := HUDKit.make_cta("전체화면", "on") if on else HUDKit.make_ghost("창 모드", 150)
-	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	button.pressed.connect(func(): SettingsSystem.set_fullscreen(not SettingsSystem.fullscreen))
-	row.add_child(button)
-	return row
 
 
 # 마스터 볼륨: 0~100 을 슬라이더로. 값 변환(데시벨)은 SettingsSystem 이 감춘다.
