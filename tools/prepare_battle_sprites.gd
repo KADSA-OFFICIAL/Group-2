@@ -1,49 +1,55 @@
 extends SceneTree
 
-# Mechanical preparation of generated artwork: chroma removal, sizing and palette.
-# This script does not draw characters or weapons.
+# Production processing only: remove the keyed backdrop and resize, retaining
+# the generated skin, eyes, clothing and line colors without palette quantization.
 func prepare(job: Dictionary) -> Image:
 	var src := Image.load_from_file(ProjectSettings.globalize_path(job.source))
 	src.convert(Image.FORMAT_RGBA8)
-	for y in src.get_height():
-		for x in src.get_width():
-			var c := src.get_pixel(x,y)
-			if job.get("chroma", true) and minf(c.r,c.b)-c.g > 0.24:
-				src.set_pixel(x,y,Color.TRANSPARENT)
-	var bounds := src.get_used_rect()
-	var crop := src.get_region(bounds)
+	var original: Image = src.duplicate()
+	if job.get("chroma",true):
+		for y in src.get_height():
+			for x in src.get_width():
+				var c := original.get_pixel(x,y)
+				var excess := minf(c.r,c.b)-c.g
+				if excess <= 0.24: continue
+				var result := Color.TRANSPARENT
+				if excess < 0.92:
+					var found := false
+					for radius in range(1,5):
+						for dy in range(-radius,radius+1):
+							for dx in range(-radius,radius+1):
+								var p := Vector2i(x+dx,y+dy)
+								if not Rect2i(Vector2i.ZERO,src.get_size()).has_point(p): continue
+								var neighbor := original.get_pixelv(p)
+								var e := minf(neighbor.r,neighbor.b)-neighbor.g
+								if e < 0.20:
+									result = neighbor
+									result.a = clampf(1-(excess-e)/(1-e),0,1)
+									found = true
+									break
+							if found: break
+						if found: break
+				src.set_pixel(x,y,result)
+	if job.has("crop"):
+		var r: Array = job.crop
+		var rect := Rect2i(roundi(r[0]*src.get_width()),roundi(r[1]*src.get_height()),roundi(r[2]*src.get_width()),roundi(r[3]*src.get_height()))
+		src = src.get_region(rect.intersection(Rect2i(Vector2i.ZERO,src.get_size())))
+	if job.get("preserve_canvas",false):
+		src.resize(int(job.width),int(job.height),Image.INTERPOLATE_LANCZOS)
+		return src
+	var crop := src.get_region(src.get_used_rect())
 	var w := int(job.width)
 	var h := int(job.height)
-	var factor := minf((w-2.0*ceil(w*0.05))/crop.get_width(),(h-ceil(h*0.05))/crop.get_height())
+	var margin := float(job.get("margin",0.05))
+	var foot := bool(job.get("foot",true))
+	var factor := minf((w-2*ceil(w*margin))/crop.get_width(),(h-ceil(h*margin)*(1 if foot else 2))/crop.get_height())
 	crop.resize(roundi(crop.get_width()*factor),roundi(crop.get_height()*factor),Image.INTERPOLATE_LANCZOS)
-	var palette: Array[Color] = []
-	for value in job.palette: palette.append(Color(value))
-	var region: Array = job.accent_region
-	var accent := Rect2(region[0]*src.get_width(),region[1]*src.get_height(),region[2]*src.get_width(),region[3]*src.get_height())
 	for y in crop.get_height():
 		for x in crop.get_width():
-			var c := crop.get_pixel(x,y)
-			if c.a < 0.08:
-				crop.set_pixel(x,y,Color.TRANSPARENT)
-				continue
-			var best := 0
-			var distance := INF
-			for i in palette.size():
-				# Quantize the existing elemental ornament separately from near-white
-				# hair/skin; this changes no shapes and creates no new painted content.
-				if i == 3 and not accent.has_point(Vector2(bounds.position)+Vector2(x,y)/factor): continue
-				var p := palette[i]
-				var d := pow(c.r-p.r,2)*0.30+pow(c.g-p.g,2)*0.59+pow(c.b-p.b,2)*0.11
-				if d < distance:
-					distance = d
-					best = i
-			var color := palette[best]
-			color.a = c.a
-			crop.set_pixel(x,y,color)
-	var out := Image.create_empty(w,h,false,Image.FORMAT_RGBA8)
-	# Re-crop after removing subvisible edge pixels, ensuring the sole meets y=h-1.
+			if crop.get_pixel(x,y).a < 0.03: crop.set_pixel(x,y,Color.TRANSPARENT)
 	crop = crop.get_region(crop.get_used_rect())
-	out.blit_rect(crop,Rect2i(Vector2i.ZERO,crop.get_size()),Vector2i((w-crop.get_width())/2,h-crop.get_height()))
+	var out := Image.create_empty(w,h,false,Image.FORMAT_RGBA8)
+	out.blit_rect(crop,Rect2i(Vector2i.ZERO,crop.get_size()),Vector2i((w-crop.get_width())/2,(h-crop.get_height()) if foot else (h-crop.get_height())/2))
 	return out
 
 func _initialize() -> void:
@@ -84,3 +90,4 @@ func _initialize() -> void:
 		sheet.save_png(args[1]+"/battle-contact-sheet.png")
 		silhouette.save_png(args[1]+"/battle-silhouettes.png")
 	quit()
+
