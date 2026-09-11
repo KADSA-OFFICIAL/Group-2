@@ -5,6 +5,8 @@
 [resource]
 script = ExtResource("1_meta")
 head_rects = {
+&"arin": Rect2(0.433, 0.040, 0.176, 0.151),
+&"gangji": Rect2(0.438, 0.040, 0.165, 0.162),
 &"childhood_friend": Rect2(0.296, 0.050, 0.448, 0.320),
 &"girl_green": Rect2(0.368, 0.030, 0.203, 0.145),
 &"girl_lilac": Rect2(0.500, 0.030, 0.280, 0.200),
