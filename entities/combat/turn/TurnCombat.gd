@@ -164,6 +164,19 @@ const BREAK_STATUS := {
 #
 # **전 게임에서 이 색을 다른 용도로 쓰지 않는다.** 색이 곧 라벨이기 때문이다.
 # 색맹 대응: 색만으로 구분하지 않고 항상 `ELEMENT_GLYPH`의 고유 형태를 병기한다.
+#
+# ## 이 값만 `UITheme` 팔레트 밖에 있다 (#489)
+#
+# #489 는 전투 HUD 를 메타 화면 팔레트로 통일하면서 이 일곱도 흙 톤으로 내리려 했다.
+# 되돌렸다 — **이 색은 UI 가 아니라 캐릭터 아트가 소유한다.**
+#
+# 전투 스프라이트의 원소 장식이 이 색으로 **그려져 있고**(`art/battle-sprites/manifest.json`
+# 의 `element_color`), 생성 도구(`tools/prepare_battle_sprites.gd`)는 그 색을 칠하는 것이
+# 아니라 소스 아트에 이미 있는 것을 기록만 한다. 그래서 코드에서 값을 바꾸면 도구를 다시
+# 돌려도 따라오지 않고, 스프라이트의 장식과 HUD 의 배지가 서로 다른 색이 된다
+# (`tests/combat/VerifyBattleSprites.gd:70` 이 정확히 그것을 잡는다).
+#
+# 바꾸려면 소스 플레이트를 다시 칠해야 한다. 그것은 별도 아트 작업이다.
 const ELEMENT_COLOR := {
 	Element.IMPACT: Color("E8E8E8"),
 	Element.PYRO: Color("FF6B35"),
@@ -200,35 +213,48 @@ const PHYSICAL_TOUGHNESS_MULTIPLIER := {
 	PhysicalType.BLUNT: 1.3,
 }
 
-# UI 계열 색 (문서 §4.10.10).
-const COLOR_BUFF := Color("4FC3F7")
-const COLOR_DEBUFF := Color("FF4757")
-const COLOR_NEUTRAL := Color("B0BEC5")
-const COLOR_WARN := Color("FFA726")
-const COLOR_DANGER := Color("E53935")
-const COLOR_HEAL := Color("66BB6A")
+# UI 계열 색 (문서 §4.10.10). 값은 전부 `UITheme` 팔레트에서 온다 (#489).
+const COLOR_BUFF := UITheme.SKY
+const COLOR_DEBUFF := UITheme.NEGATIVE
+const COLOR_NEUTRAL := UITheme.STONE_GRAY
+const COLOR_WARN := UITheme.ACCENT
+const COLOR_DANGER := UITheme.HOSTILE
+const COLOR_HEAL := UITheme.POSITIVE
 
-# 전투 화면 색 (문서 §4.9.3).
-const COLOR_ALLY_HP := Color("4FE0E8")     # 아군 HP — 시안
-const COLOR_ENEMY_HP := Color("E0473B")    # 적 HP — 적색
-const COLOR_TOUGHNESS := Color("F0F4FA")   # 인성치 — 백색 계열
-const COLOR_ULT_READY := Color("3BE07A")   # 오의 준비 — 녹색 발광
-const COLOR_PANEL := Color(0.039, 0.055, 0.094, 0.72)  # rgba(10,14,24,0.72)
-const COLOR_PANEL_LINE := Color(1, 1, 1, 0.5)
-const COLOR_AIM := Color("FFFFFF")         # 선택·조준 — 백색
+# 전투 화면 색 (문서 §4.9.3, 팔레트 통일 #489).
+#
+# 예전에는 어두운 네이비/시안 한 벌을 여기서 따로 정의했다. 그래서 출격 버튼을 누르면
+# 미술이 통째로 바뀌었다 — 메타 화면은 흙 톤, 전투는 네이비였다. 이제 두 화면이
+# 같은 팔레트를 쓴다.
+const COLOR_ALLY_HP := UITheme.SAGE        # 아군 HP
+const COLOR_ENEMY_HP := UITheme.HOSTILE    # 적 HP — 아군과 구분하는 빨강
+const COLOR_TOUGHNESS := UITheme.CREAM     # 인성치 — 밝은 면
+const COLOR_ULT_READY := UITheme.ACCENT    # 오의 준비 — 주 강조(앰버)
+const COLOR_AIM := UITheme.ACCENT          # 조준 — 앰버가 "지금 고른 것"을 뜻한다
 
 # 무채색 크롬 (문서 §4.9.3). **색은 의미에만 쓴다**는 규율의 나머지 절반이다.
 # UI 자체의 배경·테두리·빈 게이지·글자는 전부 여기서 가져온다. 여기에 원소색이나
 # 상태색이 섞이면 "색 = 의미"가 깨져서 화면을 색으로 읽을 수 없게 된다.
-const COLOR_TEXT_ACTIVE := Color("EAF0FA")   # 활성 텍스트
-const COLOR_TEXT_DIM := Color("7E8CA3")      # 비활성 텍스트
-const COLOR_GAUGE_EMPTY := Color("243146")   # 빈 게이지
-const COLOR_BORDER_IDLE := Color("48566E")   # 비활성 테두리
-const COLOR_STAGE_FLOOR := Color("141C2C")   # 장면 바닥
-const COLOR_BACKDROP := Color("0C111C")      # 배경
+const COLOR_TEXT_ACTIVE := UITheme.CREAM        # 활성 텍스트
+const COLOR_TEXT_DIM := UITheme.STONE_GRAY      # 비활성 텍스트
+const COLOR_BORDER_IDLE := UITheme.OUTLINE      # 비활성 테두리
+const COLOR_STAGE_FLOOR := UITheme.INK          # 장면 바닥
+const COLOR_BACKDROP := UITheme.BG              # 배경
 
-# UI 기울기. 텍스트는 반대로 되돌려 읽을 수 있게 한다 (문서 §4.9.3).
-const UI_SKEW_DEGREES := -12.0
+# 반투명 값은 상수 식으로 접을 수 없어 함수로 둔다. `UITheme.overlay_box()` 와 같은 값이다.
+## 오버레이 판의 면색.
+static func panel_fill() -> Color:
+	return Color(UITheme.BG, UITheme.OVERLAY_ALPHA)
+
+
+## 오버레이 판의 테두리색.
+static func panel_line() -> Color:
+	return Color(UITheme.LINE, UITheme.OVERLAY_LINE_ALPHA)
+
+
+## 빈 게이지 바닥.
+static func gauge_empty() -> Color:
+	return Color(UITheme.INK, 0.55)
 
 # ===== 랭크 (Rank) =====
 #
