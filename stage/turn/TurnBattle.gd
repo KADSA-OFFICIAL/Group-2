@@ -75,6 +75,13 @@ var hud: TurnBattleHUD = null
 
 ## 유닛별 도형. `unit_id` -> Node2D.
 var _shapes: Dictionary = {}
+## 유닛별 애니메이션 세대 번호. `unit_id` -> int.
+##
+## 한 유닛에 동작이 겹쳐 들어올 때(공격 직후 피격) **먼저 시작한 재생의 뒷정리가
+## 나중 동작을 덮어쓰는 것**을 막는다. `await animation_finished` 는 그 노드의 어떤
+## 애니메이션이 끝나도 깨어나므로, 깨어난 쪽이 자기가 아직 최신인지 확인해야 한다.
+## (실제로 death 재생 뒤 앞서 걸린 attack 의 뒷정리가 idle 로 되돌려 놓았다.)
+var _anim_token: Dictionary = {}
 ## 화면 전체를 덮는 플래시·암전 레이어.
 var _flash: ColorRect = null
 var _flash_layer: CanvasLayer = null
@@ -444,9 +451,28 @@ func _build_shapes() -> void:
 		var shape := Node2D.new()
 		shape.z_index = 10
 
+		_anim_token[unit.unit_id] = 0
 		var box := ALLY_BODY if unit.is_ally() else ENEMY_BODY
+		var frames := _battle_frames_of(unit)
 		var art := _battle_sprite_of(unit)
-		if art != null:
+		if frames != null:
+			# 프레임 시트가 있으면 그쪽이 외형을 맡는다. `AnimatedSprite2D` 는 Node2D 라
+			# 중심 기준이므로, `TextureRect`(좌상단 기준)와 같은 자리에 서게 오프셋을 준다.
+			var anim := AnimatedSprite2D.new()
+			anim.sprite_frames = frames
+			anim.centered = false
+			var cell: Vector2 = BattleAnimation.cell_size(frames)
+			# 칸에 맞춰 줄인다. 늘리지 않는다 — 비율이 다르면 칸 안에서 맞춰 들어간다.
+			var scale_factor := 1.0
+			if cell.x > 0.0 and cell.y > 0.0:
+				scale_factor = minf(box.x / cell.x, box.y / cell.y)
+			anim.scale = Vector2(scale_factor, scale_factor)
+			# 발밑이 노드 원점이다. 셀 밑변이 발 기준선이므로 셀 높이만큼 위로 올린다.
+			anim.offset = Vector2(-cell.x * 0.5, -cell.y)
+			anim.animation = BattleAnimation.IDLE
+			anim.play()
+			shape.add_child(anim)
+		elif art != null:
 			# 늘리지 않는다 — 비율이 다른 그림은 칸 안에서 맞춰 들어간다.
 			var picture := TextureRect.new()
 			picture.texture = art
@@ -491,6 +517,70 @@ func _build_shapes() -> void:
 		_shapes[unit.unit_id] = shape
 
 	_sync_shapes()
+
+
+# 이 유닛의 전투 프레임 시트. 저작되지 않았으면 null (정지 스프라이트로 떨어진다).
+func _battle_frames_of(unit: TurnUnit) -> SpriteFrames:
+	var frames: SpriteFrames = null
+	if unit.character != null:
+		frames = unit.character.battle_frames
+	elif unit.enemy != null:
+		frames = unit.enemy.battle_frames
+	# idle 조차 없는 시트는 없는 것으로 친다 — 세워 놓고 첫 프레임만 보이면
+	# 정지 스프라이트보다 나쁘다(그쪽은 최소한 완성된 그림이다).
+	if frames != null and not frames.has_animation(BattleAnimation.IDLE):
+		return null
+	return frames
+
+
+# 이 유닛의 도형 안에 있는 `AnimatedSprite2D`. 프레임 시트가 없으면 null.
+func _anim_of(unit: TurnUnit) -> AnimatedSprite2D:
+	var shape: Node2D = _shapes.get(unit.unit_id)
+	if shape == null or shape.get_child_count() == 0:
+		return null
+	return shape.get_child(0) as AnimatedSprite2D
+
+
+# 한 동작을 재생하고 끝나면 idle 로 돌아온다.
+#
+# 배속을 `speed_scale` 에 반영한다 — 연출 큐가 재생 시간을 나누는 것과 같은 이유로,
+# 그림만 원래 속도로 움직이면 배속 3배에서 공격 모션이 화면에 남는다.
+#
+# 시트가 없거나 그 동작이 저작되지 않았으면 **아무 일도 하지 않는다.** 호출부는
+# 트윈을 그대로 걸고 있으므로 지금까지의 연출이 유지된다.
+func _play_unit_anim(unit: TurnUnit, name: StringName, hold_last: bool = false) -> void:
+	if unit == null:
+		return
+	var anim := _anim_of(unit)
+	if anim == null or anim.sprite_frames == null:
+		return
+	if not anim.sprite_frames.has_animation(name):
+		return
+
+	var token := int(_anim_token.get(unit.unit_id, 0)) + 1
+	_anim_token[unit.unit_id] = token
+
+	anim.speed_scale = _anim_speed()
+	anim.play(name)
+	await anim.animation_finished
+
+	# 그 사이 다른 동작이 시작됐으면 이 재생은 이미 남의 것이다. 손대지 않는다.
+	if not is_instance_valid(anim) or int(_anim_token.get(unit.unit_id, 0)) != token:
+		return
+
+	if hold_last:
+		# `death` 는 마지막 프레임에서 멈춘다. 루프로 두면 시체가 계속 쓰러진다.
+		anim.pause()
+		return
+	if anim.sprite_frames.has_animation(BattleAnimation.IDLE):
+		anim.speed_scale = 1.0
+		anim.play(BattleAnimation.IDLE)
+
+
+func _anim_speed() -> float:
+	if battle.presentation == null or battle.presentation.speed <= 0.0:
+		return 1.0
+	return battle.presentation.speed
 
 
 # 이 유닛의 턴제 전투 정지 스프라이트. 저작되지 않았으면 null (네모로 떨어진다).
@@ -611,6 +701,9 @@ func _play_cast(data: Dictionary) -> void:
 	if shape == null:
 		return
 
+	# 프레임 시트가 있으면 휘두르는 그림이 나오고, 없으면 아래 전진 트윈만 남는다.
+	_play_unit_anim(unit, BattleAnimation.ATTACK)
+
 	# 시전자가 앞으로 살짝 나갔다 돌아온다. 3D 모션의 2D 대체다.
 	var direction := 1.0 if unit.is_ally() else -1.0
 	var home := shape.position
@@ -644,6 +737,8 @@ func _play_hit(data: Dictionary) -> void:
 			home + Vector2(direction * knock, 0), _scaled(0.06))
 		tween.tween_property(target_shape, "position", home, _scaled(0.12))
 		# 피격 명멸.
+		_play_unit_anim(ctx.target, BattleAnimation.HIT)
+
 		# 피격 명멸. 네모는 `color`, 그림은 `modulate` 를 흔든다 — 그림의 `color` 를
 		# 흰색으로 만들면 그림이 사라진다.
 		var body := target_shape.get_child(0)
@@ -880,10 +975,20 @@ func _play_death(data: Dictionary) -> void:
 	if shape == null:
 		return
 
+	# 쓰러지는 그림이 있으면 그것을 쓰고, 없으면 예전처럼 기울여 넘긴다.
+	# 그림이 있는데도 70도로 돌려 버리면 애써 그린 무너지는 자세가 안 보인다.
+	var has_death := false
+	var anim := _anim_of(unit)
+	if anim != null and anim.sprite_frames != null:
+		has_death = anim.sprite_frames.has_animation(BattleAnimation.DEATH)
+
 	var tween := create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(shape, "modulate:a", 0.0, _scaled(0.35))
-	tween.tween_property(shape, "rotation", deg_to_rad(-70.0), _scaled(0.35))
+	if has_death:
+		_play_unit_anim(unit, BattleAnimation.DEATH, true)
+	else:
+		tween.tween_property(shape, "rotation", deg_to_rad(-70.0), _scaled(0.35))
 	await tween.finished
 	shape.visible = false
 
