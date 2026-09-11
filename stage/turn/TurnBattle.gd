@@ -458,7 +458,9 @@ func _build_shapes() -> void:
 			shape.add_child(picture)
 		else:
 			var body := ColorRect.new()
-			var tint := Color("C8402F")
+			# 스프라이트가 아직 없는 유닛의 도형 색. **여기서 리터럴 hex 를 쓰지 않는다** —
+			# 색 값의 출처는 팔레트다(#489).
+			var tint := TurnCombat.COLOR_ENEMY_HP
 			if unit.is_ally() and unit.character != null:
 				tint = unit.character.tint
 			elif unit.enemy != null:
