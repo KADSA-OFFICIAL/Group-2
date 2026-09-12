@@ -205,7 +205,24 @@ const ALLY_SLOT_STEP := -112.0
 
 # ===== 상태 =====
 
-var battle: TurnBattleManager = null
+# 전투를 갈아끼우면 **화면이 들고 있던 이전 전투의 흔적을 전부 버린다.**
+#
+# 세터로 둔 이유: 재출격(`TurnBattle._restart()`)이 새 `TurnBattleManager` 를 만들어
+# 여기에 대입하는데, HUD 노드는 `_build_scene()` 에서 한 번만 만들어져 **재사용**된다.
+# 호출부가 매번 손으로 비우게 두면 언젠가 빠뜨린다 — 실제로 빠뜨려서 두 가지가 샜다(#495).
+#
+#   · 초상 캐시: 적 `unit_id` 가 `"#1"`, `"#2"` 처럼 **전투마다 재사용**되는 값이라,
+#     1-1 을 하고 2-1 로 출격하면 2-1 의 1번 적이 1-1 첫 적의 얼굴로 그려졌다
+#   · 일시정지·조준: 멈춘 채 재출격하면 새 전투가 시작하자마자 얼어 있었고,
+#     조준 프레임이 이전 전투 유닛의 자리에 그려졌다
+#
+# 배속과 자동 전투는 **일부러 남긴다** — 그쪽은 전투 상태가 아니라 플레이어 취향이다.
+var battle: TurnBattleManager = null:
+	set(value):
+		if battle == value:
+			return
+		battle = value
+		_reset_session()
 
 ## 마우스가 올라간 행동. 여기가 바뀌면 타임라인 프리뷰가 갱신된다 (설계서 §4.2.5).
 var hovered_action: int = -1
@@ -234,6 +251,20 @@ var _head_art: Dictionary = {}
 var _icons: Dictionary = {}
 ## StyleBoxFlat 캐시. 매 프레임 새로 만들면 프레임마다 수십 개가 할당된다.
 var _boxes: Dictionary = {}
+
+
+# 전투 하나가 끝나고 다음 전투로 넘어갈 때 버려야 하는 것들.
+#
+# 배속(`speed`)·자동(`auto`)은 남긴다. 그 둘은 플레이어가 고른 재생 설정이고,
+# 전투가 바뀌었다고 되돌리면 매 전투마다 다시 눌러야 한다.
+func _reset_session() -> void:
+	paused = false
+	selected_target = null
+	hovered_action = -1
+	selected_action = 0
+	preview = {}
+	_head_art.clear()
+	queue_redraw()
 
 
 func _ready() -> void:
