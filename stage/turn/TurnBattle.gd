@@ -65,8 +65,20 @@ const CUTIN_EMBLEM_ALPHA: float = 0.17
 const GROUND_H: float = 420.0
 ## 유닛 몸 칸. 발밑이 노드 원점이다 (`position = -box * (0.5, 1)`).
 ## 스프라이트를 저작할 때 이 비율을 맞춘다 — docs/turn-battle-sprite-prompts.md
-const ALLY_BODY := Vector2(56.0, 84.0)
-const ENEMY_BODY := Vector2(62.0, 78.0)
+## #492 에서 원래 크기(56×84 / 62×78)의 **1.8배**로 키웠다. 캐릭터가 너무 멀리 있는
+## 것처럼 보였기 때문이다 — 아트 가이드 §2.3 이 요구하는 표시 높이(720p 환산
+## 227~267px)와 3배 차이였다.
+##
+## **1.8배가 상한이다.** 두 제약이 동시에 걸린다(1280×720 실측).
+##   가로: 적 5체가 화면 안에 들어가야 한다. 1.9배면 맨 오른쪽이 9px 넘친다
+##   세로: 아군 머리(452 − 높이)가 적 발밑(268)보다 아래여야 한다. 1.8배에서 33px 남는다
+## 더 키우려면 랭크 배치(적 5칸 / 아군 4칸)나 줄 높이를 바꿔야 하고, 그건 전투
+## 시스템의 소유다.
+##
+## 제작 캔버스가 4배(224×336)라 1.8배로 키워도 원본 해상도 안이다 —
+## **아트를 다시 뽑을 필요가 없다.**
+const ALLY_BODY := Vector2(101.0, 151.0)
+const ENEMY_BODY := Vector2(112.0, 140.0)
 ## 중앙 충돌선의 아래에서 잰 시작 높이.
 const DIVIDER_FROM_BOTTOM: float = 540.0
 
@@ -511,7 +523,12 @@ func _build_shapes() -> void:
 		glyph.text = TurnCombat.element_glyph(unit.element)
 		glyph.add_theme_font_size_override("font_size", 22)
 		glyph.modulate = TurnCombat.element_color(unit.element)
-		glyph.position = Vector2(-10, -112)
+		# 정수리(-140) **바로 위**에 붙인다. 몸이 커지면 이 값도 함께 내려야 한다.
+		#
+		# 예전에는 정수리에서 34px 띄웠는데, 몸이 78 → 140 으로 커지자 그 여유가
+		# 화면 위쪽을 밀어내 **적 정보 카드가 우상단 토글과 겹쳤다.** 문양은 장식이고
+		# 원소 정보는 카드의 분절 칸이 이미 보여 주므로, 자리를 카드에 양보한다.
+		glyph.position = Vector2(-10, -162)
 		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		shape.add_child(glyph)
 
