@@ -105,17 +105,22 @@ func verify_scene(party: Array[StringName], enemies: Array[StringName], filename
 		var shape: Node2D = shapes.get(unit.unit_id)
 		expect(shape != null, "Unit has a stage node")
 		if shape == null: continue
-		var picture := shape.get_child(0) as TextureRect
-		expect(picture != null and picture.texture != null, "Stage uses art instead of colored placeholder")
-		if picture == null: continue
+		var picture := shape.get_child(0)
+		expect(picture is TextureRect or picture is AnimatedSprite2D, "Stage uses authored art")
 		var data: Resource = unit.character if unit.is_ally() else unit.enemy
 		var id: StringName = data.get("character_id") if unit.is_ally() else data.get("enemy_id")
 		seen[id] = true
-		expect(picture.texture == data.get("battle_sprite"), String(id)+": stage uses authored resource")
 		# 표시 칸의 정본은 TurnBattle 이다. 여기에 숫자를 박아 두면 칸을 키울 때
 		# (#492 가 1.8배로 키웠다) 아트는 멀쩡한데 이 검증만 빨간불이 켜진다.
 		var expected: Vector2 = node.get("ALLY_BODY") if unit.is_ally() else node.get("ENEMY_BODY")
-		expect(picture.size == expected and picture.position == -expected*Vector2(0.5,1), String(id)+": original display size and feet anchor")
+		if picture is AnimatedSprite2D:
+			expect(picture.sprite_frames == data.get("battle_frames"), String(id)+": stage uses authored frames")
+			var cell := BattleAnimation.cell_size(picture.sprite_frames)
+			expected = cell * minf(expected.x/cell.x, expected.y/cell.y)
+			expect((cell * picture.scale).is_equal_approx(expected) and (picture.offset * picture.scale).is_equal_approx(-expected*Vector2(0.5,1)), String(id)+": animated display size and feet anchor")
+		elif picture is TextureRect:
+			expect(picture.texture == data.get("battle_sprite"), String(id)+": stage uses authored resource")
+			expect(picture.size == expected and picture.position == -expected*Vector2(0.5,1), String(id)+": original display size and feet anchor")
 	var args := OS.get_cmdline_user_args()
 	if args.size() == 2 and args[0] == "--capture":
 		expect(DisplayServer.get_name() != "headless", "Capture requires rendering")
@@ -124,6 +129,15 @@ func verify_scene(party: Array[StringName], enemies: Array[StringName], filename
 			DirAccess.make_dir_recursive_absolute(args[1])
 			var result := get_viewport().get_texture().get_image().save_png(args[1]+"/"+filename)
 			expect(result == OK, "Saved rendered battle evidence")
+			for motion in BattleAnimation.ALL:
+				for shape in shapes.values():
+					var sprite := (shape as Node2D).get_child(0) as AnimatedSprite2D
+					if sprite != null and sprite.sprite_frames.has_animation(motion):
+						sprite.pause()
+						sprite.animation = motion
+						sprite.frame = mini(2, sprite.sprite_frames.get_frame_count(motion)-1) if motion != BattleAnimation.DEATH else sprite.sprite_frames.get_frame_count(motion)-1
+				await RenderingServer.frame_post_draw
+				var path := args[1]+"/"+filename.get_basename()+"-"+String(motion)+".png"
+				expect(get_viewport().get_texture().get_image().save_png(path) == OK, "Saved rendered animation pose")
 	node.queue_free()
 	await get_tree().process_frame
-

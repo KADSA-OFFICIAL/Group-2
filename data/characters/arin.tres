@@ -1,4 +1,6 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=15 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=16 format=3]
+
+[ext_resource type="SpriteFrames" path="res://assets/sprites/characters/battle/frames/arin.tres" id="61_animation"]
 
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/char_arin_battle.png" id="60_battle"]
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
@@ -30,6 +32,7 @@ crit_damage = 0.7
 [resource]
 script = ExtResource("1_chardata")
 battle_sprite = ExtResource("60_battle")
+battle_frames = ExtResource("61_animation")
 role = 1
 secondary_role = 1
 character_id = &"arin"

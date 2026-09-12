@@ -1,0 +1,81 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/attack_0.png" id="1_tel6d"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/attack_1.png" id="2_op2c2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/attack_2.png" id="3_s5jmi"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/attack_3.png" id="4_phl86"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/death_0.png" id="5_u5dfo"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/death_1.png" id="6_5ngx6"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/death_2.png" id="7_sgkq0"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/death_3.png" id="8_yn5uo"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/hit_0.png" id="9_n7luc"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/hit_1.png" id="10_u8sxf"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/idle_0.png" id="11_v5k06"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/idle_1.png" id="12_gm6aj"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/idle_2.png" id="13_w4cpv"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/mina/idle_3.png" id="14_f8kek"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_tel6d")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_op2c2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_s5jmi")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_phl86")
+}],
+"loop": false,
+"name": &"attack",
+"speed": 14.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_u5dfo")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_5ngx6")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_sgkq0")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_yn5uo")
+}],
+"loop": false,
+"name": &"death",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("9_n7luc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_u8sxf")
+}],
+"loop": false,
+"name": &"hit",
+"speed": 16.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("11_v5k06")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_gm6aj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_w4cpv")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_f8kek")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 6.0
+}]

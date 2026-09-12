@@ -1,0 +1,81 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/attack_0.png" id="1_0a6ya"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/attack_1.png" id="2_7mvco"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/attack_2.png" id="3_enjfm"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/attack_3.png" id="4_wwqi3"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/death_0.png" id="5_48db8"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/death_1.png" id="6_bq08v"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/death_2.png" id="7_sntsn"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/death_3.png" id="8_4kbj1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/hit_0.png" id="9_fdafh"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/hit_1.png" id="10_n38wy"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/idle_0.png" id="11_3bkpk"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/idle_1.png" id="12_m2k60"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/idle_2.png" id="13_rkixq"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/velociraptor_beastfolk/idle_3.png" id="14_kbfl7"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_0a6ya")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_7mvco")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_enjfm")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_wwqi3")
+}],
+"loop": false,
+"name": &"attack",
+"speed": 14.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_48db8")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_bq08v")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_sntsn")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_4kbj1")
+}],
+"loop": false,
+"name": &"death",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("9_fdafh")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_n38wy")
+}],
+"loop": false,
+"name": &"hit",
+"speed": 16.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("11_3bkpk")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_m2k60")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_rkixq")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_kbfl7")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 6.0
+}]
