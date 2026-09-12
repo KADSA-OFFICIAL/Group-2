@@ -1,0 +1,20 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>전투 애니메이션 검수</title>
+<style>body{font:16px system-ui;background:#19202f;color:#eee;margin:32px}header{position:sticky;top:0;background:#19202f;padding:16px;z-index:2}button,select,input{font:inherit;margin:8px;padding:8px}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}.unit{background:#273146;padding:16px;border-radius:12px;text-align:center}.stage{height:340px;display:flex;align-items:end;justify-content:center;background:repeating-conic-gradient(#334155 0% 25%,#3d4d65 0% 50%) 0/24px 24px}.stage img{object-fit:contain}small{color:#bbcadc}</style>
+<header><h1>전투 애니메이션 검수 · 12체</h1><p>원본 정지 그림은 idle_0으로 보존했습니다. 화면은 원본 PNG 크기이며 실제 전투에서는 현재 화면 칸에 비율을 유지해 표시됩니다.</p>
+<select id="motion"><option value="idle">대기 · 6 fps</option><option value="attack">공격 · 14 fps</option><option value="hit">피격 · 16 fps</option><option value="death">쓰러짐 · 8 fps</option></select>
+<button id="play">일시 정지</button><button id="restart">처음부터</button><label>프레임 <input id="frame" type="range" min="0" max="3" value="0"></label><span id="count"></span>
+<p><small>공격·피격·쓰러짐은 한 번 재생 후 마지막 컷에서 멈춥니다. 게임에서는 공격·피격 후 대기로 돌아가며, 쓰러짐은 마지막 컷을 유지한 채 사라집니다.</small></p></header><main></main>
+<script>
+const units=[["harang","하랑"],["mina","미나"],["seola","설아"],["taehee","태희"],["arin","아린"],["gangji","강지"],["seoa","서아"],["velociraptor_beastfolk","벨로시랩터 1"],["velociraptor_beastfolk_2","벨로시랩터 2"],["mammoth_beastfolk","매머드"],["mammoth_boss","매머드 보스"],["pterosaur_queen","익룡 여왕"]];
+const fps={idle:6,attack:14,hit:16,death:8},counts={idle:4,attack:4,hit:2,death:4};
+const main=document.querySelector("main"),motion=document.querySelector("#motion"),slider=document.querySelector("#frame");
+for(const [i,u] of units.entries()){const card=document.createElement("article");card.className="unit";card.innerHTML='<h2>'+u[1]+'</h2><div class="stage"><img alt="'+u[1]+'"></div><p><small>'+u[0]+'</small></p>';main.append(card);u.push(i<6?"characters":"enemies");}
+document.querySelectorAll('.stage').forEach(stage=>{const note=document.createElement('span');note.hidden=true;note.textContent='미제작 프레임';stage.append(note);const im=stage.querySelector('img');im.onerror=()=>{im.hidden=true;note.hidden=false;};im.onload=()=>{im.hidden=false;note.hidden=true;};});
+let playing=true,start=performance.now(),current=0;
+function draw(n){current=n;slider.value=n;document.querySelector("#count").textContent=n+" / "+(counts[motion.value]-1);document.querySelectorAll(".stage img").forEach((im,i)=>im.src="../../assets/sprites/"+units[i][2]+"/battle/frames/"+units[i][0]+"/"+motion.value+"_"+n+".png");}
+function restart(){start=performance.now();playing=true;document.querySelector("#play").textContent="일시 정지";slider.max=counts[motion.value]-1;draw(0);}
+motion.onchange=restart;document.querySelector("#restart").onclick=restart;
+document.querySelector("#play").onclick=()=>{playing=!playing;start=performance.now()-current/fps[motion.value]*1000;document.querySelector("#play").textContent=playing?"일시 정지":"재생";};
+slider.oninput=()=>{playing=false;document.querySelector("#play").textContent="재생";draw(+slider.value);};
+function tick(t){if(playing){let n=Math.floor((t-start)/1000*fps[motion.value]);if(motion.value==="idle")n%=counts.idle;else if(n>=counts[motion.value]){n=counts[motion.value]-1;playing=false;document.querySelector("#play").textContent="재생";}if(n!==current)draw(n);}requestAnimationFrame(tick);}draw(0);requestAnimationFrame(tick);
+</script></html>

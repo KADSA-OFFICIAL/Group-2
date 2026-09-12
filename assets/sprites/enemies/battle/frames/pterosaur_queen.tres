@@ -1,0 +1,81 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/attack_0.png" id="1_8sm5j"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/attack_1.png" id="2_etwh6"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/attack_2.png" id="3_q0t0s"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/attack_3.png" id="4_byanl"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/death_0.png" id="5_pld2l"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/death_1.png" id="6_02m38"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/death_2.png" id="7_wtd8o"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/death_3.png" id="8_iho0c"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/hit_0.png" id="9_06y3b"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/hit_1.png" id="10_0dc3o"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/idle_0.png" id="11_3frcw"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/idle_1.png" id="12_jiuo2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/idle_2.png" id="13_1t4vn"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen/idle_3.png" id="14_kjppq"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_8sm5j")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_etwh6")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_q0t0s")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_byanl")
+}],
+"loop": false,
+"name": &"attack",
+"speed": 14.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_pld2l")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_02m38")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_wtd8o")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_iho0c")
+}],
+"loop": false,
+"name": &"death",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("9_06y3b")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_0dc3o")
+}],
+"loop": false,
+"name": &"hit",
+"speed": 16.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("11_3frcw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_jiuo2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_1t4vn")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_kjppq")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 6.0
+}]

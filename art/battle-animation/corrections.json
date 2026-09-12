@@ -1,0 +1,20 @@
+[
+  {
+    "unit": "seola",
+    "anim": "attack",
+    "frame": 0,
+    "prompt": "Correct ONE seola attack_0 animation frame. Reference 1 is original idle_0 and sets the EXACT head/body scale. Reference 2 is the faulty animation. Correct its unwanted shrinking. Keep the original full standing body scale and head size from reference 1. Upright spear windup: draw spear back diagonally near shoulder, barely bent knees. Same face, costume, delicate pastel line art, peach skin, hair and weapon colors. Feet on bottom edge, same 2:3 logical 224x336 canvas. Whole figure/weapon inside, no effects/shadows/text/grid, uniform #FF00FF background."
+  },
+  {
+    "unit": "seola",
+    "anim": "attack",
+    "frame": 2,
+    "prompt": "Correct ONE seola attack_2 animation frame. Reference 1 is original idle_0 and sets the EXACT head/body scale. Reference 2 is the faulty animation. Correct its unwanted shrinking. Keep the original full standing body scale and head size from reference 1. Spear impact thrust: upright body with slightly bent knees, spear strongly foreshortened toward upper right/viewer so entire spear fits WITHOUT shrinking character. Same face, costume, delicate pastel line art, peach skin, hair and weapon colors. Feet on bottom edge, same 2:3 logical 224x336 canvas. Whole figure/weapon inside, no effects/shadows/text/grid, uniform #FF00FF background."
+  },
+  {
+    "unit": "taehee",
+    "anim": "idle",
+    "frame": 2,
+    "prompt": "Correct ONE taehee idle_2 animation frame. Reference 1 is original idle_0 and sets the EXACT head/body scale. Reference 2 is the faulty animation. Correct its unwanted shrinking. Keep the original full standing body scale and head size from reference 1. Breathing peak: retain original legs, feet, head size and canvas position. ONLY shoulders lift 4 logical pixels, hair tips sway slightly. Do not crouch or shrink, expression and weapons unchanged. Same face, costume, delicate pastel line art, peach skin, hair and weapon colors. Feet on bottom edge, same 2:3 logical 224x336 canvas. Whole figure/weapon inside, no effects/shadows/text/grid, uniform #FF00FF background."
+  }
+]

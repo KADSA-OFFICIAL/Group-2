@@ -1,0 +1,15 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+  arin: 14프레임 / 셀 (224.0, 336.0) / 동작 ["attack", "death", "hit", "idle"]
+  gangji: 14프레임 / 셀 (224.0, 336.0) / 동작 ["attack", "death", "hit", "idle"]
+  harang: 14프레임 / 셀 (224.0, 336.0) / 동작 ["attack", "death", "hit", "idle"]
+  mina: 14프레임 / 셀 (224.0, 336.0) / 동작 ["attack", "death", "hit", "idle"]
+  seola: 14프레임 / 셀 (224.0, 336.0) / 동작 ["attack", "death", "hit", "idle"]
+  taehee: 14프레임 / 셀 (224.0, 336.0) / 동작 ["attack", "death", "hit", "idle"]
+  mammoth_beastfolk: 14프레임 / 셀 (248.0, 312.0) / 동작 ["attack", "death", "hit", "idle"]
+  mammoth_boss: 14프레임 / 셀 (248.0, 312.0) / 동작 ["attack", "death", "hit", "idle"]
+  pterosaur_queen: 14프레임 / 셀 (248.0, 312.0) / 동작 ["attack", "death", "hit", "idle"]
+  seoa: 14프레임 / 셀 (248.0, 312.0) / 동작 ["attack", "death", "hit", "idle"]
+  velociraptor_beastfolk: 14프레임 / 셀 (248.0, 312.0) / 동작 ["attack", "death", "hit", "idle"]
+  velociraptor_beastfolk_2: 14프레임 / 셀 (248.0, 312.0) / 동작 ["attack", "death", "hit", "idle"]
+[build_battle_frames] 12개 시트를 만들었다.

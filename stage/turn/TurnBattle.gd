@@ -1007,12 +1007,13 @@ func _play_death(data: Dictionary) -> void:
 	if anim != null and anim.sprite_frames != null:
 		has_death = anim.sprite_frames.has_animation(BattleAnimation.DEATH)
 
+	if has_death:
+		# Let every authored frame be seen, then hold the final pose during fade.
+		await _play_unit_anim(unit, BattleAnimation.DEATH, true)
 	var tween := create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(shape, "modulate:a", 0.0, _scaled(0.35))
-	if has_death:
-		_play_unit_anim(unit, BattleAnimation.DEATH, true)
-	else:
+	if not has_death:
 		tween.tween_property(shape, "rotation", deg_to_rad(-70.0), _scaled(0.35))
 	await tween.finished
 	shape.visible = false

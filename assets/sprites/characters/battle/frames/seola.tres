@@ -1,0 +1,81 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/attack_0.png" id="1_7uijy"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/attack_1.png" id="2_leyfj"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/attack_2.png" id="3_cvhlu"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/attack_3.png" id="4_asyvb"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/death_0.png" id="5_mb23p"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/death_1.png" id="6_aklyk"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/death_2.png" id="7_k2my7"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/death_3.png" id="8_0avj6"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/hit_0.png" id="9_qbs8n"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/hit_1.png" id="10_tpun8"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/idle_0.png" id="11_dhky0"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/idle_1.png" id="12_f3u4k"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/idle_2.png" id="13_dhqyp"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/seola/idle_3.png" id="14_cwc7c"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_7uijy")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_leyfj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_cvhlu")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_asyvb")
+}],
+"loop": false,
+"name": &"attack",
+"speed": 14.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_mb23p")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_aklyk")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_k2my7")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_0avj6")
+}],
+"loop": false,
+"name": &"death",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("9_qbs8n")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_tpun8")
+}],
+"loop": false,
+"name": &"hit",
+"speed": 16.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("11_dhky0")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_f3u4k")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_dhqyp")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_cwc7c")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 6.0
+}]
