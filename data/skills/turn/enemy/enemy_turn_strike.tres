@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_wamhb"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_tk1is"]
+
+[sub_resource type="Resource" id="Resource_j3fu8"]
+script = ExtResource("2_tk1is")
+multiplier = 1.0
+
+[resource]
+script = ExtResource("1_wamhb")
+skill_id = &"enemy_turn_strike"
+display_name = "돌진"
+summary = "전열 아군 1명에게 공격력 100% 피해."
+target_ranks = Array[int]([1, 2])
+turn_effects = Array[ExtResource("2_tk1is")]([SubResource("Resource_j3fu8")])

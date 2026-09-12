@@ -1,0 +1,14 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+  stage_1_1 (1-1 시험장) → 1웨이브 / 적 3체
+  stage_1_2 (1-2 거점) → 3웨이브 / 적 12체  [점령 조건 있음 → 전멸로 대체]
+  stage_1_3 (1-3 우두머리의 자리) → 2웨이브 / 적 5체  [점령 조건 있음 → 전멸로 대체]
+  stage_2_1 (2-1 밀물 해안) → 1웨이브 / 적 4체
+  stage_test (테스트 스테이지) → 4웨이브 / 적 10체
+  스테이지 연동: stage_1_1 → 1웨이브 알림, 승패 승리
+PASS: 턴제 스테이지 연동 검증 135개 통과
+ERROR: 8 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object/object.cpp:2663)
+ERROR: 82 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:810)

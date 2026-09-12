@@ -1,10 +1,18 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=9 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=16 format=3]
 
+[ext_resource type="SpriteFrames" path="res://assets/sprites/characters/battle/frames/arin.tres" id="61_animation"]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/char_arin_battle.png" id="60_battle"]
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 
 [ext_resource type="Texture2D" uid="uid://12fmoppm4cam" path="res://assets/sprites/placeholder/shape_ranged.svg" id="9_shape"]
 [ext_resource type="Script" path="res://entities/character/SkillData.gd" id="11_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/turn/arin_turn_basic.tres" id="50_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/arin_turn_skill.tres" id="51_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/arin_turn_baton.tres" id="52_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/arin_turn_ult.tres" id="53_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/arin_turn_trait.tres" id="54_turn"]
 [ext_resource type="Resource" path="res://data/skills/arin_sweep.tres" id="12_sweep"]
 [ext_resource type="Resource" path="res://data/skills/arin_overload.tres" id="13_overload"]
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/portraits/arin.png" id="20_portrait"]
@@ -16,9 +24,15 @@ strength = 110
 defense = 110
 intelligence = 100
 faith = 100
+speed = 112
+energy_max = 120
+crit_rate = 0.12
+crit_damage = 0.7
 
 [resource]
 script = ExtResource("1_chardata")
+battle_sprite = ExtResource("60_battle")
+battle_frames = ExtResource("61_animation")
 role = 1
 secondary_role = 1
 character_id = &"arin"
@@ -34,3 +48,8 @@ sprite_texture = ExtResource("9_shape")
 portrait = ExtResource("20_portrait")
 tint = Color(1, 0.3, 0.3, 1)
 sprite_scale = Vector2(2, 2)
+element = 3
+physical_type = 1
+battle_class = 1
+preferred_ranks = Array[int]([2, 3])
+turn_skills = Array[ExtResource("11_skilldef")]([ExtResource("50_turn"), ExtResource("51_turn"), ExtResource("52_turn"), ExtResource("53_turn"), ExtResource("54_turn")])

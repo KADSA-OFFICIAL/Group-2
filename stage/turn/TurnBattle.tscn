@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cq0turnbattle01"]
+
+[ext_resource type="Script" path="res://stage/turn/TurnBattle.gd" id="1_turnbattle"]
+
+[node name="TurnBattle" type="Node2D"]
+script = ExtResource("1_turnbattle")

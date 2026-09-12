@@ -649,3 +649,263 @@ func get_effective_ally_heal(faith_boost: float = 1.0) -> int:
 	if not scales_with_faith:
 		return ally_heal
 	return int(round(ally_heal * faith_boost))
+
+
+# =====================================================================
+# 턴제 (Turn-based) — #450
+# =====================================================================
+#
+# 스킬 정의의 단일 출처는 `SkillData` 하나다(SYSTEM_CONVENTIONS §1). 턴제 스킬을 별도
+# 리소스 클래스로 만들면 같은 도메인이 두 스키마로 갈라지고, 캐릭터가 스킬을 담는
+# 배열 타입도 둘이 된다.
+#
+# 위쪽 실시간 필드(`cooldown`(초), `projectile_speed`, `aoe_radius`, `cast_time`,
+# `cone_angle_degrees`, `beam_length` ...)는 **하나도 지우지 않았다.** 실시간 전투가
+# 살아 있는 동안 그 필드가 전부 쓰이고 있다.
+#
+# 한 리소스가 두 전투의 필드를 함께 갖는 것을 어떻게 구분하는가: `CharacterData`가
+# `skills`(실시간)와 `turn_skills`(턴제)를 **별도 배열**로 들고 있고, 그 소속이
+# 어느 필드 묶음을 읽을지 정한다.
+
+@export_group("턴제")
+
+## 이 스킬이 어떤 행동인가. 자원 수지(RP·오의 게이지)와 턴 소모 여부가 여기서 갈린다.
+##
+## 기본값이 `BASIC`인 이유: 기존 스킬 `.tres`는 `turn_skills`에 들어 있지 않으므로 이 값이
+## 읽히지 않는다. 새로 저작하는 턴제 스킬은 반드시 명시하게 되어 있다(평타가 없으면
+## `CharacterData.validate_turn()`이 잡는다).
+@export var turn_action: TurnCombat.ActionKind = TurnCombat.ActionKind.BASIC
+
+## 공명 포인트 소모량. 전투 스킬은 보통 1, 강력한 스킬은 2.
+## 일반공격은 0이며 **소모 대신 +1을 번다**(그 값은 튜닝의 `resonance_gain_basic`이 소유한다).
+@export var rp_cost: int = 0
+
+## 오의 게이지 소모량. 오의만 쓴다. 0이면 캐릭터의 `stats.energy_max` 전량을 쓴다.
+@export var energy_cost: int = 0
+
+## 시전자가 이 랭크에 있을 때만 사용할 수 있다. 비우면 어디서든 사용 가능.
+## UI는 8칸 점 아이콘(`○ ○ ● ●`)으로 그린다 — 다키스트 던전이 검증한 표기다.
+@export var usable_ranks: Array[int] = []
+
+## 이 랭크의 대상만 타격할 수 있다. 비우면 전 랭크 타격 가능.
+@export var target_ranks: Array[int] = []
+
+## 대상 선택 방식.
+@export var turn_targeting: TurnCombat.Targeting = TurnCombat.Targeting.SINGLE
+
+## 타격 횟수(다단 히트). 관통 타입이 인성치 배율(x0.85) 손실을 이것으로 벌충한다 —
+## **히트 1회당 자물쇠 1개**가 해제되므로 다단 히트는 자물쇠 여러 개를 한 번에 연다.
+@export var turn_hits: int = 1
+
+## 튕김(BOUNCE) 횟수. `Targeting.BOUNCE`에서만 쓴다.
+@export var bounce_count: int = 0
+
+## 원소를 시전자의 것 대신 이 값으로 덮어쓴다.
+@export var override_element: bool = false
+@export var turn_element: TurnCombat.Element = TurnCombat.Element.IMPACT
+
+## 물리 타입을 시전자의 것 대신 이 값으로 덮어쓴다.
+@export var override_physical_type: bool = false
+@export var turn_physical_type: TurnCombat.PhysicalType = TurnCombat.PhysicalType.SLASH
+
+## 이 스킬이 일으키는 효과들. **순서대로** 적용된다(피해 → 밀치기 → 버프).
+@export var turn_effects: Array[TurnSkillEffect] = []
+
+# ===== 특성 발동 조건 (Trait trigger) =====
+#
+# 특성(`ActionKind.TRAIT`)은 플레이어가 누르는 것이 아니라 **조건부로 자동 발동**한다.
+# 그 조건이 무엇인지가 여기 있다. 특성이 아닌 스킬에서는 읽지 않는다.
+#
+# 이 축이 만드는 것: "턴 수를 늘리지 않고 **행동 수**를 늘리는 우회로"(추가공격 팀)와
+# 반격 팀(적 속도가 빠를수록 강해지는 역설적 팀)이 여기서 나온다.
+
+enum TraitTrigger {
+	NONE,               # 발동하지 않는다 (수동 조회용 패시브)
+	TURN_START,         # 자신의 턴이 시작될 때
+	ON_DAMAGE_TAKEN,    # 피격했을 때 (반격)
+	ON_DAMAGE_DEALT,    # 자신이 피해를 넣었을 때 (강지의 수혈 같은 것)
+	ON_WEAKNESS_HIT,    # 약점을 찔렀을 때 (추가공격 · 배턴)
+	ON_KILL,            # 적을 처치했을 때
+}
+
+@export var trait_trigger: TraitTrigger = TraitTrigger.NONE
+
+## 발동 주기(턴). 0이나 1이면 조건을 만족할 때마다, 2면 2턴마다 1회.
+## `TURN_START` 특성에서만 의미가 있다.
+@export var trait_turn_period: int = 0
+
+## 한 턴에 발동할 수 있는 최대 횟수. 0이면 제한 없음.
+## 반격이 무한 연쇄하지 않게 하는 장치다(설계서 §4.14 ① — "턴당 최대 2회").
+@export var trait_per_turn_cap: int = 0
+
+## 자신이 이 상태일 때만 발동한다. 「반격의 잔불」이 "도발 상태에서 피격 시"인 것처럼,
+## 반격 특성은 어그로를 모으는 것과 짝을 이뤄야 성립한다 — 조건이 없으면 후열
+## 캐릭터도 반격해서 도발의 값어치가 사라진다.
+@export var trait_require_self_status: bool = false
+@export var trait_self_status_kind: TurnStatus.Kind = TurnStatus.Kind.TAUNT
+
+## 이 특성이 넣는 피해가 **자신이 넣은 피해에 비례**하는가.
+## 강지의 수혈("평타로 들어간 피해의 비율만큼 회복")이 이 경로를 쓴다.
+## 0이면 쓰지 않는다.
+@export var trait_damage_ratio: float = 0.0
+
+
+func is_turn_trait() -> bool:
+	return turn_action == TurnCombat.ActionKind.TRAIT \
+		and trait_trigger != TraitTrigger.NONE
+
+
+# 이 특성이 이번 턴/이번 사이클에 발동할 차례인가.
+#
+# `turn_index`: 이 유닛이 지금까지 행동한 턴 수(1부터).
+func trait_ready(turn_index: int) -> bool:
+	if trait_turn_period <= 1:
+		return true
+	return turn_index % trait_turn_period == 1
+
+
+# ===== 턴제 조회 (Turn accessors) =====
+
+# 턴을 소모하는가. 오의와 특성은 턴 밖에서 발동한다 — 이 게임의 심장이다.
+func consumes_turn() -> bool:
+	return turn_action == TurnCombat.ActionKind.BASIC \
+		or turn_action == TurnCombat.ActionKind.SKILL
+
+
+func is_turn_ultimate() -> bool:
+	return turn_action == TurnCombat.ActionKind.ULTIMATE
+
+
+func is_turn_basic() -> bool:
+	return turn_action == TurnCombat.ActionKind.BASIC
+
+
+# 실제 오의 코스트. 0으로 저작했으면 캐릭터의 게이지 최대치 전량이다.
+func get_energy_cost(owner_energy_max: int) -> int:
+	if energy_cost > 0:
+		return energy_cost
+	return maxi(owner_energy_max, 0)
+
+
+# 시전자가 이 랭크에서 쓸 수 있는가.
+func can_use_from_rank(rank: int) -> bool:
+	if usable_ranks.is_empty():
+		return true
+	return usable_ranks.has(rank)
+
+
+# 이 랭크를 타격할 수 있는가.
+func can_target_rank(rank: int) -> bool:
+	if target_ranks.is_empty():
+		return true
+	return target_ranks.has(rank)
+
+
+# 아군을 대상으로 하는 스킬인가. 타겟 UI가 어느 쪽에 조준환을 띄울지 정한다.
+func targets_allies() -> bool:
+	return turn_targeting == TurnCombat.Targeting.SELF \
+		or turn_targeting == TurnCombat.Targeting.ALLY_SINGLE \
+		or turn_targeting == TurnCombat.Targeting.ALLY_ALL
+
+
+# 대상을 플레이어가 골라야 하는가. 전체/자신/아군전체는 고를 것이 없다.
+func needs_target_pick() -> bool:
+	match turn_targeting:
+		TurnCombat.Targeting.ALL_ENEMIES, TurnCombat.Targeting.ALLY_ALL, \
+		TurnCombat.Targeting.SELF, TurnCombat.Targeting.BOUNCE:
+			return false
+		_:
+			return true
+
+
+# 이 스킬의 원소. 덮어쓰지 않았으면 시전자의 원소를 쓴다.
+func resolve_element(owner_element: int) -> int:
+	return turn_element if override_element else owner_element
+
+
+# 이 스킬의 물리 타입. 덮어쓰지 않았으면 시전자의 것을 쓴다.
+func resolve_physical_type(owner_physical: int) -> int:
+	return turn_physical_type if override_physical_type else owner_physical
+
+
+# 이 스킬이 피해를 넣는가. 액션 버튼이 조준환을 띄울지 판정한다.
+func turn_deals_damage() -> bool:
+	for effect in turn_effects:
+		if effect != null and effect.deals_damage():
+			return true
+	return false
+
+
+# 이 스킬이 넣는 인성치 피해 총합 (물리 타입 배율 적용 전).
+# 적 정보 클러스터가 "이 스킬로 자물쇠가 몇 개 열리는가"를 미리 보여주는 데 쓴다.
+func get_total_toughness_damage() -> int:
+	var total := 0
+	for effect in turn_effects:
+		if effect != null and effect.deals_toughness():
+			total += effect.toughness_damage
+	return total * maxi(turn_hits, 1)
+
+
+# 랭크 조건을 8칸 점 표기로 만든다. `usable_ranks` 는 아군 4칸, `target_ranks` 는 적 5칸이다.
+#
+#   사용 랭크:  ○ ○ ● ●     (A3, A4에서만 사용 가능)
+func format_rank_dots(ranks: Array[int], count: int) -> String:
+	var out := ""
+	for i in range(1, count + 1):
+		if ranks.is_empty() or ranks.has(i):
+			out += "●"
+		else:
+			out += "○"
+		if i < count:
+			out += " "
+	return out
+
+
+func format_usable_ranks() -> String:
+	return format_rank_dots(usable_ranks, TurnCombat.ALLY_RANK_COUNT)
+
+
+func format_target_ranks() -> String:
+	return format_rank_dots(target_ranks, TurnCombat.ENEMY_RANK_COUNT)
+
+
+# 턴제 데이터의 무결성 점검.
+func validate_turn() -> Array[String]:
+	var problems: Array[String] = []
+
+	if turn_effects.is_empty():
+		return problems  # 턴제로 저작되지 않은 스킬이다. 검사할 것이 없다.
+
+	if String(skill_id).is_empty():
+		problems.append("턴제 스킬인데 skill_id가 비어 있습니다.")
+	if rp_cost < 0:
+		problems.append("rp_cost는 0 이상이어야 합니다.")
+	if energy_cost < 0:
+		problems.append("energy_cost는 0 이상이어야 합니다.")
+	if turn_hits < 1:
+		problems.append("turn_hits는 1 이상이어야 합니다.")
+	if turn_action == TurnCombat.ActionKind.BASIC and rp_cost > 0:
+		problems.append("일반공격은 공명 포인트를 소모하지 않습니다(오히려 법니다).")
+	if turn_action != TurnCombat.ActionKind.ULTIMATE and energy_cost > 0:
+		problems.append("오의가 아닌 스킬에 energy_cost가 있습니다.")
+	if turn_targeting == TurnCombat.Targeting.BOUNCE and bounce_count < 1:
+		problems.append("BOUNCE 타겟팅인데 bounce_count가 0입니다.")
+
+	for rank in usable_ranks:
+		if rank < 1 or rank > TurnCombat.ALLY_RANK_COUNT:
+			problems.append("usable_ranks에 아군 랭크 범위(1~%d) 밖의 값이 있습니다: %d"
+				% [TurnCombat.ALLY_RANK_COUNT, rank])
+	for rank in target_ranks:
+		if rank < 1 or rank > TurnCombat.ENEMY_RANK_COUNT:
+			problems.append("target_ranks에 적 랭크 범위(1~%d) 밖의 값이 있습니다: %d"
+				% [TurnCombat.ENEMY_RANK_COUNT, rank])
+
+	for i in turn_effects.size():
+		var effect: TurnSkillEffect = turn_effects[i]
+		if effect == null:
+			problems.append("turn_effects[%d]가 비어 있습니다." % i)
+			continue
+		for problem in effect.validate():
+			problems.append("turn_effects[%d](%s): %s" % [i, effect.get_label(), problem])
+
+	return problems

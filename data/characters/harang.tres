@@ -1,5 +1,8 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=16 format=3]
 
+[ext_resource type="SpriteFrames" path="res://assets/sprites/characters/battle/frames/harang.tres" id="61_animation"]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/char_harang_battle.png" id="60_battle"]
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 
@@ -7,6 +10,10 @@
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/portraits/harang.png" id="10_portrait"]
 [ext_resource type="SpriteFrames" path="res://assets/sprites/characters/buffer_pure_walk_frames.tres" id="10_walk"]
 [ext_resource type="Script" path="res://entities/character/SkillData.gd" id="11_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/turn/harang_turn_basic.tres" id="50_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/harang_turn_skill.tres" id="51_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/harang_turn_ult.tres" id="52_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/harang_turn_trait.tres" id="53_turn"]
 [ext_resource type="Resource" path="res://data/skills/harang_taunt.tres" id="12_taunt"]
 [ext_resource type="Resource" path="res://data/skills/harang_rampage.tres" id="13_rampage"]
 
@@ -17,9 +24,16 @@ strength = 110
 defense = 80
 intelligence = 100
 faith = 130
+speed = 104
+energy_max = 120
+crit_rate = 0.08
+crit_damage = 0.55
+break_effect = 0.15
 
 [resource]
 script = ExtResource("1_chardata")
+battle_sprite = ExtResource("60_battle")
+battle_frames = ExtResource("61_animation")
 role = 0
 secondary_role = 3
 character_id = &"harang"
@@ -35,3 +49,8 @@ sprite_scale = Vector2(2, 2)
 walk_frames = ExtResource("10_walk")
 walk_sprite_scale = Vector2(0.25, 0.25)
 walk_sprite_offset = Vector2(0, -177)
+element = 0
+physical_type = 0
+battle_class = 0
+preferred_ranks = Array[int]([1, 2])
+turn_skills = Array[ExtResource("11_skilldef")]([ExtResource("50_turn"), ExtResource("51_turn"), ExtResource("52_turn"), ExtResource("53_turn")])

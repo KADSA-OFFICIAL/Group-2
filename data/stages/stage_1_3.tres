@@ -1,15 +1,93 @@
-[gd_resource type="Resource" script_class="StageData" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="StageData" load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
 [ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
+[ext_resource type="Script" path="res://entities/stage/CaptureZoneData.gd" id="3_zone"]
+[ext_resource type="Script" path="res://entities/stage/StageWave.gd" id="4_wave"]
 [ext_resource type="PackedScene" path="res://entities/enemies/MammothBoss.tscn" id="5_boss"]
+[ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="6_mammoth"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk.tscn" id="7_raptor"]
+[ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="8_seoa"]
 
-[sub_resource type="Resource" id="StageSpawn_boss"]
+; ===== 1파 — 거점 수비 병력 =====
+; 근접 셋은 존(400,700 반경 140) 안에 놓는다. 존 안에 적이 있으면 진행이 멈추므로
+; 먼저 점을 비워야 한다. 매머드 수인을 섞은 것은 2파의 예고이기도 하다 --
+; 우두머리가 같은 워크 시트를 1.8배로 쓰므로(mammoth_boss.tres) 같은 실루엣이 커져서 온다.
+; 서아는 존 밖 남쪽에서 사거리 250 으로 쏜다.
+
+[sub_resource type="Resource" id="Spawn_w1_raptor"]
 script = ExtResource("2_spawn")
-enemy_scene = ExtResource("5_boss")
-position = Vector2(700, 280)
+enemy_scene = ExtResource("7_raptor")
+position = Vector2(360, 680)
+count = 2
+offset = Vector2(90, 0)
+
+[sub_resource type="Resource" id="Spawn_w1_mammoth"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_mammoth")
+position = Vector2(400, 760)
 count = 1
 offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w1_seoa"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("8_seoa")
+position = Vector2(400, 980)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Wave_1"]
+script = ExtResource("4_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w1_raptor"), SubResource("Spawn_w1_mammoth"), SubResource("Spawn_w1_seoa")])
+label = "거점 수비 병력"
+is_boss = false
+
+; ===== 2파 — 우두머리 =====
+; 존 중심에서 603px 다. 보스 detection_range(800) 안이고 attack_range(110) 밖이라
+; **첫 접근이 대시로 일어난다** -- 이 적이 일반 매머드와 다르다는 것이 등장하자마자 드러난다.
+; 2파 시점의 파티는 거점에 있으므로 거리를 파티 시작 자리가 아니라 존 기준으로 잡았다.
+;
+; 잡몹을 섞지 않는다. 웨이브는 앞 무리를 전멸시켜야 다음이 오므로 보스가 나올 때
+; 1파는 이미 죽어 있다 -- 예고(준비자세·착지)를 읽을 여유가 유지된다.
+
+[sub_resource type="Resource" id="Spawn_w2_boss"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("5_boss")
+position = Vector2(1000, 760)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Wave_2"]
+script = ExtResource("4_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w2_boss")])
+label = "우두머리"
+is_boss = true
+requires_capture = true
+
+; ===== 거점 =====
+; 월드 (400, 700). 초원 프롭 충돌 중 가장 가까운 것이 남서 작은 바위(x 446..494,
+; y 496..520)로 약 46px 떨어져 있다. 1-2 의 존(660,420)과 다른 자리를 골라 두 스테이지가
+; 같은 판처럼 보이지 않게 했다.
+;
+; **defend_radius = 900 인 이유 (중요)**: EnemyBase._defend_anchor() 는 씬에서 가장 가까운
+; CaptureZone 을 잡고, _clamp_to_defend_area() 가 그 반경 밖으로 나가는 이동의 바깥 성분을
+; 제거한다. 적과 존을 연결하는 필드가 없으므로 **보스도 이 제한을 받는다**
+; (BossEnemyBase 는 안무 중일 때만 super 를 건너뛴다).
+;
+; 공통값 320 을 그대로 쓰면 보스가 존 중심 320px 원에 갇힌다 -- 보스 대시 도달 거리(360)보다
+; 작고, 파티가 320px 밖으로 물러나면 따라오지 못한다. 원거리로 밖에서 때리는 익스플로짓이 된다.
+; 900 은 보스 detection_range(800)보다 크므로 감지할 수 있는 거리 전부를 추격할 수 있다.
+;
+; 대가: 같은 값이 1파 수비 병력에도 걸려 1-2(공통 320)보다 훨씬 넓게 따라온다.
+; 존별 값이 하나뿐이라 페이즈마다 다르게 줄 수 없어 **보스를 살리는 쪽**을 골랐다.
+; 적을 특정 존에 묶는 필드를 만들면 근본 해결이지만 스키마 변경이다.
+
+[sub_resource type="Resource" id="CaptureZone_hill"]
+script = ExtResource("3_zone")
+position = Vector2(400, 700)
+radius = 140.0
+hold_seconds = 0.0
+defend_radius = 900.0
 
 [resource]
 script = ExtResource("1_stagedata")
@@ -17,11 +95,23 @@ stage_id = &"stage_1_3"
 display_name = "1-3 우두머리의 자리"
 chapter = 1
 number = 3
-description = "첫 보스 스테이지(#376). 매머드 수인 우두머리 한 마리만 놓는다 — 잡몹을 섞지 않은 이유는 보스의 예고를 읽는 것이 이 판의 전부이기 때문이다. 다른 적이 붙어 있으면 준비자세와 착지 예고를 볼 여유가 없어 회피가 운이 된다. 스폰 거리는 파티 시작 자리에서 약 600px 라 보스의 detection_range(800) 안이고, attack_range(110) 밖이라 **첫 접근이 대시로 일어난다** — 이 적이 일반 매머드와 다르다는 것이 시작하자마자 드러난다. forced_party 를 두지 않는다: 1-1 은 튜토리얼이라 순혈 3인을 강제하지만, 여기는 배운 것을 자기 편성으로 시험하는 자리다. type = BATTLE(소탕) — 점령은 §5.2 가 [미정]이라 판정할 수단이 없다. 보상은 1-1(40/50/25) 보다 크게 잡았으나 [임시값]이며, 보스 전용 드롭 테이블은 아직 없다(보상 규칙이 clear_rewards 하나뿐이다). **1-2 는 아직 없다** — 스테이지 번호가 이어지지 않는 것은 알고 있으며, 지금 해금 사슬이 없어(StageProgress 는 클리어 횟수만 기록) 1-3 만 있어도 고르고 플레이할 수 있다."
-type = 0
+description = "**2페이즈 보스 스테이지**(#439). 1페이즈는 점령전, 2페이즈는 매머드 수인 우두머리 단독이다 — 승리하려면 **적 전멸 + 존 확보** 둘 다 채워야 한다.
+
+1파(랩터 2 + 매머드 수인 1 + 서아 1)는 거점을 지킨다. 근접 셋이 존 안에 있어 진행도가 오르지 않으므로 먼저 점을 비워야 한다. 매머드 수인을 섞은 것은 2파의 예고이기도 하다 — 우두머리가 같은 워크 시트를 1.8배로 쓰므로 같은 실루엣이 커져서 온다.
+
+2파는 우두머리 한 마리다. **잡몹을 섞지 않는 원래 의도가 페이즈로 지켜진다** — 웨이브는 앞 무리를 전멸시켜야 다음이 오므로 보스가 나올 때 1파는 이미 죽어 있고, 준비자세·착지 예고를 읽을 여유가 유지된다. 스폰은 존 중심에서 603px 라 detection_range(800) 안이고 attack_range(110) 밖이라 첫 접근이 대시로 일어난다. 2파 시점의 파티는 거점에 있으므로 거리를 파티 시작 자리가 아니라 존 기준으로 잡았다.
+
+**존의 defend_radius 를 900 으로 저작한 이유**는 .tres 의 거점 절 주석에 길게 적었다. 요지: 수비 반경 제한이 적과 존의 연결 없이 '가장 가까운 존' 기준으로 걸려 **보스까지 묶기 때문**에, 공통값 320 을 쓰면 파티가 320px 밖으로 물러나면 보스가 따라오지 못하는 익스플로짓이 생긴다. 대가로 1파 수비 병력이 1-2 보다 넓게 따라온다.
+
+**점령이 2페이즈 진입 조건이다**(#442). 2파에 requires_capture = true 를 저작했으므로 1파를 전멸시키는 것만으로는 보스가 오지 않는다 — 점을 확보해야 등장한다. 확보하지 못하면 전장에 적이 없는 채로 게이지만 차고, 점령이 미완이라 승리로 끝나지도 않는다. 그래서 보스를 먼저 잡고 아무도 없는 점을 채우는 마무리가 생기지 않는다.
+
+확보 시간은 hold_seconds = 0 으로 두어 CombatTuning.capture_hold_seconds(10초)를 따른다. forced_party 를 두지 않는다 — 1-1 만 튜토리얼로 강제하고, 여기는 배운 것을 자기 편성으로 시험하는 자리다. 보상은 1-2(90/100/55) 보다 크게 잡았으나 [임시값]이며, 보스 전용 드롭 테이블은 아직 없다(보상 규칙이 clear_rewards 하나뿐이다)."
+type = 2
+spawns = Array[ExtResource("2_spawn")]([])
+waves = Array[ExtResource("4_wave")]([SubResource("Wave_1"), SubResource("Wave_2")])
+capture_zones = Array[ExtResource("3_zone")]([SubResource("CaptureZone_hill")])
 clear_rewards = {
-"gold": 150,
-"protein": 180,
-"stone": 90
+"gold": 180,
+"protein": 200,
+"stone": 110
 }
-spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_boss")])

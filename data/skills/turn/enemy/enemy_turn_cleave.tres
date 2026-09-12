@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_p1xs0"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_ry0k1"]
+
+[sub_resource type="Resource" id="Resource_3sna7"]
+script = ExtResource("2_ry0k1")
+multiplier = 1.4
+
+[resource]
+script = ExtResource("1_p1xs0")
+skill_id = &"enemy_turn_cleave"
+display_name = "휘두르기"
+summary = "대상 + 좌우 인접에 공격력 140% / 70% 피해."
+turn_action = 1
+target_ranks = Array[int]([1, 2, 3])
+turn_targeting = 1
+turn_effects = Array[ExtResource("2_ry0k1")]([SubResource("Resource_3sna7")])

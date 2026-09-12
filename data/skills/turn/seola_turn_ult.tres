@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_s4bfu"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_6438t"]
+
+[sub_resource type="Resource" id="Resource_jcj3n"]
+script = ExtResource("2_6438t")
+label = "인성치 -35"
+kind = 1
+scope = 3
+toughness_damage = 35
+
+[sub_resource type="Resource" id="Resource_iu6yo"]
+script = ExtResource("2_6438t")
+label = "받는 피해 +15%"
+kind = 5
+scope = 3
+value = 0.15
+duration = 3
+stat_key = &"vulnerability"
+bucket = 4
+
+[resource]
+script = ExtResource("1_s4bfu")
+skill_id = &"seola_turn_ult"
+display_name = "절대 영도 관측"
+summary = "적 전체의 인성치 -35 (한기). 3턴간 적 전체가 받는 피해 +15%. 이미 격파된 적에게는 인성치 피해가 초격파 피해로 전환된다."
+turn_action = 2
+energy_cost = 100
+turn_targeting = 2
+turn_effects = Array[ExtResource("2_6438t")]([SubResource("Resource_jcj3n"), SubResource("Resource_iu6yo")])

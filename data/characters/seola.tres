@@ -1,10 +1,17 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=11 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=17 format=3]
 
+[ext_resource type="SpriteFrames" path="res://assets/sprites/characters/battle/frames/seola.tres" id="61_animation"]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/char_seola_battle.png" id="60_battle"]
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 [ext_resource type="Texture2D" uid="uid://c3mw0ogq7drhf" path="res://assets/sprites/placeholder/shape_buffer.svg" id="9_shape"]
 [ext_resource type="SpriteFrames" path="res://assets/sprites/characters/seola_walk_frames.tres" id="10_walk"]
 [ext_resource type="Script" path="res://entities/character/SkillData.gd" id="11_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/turn/seola_turn_basic.tres" id="50_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/seola_turn_skill.tres" id="51_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/seola_turn_ult.tres" id="52_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/seola_turn_trait.tres" id="53_turn"]
 [ext_resource type="Resource" path="res://data/skills/seola_triage.tres" id="12_passive"]
 [ext_resource type="Resource" path="res://data/skills/seola_wave.tres" id="13_wave"]
 [ext_resource type="Resource" path="res://data/skills/seola_empower.tres" id="14_empower"]
@@ -17,9 +24,18 @@ strength = 80
 defense = 100
 intelligence = 100
 faith = 160
+speed = 143
+energy_max = 100
+crit_rate = 0.05
+crit_damage = 0.5
+break_effect = 0.1
+effect_hit = 0.1
+energy_recharge = 0.1
 
 [resource]
 script = ExtResource("1_chardata")
+battle_sprite = ExtResource("60_battle")
+battle_frames = ExtResource("61_animation")
 role = 2
 secondary_role = 0
 character_id = &"seola"
@@ -36,3 +52,8 @@ sprite_scale = Vector2(2, 2)
 walk_frames = ExtResource("10_walk")
 walk_sprite_scale = Vector2(0.25, 0.25)
 walk_sprite_offset = Vector2(0, -155)
+element = 2
+physical_type = 1
+battle_class = 3
+preferred_ranks = Array[int]([3, 4])
+turn_skills = Array[ExtResource("11_skilldef")]([ExtResource("50_turn"), ExtResource("51_turn"), ExtResource("52_turn"), ExtResource("53_turn")])

@@ -82,6 +82,35 @@ static func role_icon_name(role: int) -> String:
 			return ""
 
 
+# ===== 오의 엠블럼 (Ultimate emblem) =====
+
+# 엠블럼 벡터가 있는 곳. **래스터가 아니라 SVG 여야 한다** — 오의 컷인에서 128px,
+# 전투 HUD 에서 40px 로 쓰므로 크기 대응이 되어야 한다
+# (캐릭터 아트 가이드 §1 5번: "벡터, 단색 실루엣. 래스터로 만들면 크기 대응 불가").
+const EMBLEM_DIR := "res://assets/sprites/placeholder"
+
+# 역할별 오의 엠블럼 경로. 없으면 빈 문자열.
+#
+# **아직 오의 전용 엠블럼 아트가 없다.** 지금 저장소에 있는 벡터는 역할 도형
+# (`shape_tank` 사각형 / `shape_ranged` 삼각형 / `shape_buffer` 마름모)뿐이고,
+# 이것이 "벡터 · 단색 실루엣 · 흰색(색은 호출부가 modulate 로 입힌다)"이라는 엠블럼
+# 요구를 그대로 만족한다. 그래서 오의 엠블럼이 그려질 때까지 이 도형을 쓴다.
+# 전용 아트가 들어오면 이 대응표 한 곳만 바꾼다.
+static func role_emblem_path(role: int) -> String:
+	var file := ""
+	match role:
+		CharacterData.Role.TANK:
+			file = "shape_tank.svg"
+		CharacterData.Role.RANGED_DEALER:
+			file = "shape_ranged.svg"
+		CharacterData.Role.BUFFER:
+			file = "shape_buffer.svg"
+		_:
+			return ""
+	var candidate: String = EMBLEM_DIR.path_join(file)
+	return candidate if ResourceLoader.exists(candidate) else ""
+
+
 # ===== 팔레트 (아이콘과 동일한 값) =====
 # 아이콘 SVG의 색과 1:1로 대응한다. 값을 바꾸면 아이콘도 함께 바꿔야 한다.
 const OUTLINE := Color("6E6558")       # 진회갈 윤곽선
@@ -129,6 +158,10 @@ const HOSTILE := Color("C8402F")
 const SKY := Color("6B8FA8")           # 탱커
 const CORAL := Color("C4705C")         # 원거리 딜러
 const LEAF := Color("7B9455")          # 버퍼
+
+# 턴제 전투의 **원소 7색은 여기 없다.** 그 색은 UI 가 아니라 캐릭터 아트가 소유한다 —
+# 전투 스프라이트의 장식이 그 색으로 그려져 있어서 코드에서 바꾸면 아트와 어긋난다.
+# 출처는 `TurnCombat.ELEMENT_COLOR` 이고, 그 파일에 이유가 적혀 있다 (#489).
 
 # ===== 그림자 =====
 # 카드를 패널 위로 띄우는 데 쓴다. 검정이 아니라 잉크색이어야 흙 톤에서 탁해지지 않는다.

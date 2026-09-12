@@ -1,0 +1,81 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/attack_0.png" id="1_4wcw2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/attack_1.png" id="2_rrkgy"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/attack_2.png" id="3_o41cv"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/attack_3.png" id="4_3nbte"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/death_0.png" id="5_rxiat"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/death_1.png" id="6_22hir"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/death_2.png" id="7_qypmq"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/death_3.png" id="8_vryct"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/hit_0.png" id="9_6bfvq"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/hit_1.png" id="10_eexh7"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/idle_0.png" id="11_sc5qp"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/idle_1.png" id="12_g8qj5"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/idle_2.png" id="13_f0fpn"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/frames/gangji/idle_3.png" id="14_72c4g"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_4wcw2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_rrkgy")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_o41cv")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_3nbte")
+}],
+"loop": false,
+"name": &"attack",
+"speed": 14.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_rxiat")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_22hir")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_qypmq")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_vryct")
+}],
+"loop": false,
+"name": &"death",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("9_6bfvq")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_eexh7")
+}],
+"loop": false,
+"name": &"hit",
+"speed": 16.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("11_sc5qp")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_g8qj5")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_f0fpn")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_72c4g")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 6.0
+}]

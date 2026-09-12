@@ -314,3 +314,241 @@ func get_derived_summary() -> Dictionary:
 		"move_speed_multiplier": get_move_speed_multiplier(),
 		"damage_taken_multiplier": get_damage_taken_multiplier(),
 	}
+
+
+# =====================================================================
+# 턴제 스텟 (Turn-based stats) — #450
+# =====================================================================
+#
+# 왜 여기에 두는가: 스텟의 단일 출처는 `PlayerStats` 하나다(SYSTEM_CONVENTIONS §2).
+# 턴제 전투용 스텟을 별도 리소스로 만들면 같은 캐릭터의 스텟이 두 파일에 나뉘어,
+# 장비·버프·성장 배수를 각자 다시 구현해야 한다.
+#
+# 기존 필드와의 관계: 위쪽 실시간 파생 스텟(`get_physical_attack()`, `apply_defense()` 등)은
+# **하나도 건드리지 않았다.** 턴제는 아래 스텟을 추가로 읽을 뿐이고, 실시간 전투의 결과는
+# 이 섹션이 있든 없든 같다.
+#
+# 기본값의 원칙: 전부 **"효과 없음"**에 해당하는 값이다. 그래서 이 섹션을 모르는 기존
+# `.tres`(캐릭터 6인 · 적 6종)가 그대로 로드되고, 턴제에서도 표준 유닛으로 동작한다.
+
+# ===== 기초 (Base) =====
+
+## 속도(SPD). 행동값 `AV = av_scale / SPD`를 결정한다 — 턴제 전투의 뼈대다.
+## 100이 "1사이클 1행동" 기준선이다(설계서 §4.2.3).
+@export var speed: int = 100
+
+## 오의(필살기) 게이지 최대치. 캐릭터마다 100 / 120 / 140 등으로 다르다.
+## 0이면 오의가 없는 유닛(잡몹 등)으로 취급한다.
+@export var energy_max: int = 0
+
+# ===== 치명타 (Crit) =====
+#
+# 비율로 저장한다. 0.05 = 5%. 기본값은 "치명타가 거의 나지 않는" 표준선이다.
+@export var crit_rate: float = 0.05
+## 치명타 시 곱해지는 **추가** 피해. 0.5 = 치명타 배율 1.5배.
+@export var crit_damage: float = 0.5
+
+# ===== 격파 / 인성치 (Break) =====
+
+## 격파 특화. 격파·초격파 피해에 곱연산(버킷 F). 0.0 = 보너스 없음.
+@export var break_effect: float = 0.0
+## 인성치 피해 배율. 자물쇠 해제 효율에 곱해진다. 0.0 = 기본(x1.0).
+@export var toughness_damage_bonus: float = 0.0
+
+# ===== 확률 (Chance) =====
+
+## 효과 적중. 디버프 부여 성공률에 가산된다.
+@export var effect_hit: float = 0.0
+## 효과 저항. 디버프를 튕겨 낼 확률. 상한은 튜닝의 `effect_res_cap`(기본 80%).
+@export var effect_res: float = 0.0
+
+# ===== 배율 (Multipliers) =====
+
+## 오의 회복 효율. 에너지 획득량에 곱연산. 0.0 = x1.0.
+@export var energy_recharge: float = 0.0
+## 회복량 증가. 힐 배율에 곱연산. 0.0 = x1.0.
+@export var heal_boost: float = 0.0
+## 원소 피해 보너스 (버킷 A). 0.0 = 보너스 없음.
+@export var element_damage_bonus: float = 0.0
+
+# ===== 장비 채널 (Equipment channel) =====
+#
+# 장비 시스템이 채워 넣는 입력값. 실시간 `equip_*`와 같은 성격이며 서로 독립적이다.
+@export var equip_speed: int = 0
+@export var equip_crit_rate: float = 0.0
+@export var equip_crit_damage: float = 0.0
+@export var equip_break_effect: float = 0.0
+@export var equip_effect_hit: float = 0.0
+@export var equip_effect_res: float = 0.0
+@export var equip_energy_recharge: float = 0.0
+@export var equip_heal_boost: float = 0.0
+@export var equip_element_damage_bonus: float = 0.0
+
+# ===== 버프 채널 (Buff channel) =====
+#
+# 턴제 상태 효과(`TurnStatusSystem`)가 채워 넣는 입력값.
+# 장비 채널과 **독립적인 별도 채널**이라 서로 덮어쓰지 않고 함께 합산된다.
+# 디버프도 표현해야 하므로 음수를 허용한다.
+@export var buff_speed: int = 0
+## 속도 **배율**의 변화분. 각인(광휘 격파)의 "속도 -20%"가 이 채널을 쓴다.
+@export var buff_speed_percent: float = 0.0
+@export var buff_crit_rate: float = 0.0
+@export var buff_crit_damage: float = 0.0
+@export var buff_break_effect: float = 0.0
+@export var buff_effect_hit: float = 0.0
+@export var buff_effect_res: float = 0.0
+@export var buff_energy_recharge: float = 0.0
+@export var buff_heal_boost: float = 0.0
+@export var buff_element_damage_bonus: float = 0.0
+## 버킷 D — 받는 피해 증가(취약). 위쪽 `buff_damage_taken_percent`(실시간 감소 통로)와
+## 별개로 둔 이유: 실시간 쪽은 "받는 피해 N% 감소"라는 확정 스펙을 표현하는 자리이고,
+## 이쪽은 턴제 데미지 파이프라인의 **버킷 D 합산값**이다. 한 필드에 섞으면 실시간
+## 강지 Q의 감소가 턴제 취약과 같은 통에 들어가 서로를 지운다.
+@export var buff_vulnerability: float = 0.0
+## 버킷 A — 피해증가%.
+@export var buff_damage_bonus: float = 0.0
+## 버킷 B — 방어력 감소 비율. 0.32 = 방어력 32% 감소.
+@export var buff_defense_reduction: float = 0.0
+## 버킷 C — 원소 저항 관통.
+@export var buff_res_penetration: float = 0.0
+
+
+# ===== 턴제 파생 스텟 (Turn-based derived) =====
+#
+# 합산 순서는 실시간 파생과 같다: (기초 + 장비 + 버프) 에 배율.
+# 기초값에는 성장 배수(`growth_multiplier`)를 태운다 — 삼각근 Lv.이 속도에도 반영되어야
+# 같은 캐릭터가 실시간과 턴제에서 다른 성장을 갖지 않는다.
+
+## 속도. 소프트캡은 여기서 걸지 않는다 — 캡은 행동값을 만드는
+## `TurnCombatTuning.action_value_for_speed()` 한 곳에서만 적용한다(화면마다 다른
+## 숫자가 나오지 않게 하려는 것이다).
+func get_speed() -> int:
+	var total := float(_grown(speed) + equip_speed + buff_speed)
+	return maxi(int(round(total * _buff_multiplier(buff_speed_percent))), 1)
+
+func get_energy_max() -> int:
+	return maxi(energy_max, 0)
+
+func get_crit_rate() -> float:
+	return maxf(crit_rate + equip_crit_rate + buff_crit_rate, 0.0)
+
+func get_crit_damage() -> float:
+	return maxf(crit_damage + equip_crit_damage + buff_crit_damage, 0.0)
+
+func get_break_effect() -> float:
+	return maxf(break_effect + equip_break_effect + buff_break_effect, 0.0)
+
+func get_toughness_damage_multiplier() -> float:
+	return maxf(1.0 + toughness_damage_bonus, 0.0)
+
+func get_effect_hit() -> float:
+	return maxf(effect_hit + equip_effect_hit + buff_effect_hit, 0.0)
+
+## 효과 저항. 상한(기본 80%)을 넘지 않는다 — 100%가 되면 디버프 자체가 죽는다.
+func get_effect_res() -> float:
+	var total := effect_res + equip_effect_res + buff_effect_res
+	return clampf(total, 0.0, get_tuning_turn().effect_res_cap)
+
+func get_energy_recharge_multiplier() -> float:
+	return maxf(1.0 + energy_recharge + equip_energy_recharge + buff_energy_recharge, 0.0)
+
+func get_heal_boost_multiplier() -> float:
+	return maxf(1.0 + heal_boost + equip_heal_boost + buff_heal_boost, 0.0)
+
+## 버킷 A 합산값 — 원소 피해 보너스 + 피해증가%.
+func get_damage_bonus() -> float:
+	return element_damage_bonus + equip_element_damage_bonus \
+		+ buff_element_damage_bonus + buff_damage_bonus
+
+## 버킷 B — 방어력 감소 비율. 1.0을 넘으면 방어력이 음수가 되므로 클램프한다.
+func get_defense_reduction() -> float:
+	return clampf(buff_defense_reduction, 0.0, 1.0)
+
+## 버킷 C — 저항 관통.
+func get_res_penetration() -> float:
+	return maxf(buff_res_penetration, 0.0)
+
+## 버킷 D — 받는 피해 증가(취약).
+func get_vulnerability() -> float:
+	return buff_vulnerability
+
+
+# 턴제 튜닝 리소스. 실시간 `get_tuning()`과 이름을 나눠 둔 이유: 두 리소스는 서로 다른
+# 스키마이고, 같은 이름으로 오버로드하면 호출부가 어느 쪽을 원했는지 알 수 없다.
+static var _fallback_turn_tuning: TurnCombatTuning = null
+
+static func get_tuning_turn() -> TurnCombatTuning:
+	var loop := Engine.get_main_loop()
+	if loop is SceneTree:
+		var cfg := (loop as SceneTree).root.get_node_or_null("TurnCombatConfig")
+		if cfg != null and cfg.tuning != null:
+			return cfg.tuning
+
+	if _fallback_turn_tuning == null:
+		_fallback_turn_tuning = TurnCombatTuning.new()
+	return _fallback_turn_tuning
+
+
+# 턴제 행동값(AV). 소프트캡이 적용된 값이다.
+func get_action_value() -> float:
+	return get_tuning_turn().action_value_for_speed(float(get_speed()))
+
+
+# 다음 속도 구간까지 필요한 속도 (설계서 §4.2.3 — UI에 명시해야 하는 값).
+func get_speed_to_next_breakpoint(cycles: int = 3) -> int:
+	return get_tuning_turn().speed_to_next_breakpoint(float(get_speed()), cycles)
+
+
+# 턴제 장비 보너스를 갱신한다 (장비 시스템에서 호출).
+# 실시간 `set_equipment_bonuses()`와 별도 통로다 — 그 함수의 인자를 늘리면 기존 호출부가 전부 깨진다.
+func set_turn_equipment_bonuses(bonuses: Dictionary = {}) -> void:
+	equip_speed = int(bonuses.get("speed", 0))
+	equip_crit_rate = float(bonuses.get("crit_rate", 0.0))
+	equip_crit_damage = float(bonuses.get("crit_damage", 0.0))
+	equip_break_effect = float(bonuses.get("break_effect", 0.0))
+	equip_effect_hit = float(bonuses.get("effect_hit", 0.0))
+	equip_effect_res = float(bonuses.get("effect_res", 0.0))
+	equip_energy_recharge = float(bonuses.get("energy_recharge", 0.0))
+	equip_heal_boost = float(bonuses.get("heal_boost", 0.0))
+	equip_element_damage_bonus = float(bonuses.get("element_damage_bonus", 0.0))
+
+
+# 턴제 버프/디버프 보너스 전체를 갱신한다 (`TurnStatusSystem`에서 호출).
+# 여러 상태 효과가 걸려 있으면 호출자가 합산한 결과를 한 번에 넘긴다.
+func set_turn_buff_bonuses(flat: Dictionary = {}, percent: Dictionary = {}) -> void:
+	buff_speed = int(flat.get("speed", 0))
+	buff_speed_percent = float(percent.get("speed", 0.0))
+	buff_crit_rate = float(percent.get("crit_rate", 0.0))
+	buff_crit_damage = float(percent.get("crit_damage", 0.0))
+	buff_break_effect = float(percent.get("break_effect", 0.0))
+	buff_effect_hit = float(percent.get("effect_hit", 0.0))
+	buff_effect_res = float(percent.get("effect_res", 0.0))
+	buff_energy_recharge = float(percent.get("energy_recharge", 0.0))
+	buff_heal_boost = float(percent.get("heal_boost", 0.0))
+	buff_element_damage_bonus = float(percent.get("element_damage_bonus", 0.0))
+	buff_vulnerability = float(percent.get("vulnerability", 0.0))
+	buff_damage_bonus = float(percent.get("damage_bonus", 0.0))
+	buff_defense_reduction = float(percent.get("defense_reduction", 0.0))
+	buff_res_penetration = float(percent.get("res_penetration", 0.0))
+
+
+func clear_turn_buff_bonuses() -> void:
+	set_turn_buff_bonuses({}, {})
+
+
+# 턴제 스텟 요약. 스텟 화면과 디버그가 읽는다.
+func get_turn_summary() -> Dictionary:
+	return {
+		"speed": get_speed(),
+		"action_value": get_action_value(),
+		"speed_to_next_breakpoint": get_speed_to_next_breakpoint(),
+		"energy_max": get_energy_max(),
+		"crit_rate": get_crit_rate(),
+		"crit_damage": get_crit_damage(),
+		"break_effect": get_break_effect(),
+		"toughness_damage_multiplier": get_toughness_damage_multiplier(),
+		"effect_hit": get_effect_hit(),
+		"effect_res": get_effect_res(),
+		"energy_recharge_multiplier": get_energy_recharge_multiplier(),
+		"heal_boost_multiplier": get_heal_boost_multiplier(),
+	}

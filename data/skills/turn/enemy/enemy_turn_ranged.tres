@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_hmdfw"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_bl3m4"]
+
+[sub_resource type="Resource" id="Resource_12o84"]
+script = ExtResource("2_bl3m4")
+multiplier = 0.9
+
+[resource]
+script = ExtResource("1_hmdfw")
+skill_id = &"enemy_turn_ranged"
+display_name = "원거리 사격"
+summary = "아군 1명에게 공격력 90% 피해. 후열도 노린다."
+turn_effects = Array[ExtResource("2_bl3m4")]([SubResource("Resource_12o84")])

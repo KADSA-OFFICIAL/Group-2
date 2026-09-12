@@ -1,0 +1,134 @@
+[
+  {
+    "id": "harang",
+    "source": "res://art/battle-sprites/source-plates/harang.png",
+    "width": 224,
+    "height": 336,
+    "output": "res://assets/sprites/characters/battle/char_harang_battle.png",
+    "data": "res://data/characters/harang.tres",
+    "side": "ally",
+    "direction": "right",
+    "element_color": "E8E8E8"
+  },
+  {
+    "id": "mina",
+    "source": "res://art/battle-sprites/source-plates/mina.png",
+    "width": 224,
+    "height": 336,
+    "output": "res://assets/sprites/characters/battle/char_mina_battle.png",
+    "data": "res://data/characters/mina.tres",
+    "side": "ally",
+    "direction": "right",
+    "element_color": "FF6B35"
+  },
+  {
+    "id": "seola",
+    "source": "res://art/battle-sprites/source-plates/seola.png",
+    "width": 224,
+    "height": 336,
+    "output": "res://assets/sprites/characters/battle/char_seola_battle.png",
+    "data": "res://data/characters/seola.tres",
+    "side": "ally",
+    "direction": "right",
+    "element_color": "4FC3F7"
+  },
+  {
+    "id": "taehee",
+    "source": "res://art/battle-sprites/source-plates/taehee.png",
+    "width": 224,
+    "height": 336,
+    "output": "res://assets/sprites/characters/battle/char_taehee_battle.png",
+    "data": "res://data/characters/taehee.tres",
+    "side": "ally",
+    "direction": "right",
+    "element_color": "7C4DFF"
+  },
+  {
+    "id": "arin",
+    "source": "res://art/battle-sprites/source-plates/arin.png",
+    "width": 224,
+    "height": 336,
+    "output": "res://assets/sprites/characters/battle/char_arin_battle.png",
+    "data": "res://data/characters/arin.tres",
+    "side": "ally",
+    "direction": "right",
+    "element_color": "B388FF"
+  },
+  {
+    "id": "gangji",
+    "source": "res://art/battle-sprites/source-plates/gangji.png",
+    "width": 224,
+    "height": 336,
+    "output": "res://assets/sprites/characters/battle/char_gangji_battle.png",
+    "data": "res://data/characters/gangji.tres",
+    "side": "ally",
+    "direction": "right",
+    "element_color": "FFD54F"
+  },
+  {
+    "id": "mammoth_beastfolk",
+    "source": "res://art/battle-sprites/source-plates/mammoth_beastfolk.png",
+    "width": 248,
+    "height": 312,
+    "output": "res://assets/sprites/enemies/battle/enemy_mammoth_beastfolk_battle.png",
+    "data": "res://data/enemies/mammoth_beastfolk.tres",
+    "side": "enemy",
+    "direction": "left",
+    "element_color": "E8E8E8"
+  },
+  {
+    "id": "mammoth_boss",
+    "source": "res://art/battle-sprites/source-plates/mammoth_boss.png",
+    "width": 248,
+    "height": 312,
+    "output": "res://assets/sprites/enemies/battle/enemy_mammoth_boss_battle.png",
+    "data": "res://data/enemies/mammoth_boss.tres",
+    "side": "enemy",
+    "direction": "left",
+    "element_color": "FF6B35"
+  },
+  {
+    "id": "velociraptor_beastfolk",
+    "source": "res://art/battle-sprites/source-plates/velociraptor_beastfolk.png",
+    "width": 248,
+    "height": 312,
+    "output": "res://assets/sprites/enemies/battle/enemy_velociraptor_beastfolk_battle.png",
+    "data": "res://data/enemies/velociraptor_beastfolk.tres",
+    "side": "enemy",
+    "direction": "left",
+    "element_color": "E8E8E8"
+  },
+  {
+    "id": "velociraptor_beastfolk_2",
+    "source": "res://art/battle-sprites/source-plates/velociraptor_beastfolk_2.png",
+    "width": 248,
+    "height": 312,
+    "output": "res://assets/sprites/enemies/battle/enemy_velociraptor_beastfolk_2_battle.png",
+    "data": "res://data/enemies/velociraptor_beastfolk_2.tres",
+    "side": "enemy",
+    "direction": "left",
+    "element_color": "E8E8E8"
+  },
+  {
+    "id": "seoa",
+    "source": "res://art/battle-sprites/source-plates/seoa.png",
+    "width": 248,
+    "height": 312,
+    "output": "res://assets/sprites/enemies/battle/enemy_seoa_battle.png",
+    "data": "res://data/enemies/seoa.tres",
+    "side": "enemy",
+    "direction": "left",
+    "element_color": "FFD54F"
+  },
+  {
+    "id": "pterosaur_queen",
+    "source": "res://art/battle-sprites/source-plates/pterosaur_queen.png",
+    "width": 248,
+    "height": 312,
+    "output": "res://assets/sprites/enemies/battle/enemy_pterosaur_queen_battle.png",
+    "data": "res://data/enemies/pterosaur_queen.tres",
+    "side": "enemy",
+    "direction": "left",
+    "element_color": "66D9A6"
+  }
+]

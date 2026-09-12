@@ -1,30 +1,119 @@
-[gd_resource type="Resource" script_class="StageData" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="StageData" load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
 [ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
 [ext_resource type="Script" path="res://entities/stage/CaptureZoneData.gd" id="3_zone"]
-[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk.tscn" id="6_raptor"]
+[ext_resource type="Script" path="res://entities/stage/StageWave.gd" id="4_wave"]
 [ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="5_mammoth"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk.tscn" id="6_raptor"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk2.tscn" id="7_raptor2"]
+[ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="8_seoa"]
 
-[sub_resource type="Resource" id="StageSpawn_raptor"]
+; ===== 1파 — 거점 위 수비 병력 =====
+; 셋 다 존(660,420 반경 140) 안에 놓는다. 존 안에 적이 있으면 진행이 멈추므로,
+; 도착해서 서 있기만 해서는 진행도가 오르지 않는다 -- 점을 비워 내는 것이 1파의 요구다.
+; 물몸(HP x0.5)이라 빠르게 치울 수 있어 첫 페이즈로 알맞다.
+
+[sub_resource type="Resource" id="Spawn_w1_raptor"]
 script = ExtResource("2_spawn")
 enemy_scene = ExtResource("6_raptor")
-position = Vector2(620, 200)
+position = Vector2(620, 400)
+count = 2
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w1_raptor2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_raptor2")
+position = Vector2(660, 490)
 count = 1
 offset = Vector2(100, 0)
 
-[sub_resource type="Resource" id="StageSpawn_mammoth"]
+[sub_resource type="Resource" id="Wave_1"]
+script = ExtResource("4_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w1_raptor"), SubResource("Spawn_w1_raptor2")])
+label = "거점 수비 병력"
+is_boss = false
+
+; ===== 2파 — 원거리 압박 =====
+; 랩터는 존 밖 동쪽(240px)에서 걸어 들어오고, 서아 둘은 남쪽 멀리(약 350px)에 둔다.
+; 서아는 사거리 250 에서 멈춰 쏘므로 존 밖에서 존 안을 때린다. 탄이 유도하지 않으니
+; 존 안에서 옆으로 움직이면 피할 수 있다 -- 존을 벗어나면 진행도가 0.5배로 줄기 때문에
+; "나가서 피하기"가 답이 되지 않는 것이 이 페이즈의 요구다.
+
+[sub_resource type="Resource" id="Spawn_w2_raptor2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_raptor2")
+position = Vector2(900, 420)
+count = 2
+offset = Vector2(0, 90)
+
+[sub_resource type="Resource" id="Spawn_w2_seoa"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("8_seoa")
+position = Vector2(560, 760)
+count = 2
+offset = Vector2(200, 0)
+
+[sub_resource type="Resource" id="Wave_2"]
+script = ExtResource("4_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w2_raptor2"), SubResource("Spawn_w2_seoa")])
+label = "원거리 지원"
+is_boss = false
+
+; ===== 3파 — 점을 되찾으러 오는 무리 =====
+; 매머드 수인이 서쪽에서 느리게(이동 0.35 = 70px/s, 320px 를 약 4.6초에) 올라온다.
+; 존에 올라서면 진행이 멈추고, 평타 3회마다 강화 평타로 기절시켜 점 밖으로 밀어낸다.
+; 랩터는 북쪽(울타리 남쪽 열린 땅)에서, 서아는 남쪽에서 함께 조인다.
+
+[sub_resource type="Resource" id="Spawn_w3_mammoth"]
 script = ExtResource("2_spawn")
 enemy_scene = ExtResource("5_mammoth")
-position = Vector2(700, 300)
+position = Vector2(340, 420)
 count = 1
 offset = Vector2(100, 0)
 
-[sub_resource type="Resource" id="CaptureZone_center"]
+[sub_resource type="Resource" id="Spawn_w3_raptor"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_raptor")
+position = Vector2(420, 250)
+count = 2
+offset = Vector2(0, 95)
+
+[sub_resource type="Resource" id="Spawn_w3_raptor2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_raptor2")
+position = Vector2(900, 470)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w3_seoa"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("8_seoa")
+position = Vector2(660, 780)
+count = 1
+offset = Vector2(200, 0)
+
+[sub_resource type="Resource" id="Wave_3"]
+script = ExtResource("4_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w3_mammoth"), SubResource("Spawn_w3_raptor"), SubResource("Spawn_w3_raptor2"), SubResource("Spawn_w3_seoa")])
+label = "탈환 부대"
+is_boss = false
+
+; ===== 거점 =====
+; 월드 (660, 420). 초원 맵이 스테이지 안에서 (-240,-240) 에 놓이므로 맵 로컬로는 (900, 660) 이다.
+; 반경 140 이면 덮는 사각형이 x 520..800 / y 280..560 인데, 초원 프롭 충돌 중 어느 것도
+; 여기에 들어오지 않는다 -- 가장 가까운 것이 동쪽 큰 바위(x 820..940)로 20px, 남서 작은
+; 바위(x 446..494, y 496..520)로 26px 떨어져 있다.
+;
+; 예전 위치(660, 250)는 울타리 줄(월드 y 168..192, x 42..834)이 관통해 96x24 정적 충돌이
+; 존 안에 있었다. 남쪽 열린 땅으로 옮긴 것이 그 이유다.
+
+[sub_resource type="Resource" id="CaptureZone_field"]
 script = ExtResource("3_zone")
-position = Vector2(660, 250)
+position = Vector2(660, 420)
 radius = 140.0
 hold_seconds = 0.0
+defend_radius = 0.0
 
 [resource]
 script = ExtResource("1_stagedata")
@@ -32,12 +121,23 @@ stage_id = &"stage_1_2"
 display_name = "1-2 거점"
 chapter = 1
 number = 2
-description = "**점령+전투** 타입의 첫 스테이지(#377). 거점 존 하나(반경 140)가 적 스폰 자리 가운데에 놓여 있고, 승리하려면 **적 전멸 + 존 확보** 둘 다 채워야 한다. 존 안에 살아 있는 적이 있으면 진행이 멈추므로(보완 규칙) 지키는 적을 치우는 것과 자리를 잡는 것이 한 행동으로 엮인다. 존을 비우면 진행도가 차는 속도의 절반으로 줄어든다. 확보 시간은 CombatTuning.capture_hold_seconds(10초)를 따른다 — hold_seconds 를 0 으로 둔 것이 그 뜻이다. 존 위치·반경·적 구성·보상은 전부 [임시값]이며, 이 스테이지의 목적은 점령 구조가 실제로 도는지 확인하는 것이다. 강제 파티를 두지 않아 플레이어가 편성한 파티로 들어간다(1-1 과 다른 점)."
+description = "**3페이즈 점령전**(#435). 거점 한 곳을 두고 웨이브 셋과 다툰다 — 승리하려면 **적 전멸 + 존 확보** 둘 다 채워야 한다.
+
+페이즈를 웨이브로 표현한 이유: 존을 셋 두면 셋이 동시에 활성화되고 전부 확보해야 하므로(순차 활성화 필드가 없다 — 설계 §5.2 [미정]) 페이즈가 아니라 동시 다지점 방어가 된다. 웨이브는 '앞 무리 전멸'이라는 순차 방아쇠를 이미 갖고 있다. spawns 를 비운 것도 의도다 — 시작 배치를 섞으면 번호 없는 '0파'가 생겨 플레이어가 세는 파 수와 어긋난다.
+
+각 페이즈가 요구하는 것이 다르다. 1파(랩터 3, 존 위)는 **점을 비워 내는 것** — 존 안에 적이 있으면 진행이 멈춘다. 2파(랩터 2 + 서아 2)는 **머무는 대가** — 서아가 존 밖 사거리 250 에서 쏘는데, 피하려 존을 나가면 진행도가 capture_decay_multiplier(0.5)배로 줄어든다. 탄이 유도하지 않으므로 존 안에서 옆으로 움직이는 것이 답이다. 3파(매머드 1 + 랩터 3 + 서아 1)는 **버티는 것** — 매머드가 점에 올라서면 진행이 멈추고, 강화 평타 기절로 점 밖으로 밀어낸다.
+
+3 → 4 → 5 마리로 늘고 역할이 근접 → 근접+원거리 → 근접+원거리+고체력/기절 로 쌓인다. 적 수치는 data/enemies 의 저작값을 그대로 쓴다.
+
+확보 시간은 hold_seconds = 0 으로 두어 CombatTuning.capture_hold_seconds(10초)를 따른다 — 이 스테이지만 다른 값을 쓰면 근거 없는 수치가 남는다. 점령을 빡빡하게 만드는 것은 확보 시간이 아니라 적이 점을 밟고 있는 시간이다.
+
+존이 월드 (660,420) 인 이유는 .tres 의 거점 절 주석에 적었다(예전 자리는 울타리가 관통했다). forced_party 를 두지 않아 플레이어가 편성한 파티로 들어간다 — 1-1 만 튜토리얼로 강제한다. 보상은 1-1(40/50/25)과 1-3(150/180/90) 사이에 두었고 [임시값]이다."
 type = 2
+spawns = Array[ExtResource("2_spawn")]([])
+waves = Array[ExtResource("4_wave")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3")])
+capture_zones = Array[ExtResource("3_zone")]([SubResource("CaptureZone_field")])
 clear_rewards = {
-"gold": 60,
-"protein": 60,
-"stone": 40
+"gold": 90,
+"protein": 100,
+"stone": 55
 }
-spawns = Array[ExtResource("2_spawn")]([SubResource("StageSpawn_raptor"), SubResource("StageSpawn_mammoth")])
-capture_zones = Array[ExtResource("3_zone")]([SubResource("CaptureZone_center")])

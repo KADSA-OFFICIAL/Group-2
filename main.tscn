@@ -1,32 +1,15 @@
-[gd_scene load_steps=7 format=3 uid="uid://c4rq7nas2b1f"]
+[gd_scene load_steps=4 format=3 uid="uid://c4rq7nas2b1f"]
 
-[ext_resource type="PackedScene" uid="uid://d87uv8f6k3n8" path="res://stage/Stage1_1.tscn" id="1_stage"]
-[ext_resource type="Script" path="res://camera/GameCamera.gd" id="2_cam"]
-[ext_resource type="Script" path="res://ui/HUD.gd" id="3_hud"]
-[ext_resource type="Script" path="res://debug/DebugOverlay.gd" id="4_dbg"]
-[ext_resource type="Script" path="res://screens/main/main_screen_launcher.gd" id="5_launcher"]
-[ext_resource type="Script" path="res://screens/result/stage_result_launcher.gd" id="6_result"]
+[ext_resource type="PackedScene" uid="uid://cq0turnbattle01" path="res://stage/turn/TurnBattle.tscn" id="1_battle"]
+[ext_resource type="Script" path="res://screens/main/main_screen_launcher.gd" id="2_launcher"]
+[ext_resource type="Script" path="res://screens/result/stage_result_launcher.gd" id="3_result"]
 
 [node name="Main" type="Node2D"]
 
-[node name="Stage1_1" parent="." instance=ExtResource("1_stage")]
-
-[node name="GameCamera" type="Camera2D" parent="."]
-script = ExtResource("2_cam")
-zoom = Vector2(0.85, 0.85)
-offset = Vector2(0, -140)
-
-[node name="HUD" type="CanvasLayer" parent="."]
-script = ExtResource("3_hud")
-layer = 1
-
-[node name="DebugOverlay" type="CanvasLayer" parent="."]
-script = ExtResource("4_dbg")
-layer = 2
+[node name="TurnBattle" parent="." instance=ExtResource("1_battle")]
 
 [node name="MainScreenLauncher" type="Node" parent="."]
-script = ExtResource("5_launcher")
+script = ExtResource("2_launcher")
 
 [node name="StageResultLauncher" type="Node" parent="."]
-script = ExtResource("6_result")
-
+script = ExtResource("3_result")

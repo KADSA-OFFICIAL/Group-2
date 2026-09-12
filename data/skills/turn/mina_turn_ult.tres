@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_hwoap"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_h6s8c"]
+
+[sub_resource type="Resource" id="Resource_bbm0p"]
+script = ExtResource("2_h6s8c")
+multiplier = 1.8
+scaling = 1
+toughness_damage = 40
+
+[sub_resource type="Resource" id="Resource_kskyy"]
+script = ExtResource("2_h6s8c")
+kind = 7
+scope = 3
+
+[sub_resource type="Resource" id="Resource_kf3qk"]
+script = ExtResource("2_h6s8c")
+label = "받는 피해 -18%"
+kind = 4
+scope = 4
+value = -0.18
+duration = 2
+stat_key = &"vulnerability"
+bucket = 4
+
+[resource]
+script = ExtResource("1_hwoap")
+skill_id = &"mina_turn_ult"
+display_name = "종언의 화로"
+summary = "적 전체에 방어력 180% 화염 피해. 인성치 -40. 적 전체를 뒤로 1칸 밀친다. 이후 2턴간 아군 전체가 받는 피해 -18%."
+turn_action = 2
+energy_cost = 120
+turn_targeting = 2
+turn_effects = Array[ExtResource("2_h6s8c")]([SubResource("Resource_bbm0p"), SubResource("Resource_kskyy"), SubResource("Resource_kf3qk")])

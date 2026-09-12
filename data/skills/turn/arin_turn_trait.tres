@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="1_xrfp8"]
+[ext_resource type="Script" path="res://entities/combat/turn/TurnSkillEffect.gd" id="2_xrj23"]
+
+[sub_resource type="Resource" id="Resource_eyxgd"]
+script = ExtResource("2_xrj23")
+kind = 12
+scope = 2
+amount = 1
+
+[resource]
+script = ExtResource("1_xrfp8")
+skill_id = &"arin_turn_trait"
+display_name = "연격"
+summary = "약점을 찌르면 추가 턴을 얻는다. (턴당 1회, 추가 턴 하드캡 2회에 걸린다)"
+turn_action = 3
+turn_effects = Array[ExtResource("2_xrj23")]([SubResource("Resource_eyxgd")])
+trait_trigger = 4
+trait_per_turn_cap = 1
