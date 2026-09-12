@@ -45,6 +45,9 @@ extends Node2D
 const HUD_LAYER: int = 1
 const FLASH_LAYER: int = 2
 
+## 히트스톱 동안의 전역 시간 배율. 0 으로 두면 타이머가 영영 돌아오지 않는다.
+const HITSTOP_SCALE: float = 0.0001
+
 # ===== 오의 컷인 구도 (캐릭터 아트 가이드 §4.1) =====
 #
 # 가이드는 2400×1350 캔버스 기준이고 이 화면은 1280×720 이라 0.533 배로 환산했다.
@@ -65,8 +68,20 @@ const CUTIN_EMBLEM_ALPHA: float = 0.17
 const GROUND_H: float = 420.0
 ## 유닛 몸 칸. 발밑이 노드 원점이다 (`position = -box * (0.5, 1)`).
 ## 스프라이트를 저작할 때 이 비율을 맞춘다 — docs/turn-battle-sprite-prompts.md
-const ALLY_BODY := Vector2(56.0, 84.0)
-const ENEMY_BODY := Vector2(62.0, 78.0)
+## #492 에서 원래 크기(56×84 / 62×78)의 **1.8배**로 키웠다. 캐릭터가 너무 멀리 있는
+## 것처럼 보였기 때문이다 — 아트 가이드 §2.3 이 요구하는 표시 높이(720p 환산
+## 227~267px)와 3배 차이였다.
+##
+## **1.8배가 상한이다.** 두 제약이 동시에 걸린다(1280×720 실측).
+##   가로: 적 5체가 화면 안에 들어가야 한다. 1.9배면 맨 오른쪽이 9px 넘친다
+##   세로: 아군 머리(452 − 높이)가 적 발밑(268)보다 아래여야 한다. 1.8배에서 33px 남는다
+## 더 키우려면 랭크 배치(적 5칸 / 아군 4칸)나 줄 높이를 바꿔야 하고, 그건 전투
+## 시스템의 소유다.
+##
+## 제작 캔버스가 4배(224×336)라 1.8배로 키워도 원본 해상도 안이다 —
+## **아트를 다시 뽑을 필요가 없다.**
+const ALLY_BODY := Vector2(101.0, 151.0)
+const ENEMY_BODY := Vector2(112.0, 140.0)
 ## 중앙 충돌선의 아래에서 잰 시작 높이.
 const DIVIDER_FROM_BOTTOM: float = 540.0
 
@@ -159,6 +174,9 @@ func _restart() -> void:
 
 	battle = TurnBattleManager.new()
 	_outcome_reported = false
+	# 이전 전투에서 켜 둔 일시정지가 새 전투로 넘어오면 시작하자마자 얼어 있다 (#495).
+	# HUD 쪽 `paused` 는 `hud.battle` 세터가 함께 푼다.
+	_paused = false
 	_start_battle()
 
 
@@ -511,7 +529,12 @@ func _build_shapes() -> void:
 		glyph.text = TurnCombat.element_glyph(unit.element)
 		glyph.add_theme_font_size_override("font_size", 22)
 		glyph.modulate = TurnCombat.element_color(unit.element)
-		glyph.position = Vector2(-10, -112)
+		# 정수리(-140) **바로 위**에 붙인다. 몸이 커지면 이 값도 함께 내려야 한다.
+		#
+		# 예전에는 정수리에서 34px 띄웠는데, 몸이 78 → 140 으로 커지자 그 여유가
+		# 화면 위쪽을 밀어내 **적 정보 카드가 우상단 토글과 겹쳤다.** 문양은 장식이고
+		# 원소 정보는 카드의 분절 칸이 이미 보여 주므로, 자리를 카드에 양보한다.
+		glyph.position = Vector2(-10, -162)
 		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		shape.add_child(glyph)
 
@@ -834,7 +857,7 @@ func _play_break(data: Dictionary) -> void:
 				# 시간 감속 0.25초 @ 0.15배속.
 				Engine.time_scale = float(step.get("time_scale", 0.15))
 				await _wait_real(duration)
-				Engine.time_scale = 1.0
+				_restore_time_scale()
 
 			5:
 				# 화면 전체 원소 색 플래시 70% -> 0%.
@@ -1099,9 +1122,24 @@ func _hitstop(frames: int) -> void:
 	if frames <= 0:
 		return
 	var seconds := float(frames) / 60.0
-	Engine.time_scale = 0.0001
+	Engine.time_scale = HITSTOP_SCALE
 	await _wait_real(seconds)
+	_restore_time_scale()
+
+
+# `Engine.time_scale` 을 1.0 으로 되돌린다.
+#
+# **전역 상태라 반드시 복구되어야 한다.** 히트스톱은 0.0001, 격파 슬로모션은 0.15 로
+# 낮추는데, 그 사이 `await` 에서 코루틴이 재개되지 못하면(씬 교체·노드 해제) 배율이
+# 그대로 남아 **게임 전체가 1/10000 속도로 굳는다.** 재시작 외에는 되돌릴 방법이 없다.
+# 그래서 복구를 한 곳에 모으고 `_exit_tree()` 에서도 부른다 (#495).
+func _restore_time_scale() -> void:
 	Engine.time_scale = 1.0
+
+
+# 노드가 트리를 떠날 때의 안전망. 연출 도중 씬이 바뀌어도 배율이 남지 않는다.
+func _exit_tree() -> void:
+	_restore_time_scale()
 
 
 # 카메라 흔들림. 진폭·지속의 2파라미터에 감쇠를 준다.

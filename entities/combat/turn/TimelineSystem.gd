@@ -31,6 +31,14 @@ var _extra_queue: Array[StringName] = []
 ## 이번 턴에 행동 중인 유닛. 오의 상한(턴당 2개)과 추가 턴 캡의 기준이다.
 var current_actor_id: StringName = &""
 
+## **이번 턴이 추가 턴인가.** `advance_to_next()` 가 정한다.
+##
+## 왜 `is_pending_extra()` 로 물어보면 안 되는가: `advance_to_next()` 가 대기열에서
+## id 를 **꺼내면서** 유닛을 돌려주므로, 돌려받은 뒤에 대기열을 조회하면 방금 꺼낸
+## 그 턴은 이미 없다. 실제로 `TurnBattleManager` 가 그렇게 물어봐서 **추가 턴마다
+## AV 가 리필되어 추가 턴이 정상 턴을 먹고 있었다**(#495).
+var current_is_extra: bool = false
+
 
 func _tuning() -> TurnCombatTuning:
 	return PlayerStats.get_tuning_turn()
@@ -49,6 +57,7 @@ func reset(battle_units: Array[TurnUnit], ally_offset_ratio: float = 0.0,
 	_extra_queue.clear()
 	elapsed_av = 0.0
 	current_actor_id = &""
+	current_is_extra = false
 
 	for unit in units:
 		var base := unit.get_action_value()
@@ -68,10 +77,17 @@ func add_unit(unit: TurnUnit, initial_ratio: float = 0.5) -> void:
 
 
 # 유닛을 타임라인에서 뺀다 (사망·퇴장).
+#
+# **`units` 에서는 지우지 않는다.** 그 배열은 전투가 소유하고 여기서는 참조만 한다 —
+# `reset()` 이 같은 객체를 받으므로 여기서 erase 하면 `TurnBattleManager.units` 가
+# 그대로 깎인다. 실제로 그랬고, 그래서 **죽은 유닛이 전투 기록에서 통째로 사라져**
+# 결과 화면의 딜량 표가 이름 대신 내부 id(`velociraptor_beastfolk#1`)를 띄웠다 (#497).
+#
+# `units` 는 "이 전투에 참여한 전원"이고, 여기서 빠져야 하는 것은 **행동 순서**뿐이다.
+# `_active_units()` 가 `_av` 에 있는지로 거르므로 이것만으로 충분하다.
 func remove_unit(unit: TurnUnit) -> void:
 	_av.erase(unit.unit_id)
 	_extra_queue = _extra_queue.filter(func(id): return id != unit.unit_id)
-	units.erase(unit)
 
 
 # ===== 조회 (Queries) =====
@@ -126,12 +142,17 @@ func _active_units() -> Array[TurnUnit]:
 #
 # 반환: 행동할 유닛. 아무도 행동할 수 없으면 null.
 func advance_to_next() -> TurnUnit:
+	current_is_extra = false
+
 	# 1) 추가 턴 우선.
 	while not _extra_queue.is_empty():
 		var id: StringName = _extra_queue.pop_front()
 		var unit := _find_unit(id)
 		if unit != null and unit.alive and unit.can_act():
 			current_actor_id = id
+			# 꺼내는 이 자리에서만 "추가 턴이다"를 알 수 있다. 호출자가 나중에
+			# 대기열을 다시 보면 이미 꺼낸 뒤라 알 방법이 없다.
+			current_is_extra = true
 			return unit
 		# 죽거나 행동 불가가 된 유닛의 추가 턴은 버린다.
 
@@ -186,6 +207,7 @@ func on_turn_finished(unit: TurnUnit, was_extra: bool = false) -> void:
 	unit.advance_streak = 0
 	unit.extra_turns_used = 0
 	current_actor_id = &""
+	current_is_extra = false
 
 
 # ===== 행동 조작 (Manipulation) =====

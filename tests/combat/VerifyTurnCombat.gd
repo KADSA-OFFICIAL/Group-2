@@ -260,6 +260,43 @@ func _test_extra_turn_cap() -> void:
 	_expect_near(timeline.get_av(unit), before, 0.001,
 		"추가 턴은 AV 를 흘리지 않아야 한다")
 
+	_test_extra_turn_does_not_refill()
+
+
+# 추가 턴을 마쳐도 AV 가 리필되면 안 된다 (#495 회귀 검사).
+#
+# 예전에는 `TurnBattleManager` 가 `advance_to_next()` **뒤에** `is_pending_extra()` 로
+# 추가 턴 여부를 물었다. 그 함수는 대기열에서 id 를 이미 꺼낸 뒤라 항상 false 를
+# 돌려줬고, 그래서 추가 턴마다 AV 가 리필되어 **추가 턴이 그 유닛의 정상 턴을 먹었다.**
+# 전투는 정상으로 보이는데 추가 턴 스킬만 아무 이득이 없는, 눈으로 안 잡히는 버그다.
+func _test_extra_turn_does_not_refill() -> void:
+	var unit := _make_unit("extra_refill", 100)
+	var units: Array[TurnUnit] = [unit]
+	var timeline := TimelineSystem.new()
+	timeline.reset(units)
+
+	# 정상 턴을 한 번 소화해 기준 상태를 만든다.
+	var normal := timeline.advance_to_next()
+	_expect(normal == unit, "정상 턴이 진행되어야 한다")
+	_expect(not timeline.current_is_extra, "정상 턴은 추가 턴으로 표시되면 안 된다")
+	timeline.on_turn_finished(unit, timeline.current_is_extra)
+
+	# AV 를 절반으로 낮춰 두면 리필 여부가 눈에 보인다.
+	timeline.advance_action(unit, 0.5)
+	var av_before := timeline.get_av(unit)
+	_expect(av_before < timeline.get_base_av(unit) - 0.001,
+		"앞당김으로 AV 가 기준치보다 낮아져 있어야 한다")
+
+	timeline.grant_extra_turn(unit)
+	var extra_actor := timeline.advance_to_next()
+	_expect(extra_actor == unit, "추가 턴 대기열이 최우선이어야 한다")
+	_expect(timeline.current_is_extra,
+		"advance_to_next() 가 이번 턴이 추가 턴임을 기록해야 한다")
+
+	timeline.on_turn_finished(unit, timeline.current_is_extra)
+	_expect_near(timeline.get_av(unit), av_before, 0.001,
+		"추가 턴을 마쳐도 AV 가 리필되면 안 된다 (#495)")
+
 
 func _test_timeline_preview() -> void:
 	var a := _make_unit("a", 120)
@@ -1476,6 +1513,41 @@ func _test_full_battle() -> void:
 	_expect(summary.has("damage") and not summary["damage"].is_empty(),
 		"캐릭터별 딜량이 집계되어야 한다")
 
+	# --- 죽은 유닛도 기록에 남는다 (#497 회귀 검사) ---
+	#
+	# 예전에는 `TimelineSystem.remove_unit()` 이 전투가 소유한 `units` 배열을 직접
+	# erase 해서 **죽은 유닛이 전투 기록에서 통째로 사라졌다.** 그러면
+	# `result_summary()` 의 `find_unit()` 이 이름을 못 찾아 딜량 표가 표시 이름 대신
+	# 내부 id(`velociraptor_beastfolk#1`)를 띄웠다. 승리하면 적은 전부 죽으므로
+	# 적 딜량 행은 사실상 항상 id 였다.
+	_expect(battle.units.size() == 9,
+		"유닛이 죽어도 전투 기록(units)에서 사라지면 안 된다 (실제 %d/9)"
+			% battle.units.size())
+
+	var dead_count := 0
+	for unit in battle.units:
+		if not unit.alive:
+			dead_count += 1
+	_expect(dead_count > 0, "전투가 끝났으면 쓰러진 유닛이 기록에 남아 있어야 한다")
+
+	# 딜량 표의 키가 전부 표시 이름이어야 한다 — 내부 id 가 섞이면 안 된다.
+	var known_names := {}
+	for unit in battle.units:
+		known_names[unit.display_name] = true
+	for label in summary["damage"]:
+		_expect(known_names.has(String(label)),
+			"딜량 표에 표시 이름이 아닌 키가 있다: '%s' (내부 id 가 샜다)" % label)
+
+	# 죽은 유닛은 타임라인과 랭크에서는 빠져 있어야 한다.
+	for unit in battle.units:
+		if unit.alive:
+			continue
+		_expect(not battle.ranks.living(unit.side).has(unit),
+			"%s 는 쓰러졌으므로 대형에 없어야 한다" % unit.display_name)
+
+	_test_enemy_retargets_dead_announcement()
+
+
 	print("  전투 결과: %s / %d 사이클 / %d턴 / 격파 %d회 / 자물쇠 %d개 해제 / 무산 %d회"
 		% ["승리" if bool(summary["victory"]) else "패배",
 			int(summary["cycles"]), int(summary["turns"]), int(summary["breaks"]),
@@ -1657,3 +1729,58 @@ func _test_cycle_limit() -> void:
 	# 제한이 0이면 제한 없음이어야 한다 (기존 동작 보존).
 	var unlimited := TurnBattleManager.new()
 	_expect(unlimited.cycle_limit == 0, "사이클 제한의 기본값은 0(제한 없음)이어야 한다")
+
+
+# 예고한 대상이 죽으면 적이 **살아 있는 대상으로 다시 고른다** (#497 회귀 검사).
+#
+# `TurnEnemyAI` 에 그 재선택 분기가 원래 있었지만 **도달할 수 없었다.**
+# 죽은 유닛이 `units` 배열에서 erase 되어 `_find()` 가 null 을 돌려줬고,
+# `if primary != null and not primary.alive` 가 절대 참이 되지 않았다.
+# 그래서 `primary` 가 null 인 채로 스킬이 실행되어 **적 턴이 통째로 사라졌다** —
+# 코드 주석이 경고하던 바로 그 상황이 실제로 일어나고 있었다.
+func _test_enemy_retargets_dead_announcement() -> void:
+	var party: Array[CharacterData] = []
+	for id in [&"mina", &"harang"]:
+		var character: CharacterData = CharacterDatabase.get_character(id)
+		if character != null:
+			party.append(character)
+	var enemies: Array[EnemyData] = []
+	var enemy: EnemyData = EnemyDatabase.get_enemy(&"velociraptor_beastfolk")
+	if enemy != null:
+		enemies.append(enemy)
+	if party.size() < 2 or enemies.is_empty():
+		return
+
+	var battle := TurnBattleManager.new()
+	battle.start(party, enemies, 0, 777)
+	battle.begin_battle()
+
+	var foe := battle.enemies()[0]
+	_expect(foe.intent != null, "적이 행동을 예고해야 한다")
+	if foe.intent == null or foe.intent.target_ids.is_empty():
+		return
+
+	# 예고된 대상을 쓰러뜨린다.
+	var announced := battle.find_unit(foe.intent.target_ids[0])
+	_expect(announced != null, "예고된 대상을 배열에서 찾을 수 있어야 한다")
+	if announced == null:
+		return
+	announced.current_hp = 0
+	announced.alive = false
+	battle.ranks.remove(announced)
+	battle.timeline.remove_unit(announced)
+
+	# 죽은 뒤에도 기록에는 남아 있어야 재선택 분기가 돈다.
+	_expect(battle.find_unit(foe.intent.target_ids[0]) != null,
+		"쓰러진 예고 대상이 기록에 남아 있어야 재선택 분기가 돈다")
+
+	var living_before := battle.allies().size()
+	_expect(living_before >= 1, "아직 살아 있는 아군이 있어야 한다")
+
+	var result := battle.ai.act(foe, battle.units)
+	var hit_living := false
+	for ctx in result.get("damage", []):
+		if ctx != null and ctx.target != null and ctx.target != announced:
+			hit_living = true
+	_expect(hit_living,
+		"예고 대상이 죽었으면 살아 있는 아군으로 다시 골라 때려야 한다 (#497)")

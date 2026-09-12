@@ -43,6 +43,10 @@ func place(units: Array[TurnUnit]) -> void:
 	_slots[TurnCombat.Side.ENEMY] = _empty_slots(TurnCombat.ENEMY_RANK_COUNT)
 
 	for unit in units:
+		# 쓰러진 유닛은 자리를 차지하지 않는다. `units` 에는 전투 기록을 위해 남아
+		# 있지만(#497) 대형에는 없어야 한다 — 앉히면 산 유닛이 앉을 칸이 모자란다.
+		if not unit.alive:
+			continue
 		if not _seat(unit, unit.rank):
 			# 원하는 자리가 찼으면 가장 앞쪽 빈 자리로.
 			var free := first_free_rank(unit.side)

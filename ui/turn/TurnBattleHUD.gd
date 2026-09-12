@@ -129,19 +129,28 @@ const TIMELINE_GHOST_DX := TIMELINE_CARD.x + TIMELINE_GAP
 # --- 적 정보 카드 ---
 #
 # `unit_position()` 은 전투 화면이 도형·연출을 놓는 좌표이기도 하다. **바꾸지 않는다.**
-const ENEMY_ROW_FROM_BOTTOM := 452.0
+## #492 에서 452 → 440 으로 내렸다. 몸이 78 → 140 으로 커지면서 그 위의 정보 카드가
+## 화면 천장(우상단 토글 y 10~42)을 밀어냈다. 적을 12px 내려 카드 자리를 만든다.
+## 아군 머리(y 301)가 적 발밑(y 280)보다 아래인 것은 그대로다 — 여유 21px.
+const ENEMY_ROW_FROM_BOTTOM := 440.0
 const ENEMY_CENTER_DX := 60.0
-const ENEMY_SLOT_STEP := 112.0
-## **`ENEMY_SLOT_STEP`(112) 보다 좁아야 한다.** 넓으면 적이 나란히 설 때 카드가 겹친다.
-const CLUSTER_W := 104.0
+## 몸이 112 폭이 되어(#492) 간격도 넓혔다. **1280 폭에서 적 5체가 들어가는 것이
+## 상한을 정한다** — 5번 적의 카드 우단이 1263, 화면 끝까지 17px 남는다.
+const ENEMY_SLOT_STEP := 126.0
+## **`ENEMY_SLOT_STEP`(126) 보다 좁아야 한다.** 넓으면 적이 나란히 설 때 카드가 겹친다.
+const CLUSTER_W := 118.0
 const CLUSTER_H := 60.0
 const CLUSTER_PAD := 10.0
-const ENEMY_BODY_H := 78.0
+const ENEMY_BODY_H := 140.0
 ## 카드 밑변을 적 도형 정수리에서 이만큼 더 띄운다.
 ##
-## 전투 화면이 원소 문양 라벨을 발밑 -112 에 놓고 그 글자가 22px 라 발밑 -112 ~ -90 을
-## 쓴다. 그 위로 넘기려면 정수리(-78)에서 46 이상 띄워야 한다.
-const CLUSTER_GAP := 46.0
+## 전투 화면이 원소 문양 라벨을 발밑 -162 에 놓고 그 글자가 22px 라 발밑 -162 ~ -140 을
+## 쓴다. 그 위로 넘기려면 정수리(-140)에서 22 이상 띄워야 한다. 4px 여유를 둔다.
+##
+## **몸 크기를 바꿀 때 이 셋이 함께 움직여야 한다** — 몸 높이 · 문양 위치 · 이 값.
+## 하나만 두면 글자나 카드가 몸 안으로 들어가고, 셋을 다 올리면 이번처럼 카드가
+## 화면 천장을 뚫는다. 세 번 겪었다.
+const CLUSTER_GAP := 26.0
 const SEG_SIZE := Vector2(20.0, 8.0)
 const SEG_GAP := 4.0
 const ENEMY_HP_SIZE := Vector2(84.0, 7.0)
@@ -149,7 +158,7 @@ const STATUS_DOT := 7.0
 const STATUS_GAP := 4.0
 const STATUS_MAX := 4
 ## 조준 고리 — 회전 크로스헤어 대신 발밑 타원 고리와 `icon_mark` 배지를 쓴다.
-const AIM_RING := Vector2(72.0, 22.0)
+const AIM_RING := Vector2(118.0, 32.0)
 const AIM_BORDER := 2.0
 const AIM_DY := -6.0
 const MARK_ICON := 24.0
@@ -189,12 +198,31 @@ const SKILL_FROM_BOTTOM := 110.0
 
 # --- 아군 도형 위치 (전투 화면이 쓰는 좌표) ---
 const ALLY_ROW_FROM_BOTTOM := 268.0
-const ALLY_CENTER_DX := -84.0
-const ALLY_SLOT_STEP := -84.0
+## 몸이 101 폭이 되어(#492) 간격을 넓혔다. 간격이 몸 폭과 같으면 정확히 맞닿는다.
+## 1번 아군의 몸 우단(596)이 1번 적의 몸 좌단(644)보다 왼쪽이어야 한다.
+const ALLY_CENTER_DX := -95.0
+const ALLY_SLOT_STEP := -112.0
 
 # ===== 상태 =====
 
-var battle: TurnBattleManager = null
+# 전투를 갈아끼우면 **화면이 들고 있던 이전 전투의 흔적을 전부 버린다.**
+#
+# 세터로 둔 이유: 재출격(`TurnBattle._restart()`)이 새 `TurnBattleManager` 를 만들어
+# 여기에 대입하는데, HUD 노드는 `_build_scene()` 에서 한 번만 만들어져 **재사용**된다.
+# 호출부가 매번 손으로 비우게 두면 언젠가 빠뜨린다 — 실제로 빠뜨려서 두 가지가 샜다(#495).
+#
+#   · 초상 캐시: 적 `unit_id` 가 `"#1"`, `"#2"` 처럼 **전투마다 재사용**되는 값이라,
+#     1-1 을 하고 2-1 로 출격하면 2-1 의 1번 적이 1-1 첫 적의 얼굴로 그려졌다
+#   · 일시정지·조준: 멈춘 채 재출격하면 새 전투가 시작하자마자 얼어 있었고,
+#     조준 프레임이 이전 전투 유닛의 자리에 그려졌다
+#
+# 배속과 자동 전투는 **일부러 남긴다** — 그쪽은 전투 상태가 아니라 플레이어 취향이다.
+var battle: TurnBattleManager = null:
+	set(value):
+		if battle == value:
+			return
+		battle = value
+		_reset_session()
 
 ## 마우스가 올라간 행동. 여기가 바뀌면 타임라인 프리뷰가 갱신된다 (설계서 §4.2.5).
 var hovered_action: int = -1
@@ -223,6 +251,20 @@ var _head_art: Dictionary = {}
 var _icons: Dictionary = {}
 ## StyleBoxFlat 캐시. 매 프레임 새로 만들면 프레임마다 수십 개가 할당된다.
 var _boxes: Dictionary = {}
+
+
+# 전투 하나가 끝나고 다음 전투로 넘어갈 때 버려야 하는 것들.
+#
+# 배속(`speed`)·자동(`auto`)은 남긴다. 그 둘은 플레이어가 고른 재생 설정이고,
+# 전투가 바뀌었다고 되돌리면 매 전투마다 다시 눌러야 한다.
+func _reset_session() -> void:
+	paused = false
+	selected_target = null
+	hovered_action = -1
+	selected_action = 0
+	preview = {}
+	_head_art.clear()
+	queue_redraw()
 
 
 func _ready() -> void:

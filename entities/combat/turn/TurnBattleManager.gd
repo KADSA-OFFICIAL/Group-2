@@ -368,7 +368,10 @@ func _step() -> bool:
 		phase = Phase.DEFEAT
 		return false
 
-	active_is_extra = timeline.is_pending_extra(active_unit)
+	# `is_pending_extra()` 로 물어보면 안 된다 — `advance_to_next()` 가 대기열에서
+	# 방금 꺼낸 뒤라 항상 false 다. 그래서 추가 턴마다 AV 가 리필되어 추가 턴이
+	# 정상 턴을 먹고 있었다 (#495).
+	active_is_extra = timeline.current_is_extra
 
 	var cycle := timeline.current_cycle()
 	if cycle != previous_cycle:
@@ -618,11 +621,17 @@ func _advance_wave() -> void:
 	var wave: Array = pending_waves.pop_front()
 	wave_index += 1
 
-	# 남아 있는 적을 정리한다(전멸했으므로 보통 비어 있지만, 안전하게 비운다).
+	# 지난 웨이브의 적을 **배열에서도** 치운다.
+	#
+	# 예전에는 `timeline.remove_unit()` 의 부작용(같은 배열을 erase 했다)에 기대고
+	# 있었다. 그 부작용을 없앴으므로(#497) 배열을 소유한 이쪽이 직접 치운다.
+	# 안 치우면 쓰러진 지난 웨이브 적이 `ranks.place()` 에서 다시 자리를 차지해
+	# 새 웨이브 적이 앉을 칸이 모자란다.
 	for unit in units.duplicate():
 		if unit.is_enemy():
 			ranks.remove(unit)
 			timeline.remove_unit(unit)
+			units.erase(unit)
 
 	var index := 1
 	for data in wave:
