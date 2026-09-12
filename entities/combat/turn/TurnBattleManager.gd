@@ -621,11 +621,17 @@ func _advance_wave() -> void:
 	var wave: Array = pending_waves.pop_front()
 	wave_index += 1
 
-	# 남아 있는 적을 정리한다(전멸했으므로 보통 비어 있지만, 안전하게 비운다).
+	# 지난 웨이브의 적을 **배열에서도** 치운다.
+	#
+	# 예전에는 `timeline.remove_unit()` 의 부작용(같은 배열을 erase 했다)에 기대고
+	# 있었다. 그 부작용을 없앴으므로(#497) 배열을 소유한 이쪽이 직접 치운다.
+	# 안 치우면 쓰러진 지난 웨이브 적이 `ranks.place()` 에서 다시 자리를 차지해
+	# 새 웨이브 적이 앉을 칸이 모자란다.
 	for unit in units.duplicate():
 		if unit.is_enemy():
 			ranks.remove(unit)
 			timeline.remove_unit(unit)
+			units.erase(unit)
 
 	var index := 1
 	for data in wave:
