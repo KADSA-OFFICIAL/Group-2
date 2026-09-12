@@ -1,4 +1,6 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=16 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=17 format=3]
+
+[ext_resource type="SpriteFrames" path="res://assets/sprites/characters/battle/frames/gangji.tres" id="61_animation"]
 
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/battle/char_gangji_battle.png" id="60_battle"]
 [ext_resource type="Script" path="res://entities/character/CharacterData.gd" id="1_chardata"]
@@ -32,6 +34,7 @@ heal_boost = 0.25
 [resource]
 script = ExtResource("1_chardata")
 battle_sprite = ExtResource("60_battle")
+battle_frames = ExtResource("61_animation")
 role = 2
 secondary_role = 2
 character_id = &"gangji"

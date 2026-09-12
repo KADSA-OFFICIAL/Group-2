@@ -1,0 +1,81 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/attack_0.png" id="1_efmbw"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/attack_1.png" id="2_t5ehq"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/attack_2.png" id="3_m21yy"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/attack_3.png" id="4_sq2fs"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/death_0.png" id="5_xelcx"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/death_1.png" id="6_iatbm"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/death_2.png" id="7_6kykq"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/death_3.png" id="8_upyx0"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/hit_0.png" id="9_7bd3x"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/hit_1.png" id="10_14h4b"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/idle_0.png" id="11_k0pku"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/idle_1.png" id="12_unsrp"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/idle_2.png" id="13_sgdqp"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk/idle_3.png" id="14_bn5if"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_efmbw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_t5ehq")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_m21yy")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_sq2fs")
+}],
+"loop": false,
+"name": &"attack",
+"speed": 14.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_xelcx")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_iatbm")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_6kykq")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_upyx0")
+}],
+"loop": false,
+"name": &"death",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("9_7bd3x")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_14h4b")
+}],
+"loop": false,
+"name": &"hit",
+"speed": 16.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("11_k0pku")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_unsrp")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_sgdqp")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_bn5if")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 6.0
+}]
