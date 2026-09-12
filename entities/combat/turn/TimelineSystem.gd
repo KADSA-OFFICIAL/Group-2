@@ -77,10 +77,17 @@ func add_unit(unit: TurnUnit, initial_ratio: float = 0.5) -> void:
 
 
 # 유닛을 타임라인에서 뺀다 (사망·퇴장).
+#
+# **`units` 에서는 지우지 않는다.** 그 배열은 전투가 소유하고 여기서는 참조만 한다 —
+# `reset()` 이 같은 객체를 받으므로 여기서 erase 하면 `TurnBattleManager.units` 가
+# 그대로 깎인다. 실제로 그랬고, 그래서 **죽은 유닛이 전투 기록에서 통째로 사라져**
+# 결과 화면의 딜량 표가 이름 대신 내부 id(`velociraptor_beastfolk#1`)를 띄웠다 (#497).
+#
+# `units` 는 "이 전투에 참여한 전원"이고, 여기서 빠져야 하는 것은 **행동 순서**뿐이다.
+# `_active_units()` 가 `_av` 에 있는지로 거르므로 이것만으로 충분하다.
 func remove_unit(unit: TurnUnit) -> void:
 	_av.erase(unit.unit_id)
 	_extra_queue = _extra_queue.filter(func(id): return id != unit.unit_id)
-	units.erase(unit)
 
 
 # ===== 조회 (Queries) =====
