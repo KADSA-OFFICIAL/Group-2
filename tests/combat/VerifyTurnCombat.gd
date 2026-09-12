@@ -260,6 +260,43 @@ func _test_extra_turn_cap() -> void:
 	_expect_near(timeline.get_av(unit), before, 0.001,
 		"추가 턴은 AV 를 흘리지 않아야 한다")
 
+	_test_extra_turn_does_not_refill()
+
+
+# 추가 턴을 마쳐도 AV 가 리필되면 안 된다 (#495 회귀 검사).
+#
+# 예전에는 `TurnBattleManager` 가 `advance_to_next()` **뒤에** `is_pending_extra()` 로
+# 추가 턴 여부를 물었다. 그 함수는 대기열에서 id 를 이미 꺼낸 뒤라 항상 false 를
+# 돌려줬고, 그래서 추가 턴마다 AV 가 리필되어 **추가 턴이 그 유닛의 정상 턴을 먹었다.**
+# 전투는 정상으로 보이는데 추가 턴 스킬만 아무 이득이 없는, 눈으로 안 잡히는 버그다.
+func _test_extra_turn_does_not_refill() -> void:
+	var unit := _make_unit("extra_refill", 100)
+	var units: Array[TurnUnit] = [unit]
+	var timeline := TimelineSystem.new()
+	timeline.reset(units)
+
+	# 정상 턴을 한 번 소화해 기준 상태를 만든다.
+	var normal := timeline.advance_to_next()
+	_expect(normal == unit, "정상 턴이 진행되어야 한다")
+	_expect(not timeline.current_is_extra, "정상 턴은 추가 턴으로 표시되면 안 된다")
+	timeline.on_turn_finished(unit, timeline.current_is_extra)
+
+	# AV 를 절반으로 낮춰 두면 리필 여부가 눈에 보인다.
+	timeline.advance_action(unit, 0.5)
+	var av_before := timeline.get_av(unit)
+	_expect(av_before < timeline.get_base_av(unit) - 0.001,
+		"앞당김으로 AV 가 기준치보다 낮아져 있어야 한다")
+
+	timeline.grant_extra_turn(unit)
+	var extra_actor := timeline.advance_to_next()
+	_expect(extra_actor == unit, "추가 턴 대기열이 최우선이어야 한다")
+	_expect(timeline.current_is_extra,
+		"advance_to_next() 가 이번 턴이 추가 턴임을 기록해야 한다")
+
+	timeline.on_turn_finished(unit, timeline.current_is_extra)
+	_expect_near(timeline.get_av(unit), av_before, 0.001,
+		"추가 턴을 마쳐도 AV 가 리필되면 안 된다 (#495)")
+
 
 func _test_timeline_preview() -> void:
 	var a := _make_unit("a", 120)

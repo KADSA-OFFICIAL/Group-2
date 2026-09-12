@@ -45,6 +45,9 @@ extends Node2D
 const HUD_LAYER: int = 1
 const FLASH_LAYER: int = 2
 
+## 히트스톱 동안의 전역 시간 배율. 0 으로 두면 타이머가 영영 돌아오지 않는다.
+const HITSTOP_SCALE: float = 0.0001
+
 # ===== 오의 컷인 구도 (캐릭터 아트 가이드 §4.1) =====
 #
 # 가이드는 2400×1350 캔버스 기준이고 이 화면은 1280×720 이라 0.533 배로 환산했다.
@@ -171,6 +174,9 @@ func _restart() -> void:
 
 	battle = TurnBattleManager.new()
 	_outcome_reported = false
+	# 이전 전투에서 켜 둔 일시정지가 새 전투로 넘어오면 시작하자마자 얼어 있다 (#495).
+	# HUD 쪽 `paused` 는 `hud.battle` 세터가 함께 푼다.
+	_paused = false
 	_start_battle()
 
 
@@ -851,7 +857,7 @@ func _play_break(data: Dictionary) -> void:
 				# 시간 감속 0.25초 @ 0.15배속.
 				Engine.time_scale = float(step.get("time_scale", 0.15))
 				await _wait_real(duration)
-				Engine.time_scale = 1.0
+				_restore_time_scale()
 
 			5:
 				# 화면 전체 원소 색 플래시 70% -> 0%.
@@ -1116,9 +1122,24 @@ func _hitstop(frames: int) -> void:
 	if frames <= 0:
 		return
 	var seconds := float(frames) / 60.0
-	Engine.time_scale = 0.0001
+	Engine.time_scale = HITSTOP_SCALE
 	await _wait_real(seconds)
+	_restore_time_scale()
+
+
+# `Engine.time_scale` 을 1.0 으로 되돌린다.
+#
+# **전역 상태라 반드시 복구되어야 한다.** 히트스톱은 0.0001, 격파 슬로모션은 0.15 로
+# 낮추는데, 그 사이 `await` 에서 코루틴이 재개되지 못하면(씬 교체·노드 해제) 배율이
+# 그대로 남아 **게임 전체가 1/10000 속도로 굳는다.** 재시작 외에는 되돌릴 방법이 없다.
+# 그래서 복구를 한 곳에 모으고 `_exit_tree()` 에서도 부른다 (#495).
+func _restore_time_scale() -> void:
 	Engine.time_scale = 1.0
+
+
+# 노드가 트리를 떠날 때의 안전망. 연출 도중 씬이 바뀌어도 배율이 남지 않는다.
+func _exit_tree() -> void:
+	_restore_time_scale()
 
 
 # 카메라 흔들림. 진폭·지속의 2파라미터에 감쇠를 준다.

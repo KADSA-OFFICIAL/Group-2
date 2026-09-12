@@ -368,7 +368,10 @@ func _step() -> bool:
 		phase = Phase.DEFEAT
 		return false
 
-	active_is_extra = timeline.is_pending_extra(active_unit)
+	# `is_pending_extra()` 로 물어보면 안 된다 — `advance_to_next()` 가 대기열에서
+	# 방금 꺼낸 뒤라 항상 false 다. 그래서 추가 턴마다 AV 가 리필되어 추가 턴이
+	# 정상 턴을 먹고 있었다 (#495).
+	active_is_extra = timeline.current_is_extra
 
 	var cycle := timeline.current_cycle()
 	if cycle != previous_cycle:
