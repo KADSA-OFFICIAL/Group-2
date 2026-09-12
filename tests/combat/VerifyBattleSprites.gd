@@ -112,7 +112,9 @@ func verify_scene(party: Array[StringName], enemies: Array[StringName], filename
 		var id: StringName = data.get("character_id") if unit.is_ally() else data.get("enemy_id")
 		seen[id] = true
 		expect(picture.texture == data.get("battle_sprite"), String(id)+": stage uses authored resource")
-		var expected := Vector2(56,84) if unit.is_ally() else Vector2(62,78)
+		# 표시 칸의 정본은 TurnBattle 이다. 여기에 숫자를 박아 두면 칸을 키울 때
+		# (#492 가 1.5배로 키웠다) 아트는 멀쩡한데 이 검증만 빨간불이 켜진다.
+		var expected: Vector2 = node.get("ALLY_BODY") if unit.is_ally() else node.get("ENEMY_BODY")
 		expect(picture.size == expected and picture.position == -expected*Vector2(0.5,1), String(id)+": original display size and feet anchor")
 	var args := OS.get_cmdline_user_args()
 	if args.size() == 2 and args[0] == "--capture":

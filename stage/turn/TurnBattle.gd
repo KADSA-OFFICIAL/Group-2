@@ -65,8 +65,13 @@ const CUTIN_EMBLEM_ALPHA: float = 0.17
 const GROUND_H: float = 420.0
 ## 유닛 몸 칸. 발밑이 노드 원점이다 (`position = -box * (0.5, 1)`).
 ## 스프라이트를 저작할 때 이 비율을 맞춘다 — docs/turn-battle-sprite-prompts.md
-const ALLY_BODY := Vector2(56.0, 84.0)
-const ENEMY_BODY := Vector2(62.0, 78.0)
+##
+## #492 에서 **1.5배**로 키웠다(56×84 / 62×78 → 84×126 / 93×117). 그 전에는 캐릭터가
+## 너무 멀리 있는 것처럼 보였다 — 아트 가이드 §2.3 이 요구하는 표시 높이(720p 환산
+## 227~267px)와 3배 차이였다. 제작 캔버스가 4배(224×336)라 1.5배로 키워도 원본
+## 해상도 안이므로 **아트를 다시 뽑을 필요가 없다.**
+const ALLY_BODY := Vector2(84.0, 126.0)
+const ENEMY_BODY := Vector2(93.0, 117.0)
 ## 중앙 충돌선의 아래에서 잰 시작 높이.
 const DIVIDER_FROM_BOTTOM: float = 540.0
 
@@ -507,9 +512,12 @@ func _build_shapes() -> void:
 		# 원소 문양 — 색맹 대응으로 색과 형태를 함께 쓴다.
 		var glyph := Label.new()
 		glyph.text = TurnCombat.element_glyph(unit.element)
-		glyph.add_theme_font_size_override("font_size", 22)
+		glyph.add_theme_font_size_override("font_size", 28)
 		glyph.modulate = TurnCombat.element_color(unit.element)
-		glyph.position = Vector2(-10, -112)
+		# 몸이 커진 만큼 문양도 위로 올린다. 예전 -112 는 새 몸(117 높이) 안쪽이라
+		# 가슴팍에 글자가 얹혔다. 정수리(-117)보다 위에 두고, HUD 의 적 클러스터가
+		# 그보다 더 위에 선다(`CLUSTER_GAP`).
+		glyph.position = Vector2(-13, -158)
 		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		shape.add_child(glyph)
 

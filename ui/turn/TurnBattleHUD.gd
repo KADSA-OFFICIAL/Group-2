@@ -89,22 +89,22 @@ const HIT_MIN := 56.0
 
 # --- 웨이브 핍 (타임라인 머리) ---
 const WAVE_ORIGIN := Vector2(8.0, 70.0)
-const WAVE_PIP := Vector2(14.0, 5.0)
+const WAVE_PIP := Vector2(18.0, 6.0)
 const WAVE_GAP := 4.0
 
 # --- 좌측 타임라인 ---
-const TIMELINE_RAIL_W := 3.0     # 좌측 강조선 3px
+const TIMELINE_RAIL_W := 4.0     # 좌측 강조선
 const TIMELINE_X := 8.0
 const TIMELINE_Y := 92.0
-const TIMELINE_CHIP_W := 60.0
-const TIMELINE_CHIP_H := 28.0
-const TIMELINE_CHIP_H_NOW := 32.0  # 현재 칩만 32
-const TIMELINE_GAP := 6.0
+const TIMELINE_CHIP_W := 80.0
+const TIMELINE_CHIP_H := 38.0
+const TIMELINE_CHIP_H_NOW := 44.0  # 현재 칩만 크게
+const TIMELINE_GAP := 8.0
 const TIMELINE_COUNT := 5          # 앞으로 5개 유닛
 ## 고스트는 칩 **옆에** 나란히 둔다. 칩 폭보다 작게 밀면 글자가 겹쳐 둘 다 못 읽는다.
 const TIMELINE_GHOST_DX := TIMELINE_CHIP_W + TIMELINE_GAP
-## 칩 안 초상 패치 폭. 강조선 3 + 26 + 문양 자리를 남긴다.
-const CHIP_ART_W := 26.0
+## 칩 안 초상 패치 폭. 강조선 + 패치 + 문양 자리를 남긴다.
+const CHIP_ART_W := 36.0
 
 # --- 적 클러스터 ---
 #
@@ -112,82 +112,87 @@ const CHIP_ART_W := 26.0
 ## 적 줄의 바닥에서 잰 높이. 지면선(아래에서 420)보다 위에 선다.
 const ENEMY_ROW_FROM_BOTTOM := 452.0
 ## 적 줄의 가로 위치는 캔버스 **중심 기준**이다. 1280 기준 x 700 과 같은 값.
-const ENEMY_CENTER_DX := 60.0
-const ENEMY_SLOT_STEP := 112.0
-const CLUSTER_W := 100.0
+## 몸이 93 폭이 되었으므로 간격을 넓혀 5체가 겹치지 않게 한다.
+## 1280 폭에서도 맨 오른쪽 적의 클러스터가 화면을 넘지 않아야 한다.
+const ENEMY_CENTER_DX := 46.0
+const ENEMY_SLOT_STEP := 124.0
+const CLUSTER_W := 118.0
 ## 적 도형 높이(62×78). 클러스터를 이 위로 올려야 바가 몸통에 겹치지 않는다.
-const ENEMY_BODY_H := 78.0
+const ENEMY_BODY_H := 117.0
 ## 클러스터 밑변을 도형 정수리에서 이만큼 더 띄운다.
 ##
 ## -76 이었을 때 클러스터가 도형 상단 27px 를 덮었고, **적 HP 바(#E0473B)가 적 도형
 ## (#C8402F) 위에 얹혀 빨강 위 빨강이 되어 남은 체력을 읽을 수 없었다.**
 ##
-## 값의 근거: 전투 화면이 원소 문양 라벨을 발밑 기준 -112 에 놓고 그 글자가 22px 라
-## 발밑 -112 ~ -90 을 쓴다. 6px 만 띄웠을 때 클러스터 밑변(-84)이 그 문양과 겹쳤다.
-## 문양 위로 넘기려면 정수리(-78)에서 46 이상 띄워야 한다.
-const CLUSTER_GAP := 46.0
-const SEG_SIZE := Vector2(22.0, 8.0)
-const SEG_GAP := 4.0             # 22×4 + 4×3 = 100 — 클러스터 폭과 정확히 같다
-const ENEMY_HP_SIZE := Vector2(100.0, 5.0)
-const ENEMY_HP_DY := 12.0
-const ENEMY_STATUS_DY := 21.0
-const AIM_FRAME := Vector2(58.0, 54.0)
-const AIM_BORDER := 2.0
+## 값의 근거: 전투 화면이 원소 문양 라벨을 발밑 기준 -158 에 놓고 그 글자가 28px 라
+## 발밑 -158 ~ -130 을 쓴다. 클러스터를 그 위로 넘기려면 정수리(-117)에서 45 이상
+## 띄워야 한다. (#492 로 몸이 커지면서 문양 위치도 함께 내려갔다.)
+const CLUSTER_GAP := 48.0
+const SEG_SIZE := Vector2(26.0, 11.0)
+const SEG_GAP := 5.0             # 26×4 + 5×3 = 119 ≈ 클러스터 폭
+const ENEMY_HP_SIZE := Vector2(118.0, 7.0)
+const ENEMY_HP_DY := 16.0
+const ENEMY_STATUS_DY := 28.0
+const AIM_FRAME := Vector2(88.0, 106.0)
+const AIM_BORDER := 3.0
 ## `unit_position()` 은 도형의 **발밑**이다 (전투 화면이 `body.position = -size * (0.5, 1)`
 ## 로 놓는다). 프레임을 그 위치에 그대로 씌우면 적의 다리 아래에 걸린다.
-const AIM_DY := -39.0
+const AIM_DY := -58.0
 
 # --- 아군 하단 밴드 ---
-const BAND_H := 112.0            # 하단 밴드 높이 112
+const BAND_H := 148.0            # 하단 밴드 높이
 const CARD_LEFT := 40.0
-const CARD_FROM_BOTTOM := 98.0
-const CARD_STEP := 62.0          # 지터 없음. 확정 규격은 균일 간격이다
-const ULT_STRIP := Vector2(4.0, 36.0)
-const PORTRAIT := Vector2(42.0, 36.0)
+const CARD_FROM_BOTTOM := 130.0
+const CARD_STEP := 86.0          # 지터 없음. 확정 규격은 균일 간격이다
+const ULT_STRIP := Vector2(6.0, 52.0)
+const PORTRAIT := Vector2(60.0, 52.0)
 ## 기울인 프레임(42×36) 안에 들어가는 **축 정렬** 직사각형.
 ##
-## 평행사변형의 내접 직사각형은 가로가 기울기만큼 줄어든다: 42 - 36×tan12° = 34.3.
+## 평행사변형의 내접 직사각형은 가로가 기울기만큼 줄어든다: 60 - 52×tan12° = 48.9.
 ## 초상을 프레임 모양대로 기울여 그렸더니 **얼굴이 그대로 전단됐다** — 그림은
 ## 기울이지 않는다.
-const PORTRAIT_ART := Vector2(34.0, 36.0)
-const ALLY_HP_SIZE := Vector2(42.0, 4.0)
-const ALLY_HP_GAP := 5.0         # 프레임 아래 5px
-const STATUS_DOT := Vector2(5.0, 7.0)
-const STATUS_GAP := 3.0
+const PORTRAIT_ART := Vector2(48.0, 52.0)
+const ALLY_HP_SIZE := Vector2(60.0, 6.0)
+const ALLY_HP_GAP := 6.0         # 프레임 아래
+const STATUS_DOT := Vector2(7.0, 10.0)
+const STATUS_GAP := 4.0
 const STATUS_MAX := 4
 
 # --- 공명 / 열기 / 예고 (하단 밴드 우측) ---
-const RESONANCE_LEFT := 312.0
-const RESONANCE_FROM_BOTTOM := 100.0
-const RESONANCE_PIP := Vector2(7.0, 13.0)
-const RESONANCE_GAP := 5.0
-const HEAT_FROM_BOTTOM := 76.0
-const HEAT_SIZE := Vector2(100.0, 4.0)
-const INTENT_FROM_BOTTOM := 58.0
-const INTENT_H := 24.0
+## 카드 4장이 커져 마지막 카드 우단이 x 406 이다. 그보다 오른쪽에서 시작한다.
+const RESONANCE_LEFT := 430.0
+const RESONANCE_FROM_BOTTOM := 132.0
+const RESONANCE_PIP := Vector2(9.0, 17.0)
+const RESONANCE_GAP := 6.0
+const HEAT_FROM_BOTTOM := 100.0
+const HEAT_SIZE := Vector2(130.0, 6.0)
+const INTENT_FROM_BOTTOM := 74.0
+const INTENT_H := 30.0
 const INTENT_MAX_W := 600.0
 
 # --- 액션 버튼 (우하단) ---
-const ACTION_SIZE := Vector2(92.0, 66.0)
-const ACTION_BORDER := 3.0
-const ACTION_FROM_RIGHT := 120.0
-const ACTION_FROM_BOTTOM := 90.0
+const ACTION_SIZE := Vector2(118.0, 84.0)
+const ACTION_BORDER := 4.0
+const ACTION_FROM_RIGHT := 146.0
+const ACTION_FROM_BOTTOM := 108.0
 ## 스킬 스트립. 세로 간격을 히트박스 최소 변(56)에 맞춰 판정이 겹치지 않게 한다.
-const SKILL_SIZE := Vector2(124.0, 34.0)
-const SKILL_STEP := HIT_MIN
-const SKILL_FROM_RIGHT := 152.0
-const SKILL_FROM_BOTTOM := 124.0
+const SKILL_SIZE := Vector2(158.0, 44.0)
+## 스트립 높이(44)보다 커야 판정이 겹치지 않는다. 히트박스 최소 변(56)보다도 커야 한다.
+const SKILL_STEP := 64.0
+const SKILL_FROM_RIGHT := 186.0
+const SKILL_FROM_BOTTOM := 150.0
 
 # --- 아군 도형 위치 (전투 화면이 쓰는 좌표) ---
 const ALLY_ROW_FROM_BOTTOM := 268.0
-const ALLY_CENTER_DX := -84.0
-const ALLY_SLOT_STEP := -84.0
+## 몸이 84 폭이 되었으므로 간격을 넓힌다. 예전 -84 면 몸끼리 정확히 맞닿는다.
+const ALLY_CENTER_DX := -96.0
+const ALLY_SLOT_STEP := -106.0
 
 # --- 우상단 토글 3개 ---
-const TOGGLE_TOP := 16.0
-const TOGGLE_FROM_RIGHT := 176.0
-const TOGGLE_SIZE := Vector2(40.0, 20.0)
-const TOGGLE_STEP := HIT_MIN     # 판정이 서로 겹치지 않는 최소 간격
+const TOGGLE_TOP := 18.0
+const TOGGLE_FROM_RIGHT := 218.0
+const TOGGLE_SIZE := Vector2(52.0, 26.0)
+const TOGGLE_STEP := 66.0        # 판정이 서로 겹치지 않는 간격
 
 # ===== 상태 =====
 
@@ -323,14 +328,14 @@ func _draw_toggles() -> void:
 	_skewed(speed_pos, TOGGLE_SIZE, TurnCombat.COLOR_PANEL, TurnCombat.COLOR_BORDER_IDLE)
 	for i in 3:
 		var on := float(i) < speed
-		draw_rect(Rect2(speed_pos + Vector2(7.0 + float(i) * 9.0, 5.0), Vector2(4.0, 10.0)),
+		draw_rect(Rect2(speed_pos + Vector2(9.0 + float(i) * 12.0, 6.0), Vector2(5.0, 14.0)),
 			TurnCombat.COLOR_TEXT_ACTIVE if on else TurnCombat.COLOR_GAUGE_EMPTY)
 	_register_hit(Rect2(speed_pos, TOGGLE_SIZE), "speed", {})
 
 	var auto_pos := origin + Vector2(TOGGLE_STEP, 0.0)
 	_skewed(auto_pos, TOGGLE_SIZE, TurnCombat.COLOR_PANEL,
 		TurnCombat.COLOR_AIM if auto else TurnCombat.COLOR_BORDER_IDLE)
-	draw_rect(Rect2(auto_pos + Vector2(8.0, 8.0), Vector2(24.0, 4.0)),
+	draw_rect(Rect2(auto_pos + Vector2(10.0, 11.0), Vector2(32.0, 5.0)),
 		TurnCombat.COLOR_TEXT_ACTIVE if auto else TurnCombat.COLOR_GAUGE_EMPTY)
 	_register_hit(Rect2(auto_pos, TOGGLE_SIZE), "auto", {})
 
@@ -338,7 +343,7 @@ func _draw_toggles() -> void:
 	_skewed(pause_pos, TOGGLE_SIZE, TurnCombat.COLOR_PANEL,
 		TurnCombat.COLOR_AIM if paused else TurnCombat.COLOR_BORDER_IDLE)
 	for i in 2:
-		draw_rect(Rect2(pause_pos + Vector2(14.0 + float(i) * 9.0, 5.0), Vector2(4.0, 11.0)),
+		draw_rect(Rect2(pause_pos + Vector2(18.0 + float(i) * 12.0, 6.0), Vector2(5.0, 14.0)),
 			TurnCombat.COLOR_TEXT_ACTIVE if paused else TurnCombat.COLOR_TEXT_DIM)
 	_register_hit(Rect2(pause_pos, TOGGLE_SIZE), "pause", {})
 
@@ -415,19 +420,19 @@ func _draw_timeline() -> void:
 			_portrait_patch(pos + Vector2(art_x, 1.0),
 				Vector2(CHIP_ART_W, size.y - 2.0), art, Color(1, 1, 1, alpha))
 			text_x = art_x + CHIP_ART_W + 4.0
-		_text(pos + Vector2(text_x, size.y * 0.5 + 4.0),
+		_text(pos + Vector2(text_x, size.y * 0.5 + 5.0),
 			TurnCombat.element_glyph(unit.element),
-			TurnCombat.element_color(unit.element) * Color(1, 1, 1, alpha), 12)
+			TurnCombat.element_color(unit.element) * Color(1, 1, 1, alpha), 16)
 		if art == null:
-			_text(pos + Vector2(text_x + 16.0, size.y * 0.5 + 4.0),
-				unit.display_name.substr(0, 2), ink, 12)
+			_text(pos + Vector2(text_x + 20.0, size.y * 0.5 + 5.0),
+				unit.display_name.substr(0, 2), ink, 16)
 
 		# CR 막대 — 초보자를 위한 두 번째 층위 (설계서 §4.2.2).
 		var charge := battle.timeline.get_charge_ratio(unit)
 		var bar := pos + Vector2(6.0, size.y - 4.0)
-		draw_rect(Rect2(bar, Vector2(size.x - 12.0, 2.0)),
+		draw_rect(Rect2(bar, Vector2(size.x - 14.0, 3.0)),
 			TurnCombat.COLOR_GAUGE_EMPTY * Color(1, 1, 1, alpha))
-		draw_rect(Rect2(bar, Vector2((size.x - 12.0) * charge, 2.0)),
+		draw_rect(Rect2(bar, Vector2((size.x - 14.0) * charge, 3.0)),
 			rail * Color(1, 1, 1, alpha * 0.8))
 
 		y += size.y + TIMELINE_GAP
@@ -457,8 +462,8 @@ func _draw_timeline() -> void:
 				_portrait_patch(pos + Vector2(_skew_inset(chip.y) + TIMELINE_RAIL_W + 1.0, 1.0),
 					Vector2(CHIP_ART_W, chip.y - 2.0), ghost_art, Color(1, 1, 1, 0.85))
 			else:
-				_text(pos + Vector2(8.0, chip.y * 0.5 + 4.0),
-					unit.display_name.substr(0, 2), TurnCombat.COLOR_AIM, 12)
+				_text(pos + Vector2(8.0, chip.y * 0.5 + 5.0),
+					unit.display_name.substr(0, 2), TurnCombat.COLOR_AIM, 16)
 		gy += height + TIMELINE_GAP
 
 
@@ -549,9 +554,9 @@ func _draw_segment_bar(unit: TurnUnit, base: Vector2) -> void:
 			color = color.darkened(0.74)
 		draw_rect(Rect2(pos, Vector2(seg_w, SEG_SIZE.y)), color)
 		# 색맹 대응 — 칸 안에 요구 타입의 고유 문양을 어두운 잉크로 찍는다.
-		if not bool(cell["off"]) and seg_w >= 14.0:
-			_text_centered(pos + Vector2(seg_w * 0.5, SEG_SIZE.y - 1.0),
-				String(cell["glyph"]), TurnCombat.COLOR_BACKDROP, 9)
+		if not bool(cell["off"]) and seg_w >= 16.0:
+			_text_centered(pos + Vector2(seg_w * 0.5, SEG_SIZE.y - 1.5),
+				String(cell["glyph"]), TurnCombat.COLOR_BACKDROP, 12)
 
 
 # 상태이상 색 점. **아이콘도 텍스트도 쓰지 않는다** — 5×7 기울인 슬래시 최대 4개다.
@@ -581,8 +586,12 @@ func _draw_expected_damage() -> void:
 	for unit in battle.enemies():
 		if not expected.has(unit.unit_id):
 			continue
-		var pos := cluster_origin(unit) + Vector2(CLUSTER_W + 6.0, ENEMY_HP_DY + 6.0)
-		_text(pos, "-%d" % int(expected[unit.unit_id]), TurnCombat.COLOR_ENEMY_HP, 15)
+		# **클러스터 위 중앙**에 둔다. 예전에는 클러스터 오른쪽에 붙였는데, #492 로
+		# 클러스터가 118 폭이 되면서 간격이 6px 밖에 남지 않아 **숫자가 옆 적의
+		# 분절 바 위에 얹혔다.** 어느 적의 피해인지 읽을 수 없었다.
+		var pos := Vector2(unit_position(unit).x, cluster_origin(unit).y - 8.0)
+		_text_centered(pos, "-%d" % int(expected[unit.unit_id]),
+			TurnCombat.COLOR_ENEMY_HP, 19)
 
 
 # --- 아군 하단 밴드 (요소 ③ + ④) ---
@@ -634,10 +643,10 @@ func _draw_party_band() -> void:
 
 		var ink := TurnCombat.COLOR_TEXT_ACTIVE if alive else TurnCombat.COLOR_TEXT_DIM
 		if art == null:
-			_text_centered(frame + Vector2(PORTRAIT.x * 0.5, PORTRAIT.y * 0.5 + 6.0),
-				unit.display_name.substr(0, 2), ink, 15)
-		_text(frame + Vector2(4.0, 11.0), TurnCombat.element_glyph(unit.element),
-			TurnCombat.element_color(unit.element) if alive else TurnCombat.COLOR_TEXT_DIM, 11)
+			_text_centered(frame + Vector2(PORTRAIT.x * 0.5, PORTRAIT.y * 0.5 + 8.0),
+				unit.display_name.substr(0, 2), ink, 21)
+		_text(frame + Vector2(5.0, 15.0), TurnCombat.element_glyph(unit.element),
+			TurnCombat.element_color(unit.element) if alive else TurnCombat.COLOR_TEXT_DIM, 15)
 
 		# --- HP 바 (요소 ④) — 프레임 아래 5px ---
 		var hp_pos := frame + Vector2(0.0, PORTRAIT.y + ALLY_HP_GAP)
@@ -711,12 +720,12 @@ func _draw_intent_strip() -> void:
 	var text := selected_target.intent.describe(TurnCombatConfig.info_detail)
 	if text.is_empty():
 		return
-	var width := minf(float(text.length()) * 8.4 + 24.0, INTENT_MAX_W)
+	var width := minf(float(text.length()) * 10.5 + 28.0, INTENT_MAX_W)
 	var origin := intent_origin()
 	_skewed(origin, Vector2(width, INTENT_H), TurnCombat.COLOR_PANEL,
 		TurnCombat.COLOR_ENEMY_HP)
-	_text(origin + Vector2(12.0, INTENT_H - 8.0), text,
-		TurnCombat.COLOR_TEXT_ACTIVE, 12)
+	_text(origin + Vector2(14.0, INTENT_H - 10.0), text,
+		TurnCombat.COLOR_TEXT_ACTIVE, 15)
 
 
 # --- 액션 버튼 (요소 ⑥) ---
@@ -752,16 +761,16 @@ func _draw_action() -> void:
 
 	# 고른 행동의 원소 문양. 대상 범위는 조준 프레임이 실물로 보여주므로 글자가 필요없다.
 	var element := skill.resolve_element(battle.active_unit.element)
-	_text_centered(origin + Vector2(ACTION_SIZE.x * 0.5, 38.0),
+	_text_centered(origin + Vector2(ACTION_SIZE.x * 0.5, 50.0),
 		TurnCombat.element_glyph(element),
-		TurnCombat.element_color(element) if usable else TurnCombat.COLOR_TEXT_DIM, 26)
+		TurnCombat.element_color(element) if usable else TurnCombat.COLOR_TEXT_DIM, 34)
 
 	# 코스트 핍 — 공명 몇 칸을 쓰는지(또는 버는지)를 막대 개수로만 알린다.
 	var gain := skill.is_turn_basic() and skill.rp_cost <= 0
 	var cost := 1 if gain else skill.rp_cost
 	for i in mini(cost, 6):
-		draw_rect(Rect2(origin + Vector2(14.0 + float(i) * 8.0, 50.0),
-			Vector2(5.0, 3.0)),
+		draw_rect(Rect2(origin + Vector2(16.0 + float(i) * 10.0, 64.0),
+			Vector2(6.0, 4.0)),
 			TurnCombat.COLOR_ULT_READY if gain else TurnCombat.COLOR_TOUGHNESS)
 
 	if usable:
@@ -787,23 +796,23 @@ func _draw_skill_panel(actions: Array[Dictionary]) -> void:
 		_skewed(pos, SKILL_SIZE, TurnCombat.COLOR_PANEL, border)
 
 		var ink := TurnCombat.COLOR_TEXT_ACTIVE if ok else TurnCombat.COLOR_TEXT_DIM
-		_text(pos + Vector2(10.0, 15.0), skill.display_name, ink, 13)
+		_text(pos + Vector2(12.0, 19.0), skill.display_name, ink, 16)
 		# 왜 못 쓰는지 / 어느 랭크에서 쓰는지. 위치 전술이 전술이 되려면 보여야 한다.
 		var note := String(entry["reason"]) if not ok else skill.format_usable_ranks()
-		_text(pos + Vector2(10.0, 29.0), note, TurnCombat.COLOR_TEXT_DIM, 9)
+		_text(pos + Vector2(12.0, 37.0), note, TurnCombat.COLOR_TEXT_DIM, 12)
 
 		# 남은 자물쇠 개수를 막대 핍으로. 매 턴의 미니 퍼즐을 계산 없이 읽게 한다.
 		var locks := int(entry["locks"])
 		for k in mini(locks, 6):
-			draw_rect(Rect2(pos + Vector2(SKILL_SIZE.x - 12.0 - float(k) * 6.0, 5.0),
-				Vector2(3.0, 10.0)), TurnCombat.COLOR_TOUGHNESS)
+			draw_rect(Rect2(pos + Vector2(SKILL_SIZE.x - 14.0 - float(k) * 8.0, 6.0),
+				Vector2(4.0, 13.0)), TurnCombat.COLOR_TOUGHNESS)
 
 		# 코스트 핍 — 공명 소모는 백색, 기본공격의 회수는 녹색.
 		var gain := skill.is_turn_basic() and skill.rp_cost <= 0
 		var cost := 1 if gain else skill.rp_cost
 		for k in mini(cost, 6):
-			draw_rect(Rect2(pos + Vector2(SKILL_SIZE.x - 12.0 - float(k) * 6.0, 22.0),
-				Vector2(4.0, 4.0)),
+			draw_rect(Rect2(pos + Vector2(SKILL_SIZE.x - 14.0 - float(k) * 8.0, 28.0),
+				Vector2(5.0, 5.0)),
 				TurnCombat.COLOR_ULT_READY if gain else TurnCombat.COLOR_TOUGHNESS)
 
 		# **스트립 자체가 버튼이다.** 고르는 것과 확정하는 것을 나누면 두 번 눌러야 하고,
