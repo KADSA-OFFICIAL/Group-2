@@ -66,6 +66,16 @@ class_name EnemyData
 # 저작 규약과 생성 프롬프트: docs/turn-battle-sprite-prompts.md
 @export var battle_sprite: Texture2D = null
 
+# ----- 턴제 전투 프레임 시트 (Turn-battle frame sheet) -----
+# 턴제 전투 화면이 재생하는 **idle / attack / hit / death** 4종 애니메이션.
+#
+# `battle_sprite`(정지 한 장)와 용도가 겹치지만 이쪽이 우선한다. 비어 있으면
+# `battle_sprite` 로, 그것도 없으면 `tint` 색 네모로 떨어진다.
+#
+# 애니메이션 이름과 재생 규약의 단일 출처는 `BattleAnimation` 이다(아군과 적이 같이 쓴다).
+# 시트 저작 규약과 생성 프롬프트: docs/battle-animation-prompts.md
+@export var battle_frames: SpriteFrames = null
+
 @export var portrait: Texture2D = null
 
 # ----- 워크 애니메이션 (Walk animation) -----
