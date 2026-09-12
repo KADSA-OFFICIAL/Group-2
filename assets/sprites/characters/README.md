@@ -12,6 +12,8 @@
 | `mina_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
 | `taehee_walk.png` | 태희. 4방향 x 3프레임 워크 시트 (셀 420x448, 시트 1260x1792) |
 | `taehee_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
+| `gangji_walk.png` | 강지. 4방향 x 3프레임 워크 시트 (셀 128x128, 시트 384x512) |
+| `gangji_walk_frames.tres` | 위 시트를 잘라 담은 `SpriteFrames` |
 
 > **`buffer_pure_walk.png` 의 이름은 역사적 흔적이다**(#276, #315). 이 아트를 쓰던 `buffer_pure` 는
 > 설아가 순혈 버퍼 슬롯을 이어받으면서 삭제됐고, 아트는 겸직 플레이스홀더 `buffer_ranged` 를 거쳐
@@ -28,6 +30,17 @@
 
 `taehee_walk.png` 도 셀 420x448 / 발 기준선 **+215** / 내용 높이 432 로 미나와 **완전히 같은 격자**다.
 `walk_sprite_offset.y = -155`, 화면 키 108px.
+
+`gangji_walk.png` 는 **#418 규격**이라 위 셋과 다르다. 셀 128x128, 인물 키 108px,
+발 기준선 y=120(셀 중심 기준 +56), **배율 1**이다. 캡슐 바닥 F=15 에 맞추면
+`walk_sprite_offset.y = 15 - 56 = -41` 이고 화면 키는 108px 로 같다.
+
+배율 1 이라 도트 1개가 화면 1px 이다. 그래서 `Player._apply_data()` 가 이 시트에만
+`TEXTURE_FILTER_NEAREST` 를 건다 — 기존 축소 시트(배율 0.25)는 부모의 선형 필터를 그대로 둔다.
+같은 필터를 전부에 걸면 축소 시트가 거칠어진다.
+
+> **아린은 아직 없다.** `arin_walk.png` 는 저작됐으나 #485 의 아트 통일 이전 외형
+> (고글·트윈테일)이라 현재 초상·전투 스프라이트와 다른 인물이다. 재제작 대상이다(#501).
 
 ## 시트 규약
 
