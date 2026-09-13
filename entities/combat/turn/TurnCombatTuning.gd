@@ -188,8 +188,12 @@ class_name TurnCombatTuning
 # (헤드리스 테스트와 연출 감소 모드가 같은 경로를 쓴다).
 @export_group("연출")
 @export var presentation_enabled: bool = true
-## 배속. 1.0 / 2.0 / 3.0.
-@export var presentation_speed: float = 1.0
+## **1배속의 실제 속도.** 화면의 배속 막대(1·2·3)는 이 값에 곱해지는 **배수**다 —
+## 막대 1칸이 이 값, 2칸이 2배, 3칸이 3배다.
+##
+## 1.0 이 아니라 0.7 인 이유: 1.0 에서 연출이 눈으로 따라가기에 너무 빨랐다.
+## `PresentationQueue.scaled()` 가 `duration / speed` 이므로 **값이 작을수록 느리다.**
+@export var presentation_speed: float = 0.7
 
 
 func validate() -> Array[String]:
