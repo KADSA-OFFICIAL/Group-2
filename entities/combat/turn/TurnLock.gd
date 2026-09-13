@@ -45,6 +45,11 @@ func glyph() -> String:
 	return TurnCombat.lock_glyph(is_element, value)
 
 
+## 요구 타입의 아이콘 이름 (#506). 없으면 빈 문자열이고 호출부가 `glyph()` 로 떨어진다.
+func icon() -> String:
+	return TurnCombat.lock_icon(is_element, value)
+
+
 func color() -> Color:
 	return TurnCombat.lock_color(is_element, value)
 
