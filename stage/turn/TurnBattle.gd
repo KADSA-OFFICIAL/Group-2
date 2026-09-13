@@ -1219,6 +1219,19 @@ func _on_pause_toggled(enabled: bool) -> void:
 
 func _on_auto_toggled(enabled: bool) -> void:
 	battle.auto_battle = enabled
+
+	# **켜는 것만으로는 재개되지 않는다.**
+	#
+	# `auto_battle` 은 턴이 **시작될 때만** 확인된다(`TurnBattleManager._step()`).
+	# 아군 턴이 이미 `AWAITING_INPUT` 로 들어갔으면 그 턴은 계속 입력을 기다리고,
+	# `_play()` 는 그때 이미 루프를 빠져나와 `_playing = false` 다. 즉 **아무도
+	# `battle.is_over()` 를 보지 않는다** — 전투가 끝나도 결과 화면이 뜨지 않는다.
+	#
+	# 소크 검증(`VerifyBattleSoak`)이 이 상태를 잡는다:
+	# `phase=VICTORY, is_over=true, _outcome_reported=false, _playing=false`.
+	if enabled and battle.phase == TurnBattleManager.Phase.AWAITING_INPUT:
+		battle.advance()
+		_play()
 	if enabled and battle.phase == TurnBattleManager.Phase.AWAITING_INPUT:
 		# 자동으로 켜면 대기 중인 턴부터 바로 굴린다.
 		battle.advance()
