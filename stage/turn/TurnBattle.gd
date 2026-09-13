@@ -66,6 +66,20 @@ const CUTIN_EMBLEM_ALPHA: float = 0.17
 # ===== 무대 (Stage) =====
 ## 지면 밴드 높이. 아래에서 이만큼이 바닥이다.
 const GROUND_H: float = 420.0
+
+# 전투 이펙트 시트 (#507). 시트가 없으면 기존 `ColorRect` 연출로 떨어진다.
+#
+# `time` 은 **기존 연출과 같은 길이**다 — 연출 타이밍은 바꾸지 않는다는 것이 이 작업의
+# 전제다(히트스톱·흔들림·슬로모션 규격표는 그대로 둔다). 배속은 `_scaled()` 가 곱한다.
+const FX_DIR := "res://assets/sprites/effects/battle"
+const FX_SPEC := {
+	"fx_hit": {"cell": 128.0, "frames": 4, "time": 0.16},
+	"fx_burst": {"cell": 256.0, "frames": 5, "time": 0.45},
+	"fx_shards": {"cell": 192.0, "frames": 4, "time": 0.50},
+	"fx_lock": {"cell": 96.0, "frames": 4, "time": 0.30},
+	"fx_heal": {"cell": 160.0, "frames": 4, "time": 0.50},
+	"fx_status": {"cell": 96.0, "frames": 3, "time": 0.35},
+}
 ## 유닛 몸 칸. 발밑이 노드 원점이다 (`position = -box * (0.5, 1)`).
 ## 스프라이트를 저작할 때 이 비율을 맞춘다 — docs/turn-battle-sprite-prompts.md
 ## #492 에서 원래 크기(56×84 / 62×78)의 **1.8배**로 키웠다. 캐릭터가 너무 멀리 있는
@@ -130,6 +144,8 @@ var _outcome_reported: bool = false
 ## 캔버스 크기를 따라야 하는 배경 조각들. 창 비율이 16:9 가 아니면 캔버스가
 ## 1280×720 보다 커지므로 고정 크기로 두면 오른쪽에 덮이지 않은 띠가 남는다.
 var _background: ColorRect = null
+## 이펙트 시트 캐시. 같은 연출이 한 턴에 여러 번 터지므로 매번 load 하지 않는다.
+static var _fx_cache: Dictionary = {}
 var _ground: ColorRect = null
 var _divider: ColorRect = null
 
@@ -752,6 +768,11 @@ func _play_hit(data: Dictionary) -> void:
 	# 히트스톱 — 인간의 지각에서 "묵직함"의 90%가 여기서 나온다.
 	await _hitstop(int(feedback.get("hitstop_frames", 2)))
 
+	# 타격 이펙트 (#507). 여기는 **원래 이펙트가 없던 자리**다 — 명멸과 흔들림뿐이었다.
+	# 시트가 없으면 지금까지처럼 아무것도 안 그린다.
+	_play_fx("fx_hit", hud.unit_position(ctx.target) + Vector2(0, -60),
+		TurnCombat.element_color(ctx.element))
+
 	# 넉백 — 방향성 있는 흔들림이 무작위보다 훨씬 좋다.
 	if target_shape != null:
 		var knock := float(feedback.get("knockback_px", 0.0))
@@ -795,8 +816,11 @@ func _play_lock(data: Dictionary) -> void:
 	_shake(float(feedback.get("shake_px", 3.0)), float(feedback.get("shake_time", 0.1)))
 	_screen_flash(lock.color(), float(feedback.get("flash", 0.15)), 0.10)
 
-	# 해제된 자물쇠 문양이 위로 튀어오르며 사라진다.
+	# 해제된 자물쇠 연출. 시트가 있으면 그림, 없으면 아래 문양 글자가 튀어오른다.
 	# 음정(`data["pitch"]`)은 사운드가 붙을 때 그대로 쓴다 — 상승 음계 설계다.
+	if _play_fx("fx_lock", hud.unit_position(unit) + Vector2(0, -100), lock.color()):
+		return
+
 	var label := Label.new()
 	label.text = lock.glyph()
 	label.modulate = lock.color()
@@ -1223,6 +1247,8 @@ func _spawn_number(ctx: DamageContext, style: Dictionary) -> void:
 # 인성치 바 파열의 유리 파편.
 func _spawn_shards(unit: TurnUnit, color: Color) -> void:
 	var origin := hud.unit_position(unit) + Vector2(0, -80)
+	if _play_fx("fx_shards", hud.unit_position(unit) + Vector2(0, -44), color):
+		return
 	for i in 18:
 		var shard := ColorRect.new()
 		shard.color = color
@@ -1246,6 +1272,8 @@ func _spawn_shards(unit: TurnUnit, color: Color) -> void:
 # 원소별 대형 이펙트. Phase 0은 방사형 링으로 대체한다 (전용 이펙트는 Phase 3).
 func _spawn_element_burst(unit: TurnUnit, color: Color) -> void:
 	var origin := hud.unit_position(unit) + Vector2(0, -44)
+	if _play_fx("fx_burst", origin, color):
+		return
 	for i in 3:
 		var ring := ColorRect.new()
 		ring.color = Color(color.r, color.g, color.b, 0.45)
@@ -1267,6 +1295,8 @@ func _spawn_element_burst(unit: TurnUnit, color: Color) -> void:
 
 # 상태이상 아이콘 부착 애니메이션 (격파 9단계의 마지막).
 func _spawn_status_badge(unit: TurnUnit, status: int, color: Color) -> void:
+	if _play_fx("fx_status", hud.unit_position(unit) + Vector2(0, -120), color):
+		return
 	var label := Label.new()
 	label.text = "[%s]" % TurnCombat.break_status_name(status)
 	label.modulate = color
@@ -1284,6 +1314,83 @@ func _spawn_status_badge(unit: TurnUnit, status: int, color: Color) -> void:
 		label.position + Vector2(0, 44), _scaled(0.35))
 	tween.chain().tween_property(label, "modulate:a", 0.0, _scaled(0.4))
 	tween.chain().tween_callback(label.queue_free)
+
+
+# 이펙트 시트를 한 번 재생한다 (#507). 재생했으면 `true`, 시트가 없으면 `false` —
+# 호출부는 `false` 일 때 기존 `ColorRect` 연출로 떨어진다.
+#
+# **두 겹으로 그린다.** `core` 는 가산 합성이라 겹치는 곳이 밝아져 발광체로 읽히고,
+# `glow` 는 알파라 넓은 잔광이 배경을 지우지 않는다. 저장소에 `BLEND_MODE_ADD` 를
+# 쓰는 곳이 여기 말고 없다 — 알파로만 그리면 아무리 잘 그려도 "배경 위에 얹힌 흰 종이"다.
+#
+# 두 겹이 없으면 합성본 한 장(`fx_*.png`)을 알파로 그린다.
+func _play_fx(fx_name: String, origin: Vector2, color: Color,
+		scale: float = 1.0) -> bool:
+	if _numbers == null or not FX_SPEC.has(fx_name):
+		return false
+
+	var spec: Dictionary = FX_SPEC[fx_name]
+	var cell: float = spec["cell"]
+	var frames: int = spec["frames"]
+
+	var layers: Array[Dictionary] = []
+	var core := _fx_texture("layers/%s_core" % fx_name)
+	var glow := _fx_texture("layers/%s_glow" % fx_name)
+	if core != null and glow != null:
+		layers.append({"tex": glow, "add": false})
+		layers.append({"tex": core, "add": true})
+	else:
+		var flat := _fx_texture(fx_name)
+		if flat == null:
+			return false
+		layers.append({"tex": flat, "add": false})
+
+	var sprites: Array[Sprite2D] = []
+	for layer in layers:
+		var atlas := AtlasTexture.new()
+		atlas.atlas = layer["tex"]
+		atlas.region = Rect2(0.0, 0.0, cell, cell)
+
+		var sprite := Sprite2D.new()
+		sprite.texture = atlas
+		sprite.centered = true
+		sprite.position = origin
+		sprite.scale = Vector2(scale, scale)
+		sprite.modulate = color
+		sprite.z_index = 54
+		if bool(layer["add"]):
+			var material := CanvasItemMaterial.new()
+			material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+			sprite.material = material
+		_numbers.add_child(sprite)
+		sprites.append(sprite)
+
+	# 프레임을 시간으로 넘긴다. 마지막 칸을 넘어가지 않게 clamp 한다.
+	var duration := _scaled(float(spec["time"]))
+	var tween := create_tween()
+	tween.tween_method(
+		func(progress: float) -> void:
+			var index := clampi(int(progress * float(frames)), 0, frames - 1)
+			for sprite in sprites:
+				var atlas_texture := sprite.texture as AtlasTexture
+				atlas_texture.region = Rect2(float(index) * cell, 0.0, cell, cell),
+		0.0, 1.0, duration)
+	tween.tween_callback(func() -> void:
+		for sprite in sprites:
+			sprite.queue_free())
+	return true
+
+
+# 이펙트 텍스처. 없으면 `null` 이고 호출부가 폴백한다.
+func _fx_texture(relative: String) -> Texture2D:
+	if _fx_cache.has(relative):
+		return _fx_cache[relative]
+	var path := "%s/%s.png" % [FX_DIR, relative]
+	var texture: Texture2D = null
+	if ResourceLoader.exists(path):
+		texture = load(path) as Texture2D
+	_fx_cache[relative] = texture
+	return texture
 
 
 # ===== 시간 (Timing) =====
