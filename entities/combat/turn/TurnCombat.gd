@@ -205,6 +205,31 @@ const PHYSICAL_GLYPH := {
 	PhysicalType.BLUNT: "■",
 }
 
+# 아이콘 이름 (#506). 위 글자를 대신하는 그림이며, **글자를 지우지 않는다** —
+# 아이콘 파일이 없으면 `ELEMENT_GLYPH` / `PHYSICAL_GLYPH` 로 떨어진다.
+#
+# 두 벌이다. 작은 자리(분절 칸 세로 8px · 배지 18~20px)는 **흰색 실루엣**에 색을 곱하고,
+# 액션 버튼(26px)은 `_full` **채색 아이콘**을 곱하지 않고 그대로 그린다.
+# 곱하기는 어둡게만 만들 수 있어서 "어두운 외곽선 + 밝은 내부"를 한 장으로 못 낸다.
+const ELEMENT_ICON := {
+	Element.IMPACT: "icon_element_impact",
+	Element.PYRO: "icon_element_pyro",
+	Element.CRYO: "icon_element_cryo",
+	Element.VOLT: "icon_element_volt",
+	Element.GALE: "icon_element_gale",
+	Element.CORROSION: "icon_element_corrosion",
+	Element.LUMEN: "icon_element_lumen",
+}
+
+const PHYSICAL_ICON := {
+	PhysicalType.SLASH: "icon_physical_slash",
+	PhysicalType.PIERCE: "icon_physical_pierce",
+	PhysicalType.BLUNT: "icon_physical_blunt",
+}
+
+## 채색 아이콘의 접미사. `icon_element_pyro_full` 처럼 붙는다.
+const ICON_FULL_SUFFIX := "_full"
+
 # 물리 타입별 인성치 피해 배율 (문서 §4.15).
 # 강타는 인성치를 잘 깎고, 관통은 덜 깎는 대신 다단 히트로 자물쇠를 여러 개 해제한다.
 const PHYSICAL_TOUGHNESS_MULTIPLIER := {
@@ -349,6 +374,26 @@ static func physical_name(physical: int) -> String:
 
 static func physical_glyph(physical: int) -> String:
 	return PHYSICAL_GLYPH.get(physical, "?")
+
+
+## 작은 자리용 흰색 실루엣 아이콘 이름. 없으면 빈 문자열 — 호출부가 글자로 떨어진다.
+static func element_icon(element: int) -> String:
+	return ELEMENT_ICON.get(element, "")
+
+
+## 액션 버튼 같은 큰 자리용 채색 아이콘 이름. **색을 곱하지 마라.**
+static func element_icon_full(element: int) -> String:
+	var base: String = ELEMENT_ICON.get(element, "")
+	return "" if base.is_empty() else base + ICON_FULL_SUFFIX
+
+
+static func physical_icon(physical: int) -> String:
+	return PHYSICAL_ICON.get(physical, "")
+
+
+## 자물쇠 요구 타입의 아이콘 이름. `lock_glyph` 와 짝이다.
+static func lock_icon(is_element: bool, value: int) -> String:
+	return element_icon(value) if is_element else physical_icon(value)
 
 static func physical_toughness_multiplier(physical: int) -> float:
 	return float(PHYSICAL_TOUGHNESS_MULTIPLIER.get(physical, 1.0))

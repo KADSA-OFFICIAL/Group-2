@@ -66,6 +66,9 @@ const CUTIN_EMBLEM_ALPHA: float = 0.17
 # ===== 무대 (Stage) =====
 ## 지면 밴드 높이. 아래에서 이만큼이 바닥이다.
 const GROUND_H: float = 420.0
+
+## 머리 위 원소 문양 아이콘의 한 변. 글자 22px 과 비슷하게 보이는 크기다 (#506).
+const GLYPH_ICON: float = 24.0
 ## 유닛 몸 칸. 발밑이 노드 원점이다 (`position = -box * (0.5, 1)`).
 ## 스프라이트를 저작할 때 이 비율을 맞춘다 — docs/turn-battle-sprite-prompts.md
 ## #492 에서 원래 크기(56×84 / 62×78)의 **1.8배**로 키웠다. 캐릭터가 너무 멀리 있는
@@ -525,9 +528,24 @@ func _build_shapes() -> void:
 		shape.add_child(shadow)
 
 		# 원소 문양 — 색맹 대응으로 색과 형태를 함께 쓴다.
-		var glyph := Label.new()
-		glyph.text = TurnCombat.element_glyph(unit.element)
-		glyph.add_theme_font_size_override("font_size", 22)
+		#
+		# 아이콘이 있으면 그림, 없으면 글자다(#506). 여기는 **어두운 배경 위**라
+		# 원소색을 그대로 곱한다 — HUD 의 원소색 판 위(잉크로 곱한다)와 반대다.
+		var glyph: Control = null
+		var icon_name := TurnCombat.element_icon(unit.element)
+		var icon_path := UITheme.icon_path(icon_name) if not icon_name.is_empty() else ""
+		if not icon_path.is_empty():
+			var icon_rect := TextureRect.new()
+			icon_rect.texture = load(icon_path) as Texture2D
+			icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon_rect.size = Vector2(GLYPH_ICON, GLYPH_ICON)
+			glyph = icon_rect
+		else:
+			var label := Label.new()
+			label.text = TurnCombat.element_glyph(unit.element)
+			label.add_theme_font_size_override("font_size", 22)
+			glyph = label
 		glyph.modulate = TurnCombat.element_color(unit.element)
 		# 정수리(-140) **바로 위**에 붙인다. 몸이 커지면 이 값도 함께 내려야 한다.
 		#
