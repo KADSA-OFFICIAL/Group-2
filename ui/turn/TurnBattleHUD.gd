@@ -152,6 +152,10 @@ const ENEMY_BODY_H := 140.0
 ## 화면 천장을 뚫는다. 세 번 겪었다.
 const CLUSTER_GAP := 26.0
 const SEG_SIZE := Vector2(20.0, 8.0)
+## 분절 칸 아이콘의 한 변. 칸(세로 8)보다 크다 — 문양은 칸 밖으로 넘쳐도 된다(#506).
+const SEG_ICON := 13.0
+## 배지 안에서 아이콘이 차지하는 비율. 알약 테두리에 닿지 않게 둔다.
+const BADGE_ICON_RATIO := 0.66
 const SEG_GAP := 4.0
 const ENEMY_HP_SIZE := Vector2(84.0, 7.0)
 const STATUS_DOT := 7.0
@@ -563,7 +567,8 @@ func _draw_segment_bar(unit: TurnUnit, base: Vector2) -> void:
 	var cells: Array[Dictionary] = []
 	for seg in battle.toughness.toughness_segments(unit):
 		var lock: TurnLock = seg["lock"]
-		cells.append({"color": lock.color(), "glyph": lock.glyph(), "off": lock.cleared})
+		cells.append({"color": lock.color(), "glyph": lock.glyph(),
+			"icon": lock.icon(), "off": lock.cleared})
 
 	var ratio := unit.get_toughness_ratio()
 	if cells.is_empty():
@@ -571,10 +576,12 @@ func _draw_segment_bar(unit: TurnUnit, base: Vector2) -> void:
 		var weak: Array[Dictionary] = []
 		for e in unit.weak_elements:
 			weak.append({"color": TurnCombat.element_color(e),
-				"glyph": TurnCombat.element_glyph(e), "off": false})
+				"glyph": TurnCombat.element_glyph(e),
+				"icon": TurnCombat.element_icon(e), "off": false})
 		for p in unit.weak_physical:
 			weak.append({"color": TurnCombat.COLOR_TOUGHNESS,
-				"glyph": TurnCombat.physical_glyph(p), "off": false})
+				"glyph": TurnCombat.physical_glyph(p),
+				"icon": TurnCombat.physical_icon(p), "off": false})
 		if weak.is_empty():
 			# 약점도 예고도 없으면 남은 인성치 비율만 게이지로 보여준다.
 			_gauge(base, Vector2(ENEMY_HP_SIZE.x, SEG_SIZE.y), ratio,
@@ -599,9 +606,14 @@ func _draw_segment_bar(unit: TurnUnit, base: Vector2) -> void:
 			color = color.darkened(0.55)
 		_plate(pos, Vector2(seg_w, SEG_SIZE.y), color, _overlay_line(), 4, BORDER_THIN)
 		# 색맹 대응 — 칸 안에 요구 타입의 고유 문양을 어두운 잉크로 찍는다.
+		# 아이콘이 있으면 그림, 없으면 글자다(#506). 칸은 세로 8px 이라 아이콘을
+		# 칸보다 크게 그린다 — 글자도 원래 칸 밖으로 넘쳐 그리고 있었다.
 		if not bool(cell["off"]) and seg_w >= 14.0:
-			_text_centered(pos + Vector2(seg_w * 0.5, SEG_SIZE.y - 1.0),
-				String(cell["glyph"]), UITheme.INK, SIZE_TINY)
+			var center := pos + Vector2(seg_w * 0.5, SEG_SIZE.y * 0.5)
+			if not _icon_centered(String(cell.get("icon", "")), center,
+					SEG_ICON, UITheme.INK):
+				_text_centered(pos + Vector2(seg_w * 0.5, SEG_SIZE.y - 1.0),
+					String(cell["glyph"]), UITheme.INK, SIZE_TINY)
 
 
 # 상태이상 색 점. **아이콘도 텍스트도 쓰지 않는다** — 둥근 점 최대 4개다.
@@ -825,8 +837,22 @@ func _draw_action() -> void:
 	var label_w := _width(label, SIZE_CTA, true)
 	var icon_side := 26.0
 	var content_x := origin.x + (ACTION_SIZE.x - icon_side - 8.0 - label_w) * 0.5
-	_icon("icon_battle", Vector2(content_x, origin.y + (ACTION_SIZE.y - icon_side) * 0.5),
-		icon_side, Color(1, 1, 1, 1.0 if usable else 0.45))
+	var icon_pos := Vector2(content_x, origin.y + (ACTION_SIZE.y - icon_side) * 0.5)
+	var icon_alpha := 1.0 if usable else 0.45
+
+	# 26px 은 이 화면에서 **가장 큰 아이콘 자리**다. 여기서만 채색 아이콘(`_full`)이
+	# 값어치를 한다 — 작은 자리에서는 외곽선과 하이라이트가 뭉개진다(#506).
+	#
+	# **곱하지 않는다.** 이미 칠해진 그림이라 색을 곱하면 어두워진다.
+	# 쓸 수 없을 때만 알파를 낮춘다.
+	#
+	# 원소는 **행동하는 유닛**이 갖는다. `SkillData` 에는 원소가 없다.
+	var element := battle.active_unit.element if battle != null and battle.active_unit != null else -1
+	var full_icon := TurnCombat.element_icon_full(element)
+	if not full_icon.is_empty() and _icon_texture(full_icon) != null:
+		_icon(full_icon, icon_pos, icon_side, Color(1, 1, 1, icon_alpha))
+	else:
+		_icon("icon_battle", icon_pos, icon_side, Color(1, 1, 1, icon_alpha))
 	_text(Vector2(content_x + icon_side + 8.0,
 		origin.y + ACTION_SIZE.y * 0.5 + float(SIZE_CTA) * 0.36), label, ink, SIZE_CTA, true)
 
@@ -1109,8 +1135,11 @@ func _element_badge(pos: Vector2, side: float, element: int, alpha: float) -> vo
 	var color := TurnCombat.element_color(element) * Color(1, 1, 1, alpha)
 	_plate(pos, Vector2(side, side), color, Color(UITheme.LINE, alpha * 0.6),
 		int(side * 0.5), BORDER_THIN)
-	_text_centered(pos + Vector2(side * 0.5, side * 0.5 + 4.0),
-		TurnCombat.element_glyph(element), Color(UITheme.INK, alpha), SIZE_SMALL)
+	if not _icon_centered(TurnCombat.element_icon(element),
+			pos + Vector2(side * 0.5, side * 0.5), side * BADGE_ICON_RATIO,
+			Color(UITheme.INK, alpha)):
+		_text_centered(pos + Vector2(side * 0.5, side * 0.5 + 4.0),
+			TurnCombat.element_glyph(element), Color(UITheme.INK, alpha), SIZE_SMALL)
 
 
 func _icon(icon_name: String, pos: Vector2, side: float,
@@ -1119,6 +1148,20 @@ func _icon(icon_name: String, pos: Vector2, side: float,
 	if tex == null:
 		return
 	draw_texture_rect(tex, Rect2(pos, Vector2(side, side)), false, modulate)
+
+
+## 중심 기준으로 아이콘을 그린다. 그렸으면 `true`, 아이콘이 없으면 `false` —
+## 호출부는 `false` 일 때 기존 글자로 떨어진다(#506).
+func _icon_centered(icon_name: String, center: Vector2, side: float,
+		modulate: Color = Color.WHITE) -> bool:
+	if icon_name.is_empty():
+		return false
+	var tex := _icon_texture(icon_name)
+	if tex == null:
+		return false
+	draw_texture_rect(tex, Rect2(center - Vector2(side, side) * 0.5,
+		Vector2(side, side)), false, modulate)
+	return true
 
 
 func _icon_texture(icon_name: String) -> Texture2D:
