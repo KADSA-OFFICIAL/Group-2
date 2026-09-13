@@ -66,6 +66,15 @@ const CUTIN_EMBLEM_ALPHA: float = 0.17
 # ===== 무대 (Stage) =====
 ## 지면 밴드 높이. 아래에서 이만큼이 바닥이다.
 const GROUND_H: float = 420.0
+
+# 전투 배경 아트 (#505). **챕터가 컨셉을 정한다** — 스테이지마다 따로 저작하지 않는다.
+# 그림이 없으면 아래 `_background` 단색으로 떨어진다(폴백은 지우지 않는다).
+const BACKDROP_DIR := "res://assets/sprites/backgrounds/battle"
+const CONCEPT_BACKDROP := {
+	StageData.Concept.LAND: "battle_bg_land",
+	StageData.Concept.SEA: "battle_bg_sea",
+	StageData.Concept.SKY: "battle_bg_sky",
+}
 ## 유닛 몸 칸. 발밑이 노드 원점이다 (`position = -box * (0.5, 1)`).
 ## 스프라이트를 저작할 때 이 비율을 맞춘다 — docs/turn-battle-sprite-prompts.md
 ## #492 에서 원래 크기(56×84 / 62×78)의 **1.8배**로 키웠다. 캐릭터가 너무 멀리 있는
@@ -130,6 +139,8 @@ var _outcome_reported: bool = false
 ## 캔버스 크기를 따라야 하는 배경 조각들. 창 비율이 16:9 가 아니면 캔버스가
 ## 1280×720 보다 커지므로 고정 크기로 두면 오른쪽에 덮이지 않은 띠가 남는다.
 var _background: ColorRect = null
+## 컨셉 배경 그림. 없으면 `null` 이고 `_background` 단색이 그대로 보인다.
+var _backdrop: TextureRect = null
 var _ground: ColorRect = null
 var _divider: ColorRect = null
 
@@ -193,9 +204,23 @@ func _build_scene() -> void:
 	# 1366×720 캔버스(1920×1012 창)에서 **오른쪽 86px 에 창 배경색 띠가 그대로 보였다.**
 	_background = ColorRect.new()
 	_background.color = TurnCombat.COLOR_BACKDROP
-	_background.z_index = -100
+	# 배경 그림(`_backdrop`, -100)보다 **한 단 아래**다. 그림이 없을 때만 보인다.
+	_background.z_index = -101
 	_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_background)
+
+	# 배경 그림은 단색 **위**에 깔린다. 그림이 없으면 이 노드는 비어 있고
+	# 아래 단색이 그대로 보인다 — 캐릭터·이펙트 슬롯과 같은 폴백 방식이다.
+	#
+	# `KEEP_ASPECT_COVERED` 인 이유: 창 비율이 16:9 가 아니면 캔버스가 옆으로 넓어진다
+	# (1920×1012 창에서 실제 캔버스가 1366×720 이었다). 그림을 늘이지 않고 **덮고 자른다.**
+	_backdrop = TextureRect.new()
+	_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_backdrop.z_index = -100
+	_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop.clip_contents = true
+	add_child(_backdrop)
 
 	_ground = ColorRect.new()
 	_ground.color = TurnCombat.COLOR_STAGE_FLOOR
@@ -271,10 +296,35 @@ func _build_scene() -> void:
 #
 # 지면선은 **아래에서 420** 이고, 이 값이 `TurnBattleHUD` 의 줄 높이
 # (`ENEMY_ROW_FROM_BOTTOM` / `ALLY_ROW_FROM_BOTTOM`)와 같은 기준을 쓴다.
+# 스테이지 컨셉에 맞는 배경 그림을 건다 (#505).
+#
+# `_stage` 가 `null` 이면(헤드리스 검증·`use_stage = false`) **육지**를 쓴다.
+# 테스트 스테이지도 챕터 밖이라 육지다.
+#
+# 그림을 찾지 못하면 `_backdrop` 을 비우고 `_ground` 를 되살린다. 그림이 있으면
+# `_ground` 를 숨긴다 — 단색 지면이 그림 위에 덮여 아래 420px 를 가리기 때문이다.
+func _apply_backdrop() -> void:
+	if _backdrop == null:
+		return
+
+	var concept: int = _stage.get_concept() if _stage != null else StageData.Concept.LAND
+	var texture: Texture2D = null
+	if CONCEPT_BACKDROP.has(concept):
+		var path: String = "%s/%s.png" % [BACKDROP_DIR, CONCEPT_BACKDROP[concept]]
+		if ResourceLoader.exists(path):
+			texture = load(path) as Texture2D
+
+	_backdrop.texture = texture
+	if _ground != null:
+		_ground.visible = texture == null
+
+
 func _fit_backdrop() -> void:
 	var canvas: Vector2 = get_viewport_rect().size
 	if _background != null:
 		_background.size = canvas
+	if _backdrop != null:
+		_backdrop.size = canvas
 	if _ground != null:
 		_ground.position = Vector2(0.0, canvas.y - GROUND_H)
 		_ground.size = Vector2(canvas.x, GROUND_H)
@@ -360,6 +410,7 @@ func _build_cutin() -> void:
 func _start_battle() -> void:
 	_stage = StageSystem.get_current_stage() if use_stage else null
 	_waves.clear()
+	_apply_backdrop()
 
 	# 강제 파티는 파티를 뽑기 **전에** 적용해야 한다 — `PartySystem` 에서 읽어 오므로
 	# 순서가 뒤집히면 강제 편성이 다음 전투에나 반영된다.
