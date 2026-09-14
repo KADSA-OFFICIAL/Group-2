@@ -152,8 +152,6 @@ const ENEMY_BODY_H := 140.0
 ## 화면 천장을 뚫는다. 세 번 겪었다.
 const CLUSTER_GAP := 26.0
 const SEG_SIZE := Vector2(20.0, 8.0)
-## 분절 칸 아이콘의 한 변. 칸(세로 8)보다 크다 — 문양은 칸 밖으로 넘쳐도 된다(#506).
-const SEG_ICON := 13.0
 ## 배지 안에서 아이콘이 차지하는 비율. 알약 테두리에 닿지 않게 둔다.
 const BADGE_ICON_RATIO := 0.66
 const SEG_GAP := 4.0
@@ -606,14 +604,15 @@ func _draw_segment_bar(unit: TurnUnit, base: Vector2) -> void:
 			color = color.darkened(0.55)
 		_plate(pos, Vector2(seg_w, SEG_SIZE.y), color, _overlay_line(), 4, BORDER_THIN)
 		# 색맹 대응 — 칸 안에 요구 타입의 고유 문양을 어두운 잉크로 찍는다.
-		# 아이콘이 있으면 그림, 없으면 글자다(#506). 칸은 세로 8px 이라 아이콘을
-		# 칸보다 크게 그린다 — 글자도 원래 칸 밖으로 넘쳐 그리고 있었다.
+		#
+		# **여기만 글자를 쓴다**(#506 에서 아이콘으로 바꿨다가 되돌렸다).
+		# 칸이 20×8 px 이라 **채워진 실루엣은 어떤 크기로 줄여도 검은 뭉치**가 된다.
+		# 13px 로 그렸더니 칸을 통째로 덮었고 8px 로 줄여도 형태가 안 살았다.
+		# 글꼴 문양은 가는 획이라 이 크기를 위해 설계된 물건이고, 아이콘은
+		# 배지(18~20px)와 액션 버튼(26px)처럼 자리가 있는 곳에서만 값어치를 한다.
 		if not bool(cell["off"]) and seg_w >= 14.0:
-			var center := pos + Vector2(seg_w * 0.5, SEG_SIZE.y * 0.5)
-			if not _icon_centered(String(cell.get("icon", "")), center,
-					SEG_ICON, UITheme.INK):
-				_text_centered(pos + Vector2(seg_w * 0.5, SEG_SIZE.y - 1.0),
-					String(cell["glyph"]), UITheme.INK, SIZE_TINY)
+			_text_centered(pos + Vector2(seg_w * 0.5, SEG_SIZE.y - 1.0),
+				String(cell["glyph"]), UITheme.INK, SIZE_TINY)
 
 
 # 상태이상 색 점. **아이콘도 텍스트도 쓰지 않는다** — 둥근 점 최대 4개다.
