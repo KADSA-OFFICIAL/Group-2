@@ -4,6 +4,35 @@ class_name Stage
 # 거점 존 씬(#377). 무엇을 어디에 놓을지는 데이터가 정하고 씬은 하나뿐이라 여기서 preload 한다.
 const CAPTURE_ZONE_SCENE := preload("res://entities/stage/CaptureZone.tscn")
 
+# ===== 파티 시작 자리 (#448) =====
+#
+# 세 스테이지(1-1·1-2·1-3)가 공유하는 유일한 파티 스폰이다.
+#
+# **왜 상수로 꺼냈는가**: 좌표가 spawn_party() 안에 박혀 있는 동안 이 자리가
+# 프롭 충돌과 겹치는지 아무 데서도 검사되지 않았고, 실제로 3번째 멤버가 초원
+# 울타리 충돌 안에 스폰됐다(실측: FenceLeft1 사각형 [(42,168) 96x24] 안).
+# 게다가 같은 좌표를 검증 두 곳이 손으로 베껴 갖고 있어, 스폰이 바뀌면 조용히 낡았다.
+# 이제 검증이 여기서 derive 한다.
+#
+# **왜 y=50 에서 시작하는가**: 초원의 울타리 띠가 스테이지 좌표로 y 168..192 / x 42..330
+# 이 이어져 있다(울타리 셋이 x 42..138 / 138..234 / 234..330). 통로는 x 330..450 뿐이라
+# **y=180 에서는 좌우로 옮겨도 여전히 울타리 안**이고, 세로로 올리는 것이 유일한 답이다.
+# 마지막 멤버가 y=130 이고 플레이어 캡슐이 중심에서 ±15 이므로 몸이 y 115..145 —
+# 울타리 위쪽(168)까지 23px 여유가 남는다.
+#
+# 아래(남)로 내리면 파티가 통로를 지나지 않고 시작하는데, 그것은 세 스테이지의
+# 여는 그림을 바꾸는 디자인 변경이라 이 자리에서 정할 일이 아니다.
+const PARTY_SPAWN_ORIGIN := Vector2(100, 50)
+
+# 멤버마다 더해지는 간격. 겹치지 않게 세로로 세운다.
+const PARTY_SPAWN_STEP := Vector2(0, 40)
+
+
+# index 번째(0부터) 파티원이 놓이는 자리. 검증도 이 함수를 쓴다.
+static func get_party_spawn_position(index: int) -> Vector2:
+	return PARTY_SPAWN_ORIGIN + PARTY_SPAWN_STEP * index
+
+
 # 전장을 찾는 그룹 (#444). HUD 가 CaptureZone.GROUP 으로 존을 찾는 것과 같은 방식이다.
 #
 # 왜 필요한가: 이 노드의 이름은 stage_name 을 따라 **동적으로 바뀌므로** 노드 경로로
@@ -164,8 +193,7 @@ func spawn_party():
 		node.data = members[i]
 		node.party_index = i
 		current_room.add_child(node)
-		# 겹치지 않게 세로로 배치한다.
-		node.global_position = Vector2(100, 100 + i * 40)
+		node.global_position = get_party_spawn_position(i)
 
 # 적을 배치한다. 무엇을 어디에 몇 마리 놓을지는 **StageData.spawns** 가 정한다.
 #
