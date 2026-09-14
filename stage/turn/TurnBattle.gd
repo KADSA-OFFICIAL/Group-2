@@ -79,6 +79,9 @@ const CONCEPT_BACKDROP := {
 ## 머리 위 원소 문양 아이콘의 한 변. 글자 22px 과 비슷하게 보이는 크기다 (#506).
 const GLYPH_ICON: float = 24.0
 
+## 발밑 그림자의 가장 진한 알파. 밝은 배경 위에서 너무 진하면 스티커처럼 보인다.
+const SHADOW_ALPHA: float = 0.28
+
 # 전투 이펙트 시트 (#507). 시트가 없으면 기존 `ColorRect` 연출로 떨어진다.
 #
 # `time` 은 **기존 연출과 같은 길이**다 — 연출 타이밍은 바꾸지 않는다는 것이 이 작업의
@@ -586,12 +589,10 @@ func _build_shapes() -> void:
 			shape.add_child(body)
 
 		# 접지 그림자 — 없으면 캐릭터가 떠 보인다 (설계서 §4.10.2).
-		var shadow := ColorRect.new()
-		shadow.color = Color(0, 0, 0, 0.32)
-		shadow.size = Vector2(60, 12)
-		shadow.position = Vector2(-30, -6)
-		shadow.z_index = -1
-		shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# 발밑 그림자. **`ColorRect` 는 쓰지 않는다** — 단색 지면 위에서는 안 보였지만
+		# 배경이 그림으로 바뀌자(#505) 밝은 풀밭 위에 **회색 사각형 막대**로 드러났다.
+		# 타원으로 그리고 가장자리를 부드럽게 죽인다.
+		var shadow := _make_shadow()
 		shape.add_child(shadow)
 
 		# 원소 문양 — 색맹 대응으로 색과 형태를 함께 쓴다.
@@ -888,6 +889,9 @@ func _play_lock(data: Dictionary) -> void:
 	# 해제된 자물쇠 연출. 시트가 있으면 그림, 없으면 아래 문양 글자가 튀어오른다.
 	# 음정(`data["pitch"]`)은 사운드가 붙을 때 그대로 쓴다 — 상승 음계 설계다.
 	if _play_fx("fx_lock", hud.unit_position(unit) + Vector2(0, -100), lock.color()):
+		# **여기서 그냥 돌아가면 함수 끝의 `await _wait(0.08)` 을 건너뛴다.**
+		# 연출 큐가 기대하는 최소 간격이므로 시트를 재생해도 같이 기다린다.
+		await _wait(0.08)
 		return
 
 	var label := Label.new()
@@ -1178,10 +1182,22 @@ func _on_ultimate_requested(unit: TurnUnit) -> void:
 	_play()
 
 
-func _on_speed_changed(new_speed: float) -> void:
+func _on_speed_changed(new_multiplier: float) -> void:
 	# **로직을 건드리지 않는다.** 연출 큐의 재생 시간만 나눈다.
+	#
+	# HUD 의 배속 막대는 **배수**(1·2·3)다. 1배속의 실제 속도는
+	# `TurnCombatTuning.presentation_speed` 가 갖는다 — 그 값이 단일 출처다.
+	# 여기서 곱하지 않으면 막대를 한 번만 눌러도 기준 속도가 1.0 으로 덮인다.
 	if battle.presentation != null:
-		battle.presentation.speed = new_speed
+		battle.presentation.speed = new_multiplier * _base_presentation_speed()
+
+
+# 1배속의 실제 속도. 튜닝이 없으면(헤드리스 등) 1.0 으로 떨어진다.
+func _base_presentation_speed() -> float:
+	var tuning := PlayerStats.get_tuning_turn()
+	if tuning == null or tuning.presentation_speed <= 0.0:
+		return 1.0
+	return tuning.presentation_speed
 
 
 # 일시정지가 풀릴 때까지 붙잡는다.
@@ -1203,6 +1219,19 @@ func _on_pause_toggled(enabled: bool) -> void:
 
 func _on_auto_toggled(enabled: bool) -> void:
 	battle.auto_battle = enabled
+
+	# **켜는 것만으로는 재개되지 않는다.**
+	#
+	# `auto_battle` 은 턴이 **시작될 때만** 확인된다(`TurnBattleManager._step()`).
+	# 아군 턴이 이미 `AWAITING_INPUT` 로 들어갔으면 그 턴은 계속 입력을 기다리고,
+	# `_play()` 는 그때 이미 루프를 빠져나와 `_playing = false` 다. 즉 **아무도
+	# `battle.is_over()` 를 보지 않는다** — 전투가 끝나도 결과 화면이 뜨지 않는다.
+	#
+	# 소크 검증(`VerifyBattleSoak`)이 이 상태를 잡는다:
+	# `phase=VICTORY, is_over=true, _outcome_reported=false, _playing=false`.
+	if enabled and battle.phase == TurnBattleManager.Phase.AWAITING_INPUT:
+		battle.advance()
+		_play()
 	if enabled and battle.phase == TurnBattleManager.Phase.AWAITING_INPUT:
 		# 자동으로 켜면 대기 중인 턴부터 바로 굴린다.
 		battle.advance()
@@ -1383,6 +1412,36 @@ func _spawn_status_badge(unit: TurnUnit, status: int, color: Color) -> void:
 		label.position + Vector2(0, 44), _scaled(0.35))
 	tween.chain().tween_property(label, "modulate:a", 0.0, _scaled(0.4))
 	tween.chain().tween_callback(label.queue_free)
+
+
+# 발밑 타원 그림자. 부드러운 가장자리를 위해 반경에 따라 알파를 죽인 텍스처를 굽는다.
+#
+# 한 번 만들어 **모든 유닛이 공유한다** — 유닛마다 텍스처를 구우면 전투 시작이 느려진다.
+static var _shadow_texture: Texture2D = null
+
+func _make_shadow() -> Sprite2D:
+	if _shadow_texture == null:
+		var w := 64
+		var h := 20
+		var image := Image.create(w, h, false, Image.FORMAT_RGBA8)
+		var cx := float(w) * 0.5
+		var cy := float(h) * 0.5
+		for y in h:
+			for x in w:
+				# 타원 안에서의 정규화 거리. 1.0 이 가장자리다.
+				var dx := (float(x) + 0.5 - cx) / cx
+				var dy := (float(y) + 0.5 - cy) / cy
+				var d := sqrt(dx * dx + dy * dy)
+				# 중심 0.55 까지는 꽉 차고 그 밖으로 부드럽게 죽인다.
+				var a := clampf(1.0 - (d - 0.55) / 0.45, 0.0, 1.0)
+				image.set_pixel(x, y, Color(0.0, 0.0, 0.0, a * SHADOW_ALPHA))
+		_shadow_texture = ImageTexture.create_from_image(image)
+
+	var shadow := Sprite2D.new()
+	shadow.texture = _shadow_texture
+	shadow.centered = true
+	shadow.z_index = -1
+	return shadow
 
 
 # 이펙트 시트를 한 번 재생한다 (#507). 재생했으면 `true`, 시트가 없으면 `false` —

@@ -78,4 +78,4 @@ lock_count_elite = Vector2i(3, 4)
 lock_count_boss = Vector2i(4, 6)
 lock_toughness_share = 1.0
 presentation_enabled = true
-presentation_speed = 1.0
+presentation_speed = 0.7
