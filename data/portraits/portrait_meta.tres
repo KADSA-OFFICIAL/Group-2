@@ -5,6 +5,9 @@
 [resource]
 script = ExtResource("1_meta")
 head_rects = {
+&"mammoth_beastfolk": Rect2(0.34, 0.07, 0.32, 0.14),
+&"mammoth_boss": Rect2(0.34, 0.07, 0.32, 0.14),
+&"pterosaur_queen": Rect2(0.33, 0.075, 0.30, 0.15),
 &"arin": Rect2(0.433, 0.040, 0.176, 0.151),
 &"gangji": Rect2(0.438, 0.040, 0.165, 0.162),
 &"childhood_friend": Rect2(0.296, 0.050, 0.448, 0.320),
