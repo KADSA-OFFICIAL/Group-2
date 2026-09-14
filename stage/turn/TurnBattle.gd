@@ -142,6 +142,7 @@ var _numbers: Node2D = null
 var _banner: Label = null
 
 ## 오의 컷인 묶음. 아트·조명·엠블럼·타이포를 한 노드 아래 둬서 통째로 슬라이드시킨다.
+var _wide_cutin: bool = false
 var _cutin: Control = null
 var _cutin_art: TextureRect = null
 var _cutin_light: ColorRect = null
@@ -404,10 +405,27 @@ func _fit_backdrop() -> void:
 		_flash.size = canvas
 	if _cutin_light != null:
 		_cutin_light.size = canvas
-	if _cutin_art != null:
-		# 아트 판의 좌단은 캔버스 좌측 40%(타이포 영역) 밖이고, 우단은 화면 밖까지 나간다.
+	_fit_cutin_layout(canvas)
+
+
+func _fit_cutin_layout(canvas: Vector2) -> void:
+	if _cutin_art == null:
+		return
+	if _wide_cutin:
+		_cutin_art.position = Vector2.ZERO
+		_cutin_art.size = canvas
+		_cutin_name.position = Vector2(canvas.x * 0.60, canvas.y * 0.42)
+		_cutin_skill.position = Vector2(canvas.x * 0.60, canvas.y * 0.49)
+		_cutin_emblem.position = Vector2(canvas.x * 0.73 - CUTIN_EMBLEM * 0.5, canvas.y * 0.39)
+		# Dedicated canvases reserve the right side for type; keep long skill names inside it.
+		_cutin_skill.add_theme_font_size_override("font_size", 40)
+	else:
 		_cutin_art.position = Vector2(canvas.x * CUTIN_ART_LEFT_RATIO, 0.0)
 		_cutin_art.size = Vector2(canvas.x - _cutin_art.position.x + CUTIN_ART_BLEED, canvas.y)
+		_cutin_name.position = Vector2(104, 300)
+		_cutin_skill.position = Vector2(96, 336)
+		_cutin_emblem.position = Vector2(88, 244)
+		_cutin_skill.add_theme_font_size_override("font_size", 62)
 
 
 func _on_canvas_resized() -> void:
@@ -1083,13 +1101,21 @@ func _setup_cutin(unit: TurnUnit, skill: SkillData, color: Color) -> bool:
 	if _cutin == null or unit.character == null:
 		return false
 
-	# 어떤 그림을 쓸지는 PortraitSystem 이 정한다. 여기서 character.portrait 를 직접
-	# 읽으면 편성 화면에서 고른 초상과 컷인이 어긋난다.
-	var art := PortraitSystem.get_portrait(unit.character)
+	var art: Texture2D = null
+	_wide_cutin = false
+	var id := String(unit.character.character_id)
+	if id in ["harang", "mina", "seola", "taehee"]:
+		var path := "res://assets/sprites/characters/cutins/char_%s_cutin.png" % id
+		if ResourceLoader.exists(path):
+			art = load(path) as Texture2D
+			_wide_cutin = art != null
+	if art == null:
+		art = PortraitSystem.get_portrait(unit.character)
 	if art == null:
 		return false
-	# 투명 여백을 잘라 낸 판을 쓴다. 여백째로 넣으면 인물이 화면에서 작아진다.
-	_cutin_art.texture = HUDKit.trimmed_texture(art)
+	# Keep the dedicated canvas's transparent text area; trim only fallback portraits.
+	_cutin_art.texture = art if _wide_cutin else HUDKit.trimmed_texture(art)
+	_fit_cutin_layout(get_viewport_rect().size)
 
 	# 원소색 조명을 **코드로** 합성한다. 그림에는 구워 넣지 않는다 (가이드 §4.2).
 	_cutin_light.color = Color(color.r, color.g, color.b, 0.16)
@@ -1111,7 +1137,7 @@ func _play_cutin_slide(duration: float) -> void:
 	_cutin.visible = true
 	_cutin.modulate = Color(1, 1, 1, 0)
 	var home := _cutin_art.position
-	_cutin_art.position = home + Vector2(CUTIN_SLIDE, 0.0)
+	_cutin_art.position = home + Vector2(-CUTIN_SLIDE if _wide_cutin else CUTIN_SLIDE, 0.0)
 
 	var tween := create_tween()
 	tween.set_parallel(true)
