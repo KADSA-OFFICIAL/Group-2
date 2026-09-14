@@ -1,0 +1,137 @@
+name: Verify
+
+# 왜 필요한가: tests/ 에 헤드리스 검증 씬이 6개 있는데 아무도 돌리지 않는다.
+# main 은 승인 리뷰 1건이 필수라, 리뷰어가 회귀 여부를 눈으로만 판단해야 했다.
+# 이 워크플로가 PR 마다 6종을 돌려 초록/빨강을 먼저 보여준다.
+#
+# 검증 씬을 추가하려면 아래 SCENES 배열에 경로 한 줄만 넣으면 된다.
+#
+# 참고: #453 · CLAUDE.md "브랜치를 갈아탄 뒤에는 먼저 import"
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 같은 브랜치에 연속 푸시하면 이전 실행을 취소한다.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Godot 버전은 여기 한 줄에서만 바꾼다.
+  # #450 이 선언한 개발 환경(4.6.2)에 맞췄다. 팀이 올리면 여기도 같이 올린다.
+  # (2026-09 기준 최신 안정판은 4.6.3-stable)
+  GODOT_VERSION: 4.6.2-stable
+
+jobs:
+  verify:
+    name: Headless verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Godot 바이너리는 68MB 라 매번 받으면 느리다. 버전이 같으면 캐시를 쓴다.
+      - name: Cache Godot binary
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Install Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot-bin
+          ZIP="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${ZIP}"
+          echo "downloading $URL"
+          curl -fsSL -o /tmp/godot.zip "$URL"
+          unzip -q /tmp/godot.zip -d /tmp/godot-extract
+          mv "/tmp/godot-extract/Godot_v${GODOT_VERSION}_linux.x86_64" ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+
+      - name: Add Godot to PATH
+        run: echo "$HOME/godot-bin" >> "$GITHUB_PATH"
+
+      - name: Show Godot version
+        run: godot --version
+
+      # 에셋 import 결과는 .godot/ 에 캐시된다. 에셋이 안 바뀌었으면 재사용한다.
+      - name: Cache import data
+        uses: actions/cache@v4
+        with:
+          path: .godot
+          key: godot-import-${{ env.GODOT_VERSION }}-${{ hashFiles('**/*.import', 'project.godot') }}
+          restore-keys: |
+            godot-import-${{ env.GODOT_VERSION }}-
+
+      # CLAUDE.md 가 경고하는 그 단계다. import 캐시가 새 파일을 모르는 상태로
+      # 실행하면 멀쩡한 코드에서 가짜 파스 에러가 난다. 반드시 먼저 돌린다.
+      - name: Import assets
+        run: timeout 900 godot --headless --path . --import
+
+      - name: Project opens without parse errors
+        run: timeout 300 godot --headless --path . --quit
+
+      - name: Run verification scenes
+        id: scenes
+        run: |
+          set -uo pipefail
+
+          # ── 검증 씬 목록 — 추가하려면 여기 한 줄 ──────────────────────
+          SCENES=(
+            "res://tests/stage/VerifyStageMaps.tscn"
+            "res://tests/story/VerifyStoryChapters.tscn"
+            "res://tests/beach/VerifyBeachMap.tscn"
+            "res://tests/grassland/VerifyGrasslandMap.tscn"
+            "res://tests/sky/VerifySkyIslandMap.tscn"
+            "res://tests/enemies/VerifyPterosaurQueenArt.tscn"
+          )
+          # ──────────────────────────────────────────────────────────────
+
+          passed=()
+          failed=()
+
+          # 하나가 실패해도 멈추지 않는다 — 어느 것들이 깨졌는지 한 번에 보려고.
+          for scene in "${SCENES[@]}"; do
+            echo "::group::$scene"
+            if timeout 300 godot --headless --path . "$scene"; then
+              echo "PASS  $scene"
+              passed+=("$scene")
+            else
+              code=$?
+              echo "::error title=Verify failed::$scene (exit $code)"
+              failed+=("$scene")
+            fi
+            echo "::endgroup::"
+          done
+
+          {
+            echo "## 검증 결과"
+            echo ""
+            echo "Godot \`${GODOT_VERSION}\` · 통과 ${#passed[@]} / 전체 ${#SCENES[@]}"
+            echo ""
+            echo "| 결과 | 씬 |"
+            echo "|---|---|"
+            for s in "${passed[@]:-}"; do [ -n "$s" ] && echo "| ✅ | \`$s\` |"; done
+            for s in "${failed[@]:-}"; do [ -n "$s" ] && echo "| ❌ | \`$s\` |"; done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ ${#failed[@]} -ne 0 ]; then
+            echo ""
+            echo "실패한 씬 ${#failed[@]}개:"
+            printf '  %s\n' "${failed[@]}"
+            exit 1
+          fi
+
+          echo "모든 검증 씬 통과 (${#passed[@]}/${#SCENES[@]})"
