@@ -215,10 +215,19 @@ func _play_se(sound: String, pitch: float = 1.0) -> AudioStreamPlayer:
 	var stream: AudioStream = _se_streams[sound]
 	if stream == null:
 		return null
-	for voice in _se_voices.duplicate():
-		if not is_instance_valid(voice) or voice.is_queued_for_deletion():
-			_se_voices.erase(voice)
-	if _se_voices.size() >= MAX_SE_VOICES:
+	# **해제된 인스턴스를 목록에 담아 두지 않는다.**
+	#
+	# 아래 `finished` 가 보이스를 목록에서 먼저 빼고 해제하므로 보통은 비어 있지만,
+	# 전투 재시작처럼 밖에서 노드가 사라지는 길도 있다. 남아 있으면 타입 배열의
+	# `erase()` 와 `pop_front()` 가 해제된 값에 걸려 에러를 뱉는다
+	# ("Trying to assign invalid previously freed instance").
+	var alive: Array[AudioStreamPlayer] = []
+	for voice in _se_voices:
+		if is_instance_valid(voice) and not voice.is_queued_for_deletion():
+			alive.append(voice)
+	_se_voices = alive
+
+	while _se_voices.size() >= MAX_SE_VOICES:
 		var oldest: AudioStreamPlayer = _se_voices.pop_front()
 		oldest.stop()
 		oldest.queue_free()
@@ -228,7 +237,10 @@ func _play_se(sound: String, pitch: float = 1.0) -> AudioStreamPlayer:
 	player.volume_db = -15.0  # Leave headroom for simultaneous hit/lock/break voices.
 	add_child(player)
 	_se_voices.append(player)
-	player.finished.connect(player.queue_free)
+	# 끝나면 **목록에서 먼저 빼고** 해제한다. 빼지 않으면 해제된 참조가 쌓인다.
+	player.finished.connect(func() -> void:
+		_se_voices.erase(player)
+		player.queue_free())
 	player.play()
 	return player
 
