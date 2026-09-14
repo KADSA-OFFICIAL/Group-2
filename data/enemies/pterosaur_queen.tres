@@ -1,5 +1,6 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=17 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=18 format=3]
 
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/portraits/pterosaur_queen.png" id="90_portrait"]
 [ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen.tres" id="61_animation"]
 
 [ext_resource type="Texture2D" path="res://assets/sprites/enemies/battle/enemy_pterosaur_queen_battle.png" id="60_battle"]
@@ -27,8 +28,11 @@ faith = 100
 speed = 112
 energy_max = 100
 
+
+
 [resource]
 script = ExtResource("1_enemydata")
+portrait = ExtResource("90_portrait")
 battle_sprite = ExtResource("60_battle")
 battle_frames = ExtResource("61_animation")
 enemy_id = &"pterosaur_queen"
