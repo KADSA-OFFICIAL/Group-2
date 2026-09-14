@@ -856,6 +856,9 @@ func _drain_presentation() -> void:
 			PresentationQueue.Event.HIT:
 				await _play_hit(data)
 
+			PresentationQueue.Event.HEAL:
+				await _play_heal(data)
+
 			PresentationQueue.Event.LOCK_CLEARED:
 				await _play_lock(data)
 
@@ -949,6 +952,52 @@ func _play_hit(data: Dictionary) -> void:
 	_spawn_number(ctx, style)
 
 	await _wait(0.10)
+
+
+# 회복 연출 (#525).
+#
+# 이 자리가 비어 있어서 `fx_heal` 시트와 `heal.ogg` 가 만들어지고도 재생되지 않았다.
+# 피해와 달리 `DamageContext` 가 없다 — 회복은 파이프라인을 타지 않고 HP 를 바로 올린다.
+#
+# **위로 올라가는 연출이다.** 다른 이펙트와 방향이 반대여야 회복으로 읽힌다.
+func _play_heal(data: Dictionary) -> void:
+	var unit: TurnUnit = data.get("unit")
+	if unit == null:
+		return
+
+	var amount := int(data.get("amount", 0))
+	var style: Dictionary = data.get("number", {})
+	var color: Color = style.get("color", TurnCombat.COLOR_HEAL)
+
+	_play_fx("fx_heal", hud.unit_position(unit) + Vector2(0, -60), color)
+	_play_se("heal")
+	_spawn_text_number(unit, str(amount), color, float(style.get("scale", 1.0)))
+
+	await _wait(0.08)
+
+
+# 유닛 위로 떠오르는 숫자. `_spawn_number()` 와 달리 `DamageContext` 없이 쓴다 —
+# 회복처럼 피해 파이프라인을 타지 않는 값에 필요하다.
+func _spawn_text_number(unit: TurnUnit, text: String, color: Color,
+		scale: float = 1.0) -> void:
+	if _numbers == null or unit == null:
+		return
+
+	var label := Label.new()
+	label.text = text
+	label.modulate = color
+	label.add_theme_font_size_override("font_size", int(20.0 * scale))
+	label.position = hud.unit_position(unit) + Vector2(
+		randf_range(-18.0, 18.0), -96.0)
+	label.z_index = 60
+	_numbers.add_child(label)
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "position",
+		label.position + Vector2(0, -48), _scaled(0.6))
+	tween.tween_property(label, "modulate:a", 0.0, _scaled(0.6))
+	tween.chain().tween_callback(label.queue_free)
 
 
 func _play_lock(data: Dictionary) -> void:
