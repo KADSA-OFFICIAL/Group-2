@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=14 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=15 format=3]
 
 [ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/battle/frames/mammoth_boss.tres" id="61_animation"]
 
@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://entities/character/SkillData.gd" id="11_skilldef"]
 [ext_resource type="Resource" path="res://data/enemies/skills/boss_charge.tres" id="12_charge"]
 [ext_resource type="Resource" path="res://data/enemies/skills/boss_leap_slam.tres" id="13_leap"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/portraits/mammoth_boss.png" id="4_portrait"]
 
 [sub_resource type="Resource" id="PlayerStats_mammoth_boss"]
 script = ExtResource("2_stats")
@@ -28,6 +29,7 @@ energy_max = 100
 [resource]
 script = ExtResource("1_enemydata")
 battle_sprite = ExtResource("60_battle")
+portrait = ExtResource("4_portrait")
 battle_frames = ExtResource("61_animation")
 enemy_id = &"mammoth_boss"
 display_name = "매머드 수인 우두머리"

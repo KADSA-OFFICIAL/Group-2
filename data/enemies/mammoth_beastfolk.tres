@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=12 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=13 format=3]
 
 [ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/battle/frames/mammoth_beastfolk.tres" id="61_animation"]
 
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
 [ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
 [ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/mammoth_beastfolk_walk_frames.tres" id="10_walk"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/portraits/mammoth_beastfolk.png" id="4_portrait"]
 
 [sub_resource type="Resource" id="PlayerStats_mammoth_beastfolk"]
 script = ExtResource("2_stats")
@@ -24,6 +25,7 @@ speed = 88
 [resource]
 script = ExtResource("1_enemydata")
 battle_sprite = ExtResource("60_battle")
+portrait = ExtResource("4_portrait")
 battle_frames = ExtResource("61_animation")
 enemy_id = &"mammoth_beastfolk"
 display_name = "매머드 수인"

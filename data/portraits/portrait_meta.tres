@@ -15,5 +15,8 @@ head_rects = {
 &"harang": Rect2(0.44, 0.185, 0.14, 0.18),
 &"mina": Rect2(0.44, 0.026, 0.14, 0.20),
 &"seola": Rect2(0.53, 0.032, 0.13, 0.19),
-&"taehee": Rect2(0.40, 0.026, 0.16, 0.21)
+&"taehee": Rect2(0.40, 0.026, 0.16, 0.21),
+&"mammoth_beastfolk": Rect2(0.42, 0.040, 0.16, 0.120),
+&"mammoth_boss": Rect2(0.42, 0.045, 0.16, 0.115),
+&"pterosaur_queen": Rect2(0.43, 0.050, 0.14, 0.110)
 }

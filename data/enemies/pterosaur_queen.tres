@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=17 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=18 format=3]
 
 [ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/battle/frames/pterosaur_queen.tres" id="61_animation"]
 
@@ -16,6 +16,7 @@
 [ext_resource type="Resource" path="res://data/enemies/skills/queen_retreat.tres" id="13_retreat"]
 [ext_resource type="Resource" path="res://data/enemies/skills/queen_lance.tres" id="14_lance"]
 [ext_resource type="Resource" path="res://data/enemies/skills/queen_snare_field.tres" id="15_snare"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/portraits/pterosaur_queen.png" id="4_portrait"]
 
 [sub_resource type="Resource" id="PlayerStats_pterosaur_queen"]
 script = ExtResource("2_stats")
@@ -30,6 +31,7 @@ energy_max = 100
 [resource]
 script = ExtResource("1_enemydata")
 battle_sprite = ExtResource("60_battle")
+portrait = ExtResource("4_portrait")
 battle_frames = ExtResource("61_animation")
 enemy_id = &"pterosaur_queen"
 display_name = "여왕"
