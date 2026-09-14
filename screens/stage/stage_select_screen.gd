@@ -10,11 +10,17 @@ extends Control
 #                        (타입->조건 대응을 화면에서 다시 쓰지 않는다)
 #   챕터·컨셉          -> StageData.chapter_to_display_name() (#408)
 #                        (챕터->컨셉 대응도 화면에서 다시 쓰지 않는다)
+#   해금 여부          -> StageProgress.get_unlocked_chapters() (#434)
+#                        (앞 챕터를 다 깼는지 판정하는 규칙도 화면에 두지 않는다)
 #   색·조각            -> UITheme / HUDKit
 #
 # 목록은 챕터별로 묶인다(#408) — 전체 규모는 3챕터 x 3스테이지이고 챕터 하나가
 # 컨셉(육지/바다/하늘) 하나를 갖는다. 저작 전인 챕터는 머리도 뜨지 않고,
 # 챕터에 속하지 않는 스테이지(테스트)는 맨 끝에 따로 모인다.
+#
+# 앞 챕터를 전부 클리어할 때까지 다음 챕터는 **목록에 뜨지 않는다**(#434). 잠긴 카드를
+# 흐리게 보여주지 않는 이유: 아직 저작되지 않은 챕터를 감추는 것과 같은 처리로 두면
+# 목록은 "지금 갈 수 있는 곳"만 담는다. 판정은 StageProgress 가 한다.
 #
 # 저작된 스테이지가 하나도 없을 때는 목록이 빈 것을 정상 상태로 다루고,
 # 지금까지처럼 바로 출격할 수 있는 길을 남겨 둔다.
@@ -52,6 +58,8 @@ var _list_holder: VBoxContainer
 func _ready() -> void:
 	_build()
 	_refresh()
+	# 판이 끝나 챕터가 열리면 목록이 따라 바뀐다. 화면은 이 신호로만 갱신한다.
+	StageProgress.progress_changed.connect(_refresh)
 
 
 # ===== 화면 구성 =====
@@ -97,7 +105,11 @@ func _refresh() -> void:
 	# 챕터별로 묶어 놓는다(#408). 전체 규모는 3챕터 x 3스테이지이고, 챕터 하나가
 	# 컨셉(육지/바다/하늘) 하나를 갖는다. 아직 저작되지 않은 챕터는 머리도 뜨지 않는다 —
 	# 빈 머리 셋을 미리 띄우면 화면이 "저작 안 됨"을 알리는 자리가 되어 버린다.
-	for chapter in StageDatabase.get_authored_chapters():
+	#
+	# 아직 열리지 않은 챕터도 같은 이유로 뜨지 않는다(#434). 목록은 지금 갈 수 있는
+	# 곳만 담는다. 어느 챕터가 열렸는지는 StageProgress 가 클리어 기록에서 판정한다 —
+	# 여기서 "앞 챕터를 다 깼는가"를 다시 세지 않는다.
+	for chapter in StageProgress.get_unlocked_chapters():
 		_list_holder.add_child(_chapter_header(chapter))
 		for id in StageDatabase.get_ids_by_chapter(chapter):
 			_list_holder.add_child(_make_stage_card(id))
