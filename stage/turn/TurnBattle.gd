@@ -87,6 +87,13 @@ const SHADOW_ALPHA: float = 0.28
 # `time` 은 **기존 연출과 같은 길이**다 — 연출 타이밍은 바꾸지 않는다는 것이 이 작업의
 # 전제다(히트스톱·흔들림·슬로모션 규격표는 그대로 둔다). 배속은 `_scaled()` 가 곱한다.
 const FX_DIR := "res://assets/sprites/effects/battle"
+const BATTLE_BGM_PATH := "res://assets/audio/bgm/battle_land.ogg"
+const LOBBY_BGM_PATH := "res://assets/audio/bgm/lobby_theme.ogg"
+const SE_DIR := "res://assets/audio/se/"
+const MAX_SE_VOICES := 8
+var _battle_music: AudioStream = null
+var _se_streams: Dictionary = {}
+var _se_voices: Array[AudioStreamPlayer] = []
 const FX_SPEC := {
 	"fx_hit": {"cell": 128.0, "frames": 4, "time": 0.16},
 	"fx_burst": {"cell": 256.0, "frames": 5, "time": 0.45},
@@ -175,6 +182,13 @@ var _camera: Camera2D = null
 
 
 func _ready() -> void:
+	# Deferred so the lobby launcher can stop its track before battle resumes.
+	ScreenManager.screen_visibility_changed.connect(_on_music_visibility, CONNECT_DEFERRED)
+	if ResourceLoader.exists(BATTLE_BGM_PATH):
+		_battle_music = load(BATTLE_BGM_PATH) as AudioStream
+		if _battle_music is AudioStreamOggVorbis:
+			_battle_music.loop = true
+	_on_music_visibility(false)
 	name = "TurnBattle"
 	_build_scene()
 
@@ -187,6 +201,37 @@ func _ready() -> void:
 
 
 # 다른 스테이지로 출격했다. 전투를 그 스테이지로 다시 만든다.
+func _on_music_visibility(_has_screen: bool) -> void:
+	# Recheck current state: a deferred close may already have been followed by open.
+	if is_inside_tree() and not ScreenManager.has_screen() and _battle_music != null:
+		MusicSystem.play(_battle_music)
+
+
+func _play_se(sound: String, pitch: float = 1.0) -> AudioStreamPlayer:
+	if not _se_streams.has(sound):
+		var path := SE_DIR + sound + ".ogg"
+		_se_streams[sound] = load(path) as AudioStream if ResourceLoader.exists(path) else null
+	var stream: AudioStream = _se_streams[sound]
+	if stream == null:
+		return null
+	for voice in _se_voices.duplicate():
+		if not is_instance_valid(voice) or voice.is_queued_for_deletion():
+			_se_voices.erase(voice)
+	if _se_voices.size() >= MAX_SE_VOICES:
+		var oldest: AudioStreamPlayer = _se_voices.pop_front()
+		oldest.stop()
+		oldest.queue_free()
+	var player := AudioStreamPlayer.new()
+	player.stream = stream
+	player.pitch_scale = clampf(pitch, 0.5, 3.0)
+	player.volume_db = -15.0  # Leave headroom for simultaneous hit/lock/break voices.
+	add_child(player)
+	_se_voices.append(player)
+	player.finished.connect(player.queue_free)
+	player.play()
+	return player
+
+
 func _on_stage_requested(_stage_id: StringName) -> void:
 	_restart()
 
@@ -834,6 +879,7 @@ func _play_hit(data: Dictionary) -> void:
 	var feedback: Dictionary = data.get("feedback", {})
 	var style: Dictionary = data.get("number", {})
 	var target_shape: Node2D = _shapes.get(ctx.target.unit_id)
+	_play_se("hit")
 
 	# 히트스톱 — 인간의 지각에서 "묵직함"의 90%가 여기서 나온다.
 	await _hitstop(int(feedback.get("hitstop_frames", 2)))
@@ -880,6 +926,7 @@ func _play_lock(data: Dictionary) -> void:
 	var lock: TurnLock = data.get("lock")
 	if unit == null or lock == null:
 		return
+	_play_se("lock", float(data.get("pitch", 1.0)))
 
 	var feedback: Dictionary = data.get("feedback", {})
 	await _hitstop(int(feedback.get("hitstop_frames", 3)))
@@ -946,6 +993,7 @@ func _play_break(data: Dictionary) -> void:
 
 			3:
 				# 인성치 바 파열 + 유리 파편.
+				_play_se("break")
 				_shake(20.0, 0.45)
 				_spawn_shards(unit, color)
 				await _wait(duration)
@@ -1096,6 +1144,7 @@ func _play_death(data: Dictionary) -> void:
 	var shape: Node2D = _shapes.get(unit.unit_id) if unit != null else null
 	if shape == null:
 		return
+	_play_se("death")
 
 	# 쓰러지는 그림이 있으면 그것을 쓰고, 없으면 예전처럼 기울여 넘긴다.
 	# 그림이 있는데도 70도로 돌려 버리면 애써 그린 무너지는 자세가 안 보인다.
@@ -1263,6 +1312,11 @@ func _restore_time_scale() -> void:
 # 노드가 트리를 떠날 때의 안전망. 연출 도중 씬이 바뀌어도 배율이 남지 않는다.
 func _exit_tree() -> void:
 	_restore_time_scale()
+	if _battle_music != null and MusicSystem.get_current_stream() == _battle_music:
+		if ResourceLoader.exists(LOBBY_BGM_PATH):
+			MusicSystem.play(load(LOBBY_BGM_PATH) as AudioStream)
+		else:
+			MusicSystem.stop()
 
 
 # 카메라 흔들림. 진폭·지속의 2파라미터에 감쇠를 준다.
@@ -1393,6 +1447,7 @@ func _spawn_element_burst(unit: TurnUnit, color: Color) -> void:
 
 # 상태이상 아이콘 부착 애니메이션 (격파 9단계의 마지막).
 func _spawn_status_badge(unit: TurnUnit, status: int, color: Color) -> void:
+	_play_se("status")
 	if _play_fx("fx_status", hud.unit_position(unit) + Vector2(0, -120), color):
 		return
 	var label := Label.new()
