@@ -55,6 +55,7 @@ func execute(actor: TurnUnit, skill: SkillData, primary: TurnUnit = null) -> Dic
 		"ok": false, "reason": "",
 		"damage": [] as Array[DamageContext],
 		"breaks": [] as Array[TurnUnit],
+		"heals": [] as Array[Dictionary],
 		"nullified": [] as Array[TurnUnit],
 		"kills": [] as Array[TurnUnit],
 		"logs": [] as Array[String],
@@ -257,6 +258,10 @@ func _apply_other(actor: TurnUnit, skill: SkillData, effect: TurnSkillEffect,
 			var before := target.current_hp
 			target.current_hp = mini(target.current_hp + amount, target.get_max_hp())
 			var healed := target.current_hp - before
+			# 연출이 쓸 수 있게 남긴다. 회복은 DamageContext 를 만들지 않으므로
+			# 여기서 기록하지 않으면 화면이 회복을 알 방법이 없다 (#525).
+			if healed > 0:
+				result["heals"].append({"unit": target, "amount": healed})
 			_log(result, "  %s 회복 +%d (%d/%d)"
 				% [target.display_name, healed, target.current_hp, target.get_max_hp()])
 
@@ -522,6 +527,7 @@ func _execute_trait(unit: TurnUnit, skill: SkillData, target: TurnUnit,
 		"ok": true, "reason": "",
 		"damage": [] as Array[DamageContext],
 		"breaks": [] as Array[TurnUnit],
+		"heals": [] as Array[Dictionary],
 		"nullified": [] as Array[TurnUnit],
 		"kills": [] as Array[TurnUnit],
 		"logs": [] as Array[String],

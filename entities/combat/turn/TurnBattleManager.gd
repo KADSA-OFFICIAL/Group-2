@@ -586,6 +586,9 @@ func _absorb(result: Dictionary) -> void:
 			feedback_key = PresentationQueue.feedback_key_for_action(ctx.skill.turn_action)
 		presentation.push_hit(ctx, feedback_key)
 
+	for heal in result.get("heals", []):
+		presentation.push_heal(heal["unit"], int(heal["amount"]))
+
 	for unit in result.get("kills", []):
 		_on_death(unit)
 

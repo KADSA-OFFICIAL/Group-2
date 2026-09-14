@@ -120,6 +120,22 @@ func push_hit(ctx: DamageContext, feedback_key: String = "skill") -> void:
 	})
 
 
+# 회복 (#525). `Event.HEAL` 은 enum 에 있었지만 **쌓는 곳이 없어 재생되지 않았다** —
+# 그래서 `fx_heal` 시트와 `heal.ogg` 가 만들어지고도 놀고 있었다.
+#
+# 피해와 달리 `DamageContext` 가 없다. 회복은 파이프라인을 타지 않고
+# `SkillResolver` 가 바로 HP 를 올리기 때문이다. 필요한 것은 대상과 양뿐이다.
+func push_heal(unit: TurnUnit, amount: int) -> void:
+	if amount <= 0:
+		return
+	push(Event.HEAL, {
+		"unit": unit,
+		"amount": amount,
+		"number": NUMBER_STYLE["heal"],
+		"text": str(amount),
+	})
+
+
 func push_break(unit: TurnUnit, element: int, ctx: DamageContext) -> void:
 	push(Event.BREAK, {
 		"unit": unit,
