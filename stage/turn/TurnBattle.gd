@@ -121,6 +121,22 @@ const ENEMY_BODY := Vector2(112.0, 140.0)
 ## 중앙 충돌선의 아래에서 잰 시작 높이.
 const DIVIDER_FROM_BOTTOM: float = 540.0
 
+# ===== 근접 타격 (#531) =====
+#
+# 공격자가 대상 앞까지 달려가서 때린다. 제자리에서 26px 나갔다 오는 것으로는
+# 공격자와 피격자가 화면 반대편에 떨어져 있어 **"때린다"는 느낌이 없었다.**
+## 대상 발 기준점에서 공격자가 멈출 가로 간격. 두 몸 폭의 절반 합(≈106)보다 좁혀 붙인다.
+const STRIKE_GAP: float = 84.0
+## 대상보다 이만큼 아래(화면 앞쪽)에 선다. 같은 줄에 서면 발이 겹쳐 보인다.
+const STRIKE_DEPTH: float = 12.0
+## 달려가는 시간 / 돌아오는 시간 (배속 적용 전).
+const STRIKE_DASH_TIME: float = 0.16
+const STRIKE_RETURN_TIME: float = 0.18
+## 도착한 뒤 휘두르며 한 번 더 파고드는 거리.
+const STRIKE_LUNGE: float = 18.0
+## 대상 앞에 선 동안의 그리기 순서. 대상(10)보다 앞에 그린다.
+const STRIKER_Z: int = 11
+
 var battle := TurnBattleManager.new()
 var hud: TurnBattleHUD = null
 
@@ -133,6 +149,8 @@ var _shapes: Dictionary = {}
 ## 애니메이션이 끝나도 깨어나므로, 깨어난 쪽이 자기가 아직 최신인지 확인해야 한다.
 ## (실제로 death 재생 뒤 앞서 걸린 attack 의 뒷정리가 idle 로 되돌려 놓았다.)
 var _anim_token: Dictionary = {}
+## 대상 앞에 나가 있는 공격자 (#531). 그 행동의 피격 연출이 끝나면 제자리로 돌린다.
+var _striker: TurnUnit = null
 ## 화면 전체를 덮는 플래시·암전 레이어.
 var _flash: ColorRect = null
 var _flash_layer: CanvasLayer = null
@@ -849,6 +867,11 @@ func _drain_presentation() -> void:
 		var event: int = entry["event"]
 		var data: Dictionary = entry["data"]
 
+		# 행동이 끝나는 자리에서 공격자를 돌려보낸다. 시전 사이는 `_play_cast()` 가 한다.
+		if event == PresentationQueue.Event.TURN_END \
+				or event == PresentationQueue.Event.CYCLE_START:
+			await _return_striker()
+
 		match event:
 			PresentationQueue.Event.SKILL_CAST:
 				await _play_cast(data)
@@ -883,23 +906,95 @@ func _drain_presentation() -> void:
 
 		hud.refresh()
 
+	# 큐가 비었는데 공격자가 나가 있으면(입력 대기로 끊긴 경우) 여기서 돌려보낸다.
+	await _return_striker()
+
 
 func _play_cast(data: Dictionary) -> void:
+	# 앞 행동의 공격자가 아직 나가 있으면 먼저 돌려보낸다. 두 명이 한 자리에 겹친다.
+	await _return_striker()
+
 	var unit: TurnUnit = data.get("unit")
 	var shape: Node2D = _shapes.get(unit.unit_id) if unit != null else null
 	if shape == null:
 		return
 
-	# 프레임 시트가 있으면 휘두르는 그림이 나오고, 없으면 아래 전진 트윈만 남는다.
-	_play_unit_anim(unit, BattleAnimation.ATTACK)
-
-	# 시전자가 앞으로 살짝 나갔다 돌아온다. 3D 모션의 2D 대체다.
 	var direction := 1.0 if unit.is_ally() else -1.0
-	var home := shape.position
+	var victim := _strike_target(unit, data.get("skill"), data.get("target"))
+
+	# 회복·버프처럼 상대를 치지 않는 행동은 제자리에서 살짝 나갔다 돌아온다.
+	if victim == null:
+		_play_unit_anim(unit, BattleAnimation.ATTACK)
+		var home := shape.position
+		var tween := create_tween()
+		tween.tween_property(shape, "position", home + Vector2(direction * 26.0, 0),
+			_scaled(0.10)).set_ease(Tween.EASE_OUT)
+		tween.tween_property(shape, "position", home, _scaled(0.14)).set_ease(Tween.EASE_IN)
+		await tween.finished
+		return
+
+	# 대상 바로 앞까지 달려간다. **돌아오지 않는다** — 뒤따르는 피격 연출이
+	# 공격자가 붙어 선 채로 재생되어야 맞는 그림이 된다. 복귀는 `_return_striker()`.
+	_striker = unit
+	shape.z_index = STRIKER_Z
+	var spot := hud.unit_position(victim) + Vector2(-direction * STRIKE_GAP, STRIKE_DEPTH)
+	var dash := create_tween()
+	dash.tween_property(shape, "position", spot, _scaled(STRIKE_DASH_TIME)) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	await dash.finished
+
+	# 프레임 시트가 있으면 휘두르는 그림이 나오고, 없으면 파고드는 트윈만 남는다.
+	_play_unit_anim(unit, BattleAnimation.ATTACK)
+	var lunge := create_tween()
+	lunge.tween_property(shape, "position", spot + Vector2(direction * STRIKE_LUNGE, 0),
+		_scaled(0.06)).set_ease(Tween.EASE_OUT)
+	lunge.tween_property(shape, "position", spot, _scaled(0.08)).set_ease(Tween.EASE_IN)
+	await lunge.finished
+
+
+# 공격자가 달려갈 상대. 상대를 치지 않는 행동이면 null.
+#
+# 로직은 이미 끝났으므로 대상이 **이번 공격으로 죽었을 수 있다** — 그래도 그 앞으로 간다.
+# 사망 연출은 뒤따르는 `DEATH` 이벤트가 하고, 그때까지 도형은 보인다.
+func _strike_target(unit: TurnUnit, skill: SkillData, target: TurnUnit) -> TurnUnit:
+	if skill != null and skill.targets_allies():
+		return null
+	if target != null and target.is_ally() != unit.is_ally() and _shapes.has(target.unit_id):
+		return target
+
+	# 전체·튕김처럼 고른 대상이 없으면 가장 앞 랭크의 상대 앞으로 간다.
+	var front: TurnUnit = null
+	for other in battle.units:
+		if other.is_ally() == unit.is_ally() or not other.alive:
+			continue
+		var other_shape: Node2D = _shapes.get(other.unit_id)
+		if other_shape == null or not other_shape.visible:
+			continue
+		if front == null or other.rank < front.rank:
+			front = other
+	return front
+
+
+# 대상 앞에 나가 있는 공격자를 제 랭크 자리로 돌려보낸다 (#531).
+#
+# 다음 시전·턴 종료·큐 소진 때 부른다. 그 행동의 피격·격파·사망 연출이 다 끝난 뒤다.
+# 돌아갈 자리는 **지금 랭크의 좌표**다 — 밀치기·자리바꿈으로 랭크가 바뀌었을 수 있다.
+func _return_striker() -> void:
+	if _striker == null:
+		return
+	var unit := _striker
+	_striker = null
+
+	var shape: Node2D = _shapes.get(unit.unit_id)
+	if shape == null:
+		return
+	shape.z_index = 10
+	if not shape.visible:
+		return
+
 	var tween := create_tween()
-	tween.tween_property(shape, "position", home + Vector2(direction * 26.0, 0),
-		_scaled(0.10)).set_ease(Tween.EASE_OUT)
-	tween.tween_property(shape, "position", home, _scaled(0.14)).set_ease(Tween.EASE_IN)
+	tween.tween_property(shape, "position", hud.unit_position(unit),
+		_scaled(STRIKE_RETURN_TIME)).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)
 	await tween.finished
 
 
