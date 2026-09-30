@@ -50,6 +50,25 @@ func _ready() -> void:
 	for path in [field.VICTORY_JINGLE_PATH, field.DEFEAT_JINGLE_PATH]:
 		var jingle := load(path) as AudioStreamOggVorbis
 		check(jingle != null and not jingle.loop, "Jingle plays once: " + path)
+	# 실제 스테이지 흐름: 승패를 알리면 결과 화면이 열린다. 그래도 징글이 나와야 한다.
+	var results := Node.new()
+	results.set_script(load("res://screens/result/stage_result_launcher.gd"))
+	add_child(results)
+	await get_tree().process_frame
+	var stage := StageData.new()
+	stage.stage_id = &"stage_test"
+	field._stage = stage
+	field._outcome_reported = false
+	field._show_result()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	check(ScreenManager.has_screen(), "Result screen opens after the outcome is reported")
+	var playing := MusicSystem.get_current_stream()
+	check(playing != null and playing.resource_path.ends_with("jingle_defeat.ogg") or playing != null and playing.resource_path.ends_with("jingle_victory.ogg"),
+		"Result jingle keeps playing under the result screen (got %s)" % (playing.resource_path if playing else "none"))
+	ScreenManager.close_all()
+	await get_tree().process_frame
+	results.queue_free()
 	field._stage = null
 	field._apply_backdrop()
 	launcher.open_menu()

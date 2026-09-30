@@ -1318,6 +1318,14 @@ func _show_result() -> void:
 	# `stage_started` 는 **쏘지 않는다.** 그 신호로 `TutorialSystem` 이 활성화되는데,
 	# 저작된 튜토리얼 단계의 진행 조건이 대시·처형 같은 **실시간 행동**이라 턴제에서는
 	# 영원히 충족되지 않고 진행 불가로 멈춘다 (#472 Consequences 1).
+	# 결과 징글: 전투곡을 끊고 한 번 재생한다. **승패를 알리기 전에** 튼다 — 알리는 순간 결과
+	# 화면이 열리고(stage_result_launcher), 그 뒤에는 화면이 떠 있어 징글을 틀 수 없다.
+	# 결과 화면이 떠 있는 동안 로비 런처는 곡을 건드리지 않는다. 로비가 이미 떠 있으면 틀지 않는다.
+	var jingle_path := VICTORY_JINGLE_PATH if victory else DEFEAT_JINGLE_PATH
+	if ResourceLoader.exists(jingle_path) and not ScreenManager.has_screen():
+		_result_music_played = true
+		MusicSystem.play(load(jingle_path) as AudioStream, 0.05)
+
 	if _stage != null and not _outcome_reported:
 		_outcome_reported = true
 		var stage_name := String(_stage.stage_id)
@@ -1325,12 +1333,6 @@ func _show_result() -> void:
 			EventBus.stage_completed.emit(stage_name)
 		else:
 			EventBus.stage_failed.emit(stage_name)
-
-	# 결과 징글: 전투곡을 끊고 한 번 재생한다. 로비가 떠 있으면 로비 곡을 건드리지 않는다.
-	var jingle_path := VICTORY_JINGLE_PATH if victory else DEFEAT_JINGLE_PATH
-	if ResourceLoader.exists(jingle_path) and not ScreenManager.has_screen():
-		_result_music_played = true
-		MusicSystem.play(load(jingle_path) as AudioStream, 0.05)
 
 	await _play_banner("VICTORY" if victory else "DEFEAT",
 		TurnCombat.COLOR_ULT_READY if victory else TurnCombat.COLOR_DANGER, 1.2, 88)

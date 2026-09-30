@@ -19,6 +19,9 @@ const MAIN_SCREEN := preload("res://screens/main/MainScreen.tscn")
 # 때마다 인프라를 고쳐야 한다. 이 노드는 이미 MainScreen 을 아는 자리라 곡도 여기가 안다.
 const LOBBY_BGM := preload("res://assets/audio/bgm/lobby_theme.ogg")
 
+# 결과 화면(stage_result_launcher 가 연다). 이 화면이 맨 위면 전투의 결과 징글을 그대로 둔다.
+const RESULT_SCREEN_PATH := "res://screens/result/ResultScreen.tscn"
+
 # 메뉴를 여닫는 입력 액션 (project.godot [input] 에 정의).
 const MENU_ACTION := &"open_menu"
 
@@ -72,6 +75,10 @@ func open_menu() -> void:
 # 이 노드는 로비만 안다.
 func _on_screen_visibility_changed(has_screen: bool) -> void:
 	if has_screen:
+		# 결과 화면은 전투가 방금 튼 승리·패배 징글을 끝까지 들려준다(#535).
+		var top := ScreenManager.current()
+		if top != null and top.scene_file_path == RESULT_SCREEN_PATH:
+			return
 		MusicSystem.play(LOBBY_BGM)
 	else:
 		MusicSystem.stop()
