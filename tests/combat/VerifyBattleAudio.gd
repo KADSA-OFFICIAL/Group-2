@@ -50,6 +50,39 @@ func _ready() -> void:
 	for path in [field.VICTORY_JINGLE_PATH, field.DEFEAT_JINGLE_PATH]:
 		var jingle := load(path) as AudioStreamOggVorbis
 		check(jingle != null and not jingle.loop, "Jingle plays once: " + path)
+	# #537: 하늘(마지막 챕터) 보스는 하이브리드 최종 보스곡, 다른 챕터 보스는 보스곡.
+	var sky := StageData.new()
+	sky.chapter = 3
+	field._stage = sky
+	check(field._boss_music().resource_path.ends_with("battle_final.ogg"), "Sky boss uses the final boss track")
+	field._stage = sea
+	check(field._boss_music().resource_path.ends_with("battle_boss.ogg"), "Other bosses keep the boss track")
+	var final_track := load(field.FINAL_BOSS_BGM_PATH) as AudioStreamOggVorbis
+	check(final_track != null and final_track.loop, "Final boss track loops")
+	# #537: 메타 화면별 곡 — 스토리·출격 준비는 곡이 다르고, 결과 화면은 징글을 둔다.
+	var Launcher = load("res://screens/main/main_screen_launcher.gd")
+	check(Launcher.music_for("res://screens/story/StoryScreen.tscn").ends_with("story_theme.ogg"), "Story screen -> story theme")
+	check(Launcher.music_for("res://screens/story/StoryPlayerScreen.tscn").ends_with("story_theme.ogg"), "Story player -> story theme")
+	check(Launcher.music_for("res://screens/stage/StageSelectScreen.tscn").ends_with("sortie_theme.ogg"), "Stage select -> sortie theme")
+	check(Launcher.music_for("res://screens/formation/FormationScreen.tscn").ends_with("sortie_theme.ogg"), "Formation -> sortie theme")
+	check(Launcher.music_for("res://screens/main/MainScreen.tscn").ends_with("lobby_theme.ogg"), "Other screens -> lobby theme")
+	check(Launcher.music_for("res://screens/result/ResultScreen.tscn") == "", "Result screen keeps the jingle")
+	for path in [Launcher.STORY_BGM_PATH, Launcher.SORTIE_BGM_PATH]:
+		var meta_track := load(path) as AudioStreamOggVorbis
+		check(meta_track != null and meta_track.loop, "Meta track exists and loops: " + path)
+	# 실제로 화면을 쌓고 물면 곡이 따라 바뀐다.
+	launcher.open_menu()
+	await get_tree().process_frame
+	ScreenManager.push(load("res://screens/stage/StageSelectScreen.tscn"))
+	await get_tree().process_frame
+	check(MusicSystem.get_current_stream().resource_path.ends_with("sortie_theme.ogg"), "Opening stage select plays the sortie theme")
+	ScreenManager.pop()
+	await get_tree().process_frame
+	check(MusicSystem.get_current_stream().resource_path.ends_with("lobby_theme.ogg"), "Back to the lobby plays the lobby theme")
+	ScreenManager.close_all()
+	await get_tree().process_frame
+	await get_tree().process_frame
+
 	# 실제 스테이지 흐름: 승패를 알리면 결과 화면이 열린다. 그래도 징글이 나와야 한다.
 	var results := Node.new()
 	results.set_script(load("res://screens/result/stage_result_launcher.gd"))

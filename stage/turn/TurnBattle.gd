@@ -98,6 +98,8 @@ const CONCEPT_BGM := {
 }
 ## 보스(`EnemyTier.BOSS`)가 선 웨이브에서 전투곡을 대신한다.
 const BOSS_BGM_PATH := "res://assets/audio/bgm/battle_boss.ogg"
+## 마지막 챕터(하늘)의 보스는 하이브리드 오케스트라 곡 "Colossus of the Sky" (#537). 없으면 보스곡.
+const FINAL_BOSS_BGM_PATH := "res://assets/audio/bgm/battle_final.ogg"
 ## 결과 배너와 함께 한 번 재생한다(반복하지 않는다).
 const VICTORY_JINGLE_PATH := "res://assets/audio/bgm/jingle_victory.ogg"
 const DEFEAT_JINGLE_PATH := "res://assets/audio/bgm/jingle_defeat.ogg"
@@ -245,7 +247,7 @@ func _switch_battle_music(stream: AudioStream) -> void:
 func _is_battle_stream(stream: AudioStream) -> bool:
 	if stream == null:
 		return false
-	return stream == _battle_music or stream == _stage_music 		or stream.resource_path in [BOSS_BGM_PATH, VICTORY_JINGLE_PATH, DEFEAT_JINGLE_PATH]
+	return stream == _battle_music or stream == _stage_music 		or stream.resource_path in [BOSS_BGM_PATH, FINAL_BOSS_BGM_PATH, VICTORY_JINGLE_PATH, DEFEAT_JINGLE_PATH]
 
 
 func _play_se(sound: String, pitch: float = 1.0) -> AudioStreamPlayer:
@@ -647,11 +649,21 @@ func _resolve_waves() -> Array:
 # 굴릴 수 있다(헤드리스 테스트와 `use_stage = false` 가 그렇게 쓴다).
 func _on_wave_started(index: int, total: int) -> void:
 	# 보스가 선 웨이브는 보스곡, 아니면 스테이지 곡.
-	_switch_battle_music(_load_loop(BOSS_BGM_PATH) if _wave_has_boss() else _stage_music)
+	_switch_battle_music(_boss_music() if _wave_has_boss() else _stage_music)
 	if _stage == null:
 		return
 	var wave: StageWave = _waves[index] if index < _waves.size() else null
 	EventBus.stage_wave_started.emit(String(_stage.stage_id), index, total, wave)
+
+
+# 보스 웨이브의 곡: 하늘(마지막 챕터)이면 최종 보스곡, 아니면 보스곡.
+func _boss_music() -> AudioStream:
+	var concept: int = _stage.get_concept() if _stage != null else StageData.Concept.LAND
+	if concept == StageData.Concept.SKY:
+		var final := _load_loop(FINAL_BOSS_BGM_PATH)
+		if final != null:
+			return final
+	return _load_loop(BOSS_BGM_PATH)
 
 
 func _wave_has_boss() -> bool:
