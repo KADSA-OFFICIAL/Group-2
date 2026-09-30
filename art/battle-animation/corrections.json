@@ -1,20 +1,74 @@
 [
   {
+    "unit": "harang",
+    "anim": "attack",
+    "frame": 3,
+    "prompt": "Make the RECOVERY frame after attacking. Sword has returned almost exactly to its original resting position over shoulder from idle_0, torso almost upright, arms relaxing. Minimal difference from reference, no strike or low sword. Keep face, head size, feet, short legs, scale, all accessories exactly. No effects."
+  },
+  {
     "unit": "seola",
+    "anim": "attack",
+    "frame": 1,
+    "prompt": "Make spear THRUST strike toward screen RIGHT. Crucial: preserve the EXACT character scale, head size, short leg lengths and sole coordinates of this idle_0 reference. Do NOT shrink, move up, or move left to fit the weapon. Keep both feet exactly planted where shown. Torso leans forward modestly, both arms thrust the spear right with foreshortening/slightly diagonal orientation so the entire spear fits INSIDE canvas. A small pale arc only at spearhead is allowed. All other identity/clothes/tail stay identical. Same canvas and bottom margin."
+  },
+  {
+    "unit": "gangji",
+    "anim": "idle",
+    "frame": 3,
+    "prompt": "Remove ONLY the white breath puff beside the mouth. Keep character, mouth, pose, staff, feet, scale and every other detail exactly unchanged. Flat magenta #FF00FF background."
+  },
+  {
+    "unit": "velociraptor_beastfolk_2",
     "anim": "attack",
     "frame": 0,
-    "prompt": "Correct ONE seola attack_0 animation frame. Reference 1 is original idle_0 and sets the EXACT head/body scale. Reference 2 is the faulty animation. Correct its unwanted shrinking. Keep the original full standing body scale and head size from reference 1. Upright spear windup: draw spear back diagonally near shoulder, barely bent knees. Same face, costume, delicate pastel line art, peach skin, hair and weapon colors. Feet on bottom edge, same 2:3 logical 224x336 canvas. Whole figure/weapon inside, no effects/shadows/text/grid, uniform #FF00FF background."
+    "prompt": "Remove ONLY all white/pale slash arcs/motion trails around the claw hands. This is anticipation, with NO effects. Keep character, pose, tail, feet, scale and every other detail exactly unchanged. Flat #FF00FF background."
+  },
+  {
+    "unit": "velociraptor_beastfolk_2",
+    "anim": "attack",
+    "frame": 2,
+    "prompt": "Remove ONLY the white/pale claw motion trails at screen left. Keep character, pose, tail, feet, scale and every other detail exactly unchanged. Flat #FF00FF background."
+  },
+  {
+    "unit": "arin",
+    "anim": "attack",
+    "frame": 2,
+    "prompt": "Remove ONLY the flying arrow/projectile outside the crossbow, white muzzle flash and all white body motion wiggles. Keep the crossbow itself, both hands and the follow-through firing pose, character, feet, short legs and scale unchanged. No effects. Flat magenta #FF00FF background."
+  },
+  {
+    "unit": "seoa",
+    "anim": "hit",
+    "frame": 1,
+    "prompt": "Remove stray white sketch-like marks/scribbles floating on and near the hair by the shoulders; preserve the whole character, pose, scale, feet, flat magenta background."
+  },
+  {
+    "unit": "mammoth_beastfolk",
+    "anim": "attack",
+    "frame": 2,
+    "prompt": "Attack follow-through AFTER an overhead downward club strike to screen left. Both arms extended diagonally DOWN-LEFT with club head lowered to waist/knee height at screen left, torso bent forward modestly. NO weapon overhead. NO motion trails or effects. Feet and body scale exactly anchored to idle_0, short legs unchanged. Entire club inside canvas."
+  },
+  {
+    "unit": "mammoth_boss",
+    "anim": "attack",
+    "frame": 2,
+    "prompt": "Remove only the pale white/pink crescent motion trails behind and around the club. Leave character, pose, club, clothing, short legs, feet and scale EXACTLY unchanged. Replace trails with flat #FF00FF, no other effects."
+  },
+  {
+    "unit": "mammoth_boss",
+    "anim": "attack",
+    "frame": 3,
+    "prompt": "Remove only the two floating pale yellow curved motion marks just outside the left and right shoulders. Leave entire character, pose, club, clothing, short legs, feet and scale EXACTLY unchanged. Flat #FF00FF background."
+  },
+  {
+    "unit": "pterosaur_queen",
+    "anim": "attack",
+    "frame": 1,
+    "prompt": "Remove the invented handheld dagger/sword in the extended screen-left hand. Replace with her empty clawed gauntlet raking toward screen left, matching the ivory claws in attack_0/attack_2. This character has NO handheld weapon. Keep wing sweep, pale attack arc, all other pose details, face, crown, clothing, short leg proportions, scale, feet, and canvas placement unchanged. Remove small stray white scribbles at neck."
   },
   {
     "unit": "seola",
-    "anim": "attack",
-    "frame": 2,
-    "prompt": "Correct ONE seola attack_2 animation frame. Reference 1 is original idle_0 and sets the EXACT head/body scale. Reference 2 is the faulty animation. Correct its unwanted shrinking. Keep the original full standing body scale and head size from reference 1. Spear impact thrust: upright body with slightly bent knees, spear strongly foreshortened toward upper right/viewer so entire spear fits WITHOUT shrinking character. Same face, costume, delicate pastel line art, peach skin, hair and weapon colors. Feet on bottom edge, same 2:3 logical 224x336 canvas. Whole figure/weapon inside, no effects/shadows/text/grid, uniform #FF00FF background."
-  },
-  {
-    "unit": "taehee",
-    "anim": "idle",
-    "frame": 2,
-    "prompt": "Correct ONE taehee idle_2 animation frame. Reference 1 is original idle_0 and sets the EXACT head/body scale. Reference 2 is the faulty animation. Correct its unwanted shrinking. Keep the original full standing body scale and head size from reference 1. Breathing peak: retain original legs, feet, head size and canvas position. ONLY shoulders lift 4 logical pixels, hair tips sway slightly. Do not crouch or shrink, expression and weapons unchanged. Same face, costume, delicate pastel line art, peach skin, hair and weapon colors. Feet on bottom edge, same 2:3 logical 224x336 canvas. Whole figure/weapon inside, no effects/shadows/text/grid, uniform #FF00FF background."
+    "anim": "death",
+    "frame": 3,
+    "prompt": "Curl tail fin inside left edge and move spear slightly left, preserving pose and character scale; minimum 25px margin."
   }
 ]

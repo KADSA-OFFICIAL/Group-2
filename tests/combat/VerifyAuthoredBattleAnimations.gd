@@ -37,8 +37,11 @@ func _ready() -> void:
 						if color.a > 0.9:
 							colors[color.to_html(false)] = true
 							# Test the production key, not violet ornaments. Lanczos
-							# creates small RGB overshoots around legitimate purples.
-							if minf(color.r,color.b)-color.g > 0.5: chroma += 1
+							# creates small RGB overshoots around legitimate purples —
+							# Arin's lightning inset (216,104,240) overshoots to about
+							# (235,105,255), past a "min(r,b)-g > 0.5" test (#533).
+							# The key itself (#FF00FF) keeps green near zero.
+							if color.g < 0.25 and color.r > 0.75 and color.b > 0.75: chroma += 1
 				expect(chroma == 0 and colors.size() > 16, texture.resource_path+": keyed background removed and illustration colors retained")
 				hashes[img.get_data().hex_encode().sha256_text()] = true
 				if anim == &"idle" and n == 0:
