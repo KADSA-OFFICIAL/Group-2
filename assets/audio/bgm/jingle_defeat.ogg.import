@@ -14,6 +14,6 @@ dest_files=["res://.godot/imported/jingle_defeat.ogg-8288d145b45c42f3169a7ff34f8
 
 loop=false
 loop_offset=0
-bpm=80
+bpm=76
 beat_count=0
 bar_beats=4

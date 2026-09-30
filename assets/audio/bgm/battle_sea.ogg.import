@@ -14,6 +14,6 @@ dest_files=["res://.godot/imported/battle_sea.ogg-46d7ac10386ebf0d6786e8482193e8
 
 loop=true
 loop_offset=0
-bpm=124
+bpm=122
 beat_count=0
 bar_beats=4

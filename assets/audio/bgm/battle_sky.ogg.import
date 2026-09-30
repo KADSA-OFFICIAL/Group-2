@@ -14,6 +14,6 @@ dest_files=["res://.godot/imported/battle_sky.ogg-9a491420e80f671b802e9348234d98
 
 loop=true
 loop_offset=0
-bpm=150
+bpm=156
 beat_count=0
 bar_beats=4
