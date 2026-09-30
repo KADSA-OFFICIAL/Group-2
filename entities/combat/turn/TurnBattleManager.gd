@@ -526,8 +526,27 @@ func use_ultimate(unit: TurnUnit) -> Dictionary:
 func _enemy_turn() -> void:
 	phase = Phase.RESOLVING
 	var result := ai.act(active_unit, units)
+	_push_enemy_cast(active_unit, result)
 	_absorb(result)
 	_end_turn()
+
+
+# 적 행동의 시전 연출 (#531).
+#
+# 아군은 `_run()` 이 `SKILL_CAST` 를 쌓지만 적은 `ai.act()` 가 리졸버를 직접 불러
+# **시전 이벤트가 없었다** — 적은 공격 동작도, 대상 앞으로 달려가는 연출도 없었다.
+# 대상은 실행 뒤에야 확정되므로(죽은 대상은 다시 고른다) 결과의 첫 피해에서 읽는다.
+# 무산된 행동은 피해가 없으므로 쌓지 않는다 — 움직이지 않는 것이 무산의 표현이다.
+func _push_enemy_cast(unit: TurnUnit, result: Dictionary) -> void:
+	for ctx in result.get("damage", []):
+		# 감전 폭발은 자기 자신이 대상이다. 그건 시전 대상이 아니다.
+		if ctx.target == null or ctx.target == unit:
+			continue
+		presentation.push(PresentationQueue.Event.SKILL_CAST, {
+			"unit": unit, "skill": ctx.skill, "target": ctx.target,
+			"camera": PresentationQueue.camera_for("single"),
+		})
+		return
 
 
 func _auto_ally_turn() -> void:
