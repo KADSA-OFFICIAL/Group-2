@@ -152,11 +152,12 @@ def inst_pizz(f, dur, vel):
     return vel * additive(f, n, "saw", cutoff) * np.exp(-t / 0.18) * np.clip(t / 0.002, 0, 1)
 
 
-def inst_flute(f, dur, vel, rng=np.random.default_rng(7)):
+def inst_flute(f, dur, vel):
     n = int((dur + 0.25) * SR)
     t = np.arange(n) / SR
     x = additive(f, n, "tri", 2200.0, vib=(5.0, 0.005, 0.25)) + 0.25 * np.sin(2 * np.pi * 2 * f * t)
-    breath = fft_band(rng.standard_normal(n), 1500, 6000) * 0.12 * np.exp(-t / 0.08)
+    # 음마다 자기 난수: 앞서 몇 번 불렸는지에 따라 소리가 바뀌지 않게.
+    breath = fft_band(np.random.default_rng(int(f * 100)).standard_normal(n), 1500, 6000) * 0.12 * np.exp(-t / 0.08)
     return vel * (x + breath) * adsr(n, 0.05, 0.5, 0.8, 0.18, note_len=int(dur * SR))
 
 
@@ -224,7 +225,9 @@ def fft_band(x, lo, hi):
     return np.fft.irfft(spec * mask, len(x))
 
 
-def make_drums(rng, soft):
+def make_drums(seed, soft):
+    """드럼은 곡의 난수와 따로 합성한다 — 드럼 종류를 늘려도 곡의 인간화(세기·박자 흔들림)가 바뀌지 않게."""
+    rng = np.random.default_rng(seed)
     d = {}
     t = np.arange(int(0.5 * SR)) / SR
     fk = 46 + (150 if not soft else 110) * np.exp(-t / (0.03 if not soft else 0.04))
@@ -320,6 +323,7 @@ class Song:
         self.beat = 60.0 / bpm
         self.loop_len = int(round(bars * 4 * self.beat * SR))
         self.n = self.loop_len + int(tail * SR)
+        self.seed = seed
         self.rng = np.random.default_rng(seed)
         self.swing = swing
         self.buses = {}
@@ -363,7 +367,7 @@ def play_line(song, bus, inst, bar0, line, vel, pan=0.0, transpose=0):
 
 def compose_battle():
     s = Song("battle_land", bpm=140, bars=32, seed=535)
-    drums = make_drums(s.rng, soft=False)
+    drums = make_drums(s.seed + 1, soft=False)
     # (EP 보이싱, 베이스 근음, 3박째에 바뀌는 두 번째 코드)
     A = [([66, 69, 73, 76], 38, None),                 # Dmaj9
          ([62, 66, 69, 73], 35, None),                 # Bm9
@@ -457,7 +461,7 @@ def compose_battle():
 
 def compose_lobby():
     s = Song("lobby_theme", bpm=108, bars=32, seed=308, swing=0.12)
-    drums = make_drums(s.rng, soft=True)
+    drums = make_drums(s.seed + 1, soft=True)
     # (반주 보이싱, 베이스 근음, 3박째 두 번째 코드(보이싱, 근음))
     A = [([57, 60, 64], 41, None),                          # Fmaj7 (A C E)
          ([55, 60, 64], 45, ([54, 57, 60], 50)),            # Am7 → D7
@@ -549,7 +553,7 @@ def compose_lobby():
 def compose_sea():
     """"Tidepool Run" — 2챕터(바다). A장조 124BPM 칼립소·보사: 스틸팬, 콩가, 클라베."""
     s = Song("battle_sea", bpm=124, bars=32, seed=536, swing=0.05)
-    drums = make_drums(s.rng, soft=True)
+    drums = make_drums(s.seed + 1, soft=True)
     A = [([64, 68, 69, 73], 45, None),                      # Amaj7
          ([64, 66, 69, 73], 42, None),                      # F#m7
          ([62, 66, 69, 73], 38, None),                      # Dmaj7
@@ -623,7 +627,7 @@ def compose_sea():
 def compose_sky():
     """"Cloud Circuit" — 3챕터(하늘). E장조 150BPM: 쉬지 않는 16분 분산화음, 사각파 리드, 브레이크비트."""
     s = Song("battle_sky", bpm=150, bars=32, seed=537)
-    drums = make_drums(s.rng, soft=False)
+    drums = make_drums(s.seed + 1, soft=False)
     A = [([64, 66, 68, 71], 40, None),                      # Eadd9
          ([61, 64, 68, 71], 49, None),                      # C#m7
          ([61, 64, 69, 71], 45, None),                      # Aadd9
@@ -698,7 +702,7 @@ def compose_sky():
 def compose_boss():
     """"Mammoth Stomp" — 보스 웨이브. D단조 156BPM: 낮은 브라스, 합창, 네 박 킥, 탐 필."""
     s = Song("battle_boss", bpm=156, bars=32, seed=538)
-    drums = make_drums(s.rng, soft=False)
+    drums = make_drums(s.seed + 1, soft=False)
     A = [([62, 65, 69], 38, None),                          # Dm
          ([58, 62, 65], 46, None),                          # Bb
          ([60, 64, 67], 48, None),                          # C
@@ -766,7 +770,7 @@ def compose_boss():
 def compose_victory():
     """승리 팡파르: Bb장조, bVII(Ab) → I 로 끝나는 3마디 + 잔향."""
     s = Song("jingle_victory", bpm=120, bars=3, seed=539, tail=2.5)
-    drums = make_drums(s.rng, soft=False)
+    drums = make_drums(s.seed + 1, soft=False)
     fanfare = [(0, 0, .33, 65), (0, .33, .33, 70), (0, .67, .33, 74), (0, 1, 1, 77), (0, 2, .5, 75), (0, 2.5, .5, 77), (0, 3, 1, 82),
                (1, 0, 1, 80), (1, 1, 1, 82), (1, 2, 1.5, 84), (2, 0, 4, 82)]
     play_line(s, "lead", "brass", 0, fanfare, 0.2, 0.05)
