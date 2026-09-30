@@ -167,7 +167,48 @@ def inst_tuba(f, dur, vel):
     return vel * x * adsr(n, 0.015, 0.2, 0.6, 0.06, note_len=int(dur * SR))
 
 
+def inst_steelpan(f, dur, vel):
+    """스틸팬: 옥타브 비율 FM, 금방 사라지는 금속성 어택."""
+    n = int(1.1 * SR)
+    t = np.arange(n) / SR
+    body = np.sin(2 * np.pi * f * t + 1.2 * np.exp(-t / 0.12) * np.sin(2 * np.pi * 2 * f * t)) * np.exp(-t / 0.55)
+    ring = 0.3 * np.sin(2 * np.pi * 3.98 * f * t) * np.exp(-t / 0.18)
+    return vel * (body + ring) * np.clip(t / 0.002, 0, 1)
+
+
+def inst_arp(f, dur, vel):
+    """16분 분산화음용 짧은 톱니 플럭."""
+    n = int(0.35 * SR)
+    t = np.arange(n) / SR
+    cutoff = 450 + 2600 * np.exp(-t / 0.05)
+    return vel * additive(f, n, "saw", cutoff) * np.exp(-t / 0.14) * np.clip(t / 0.002, 0, 1)
+
+
+def inst_square_lead(f, dur, vel):
+    n = int((dur + 0.25) * SR)
+    t = np.arange(n) / SR
+    x = additive(f, n, "square", 1900 + 900 * np.exp(-t / 0.2), vib=(5.6, 0.005, 0.15))
+    return vel * x * adsr(n, 0.008, 0.3, 0.75, 0.12, note_len=int(dur * SR))
+
+
+def inst_choir(f, dur, vel):
+    """합창 패드: 떨림이 있는 톱니 네 겹을 낮은 밝기로."""
+    n = int((dur + 0.9) * SR)
+    x = sum(additive(f, n, "saw", 1300.0, dc, vib=(4.6 + 0.3 * i, 0.004, 0.2)) for i, dc in enumerate((-10.0, -3.0, 4.0, 9.0))) / 4.0
+    return vel * x * adsr(n, 0.45, 1.0, 0.9, 0.7, note_len=int(dur * SR))
+
+
+def inst_low_brass(f, dur, vel):
+    n = int((dur + 0.2) * SR)
+    t = np.arange(n) / SR
+    cutoff = 400 + 1500 * np.clip(t / 0.04, 0, 1) * (0.5 + 0.5 * np.exp(-t / 0.15))
+    x = sum(additive(f, n, "saw", cutoff, dc) for dc in (-7.0, 0.0, 6.0)) / 3.0 + 0.4 * np.sin(2 * np.pi * f * t)
+    return vel * x * adsr(n, 0.015, 0.25, 0.7, 0.1, note_len=int(dur * SR))
+
+
 INSTRUMENTS = {
+    "steelpan": inst_steelpan, "arp": inst_arp, "square_lead": inst_square_lead, "choir": inst_choir,
+    "low_brass": inst_low_brass,
     "ep": inst_ep, "brass": inst_brass, "lead": inst_lead, "bass_funk": inst_bass_funk,
     "pad": inst_pad, "marimba": inst_marimba, "glock": inst_glock, "pizz": inst_pizz,
     "flute": inst_flute, "tuba": inst_tuba,
@@ -207,6 +248,10 @@ def make_drums(rng, soft):
     d["shaker"] = fft_band(rng.standard_normal(len(t)), 4500, 12000) * np.clip(t / 0.012, 0, 1) * np.exp(-t / 0.045)
     t = np.arange(int(2.2 * SR)) / SR
     d["crash"] = fft_band(rng.standard_normal(len(t)), 3500, 15000) * np.exp(-t / 0.9)
+    for name, f0, dec in (("conga_hi", 330, 0.14), ("conga_lo", 220, 0.18), ("tom_hi", 160, 0.3), ("tom_lo", 95, 0.4)):
+        t = np.arange(int(0.6 * SR)) / SR
+        fr = f0 * (1 + 0.5 * np.exp(-t / 0.02))
+        d[name] = np.sin(2 * np.pi * np.cumsum(fr) / SR) * np.exp(-t / dec) +             0.2 * fft_band(rng.standard_normal(len(t)), 800, 5000) * np.exp(-t / 0.01)
     t = np.arange(int(0.12 * SR)) / SR
     d["rim"] = (np.sin(2 * np.pi * 1700 * t) * 0.5 + fft_band(rng.standard_normal(len(t)), 2000, 8000)) * np.exp(-t / 0.018)
     return {k: v / (np.max(np.abs(v)) + 1e-9) for k, v in d.items()}
@@ -499,9 +544,266 @@ def compose_lobby():
     return s, master
 
 
+# ------------------------------------------------------------------ track 3: sea battle
+
+def compose_sea():
+    """"Tidepool Run" — 2챕터(바다). A장조 124BPM 칼립소·보사: 스틸팬, 콩가, 클라베."""
+    s = Song("battle_sea", bpm=124, bars=32, seed=536, swing=0.05)
+    drums = make_drums(s.rng, soft=True)
+    A = [([64, 68, 69, 73], 45, None),                      # Amaj7
+         ([64, 66, 69, 73], 42, None),                      # F#m7
+         ([62, 66, 69, 73], 38, None),                      # Dmaj7
+         ([62, 64, 69, 71], 40, ([62, 64, 68, 71], 40))]    # E7sus → E7
+    B = [([64, 68, 71, 73], 49, None),                      # C#m7
+         ([64, 66, 70, 73], 42, None),                      # F#7
+         ([62, 66, 69, 73], 47, None),                      # Bm7
+         ([62, 64, 68, 71], 40, None),                      # E7
+         ([64, 68, 71, 73], 49, None),
+         ([64, 66, 70, 73], 42, None),
+         ([62, 66, 69, 73], 47, None),
+         ([62, 64, 69, 71], 40, ([62, 64, 68, 71], 40))]
+    prog = A * 4 + B * 2
+    order = [0, 2, 1, 3, 4, 2, 3, 1]
+    for bar, (voice, root, change) in enumerate(prog):
+        v2 = change[0] if change else voice
+        # 보사 comp: 일렉트릭 피아노 엇박
+        chord_hits(s, "keys", "ep", bar, [(0, 0.75), (1.5, 0.5)], voice, 0.13, 0.4)
+        chord_hits(s, "keys", "ep", bar, [(2.5, 0.5), (3.5, 0.5)], v2, 0.12, 0.4)
+        # 나일론 기타 느낌의 8분 분산화음
+        for k in range(8):
+            vv = voice if k < 4 else v2
+            s.note("keys", "pizz", bar, k * 0.5, 0.5, (vv + [vv[2] + 12])[order[k]], 0.07, -0.35)
+        # 칼립소 베이스
+        for beat, m, beats in ((0, root, 0.75), (1.5, root + 7, 0.5), (2, root + 12, 0.5), (3, root + 7, 0.5), (3.5, root, 0.5)):
+            s.note("bass", "tuba", bar, beat, beats, m - 12 if m > 52 else m, 0.42)
+        if bar >= 16:
+            for m in voice[:3]:
+                s.note("pad", "pad", bar, 0, 4, m, 0.04)
+        # 콩가 · 셰이커 16분 · 클라베(3-2)
+        for beat, name in ((0, "conga_lo"), (1, "conga_hi"), (1.5, "conga_hi"), (2.5, "conga_lo"), (3, "conga_hi"), (3.5, "conga_hi")):
+            s.hit(drums, name, bar, beat, 0.32, 0.25 if name == "conga_hi" else -0.2)
+        for k in range(16):
+            s.hit(drums, "shaker", bar, k * 0.25, 0.16 if k % 2 == 0 else 0.09, 0.4)
+        for beat in ((0, 1.5, 3) if bar % 2 == 0 else (1, 2)):
+            s.hit(drums, "rim", bar, beat, 0.22, -0.35)
+        s.hit(drums, "kick", bar, 0, 0.45)
+        s.hit(drums, "kick", bar, 2.5, 0.35)
+        if bar % 8 == 0:
+            s.hit(drums, "crash", bar, 0, 0.14, 0.4)
+    melody_a = [
+        (0, 0, .5, 76), (0, .5, .5, 73), (0, 1, .5, 76), (0, 1.5, 1, 80), (0, 2.5, .5, 78), (0, 3, .5, 76), (0, 3.5, .5, 73),
+        (1, 0, 1, 73), (1, 1, .5, 69), (1, 1.5, .5, 71), (1, 2, .5, 73), (1, 2.5, 1.5, 76),
+        (2, 0, .5, 78), (2, .5, .5, 76), (2, 1, .5, 73), (2, 1.5, .5, 69), (2, 2, 1, 73), (2, 3, .5, 71), (2, 3.5, .5, 69),
+        (3, 0, 1.5, 68), (3, 1.5, .5, 71), (3, 2, .5, 74), (3, 2.5, 1.5, 76),
+        (4, 0, .5, 81), (4, .5, .5, 80), (4, 1, .5, 76), (4, 1.5, .5, 73), (4, 2, 1, 76), (4, 3, 1, 80),
+        (5, 0, 1.5, 78), (5, 1.5, .5, 76), (5, 2, 1, 73), (5, 3, 1, 69),
+        (6, 0, .5, 74), (6, .5, .5, 73), (6, 1, .5, 69), (6, 1.5, .5, 66), (6, 2, .5, 69), (6, 2.5, .5, 73), (6, 3, 1, 76),
+        (7, 0, 1, 74), (7, 1, .5, 71), (7, 1.5, .5, 68), (7, 2, 2, 71),
+    ]
+    melody_b = [
+        (0, 0, 2, 76), (0, 2, 1, 73), (0, 3, 1, 71), (1, 0, 1.5, 70), (1, 1.5, .5, 73), (1, 2, 1, 76), (1, 3, 1, 78),
+        (2, 0, 2, 74), (2, 2, 1, 73), (2, 3, 1, 71), (3, 0, 1, 68), (3, 1, 1, 71), (3, 2, 1, 74), (3, 3, 1, 76),
+        (4, 0, 2, 80), (4, 2, 1, 76), (4, 3, 1, 73), (5, 0, 1, 78), (5, 1, .5, 76), (5, 1.5, .5, 73), (5, 2, 1, 70), (5, 3, 1, 73),
+        (6, 0, 1, 74), (6, 1, 1, 78), (6, 2, 1, 81), (6, 3, 1, 78), (7, 0, 1.5, 76), (7, 1.5, .5, 74), (7, 2, 1, 71), (7, 3, 1, 68),
+    ]
+    play_line(s, "lead", "steelpan", 0, melody_a, 0.24, 0.1)
+    play_line(s, "lead", "steelpan", 8, melody_a, 0.22, 0.1)
+    play_line(s, "lead", "marimba", 8, melody_a, 0.07, -0.3, transpose=-12)
+    play_line(s, "lead", "flute", 16, melody_b, 0.11, 0.1)
+    play_line(s, "lead", "steelpan", 24, melody_b, 0.2, 0.1)
+    master = mix(s, sidechain_kicks=None,
+                 levels={"drums": 0.85, "bass": 0.45, "keys": 1.4, "pad": 0.7, "lead": 1.2},
+                 reverb={"keys": 0.3, "pad": 0.45, "lead": 0.32, "drums": 0.1},
+                 room=1.6, lead_echo=0.75 * s.beat)
+    return s, master
+
+
+# ------------------------------------------------------------------ track 4: sky battle
+
+def compose_sky():
+    """"Cloud Circuit" — 3챕터(하늘). E장조 150BPM: 쉬지 않는 16분 분산화음, 사각파 리드, 브레이크비트."""
+    s = Song("battle_sky", bpm=150, bars=32, seed=537)
+    drums = make_drums(s.rng, soft=False)
+    A = [([64, 66, 68, 71], 40, None),                      # Eadd9
+         ([61, 64, 68, 71], 49, None),                      # C#m7
+         ([61, 64, 69, 71], 45, None),                      # Aadd9
+         ([63, 66, 71, 73], 47, None),                      # Badd9
+         ([64, 66, 68, 71], 40, None),
+         ([63, 66, 68, 71], 44, None),                      # G#m7
+         ([61, 64, 69, 71], 45, None),
+         ([64, 66, 71, 73], 47, ([63, 66, 71, 73], 47))]    # Bsus4 → B
+    B = [([61, 64, 68, 71], 49, None), ([61, 64, 69, 71], 45, None), ([64, 66, 68, 71], 40, None), ([63, 66, 71, 73], 47, None),
+         ([61, 64, 68, 71], 49, None), ([61, 64, 69, 71], 45, None),
+         ([62, 66, 69, 74], 38, None),                      # D (bVII, 영웅적인 전조감)
+         ([63, 66, 71, 73], 47, None)]
+    prog = A * 2 + B * 2
+    up = [0, 1, 2, 3, 4, 3, 2, 1]
+    for bar, (voice, root, change) in enumerate(prog):
+        v2 = change[0] if change else voice
+        # 16분 분산화음 — 비행선 엔진처럼 쉬지 않고 돈다
+        for k in range(16):
+            vv = voice if k < 8 else v2
+            seq = vv + [vv[0] + 12]
+            s.note("keys", "arp", bar, k * 0.25, 0.25, seq[up[k % 8]] + 12, 0.07, 0.45 if k % 2 else -0.45)
+        for m in voice[:3]:
+            s.note("pad", "pad", bar, 0, 4, m, 0.045)
+        # 달리는 8분 베이스(한 칸씩 옥타브)
+        r = root if root < 46 else root - 12
+        for k in range(8):
+            s.note("bass", "bass_funk", bar, k * 0.5, 0.45, r + (12 if k % 2 else 0), 0.45)
+        if bar >= 16:
+            chord_hits(s, "brass", "brass", bar, [(0, 0.5), (1.5, 0.25), (2.5, 0.5)] if bar % 2 == 0 else [(0.5, 0.25), (2, 0.5), (3.5, 0.5)],
+                       [m + 12 for m in voice[1:]], 0.09, 0.5)
+        for beat in (0, 1.75, 2.5):
+            s.hit(drums, "kick", bar, beat, 0.4 if beat != 1.75 else 0.26)
+        for beat in (1, 3):
+            s.hit(drums, "snare", bar, beat, 0.55, 0.05)
+        for k in range(16):
+            s.hit(drums, "hat", bar, k * 0.25, 0.22 if k % 4 == 0 else (0.14 if k % 2 == 0 else 0.08), 0.3)
+        if bar % 8 == 7:
+            for k, (beat, name) in enumerate(((2.0, "tom_hi"), (2.5, "tom_hi"), (3.0, "tom_lo"), (3.5, "tom_lo"))):
+                s.hit(drums, name, bar, beat, 0.45, 0.3 - 0.2 * k)
+        if bar % 8 == 0:
+            s.hit(drums, "crash", bar, 0, 0.3, -0.4)
+    melody = [
+        (0, 0, .75, 76), (0, .75, .75, 78), (0, 1.5, .5, 80), (0, 2, 1, 83), (0, 3, .5, 80), (0, 3.5, .5, 78),
+        (1, 0, 1, 76), (1, 1, .5, 73), (1, 1.5, .5, 76), (1, 2, 1.5, 80), (1, 3.5, .5, 78),
+        (2, 0, .5, 76), (2, .5, .5, 73), (2, 1, .5, 69), (2, 1.5, .5, 73), (2, 2, .5, 76), (2, 2.5, 1, 81), (2, 3.5, .5, 80),
+        (3, 0, 1.5, 78), (3, 1.5, .5, 75), (3, 2, 1, 71), (3, 3, 1, 75),
+        (4, 0, .75, 76), (4, .75, .75, 78), (4, 1.5, .5, 80), (4, 2, .5, 83), (4, 2.5, 1, 85), (4, 3.5, .5, 83),
+        (5, 0, 1, 80), (5, 1, .5, 78), (5, 1.5, .5, 75), (5, 2, 1, 80), (5, 3, 1, 83),
+        (6, 0, .5, 81), (6, .5, .5, 80), (6, 1, .5, 78), (6, 1.5, .5, 76), (6, 2, 1, 73), (6, 3, 1, 76),
+        (7, 0, 2, 78), (7, 2, 1, 75), (7, 3, 1, 71),
+    ]
+    counter = [
+        (0, 0, 2, 80), (0, 2, 1, 76), (0, 3, 1, 80), (1, 0, 2, 81), (1, 2, 2, 76),
+        (2, 0, 1, 80), (2, 1, 1, 83), (2, 2, 2, 88), (3, 0, 1, 87), (3, 1, 1, 83), (3, 2, 2, 78),
+        (4, 0, 2, 80), (4, 2, 1, 83), (4, 3, 1, 80), (5, 0, 1.5, 81), (5, 1.5, .5, 80), (5, 2, 2, 76),
+        (6, 0, 1, 78), (6, 1, 1, 81), (6, 2, 2, 86), (7, 0, 2, 87), (7, 2, 1, 83), (7, 3, 1, 78),
+    ]
+    play_line(s, "lead", "square_lead", 0, melody, 0.15, 0.05)
+    play_line(s, "lead", "square_lead", 8, melody, 0.15, 0.05)
+    play_line(s, "lead", "glock", 8, melody, 0.05, -0.3, transpose=12)
+    play_line(s, "lead", "lead", 16, counter, 0.15, 0.05, transpose=-12)
+    play_line(s, "lead", "square_lead", 24, counter, 0.14, 0.05, transpose=-12)
+    master = mix(s, sidechain_kicks=[(bar, b) for bar in range(32) for b in (0, 2.5)],
+                 levels={"drums": 0.8, "bass": 0.24, "keys": 1.6, "pad": 0.9, "brass": 1.3, "lead": 1.35},
+                 reverb={"keys": 0.2, "pad": 0.4, "brass": 0.2, "lead": 0.3, "drums": 0.05},
+                 room=1.4, lead_echo=0.75 * s.beat)
+    return s, master
+
+
+# ------------------------------------------------------------------ track 5: boss
+
+def compose_boss():
+    """"Mammoth Stomp" — 보스 웨이브. D단조 156BPM: 낮은 브라스, 합창, 네 박 킥, 탐 필."""
+    s = Song("battle_boss", bpm=156, bars=32, seed=538)
+    drums = make_drums(s.rng, soft=False)
+    A = [([62, 65, 69], 38, None),                          # Dm
+         ([58, 62, 65], 46, None),                          # Bb
+         ([60, 64, 67], 48, None),                          # C
+         ([61, 64, 67], 45, None),                          # A7(무근)
+         ([62, 65, 69], 38, None),
+         ([58, 62, 67], 43, None),                          # Gm
+         ([58, 62, 65], 46, None),
+         ([61, 64, 67], 45, ([61, 64, 70], 45))]            # A7 → A7(b9)
+    B = [([58, 62, 67], 43, None), ([62, 65, 69], 38, None), ([58, 62, 65], 46, None), ([61, 64, 69], 45, None),
+         ([58, 62, 67], 43, None),
+         ([58, 63, 67], 39, None),                          # Eb (bII, 긴장)
+         ([58, 62, 65], 46, None),
+         ([61, 64, 67], 45, ([61, 64, 70], 45))]
+    prog = A * 2 + B * 2
+    for bar, (voice, root, change) in enumerate(prog):
+        v2 = change[0] if change else voice
+        r = root if root < 44 else root - 12
+        for k in range(8):
+            s.note("bass", "bass_funk", bar, k * 0.5, 0.45, r + (12 if k in (3, 7) else 0), 0.5)
+        # 낮은 브라스: 밀어 치는 엇박
+        chord_hits(s, "brass", "low_brass", bar, [(0, 0.5), (0.75, 0.25), (1.5, 0.5)], voice, 0.12, 0.3)
+        chord_hits(s, "brass", "low_brass", bar, [(3, 0.25), (3.5, 0.5)], v2, 0.1, 0.3)
+        for m in voice:
+            s.note("pad", "choir", bar, 0, 4, m + 12, 0.045)
+        for beat in (0, 1, 2, 3):
+            s.hit(drums, "kick", bar, beat, 0.36)
+        for beat in (1, 3):
+            s.hit(drums, "snare", bar, beat, 0.6, 0.05)
+        for k in range(8):
+            s.hit(drums, "hat", bar, k * 0.5, 0.18, 0.3)
+        if bar % 4 == 3:
+            for k, beat in enumerate((3.0, 3.25, 3.5, 3.75)):
+                s.hit(drums, "tom_lo" if k % 2 else "tom_hi", bar, beat, 0.5, 0.3 - 0.2 * k)
+        if bar % 4 == 0:
+            s.hit(drums, "crash", bar, 0, 0.3, 0.4)
+    motif = [
+        (0, 0, .75, 74), (0, .75, .25, 72), (0, 1, .5, 74), (0, 1.5, .5, 77), (0, 2, 1.5, 81), (0, 3.5, .5, 79),
+        (1, 0, 1, 77), (1, 1, .5, 74), (1, 1.5, .5, 70), (1, 2, 2, 74),
+        (2, 0, .75, 72), (2, .75, .25, 74), (2, 1, .5, 76), (2, 1.5, .5, 79), (2, 2, 1.5, 84), (2, 3.5, .5, 82),
+        (3, 0, 1.5, 81), (3, 1.5, .5, 79), (3, 2, .5, 76), (3, 2.5, 1.5, 73),
+        (4, 0, .75, 74), (4, .75, .25, 72), (4, 1, .5, 74), (4, 1.5, .5, 77), (4, 2, 1.5, 86), (4, 3.5, .5, 84),
+        (5, 0, 1, 82), (5, 1, .5, 79), (5, 1.5, .5, 74), (5, 2, 1, 82), (5, 3, 1, 81),
+        (6, 0, .5, 79), (6, .5, .5, 77), (6, 1, .5, 74), (6, 1.5, .5, 77), (6, 2, 1, 82), (6, 3, .5, 81), (6, 3.5, .5, 79),
+        (7, 0, 2, 81), (7, 2, 1, 73), (7, 3, 1, 76),
+    ]
+    choir_line = [
+        (0, 0, 2, 79), (0, 2, 2, 82), (1, 0, 3, 81), (1, 3, 1, 77), (2, 0, 2, 77), (2, 2, 1, 74), (2, 3, 1, 77), (3, 0, 2, 76), (3, 2, 2, 73),
+        (4, 0, 2, 79), (4, 2, 2, 86), (5, 0, 3, 82), (5, 3, 1, 79), (6, 0, 1, 81), (6, 1, 1, 82), (6, 2, 2, 86), (7, 0, 2, 85), (7, 2, 2, 81),
+    ]
+    play_line(s, "lead", "brass", 0, motif, 0.2, 0.05)
+    play_line(s, "lead", "brass", 8, motif, 0.2, 0.05)
+    play_line(s, "lead", "square_lead", 8, motif, 0.06, 0.3, transpose=12)
+    play_line(s, "lead", "brass", 8, motif, 0.07, -0.3, transpose=-12)
+    play_line(s, "lead", "choir", 16, choir_line, 0.12, 0.0)
+    play_line(s, "lead", "lead", 24, choir_line, 0.14, 0.05)
+    master = mix(s, sidechain_kicks=[(bar, b) for bar in range(32) for b in (0, 1, 2, 3)],
+                 levels={"drums": 0.85, "bass": 0.22, "brass": 1.5, "pad": 1.0, "lead": 1.4},
+                 reverb={"brass": 0.25, "pad": 0.4, "lead": 0.3, "drums": 0.08},
+                 room=1.6, lead_echo=0.5 * s.beat)
+    return s, master
+
+
+# ------------------------------------------------------------------ jingles (한 번 재생)
+
+def compose_victory():
+    """승리 팡파르: Bb장조, bVII(Ab) → I 로 끝나는 3마디 + 잔향."""
+    s = Song("jingle_victory", bpm=120, bars=3, seed=539, tail=2.5)
+    drums = make_drums(s.rng, soft=False)
+    fanfare = [(0, 0, .33, 65), (0, .33, .33, 70), (0, .67, .33, 74), (0, 1, 1, 77), (0, 2, .5, 75), (0, 2.5, .5, 77), (0, 3, 1, 82),
+               (1, 0, 1, 80), (1, 1, 1, 82), (1, 2, 1.5, 84), (2, 0, 4, 82)]
+    play_line(s, "lead", "brass", 0, fanfare, 0.2, 0.05)
+    play_line(s, "lead", "brass", 0, fanfare, 0.09, -0.25, transpose=-5)
+    for bar, voice in ((0, [58, 62, 65]), (1, [56, 60, 63]), (2, [58, 62, 65, 70])):
+        for m in voice:
+            s.note("pad", "pad", bar, 0, 4 if bar < 2 else 6, m, 0.06)
+        s.note("bass", "tuba", bar, 0, 1.5, voice[0] - 12, 0.3)
+    for k in range(8):
+        s.note("keys", "glock", 2, k * 0.25, 0.25, [70, 74, 77, 82, 86, 82, 86, 89][k], 0.08, 0.3)
+    for beat in (0, 1, 2, 3):
+        s.hit(drums, "tom_lo", 0, beat, 0.22)
+    s.hit(drums, "snare", 1, 3.5, 0.5)
+    s.hit(drums, "kick", 2, 0, 0.8)
+    s.hit(drums, "crash", 2, 0, 0.45)
+    master = mix(s, None, {"lead": 1.2, "pad": 0.9, "bass": 0.4, "keys": 1.2, "drums": 0.8},
+                 {"lead": 0.3, "pad": 0.4, "keys": 0.3, "drums": 0.1}, room=1.8, lead_echo=0, loop_wrap=False)
+    return s, master
+
+
+def compose_defeat():
+    """패배: D단조로 조용히 내려앉는 2마디 + 잔향. 벌을 주는 소리가 아니라 다시 해 볼 마음이 들게."""
+    s = Song("jingle_defeat", bpm=80, bars=2, seed=540, tail=2.5)
+    line = [(0, 0, 1, 74), (0, 1, 1, 72), (0, 2, 1, 70), (0, 3, 1, 69), (1, 0, 3, 65)]
+    play_line(s, "lead", "flute", 0, line, 0.16, 0.05)
+    play_line(s, "lead", "ep", 0, line, 0.08, -0.2, transpose=-12)
+    for bar, voice in ((0, [58, 62, 65]), (1, [57, 62, 65])):
+        for m in voice:
+            s.note("pad", "pad", bar, 0, 4, m, 0.05)
+        s.note("bass", "tuba", bar, 0, 2, voice[0] - 12, 0.3)
+    master = mix(s, None, {"lead": 1.2, "pad": 0.9, "bass": 0.4}, {"lead": 0.4, "pad": 0.45}, room=2.0, lead_echo=0, loop_wrap=False)
+    return s, master
+
+
 # ------------------------------------------------------------------ master
 
-def mix(s, sidechain_kicks, levels, reverb, room, lead_echo):
+def mix(s, sidechain_kicks, levels, reverb, room, lead_echo, loop_wrap=True):
     out = np.zeros((2, s.n))
     send = np.zeros((2, s.n))
     duck = np.ones(s.n)
@@ -521,6 +823,10 @@ def mix(s, sidechain_kicks, levels, reverb, room, lead_echo):
         out += x
         send += x * reverb.get(name, 0.0)
     out += convolve(send, reverb_ir(room, np.random.default_rng(11)))
+    if not loop_wrap:
+        # 징글: 한 번만 재생한다. 꼬리를 살리고 끝을 부드럽게 닫는다.
+        fade = np.clip((s.n - np.arange(s.n)) / (0.8 * SR), 0, 1)
+        return out * fade
     # 이음새: 곡 끝을 넘친 꼬리(잔향·release)를 처음에 더해 반복을 매끄럽게 한다.
     loop = out[:, : s.loop_len].copy()
     tail = out[:, s.loop_len:]
@@ -570,7 +876,16 @@ def encode(stereo, name, tmpdir):
     return out
 
 
-TRACKS = {"battle": (compose_battle, -17.0), "lobby": (compose_lobby, -20.0)}
+# (합성 함수, 목표 음량 LUFS). 반복 여부는 곡마다 .import 의 loop 가 정한다.
+TRACKS = {
+    "battle": (compose_battle, -17.0),
+    "lobby": (compose_lobby, -20.0),
+    "sea": (compose_sea, -17.5),
+    "sky": (compose_sky, -17.0),
+    "boss": (compose_boss, -16.5),
+    "victory": (compose_victory, -17.0),
+    "defeat": (compose_defeat, -19.0),
+}
 
 
 def main(argv):

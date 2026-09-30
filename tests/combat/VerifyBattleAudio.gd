@@ -30,6 +30,28 @@ func _ready() -> void:
 	check(field._se_voices.size() <= field.MAX_SE_VOICES, "SE voices must be bounded")
 	for sound in ["hit", "break", "status", "death"]:
 		check(field._play_se(sound) != null, "Playable effect: " + sound)
+	# #535: 챕터 컨셉마다 전투곡, 보스 웨이브는 보스곡, 결과는 한 번 재생하는 징글.
+	check(field._stage_music.resource_path == field.BATTLE_BGM_PATH, "Stage-less battle uses the land track")
+	for concept in field.CONCEPT_BGM:
+		var track: AudioStream = field._load_loop(field.CONCEPT_BGM[concept])
+		check(track != null and track.loop, "Concept track exists and loops: %s" % field.CONCEPT_BGM[concept])
+	var sea := StageData.new()
+	sea.chapter = 2
+	field._stage = sea
+	field._apply_backdrop()
+	check(field._stage_music.resource_path.ends_with("battle_sea.ogg"), "Sea chapter picks the sea track")
+	check(MusicSystem.get_current_stream() == field._stage_music, "Switching stage music plays it")
+	var boss: AudioStream = field._load_loop(field.BOSS_BGM_PATH)
+	check(boss != null and boss.loop, "Boss track exists and loops")
+	field._switch_battle_music(boss)
+	check(MusicSystem.get_current_stream() == boss, "Boss wave switches to the boss track")
+	field._switch_battle_music(field._stage_music)
+	check(MusicSystem.get_current_stream() == field._stage_music, "After the boss the stage track returns")
+	for path in [field.VICTORY_JINGLE_PATH, field.DEFEAT_JINGLE_PATH]:
+		var jingle := load(path) as AudioStreamOggVorbis
+		check(jingle != null and not jingle.loop, "Jingle plays once: " + path)
+	field._stage = null
+	field._apply_backdrop()
 	launcher.open_menu()
 	await get_tree().process_frame
 	check(MusicSystem.get_current_stream().resource_path.ends_with("lobby_theme.ogg"), "Return to lobby must restore music")

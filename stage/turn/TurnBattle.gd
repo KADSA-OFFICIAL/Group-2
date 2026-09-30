@@ -89,9 +89,25 @@ const SHADOW_ALPHA: float = 0.28
 const FX_DIR := "res://assets/sprites/effects/battle"
 const BATTLE_BGM_PATH := "res://assets/audio/bgm/battle_land.ogg"
 const LOBBY_BGM_PATH := "res://assets/audio/bgm/lobby_theme.ogg"
+# 챕터 컨셉마다 전투곡이 다르다 (#535). 배경(`CONCEPT_BACKDROP`)과 같은 규칙으로 고른다.
+# 곡이 없으면 육지 곡(`BATTLE_BGM_PATH`)으로 떨어진다.
+const CONCEPT_BGM := {
+	StageData.Concept.LAND: BATTLE_BGM_PATH,
+	StageData.Concept.SEA: "res://assets/audio/bgm/battle_sea.ogg",
+	StageData.Concept.SKY: "res://assets/audio/bgm/battle_sky.ogg",
+}
+## 보스(`EnemyTier.BOSS`)가 선 웨이브에서 전투곡을 대신한다.
+const BOSS_BGM_PATH := "res://assets/audio/bgm/battle_boss.ogg"
+## 결과 배너와 함께 한 번 재생한다(반복하지 않는다).
+const VICTORY_JINGLE_PATH := "res://assets/audio/bgm/jingle_victory.ogg"
+const DEFEAT_JINGLE_PATH := "res://assets/audio/bgm/jingle_defeat.ogg"
 const SE_DIR := "res://assets/audio/se/"
 const MAX_SE_VOICES := 8
 var _battle_music: AudioStream = null
+## 이 스테이지 컨셉의 전투곡. 보스 웨이브가 끝나면 이 곡으로 돌아온다.
+var _stage_music: AudioStream = null
+## 결과 징글을 틀었다. 그 뒤에는 로비를 닫아도 전투곡을 다시 틀지 않는다.
+var _result_music_played := false
 var _se_streams: Dictionary = {}
 var _se_voices: Array[AudioStreamPlayer] = []
 const FX_SPEC := {
@@ -185,10 +201,8 @@ var _camera: Camera2D = null
 func _ready() -> void:
 	# Deferred so the lobby launcher can stop its track before battle resumes.
 	ScreenManager.screen_visibility_changed.connect(_on_music_visibility, CONNECT_DEFERRED)
-	if ResourceLoader.exists(BATTLE_BGM_PATH):
-		_battle_music = load(BATTLE_BGM_PATH) as AudioStream
-		if _battle_music is AudioStreamOggVorbis:
-			_battle_music.loop = true
+	_stage_music = _load_loop(BATTLE_BGM_PATH)
+	_battle_music = _stage_music
 	_on_music_visibility(false)
 	name = "TurnBattle"
 	_build_scene()
@@ -204,8 +218,34 @@ func _ready() -> void:
 # 다른 스테이지로 출격했다. 전투를 그 스테이지로 다시 만든다.
 func _on_music_visibility(_has_screen: bool) -> void:
 	# Recheck current state: a deferred close may already have been followed by open.
-	if is_inside_tree() and not ScreenManager.has_screen() and _battle_music != null:
+	if is_inside_tree() and not ScreenManager.has_screen() and _battle_music != null and not _result_music_played:
 		MusicSystem.play(_battle_music)
+
+
+# 반복 재생할 전투곡. 없으면 null.
+static func _load_loop(path: String) -> AudioStream:
+	if not ResourceLoader.exists(path):
+		return null
+	var stream := load(path) as AudioStream
+	if stream is AudioStreamOggVorbis:
+		stream.loop = true
+	return stream
+
+
+# 전투곡을 바꾼다. 로비가 떠 있으면 바꿔 두기만 하고, 로비가 닫힐 때 그 곡이 나온다.
+func _switch_battle_music(stream: AudioStream) -> void:
+	if stream == null or stream == _battle_music:
+		return
+	_battle_music = stream
+	if is_inside_tree() and not ScreenManager.has_screen() and not _result_music_played:
+		MusicSystem.play(stream)
+
+
+# 이 화면이 튼 곡인가. 화면을 떠날 때 로비 곡으로 되돌릴지 정한다.
+func _is_battle_stream(stream: AudioStream) -> bool:
+	if stream == null:
+		return false
+	return stream == _battle_music or stream == _stage_music 		or stream.resource_path in [BOSS_BGM_PATH, VICTORY_JINGLE_PATH, DEFEAT_JINGLE_PATH]
 
 
 func _play_se(sound: String, pitch: float = 1.0) -> AudioStreamPlayer:
@@ -397,6 +437,12 @@ func _apply_backdrop() -> void:
 	_backdrop.texture = texture
 	if _ground != null:
 		_ground.visible = texture == null
+
+	# 전투곡도 같은 컨셉으로 고른다. 새 전투라 결과 징글 상태도 되돌린다.
+	_result_music_played = false
+	var music := _load_loop(String(CONCEPT_BGM.get(concept, BATTLE_BGM_PATH)))
+	_stage_music = music if music != null else _load_loop(BATTLE_BGM_PATH)
+	_switch_battle_music(_stage_music)
 
 
 func _fit_backdrop() -> void:
@@ -600,10 +646,19 @@ func _resolve_waves() -> Array:
 # 전투는 `StageWave` 를 모르고 번호만 알린다 — 그 경계를 지켜야 전투를 스테이지 없이도
 # 굴릴 수 있다(헤드리스 테스트와 `use_stage = false` 가 그렇게 쓴다).
 func _on_wave_started(index: int, total: int) -> void:
+	# 보스가 선 웨이브는 보스곡, 아니면 스테이지 곡.
+	_switch_battle_music(_load_loop(BOSS_BGM_PATH) if _wave_has_boss() else _stage_music)
 	if _stage == null:
 		return
 	var wave: StageWave = _waves[index] if index < _waves.size() else null
 	EventBus.stage_wave_started.emit(String(_stage.stage_id), index, total, wave)
+
+
+func _wave_has_boss() -> bool:
+	for unit in battle.units:
+		if unit.alive and unit.is_enemy() and unit.enemy != null and unit.enemy.tier == TurnCombat.EnemyTier.BOSS:
+			return true
+	return false
 
 
 # 유닛마다 몸을 하나 만든다.
@@ -1271,6 +1326,12 @@ func _show_result() -> void:
 		else:
 			EventBus.stage_failed.emit(stage_name)
 
+	# 결과 징글: 전투곡을 끊고 한 번 재생한다. 로비가 떠 있으면 로비 곡을 건드리지 않는다.
+	var jingle_path := VICTORY_JINGLE_PATH if victory else DEFEAT_JINGLE_PATH
+	if ResourceLoader.exists(jingle_path) and not ScreenManager.has_screen():
+		_result_music_played = true
+		MusicSystem.play(load(jingle_path) as AudioStream, 0.05)
+
 	await _play_banner("VICTORY" if victory else "DEFEAT",
 		TurnCombat.COLOR_ULT_READY if victory else TurnCombat.COLOR_DANGER, 1.2, 88)
 
@@ -1399,7 +1460,7 @@ func _restore_time_scale() -> void:
 # 노드가 트리를 떠날 때의 안전망. 연출 도중 씬이 바뀌어도 배율이 남지 않는다.
 func _exit_tree() -> void:
 	_restore_time_scale()
-	if _battle_music != null and MusicSystem.get_current_stream() == _battle_music:
+	if _is_battle_stream(MusicSystem.get_current_stream()):
 		if ResourceLoader.exists(LOBBY_BGM_PATH):
 			MusicSystem.play(load(LOBBY_BGM_PATH) as AudioStream)
 		else:
