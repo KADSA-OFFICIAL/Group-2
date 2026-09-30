@@ -1098,7 +1098,7 @@ def encode(stereo, name, tmpdir):
     wav = os.path.join(tmpdir, name + ".wav")
     write_wav(wav, stereo)
     out = os.path.join(OUT_DIR, name + ".ogg")
-    subprocess.run([ffmpeg_exe(), "-y", "-hide_banner", "-loglevel", "error", "-i", wav, "-map_metadata", "-1",
+    subprocess.run([ffmpeg_exe(), "-y", "-hide_banner", "-loglevel", "error", "-i", wav, "-map_metadata", "-1", "-fflags", "+bitexact", "-flags:a", "+bitexact",
                     "-c:a", "libvorbis", "-q:a", "5", "-ar", str(SR), "-ac", "2", out], check=True)
     return out, loudness(out)
 
