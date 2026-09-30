@@ -60,7 +60,10 @@ func verify_asset(entry: Dictionary) -> void:
 				if Vector3(c.r-accent_color.r,c.g-accent_color.g,c.b-accent_color.b).length() < 0.22: accent_count += 1
 				# Warm pale skin remains separate from mint/blue hair and gray clothes.
 				if c.r > 0.85 and c.g > 0.65 and c.b > 0.60 and c.r-c.g > 0.018 and c.r-c.b > 0.025: skin_count += 1
-				if minf(c.r,c.b)-c.g > 0.24: chroma_count += 1
+				# Leftover key colour = close to #FF00FF itself (#533). A plain "min(r,b)-g" test also
+				# flags colours the art really uses — Arin's lightning inset (216,104,240), Taehee's
+				# corrosion inset, Velo 2's pink-lilac hair — which must stay.
+				if c.g < 0.25 and c.r > 0.75 and c.b > 0.75: chroma_count += 1
 	expect(has_transparent and img.get_pixel(0,0).a == 0, entry.id+": real transparent background")
 	expect(colors.size() > 16, entry.id+": source colors retained without four-color quantization")
 	expect(skin_count > 50, entry.id+": pale warm skin survives export")
