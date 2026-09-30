@@ -267,14 +267,99 @@ def inst_synth_bass(f, dur):
     return np.tanh(1.4 * x * adsr(n, 0.003, 0.2, 0.7, 0.04, note_len=int(dur * SR))) / np.tanh(1.4)
 
 
-def inst_guitar(f, dur):
-    """클린 일렉 기타(카플러스-스트롱). 짧은 음은 손바닥으로 뮤트한 커팅이 된다."""
-    n = int((dur + 0.12) * SR)
-    muted = dur < 0.2
-    x = karplus(f, n, 0.985 if muted else 0.997, 3200 if muted else 4500, seed=int(f))
+def inst_harp(f, dur):
+    """하프(카플러스-스트롱): 밝게 뜯고 오래 울린다."""
+    n = int(1.8 * SR)
     t = np.arange(n) / SR
-    damp = np.where(t < dur, 1.0, np.exp(-(t - dur) / 0.03))
-    return x * damp * 0.8
+    return karplus(f, n, 0.998, 6000, seed=int(f)) * np.clip(t / 0.002, 0, 1) * 0.7
+
+
+# ---- 몽글몽글 (#539 보강): 일상 곡용. 어택이 둥글고, 날 선 배음이 없다.
+
+def inst_soft_rhodes(f, dur):
+    """몽글한 로즈: 변조를 얕게, 어택을 둥글게. "팅" 소리 없이 따뜻한 몸통만."""
+    n = int((dur + 0.7) * SR)
+    t = np.arange(n) / SR
+    idx = 0.6 * np.exp(-t / 0.3) + 0.12
+    body = np.sin(2 * np.pi * f * t + idx * np.sin(2 * np.pi * f * t)) + \
+        0.15 * np.sin(4 * np.pi * f * t) * np.exp(-t / 0.4)
+    decay = np.exp(-t / (2.2 * (262.0 / max(f, 80.0)) ** 0.5))
+    damp = np.where(t < dur, 1.0, np.exp(-(t - dur) / 0.18))
+    return body * decay * damp * np.clip(t / 0.01, 0, 1) * 0.8
+
+
+def inst_soft_lead(f, dur):
+    """입김 섞인 말랑한 리드: 거의 사인에 가까운 삼각파 + 숨소리, 늦게 오는 비브라토."""
+    n = int((dur + 0.4) * SR)
+    t = np.arange(n) / SR
+    vib = (5.0, 0.005, 0.3)
+    x = 0.8 * additive(f, n, "tri", 700.0, vib=vib) + 0.3 * additive(f, n, "tri", 2500.0, 4, vib=vib)
+    breath = fft_band(np.random.default_rng(int(f * 5)).standard_normal(n), 800, 3500) * 0.05 * np.exp(-t / 0.12)
+    return (x + breath) * adsr(n, 0.05, 0.6, 0.8, 0.25, note_len=int(dur * SR))
+
+
+def inst_kalimba(f, dur):
+    n = int(1.2 * SR)
+    t = np.arange(n) / SR
+    x = np.sin(2 * np.pi * f * t) * np.exp(-t / 0.5) + 0.22 * np.sin(2 * np.pi * f * 5.6 * t) * np.exp(-t / 0.04) + \
+        0.08 * np.sin(2 * np.pi * f * 8.3 * t) * np.exp(-t / 0.02)
+    return x * np.clip(t / 0.002, 0, 1)
+
+
+def inst_bubble(f, dur):
+    """방울: 음이 살짝 올라가며 톡 사라지는 사인."""
+    n = int(0.35 * SR)
+    t = np.arange(n) / SR
+    fr = f * (0.8 + 0.35 * (1 - np.exp(-t / 0.035)))
+    return np.sin(2 * np.pi * np.cumsum(fr) / SR) * np.exp(-t / 0.08) * np.clip(t / 0.003, 0, 1)
+
+
+# ---- 오케스트라 (#539 보강): 보스곡용.
+
+def inst_staccato(f, dur):
+    """현 스타카토: 세 연주자가 활을 짧게 끊는다."""
+    n = int(0.4 * SR)
+    t = np.arange(n) / SR
+    cut = 1400 + 1800 * np.exp(-t / 0.06)
+    x = sum(additive(f, n, "saw", cut, dc, max_h=24) for dc in (-8.0, 0.0, 8.0)) / 3
+    return x * np.clip(t / 0.006, 0, 1) * np.exp(-t / 0.09)
+
+
+def inst_horn(f, dur):
+    """호른 합주: 어둡고 둥근 금관이 부풀듯 들어온다."""
+    n = int((dur + 0.4) * SR)
+    t = np.arange(n) / SR
+    cut = 450 + 900 * np.clip(t / 0.18, 0, 1)
+    x = sum(additive(f, n, "saw", cut, dc, vib=(4.8, 0.003, 0.35), max_h=20) for dc in (-6.0, 0.0, 5.0)) / 3 + \
+        0.4 * np.sin(2 * np.pi * f * t)
+    return x * adsr(n, 0.07, 0.8, 0.85, 0.3, note_len=int(dur * SR))
+
+
+def inst_contrabass(f, dur):
+    n = int((dur + 0.3) * SR)
+    x = sum(additive(f, n, "saw", 700.0, dc, max_h=20) for dc in (-5.0, 5.0)) / 2 + \
+        0.6 * np.sin(2 * np.pi * f * np.arange(n) / SR)
+    return x * adsr(n, 0.05, 0.5, 0.9, 0.25, note_len=int(dur * SR))
+
+
+def inst_timpani(f, dur):
+    n = int(2.0 * SR)
+    t = np.arange(n) / SR
+    x = np.sin(2 * np.pi * f * t) * np.exp(-t / 0.9) + 0.45 * np.sin(2 * np.pi * 1.5 * f * t) * np.exp(-t / 0.5) + \
+        0.25 * np.sin(2 * np.pi * 1.98 * f * t) * np.exp(-t / 0.35)
+    thud = fft_band(np.random.default_rng(int(f)).standard_normal(n), 50, 700) * np.exp(-t / 0.025) * 0.5
+    return (x + thud) * np.clip(t / 0.002, 0, 1)
+
+
+def inst_organ(f, dur):
+    """파이프 오르간 풍 패드: 배음 스톱을 겹치고 두 벌을 살짝 어긋나게."""
+    n = int((dur + 0.5) * SR)
+    t = np.arange(n) / SR
+    x = np.zeros(n)
+    for k, a in ((1, 1.0), (2, 0.6), (3, 0.3), (4, 0.35), (6, 0.15), (8, 0.12)):
+        if k * f < 8000:
+            x += a * (np.sin(2 * np.pi * k * f * t) + np.sin(2 * np.pi * k * f * 1.0015 * t)) / 2
+    return x * adsr(n, 0.08, 0.5, 1.0, 0.35, note_len=int(dur * SR)) * 0.5
 
 
 def inst_pad(f, dur):
@@ -358,8 +443,11 @@ def inst_swell(f, dur):
 
 INSTRUMENTS = {
     "rhodes": inst_rhodes, "piano": inst_piano, "bass": inst_bass, "synth_bass": inst_synth_bass,
-    "guitar": inst_guitar, "pad": inst_pad, "strings": inst_strings, "lead": inst_lead, "bell": inst_bell,
+    "harp": inst_harp, "pad": inst_pad, "strings": inst_strings, "lead": inst_lead, "bell": inst_bell,
     "pluck": inst_pluck, "mallet": inst_mallet, "choir": inst_choir, "sub_hit": inst_sub_hit, "swell": inst_swell,
+    "soft_rhodes": inst_soft_rhodes, "soft_lead": inst_soft_lead, "kalimba": inst_kalimba, "bubble": inst_bubble,
+    "staccato": inst_staccato, "horn": inst_horn, "contrabass": inst_contrabass, "timpani": inst_timpani,
+    "organ": inst_organ,
 }
 
 
@@ -398,6 +486,15 @@ def make_kit(seed, tight=1.0):
         t = np.arange(int(0.6 * SR)) / SR
         fr = f0 * (1 + 0.4 * np.exp(-t / 0.02))
         d[name] = np.sin(2 * np.pi * np.cumsum(fr) / SR) * np.exp(-t / dec)
+    # 몽글한 곡·오케스트라용(#539 보강). 자기 난수를 써서 위의 드럼(과 전투곡)을 바꾸지 않는다.
+    rng2 = np.random.default_rng(seed + 100)
+    t = np.arange(int(0.35 * SR)) / SR
+    d["kick_soft"] = np.sin(2 * np.pi * np.cumsum(58 + 60 * np.exp(-t / 0.025)) / SR) * np.exp(-t / 0.16)
+    t = np.arange(int(0.12 * SR)) / SR
+    d["snap"] = fft_band(rng2.standard_normal(len(t)), 1500, 5000) * np.exp(-t / 0.02)
+    t = np.arange(int(1.5 * SR)) / SR
+    d["bdrum"] = np.sin(2 * np.pi * np.cumsum(50 * (1 + 0.3 * np.exp(-t / 0.05))) / SR) * np.exp(-t / 0.7) + \
+        0.4 * fft_band(rng2.standard_normal(len(t)), 40, 300) * np.exp(-t / 0.1)
     return {k: v / (np.max(np.abs(v)) + 1e-9) for k, v in d.items()}
 
 
@@ -487,7 +584,7 @@ class Song:
         self.bus(bus).add(self.cache[key] * v, self.when(bar, beat) + int(delay * SR), pan)
 
     def hit(self, kit, name, bar, beat, vel=0.8, pan=0.0):
-        if name == "kick":
+        if name in ("kick", "kick_soft", "bdrum"):
             self.kicks.append((bar, beat))
         self.bus("drums").add(kit[name] * vel * (1.0 + self.rng.normal(0, 0.06)), self.when(bar, beat, 0.002), pan)
 
@@ -624,13 +721,105 @@ def groove_break(s, kit, bar, v=1.0, fill=False, ride=False):
             s.hit(kit, d, bar, b, (0.3 + 0.06 * k) * v, 0.25 - 0.15 * k)
 
 
+def groove_soft(s, kit, bar, v=1.0, fill=False):
+    """몽글한 곡: 푹신한 킥 1·2.5, 스냅 2·4, 하이햇은 8분으로 아주 작게."""
+    s.hit(kit, "kick_soft", bar, 0, 0.6 * v)
+    s.hit(kit, "kick_soft", bar, 2.5, 0.45 * v)
+    for b in (1, 3):
+        s.hit(kit, "snap", bar, b, 0.35 * v, 0.1)
+        s.hit(kit, "rim", bar, b, 0.08 * v, -0.1)
+    for k in range(8):
+        if fill and k >= 6:
+            continue
+        s.hit(kit, "hat", bar, k * 0.5, (0.08 if k % 2 == 0 else 0.05) * v, 0.3)
+    for k in range(4):
+        s.hit(kit, "shaker", bar, k + 0.75, 0.07 * v, -0.35)
+    if fill:
+        for k, b in enumerate((3.0, 3.5, 3.75)):
+            s.hit(kit, "snap", bar, b, (0.2 + 0.05 * k) * v, -0.2 + 0.2 * k)
+
+
+def groove_soft_four(s, kit, bar, v=1.0, fill=False):
+    """몽글한 퓨처 펑크: 푹신한 네 박 킥(패드가 숨 쉰다), 스냅+박수 2·4."""
+    for b in range(4):
+        s.hit(kit, "kick_soft", bar, b, 0.6 * v)
+        s.hit(kit, "hat", bar, b + 0.5, 0.09 * v, 0.3)
+        s.hit(kit, "shaker", bar, b + 0.25, 0.05 * v, -0.35)
+        s.hit(kit, "shaker", bar, b + 0.75, 0.06 * v, -0.35)
+    for b in (1, 3):
+        s.hit(kit, "snap", bar, b, 0.3 * v, 0.1)
+        s.hit(kit, "clap", bar, b, 0.16 * v, -0.05)
+    if fill:
+        for k, b in enumerate((3.25, 3.5, 3.75)):
+            s.hit(kit, "snap", bar, b, (0.18 + 0.05 * k) * v, -0.2 + 0.2 * k)
+
+
+def bubbles(s, bus, chords, every=2, vel=0.05, center=80):
+    """방울 소리: 몇 마디에 한 번, 화음 음 두세 개가 톡톡 떠오른다."""
+    rng = np.random.default_rng(s.seed + 7)
+    for c in chords:
+        if c.bar % every or c.beat:
+            continue
+        v = voice(c, None, center, rootless=False, count=4)
+        start = float(rng.choice([0.5, 1.5, 2.5]))
+        for k in range(int(rng.integers(2, 4))):
+            s.note(bus, "bubble", c.bar, start + k * 0.25, 0.25, v[int(rng.integers(len(v)))], vel,
+                   float(rng.uniform(-0.6, 0.6)))
+
+
+def chord_at(chords, bar):
+    return next(c for c in chords if c.bar == bar and c.beat == 0)
+
+
+def timp_pitch(c):
+    """팀파니 음: 근음을 E2..D#3 에 둔다."""
+    r = c.root + 36
+    return r + 12 if r < 40 else r
+
+
+def string_ostinato(s, chords, vel, pattern=(0, 12, 7, 12), step=0.5):
+    """현 스타카토 오스티나토: 근음 기준 pattern(반음)을 step 박마다."""
+    for c in chords:
+        r = c.bass() + 12
+        pos, k = 0.0, 0
+        while pos < c.beats - 1e-6:
+            off = pattern[k % len(pattern)]
+            if off == 7 and 6 in c.ints:
+                off = 6
+            s.note("stacc", "staccato", c.bar, c.beat + pos, step, r + off, vel * (1.0 if k % 4 == 0 else 0.7),
+                   0.15 if k % 2 == 0 else -0.25)
+            pos += step
+            k += 1
+
+
+def orch_perc(s, kit, chords, bar, v=1.0, half=False):
+    """오케스트라 타악: 팀파니 근음, 그란 카사, 구간 끝 스네어 롤, 구간 머리 심벌."""
+    c = chord_at(chords, bar)
+    tp = timp_pitch(c)
+    s.note("perc", "timpani", bar, 0, 1, tp, 0.35 * v)
+    if not half:
+        s.note("perc", "timpani", bar, 2, 1, tp, 0.22 * v)
+    s.hit(kit, "bdrum", bar, 0, (0.5 if bar % 4 == 0 else 0.3) * v)
+    if bar % 4 == 3:
+        fifth = tp + 7 if tp + 7 <= 52 else tp - 5
+        s.note("perc", "timpani", bar, 3.0, 0.5, tp, 0.2 * v)
+        s.note("perc", "timpani", bar, 3.5, 0.5, fifth, 0.28 * v)
+    if bar % 8 == 7:
+        for k in range(16):
+            s.hit(kit, "ghost", bar, 2 + k * 0.125, (0.06 + 0.018 * k) * v, 0.1)
+    if bar % 8 == 0:
+        s.hit(kit, "crash", bar, 0, 0.18 * v, -0.3)
+        s.hit(kit, "bdrum", bar, 0, 0.3 * v)
+
+
 # ================================================================== songs
 
 def compose_lobby():
-    """"Afterschool Plaza" — 로비. D장조 98BPM, 32마디. 느긋한 시티팝.
-    A(1~8) 로즈·베이스·드럼만 / A'(9~16) 부드러운 리드가 주제 / B(17~24) 기타 커팅이 들어오고 종이 두 번째 선율 /
+    """"Afterschool Plaza" — 로비. D장조 88BPM, 32마디. 몽글몽글한 시티팝.
+    둥근 로즈가 길게 눌러 주고, 칼림바·방울이 톡톡 떠오른다. 킥은 푹신하고 스네어 대신 스냅.
+    A(1~8) 로즈·베이스·드럼 / A'(9~16) 말랑한 리드가 주제 / B(17~24) 칼림바가 두 번째 선율 /
     A''(25~32) 주제를 종과 리드가 옥타브로 나눠 부른다."""
-    s = Song("lobby_theme", bpm=98, bars=32, seed=5391, shuffle=0.1)
+    s = Song("lobby_theme", bpm=88, bars=32, seed=5391, shuffle=0.12)
     kit = make_kit(s.seed + 1)
     A = prog("Gmaj9:4 | A13:4 | F#m7:4 | Bm9:4 | Em9:4 | A7sus4:2 A7:2 | Dmaj9:4 | D9:4 |")
     B = prog("Gmaj9:4 | F#7b13:4 | Bm9:4 | Am7:2 D7:2 | Gmaj9:4 | F#m7:2 B7:2 | Em9:4 | A13:4 |")
@@ -644,79 +833,78 @@ def compose_lobby():
                   "G5:2 r:.5 F#5:.5 G5:.5 A5:.5 | A5:1 F#5:1 D#5:1.5 r:.5 | "
                   "E5:.5 F#5:.5 G5:.5 B5:.5 D6:1 B5:1 | C#6:1.5 B5:.5 A5:1 r:1 |")
 
-    comp(s, "keys", "rhodes", chords, [(0, 0.75), (0.75, 0.5), (1.75, 0.75), (2.5, 0.5), (3.25, 0.75)], 0.13,
-         center=62, accent=(1.0, 0.7, 0.85, 0.75, 0.8))
-    bass_line(s, "bass", "bass", chords, [(0, "R", .7, 1.0), (.75, "R", .2, .5), (1.5, "8", .4, .7), (2, "R", .45, .85),
-                                          (2.75, "5", .25, .6), (3, "8", .4, .7), (3.5, "A", .45, .75)], 0.5)
-    pads(s, "pad", "pad", chords[len(A):], 0.035, center=60)
-    # B: 기타 커팅(뒷박 16분)
-    comp(s, "gtr", "guitar", [c for c in chords if 16 <= c.bar < 24],
-         [(0.5, 0.12), (1.25, 0.12), (1.5, 0.12), (2.5, 0.12), (3.25, 0.12), (3.5, 0.12)], 0.07,
-         center=66, strum=0.006, spread=0.3, count=4)
-    melody(s, "lead", "lead", 8, theme, 0.13, 0.05)
-    melody(s, "bells", "bell", 16, theme_b, 0.11, 0.2)
-    melody(s, "bells", "bell", 24, theme, 0.1, 0.25, transpose=12)
-    melody(s, "lead", "lead", 24, theme, 0.07, -0.1)
+    comp(s, "keys", "soft_rhodes", chords, [(0, 1.4), (1.5, 0.9), (2.75, 1.2)], 0.13, center=62, strum=0.018,
+         accent=(1.0, 0.75, 0.85))
+    bass_line(s, "bass", "bass", chords, [(0, "R", 1.3, 1.0), (1.5, "5", .4, .6), (2, "R", 1.2, .85), (3.5, "A", .45, .7)], 0.5)
+    pads(s, "pad", "pad", chords, 0.035, center=60)
+    bubbles(s, "bubble", chords[8:], every=2, vel=0.05)
+    melody(s, "lead", "soft_lead", 8, theme, 0.14, 0.05)
+    melody(s, "kalimba", "kalimba", 16, theme_b, 0.14, 0.2)
+    melody(s, "bells", "bell", 24, theme, 0.08, 0.25, transpose=12)
+    melody(s, "lead", "soft_lead", 24, theme, 0.1, -0.1)
     for bar in range(32):
-        sec = bar // 8
-        groove_pop(s, kit, bar, v=0.8 if sec == 0 else 0.95, shaker=sec >= 1, fill=bar % 8 == 7,
-                   kick=(0, 2.5) if bar % 2 == 0 else (0, 1.75, 2.5))
-        if bar % 8 == 0:
-            s.hit(kit, "crash", bar, 0, 0.12, -0.4)
-    return s, mix(s, levels={"drums": 0, "bass": -2, "keys": -3, "pad": -13, "gtr": -12, "lead": -6, "bells": -8},
-                  sends={"drums": 0.08, "keys": 0.22, "pad": 0.35, "gtr": 0.18, "lead": 0.3, "bells": 0.35},
-                  duck=("keys", "pad", "gtr"), depth=0.22, room=1.8,
-                  echoes={"lead": (0.75 * s.beat, 0.25, 3), "bells": (0.5 * s.beat, 0.3, 3)},
-                  autopan={"keys": (1 / (2 * s.beat), 0.18)})
+        groove_soft(s, kit, bar, v=0.75 if bar < 8 else 0.9, fill=bar % 8 == 7)
+    s.note("fx", "swell", 15, 2, 2, 60, 0.03)
+    return s, mix(s, levels={"drums": 0, "bass": -3, "keys": -2, "pad": -9, "lead": -6, "kalimba": -7, "bells": -10,
+                             "bubble": -14, "fx": -24},
+                  sends={"drums": 0.12, "keys": 0.3, "pad": 0.45, "lead": 0.4, "kalimba": 0.4, "bells": 0.45, "bubble": 0.5,
+                         "fx": 0.4},
+                  duck=("keys", "pad"), depth=0.28, room=2.4,
+                  echoes={"lead": (0.75 * s.beat, 0.3, 3), "kalimba": (0.5 * s.beat, 0.3, 3), "bubble": (0.75 * s.beat, 0.35, 4)},
+                  autopan={"keys": (1 / (2 * s.beat), 0.18)}, lowpass=9500.0, wobble=0.0012)
 
 
 def compose_story():
-    """"Letters in Blue" — 스토리. F장조 72BPM, 24마디. 피아노가 말을 걸고 로즈·현이 뒤에서 받쳐 준다.
-    1(1~8) 피아노 독주 + 옅은 패드 / 2(9~16) 로즈 분산화음·베이스·브러시 같은 셰이커 / 3(17~24) 현이 차오르고 종이 선율을 겹친다."""
-    s = Song("story_theme", bpm=72, bars=24, seed=5392, tail=5.0)
+    """"Letters in Blue" — 스토리. F장조 68BPM, 24마디. 피아노가 말을 걸고 둥근 로즈·현이 뒤에서 받쳐 준다.
+    1(1~8) 피아노 독주 + 옅은 패드 / 2(9~16) 로즈 분산화음·베이스, 칼림바가 선율을 옥타브 위로 겹친다 /
+    3(17~24) 현이 차오르고 말랑한 리드와 종이 선율을 부른다."""
+    s = Song("story_theme", bpm=68, bars=24, seed=5392, tail=5.0)
     kit = make_kit(s.seed + 1, tight=0.8)
     P = prog("Bbmaj9:4 | Am7:4 | Gm9:4 | C7sus4:2 C7:2 | Fmaj9:4 | Dm9:4 | Gm9:4 | C9sus4:4 |")
     chords = P + shift(P, 8) + shift(P, 16)
     theme = seq("r:1 A4:.5 C5:.5 D5:1.5 C5:.5 | C5:2 r:.5 G4:.5 A4:.5 C5:.5 | D5:1 F5:1 A5:1.5 G5:.5 | "
                 "F5:2 E5:1 r:1 | r:.5 C5:.5 F5:.5 G5:.5 A5:2 | G5:1 F5:.5 E5:.5 F5:1 r:1 | "
                 "D5:1 F5:.5 G5:.5 Bb5:1.5 A5:.5 | G5:3 r:1 |")
-    # 왼손: 근음 + 열린 10도 화음을 2박마다
+    # 왼손: 근음 + 열린 화음을 2박마다
     for c in chords:
         r = c.bass() + 12
         top = voice(c, None, 58, rootless=True, count=3)
         for off in (0, 2):
             if off < c.beats:
-                s.note("keys", "piano", c.bar, c.beat + off, 1.9, r, 0.16, -0.2)
+                s.note("keys", "piano", c.bar, c.beat + off, 1.9, r, 0.14, -0.2)
                 for i, m in enumerate(top):
-                    s.note("keys", "piano", c.bar, c.beat + off + 0.5, 1.4, m, 0.08, -0.1 + 0.1 * i, delay=0.012 * i)
-    pads(s, "pad", "pad", chords[:8], 0.025, center=58)
-    arpeggio(s, "rhodes", "rhodes", [c for c in chords if c.bar >= 8], [0, 1, 2, 3, 4, 3, 2, 1], 0.5, 0.07, center=64,
-             pan_swing=0.45, length=0.9)
+                    s.note("keys", "piano", c.bar, c.beat + off + 0.5, 1.4, m, 0.07, -0.1 + 0.1 * i, delay=0.015 * i)
+    pads(s, "pad", "pad", chords, 0.025, center=58)
+    arpeggio(s, "rhodes", "soft_rhodes", [c for c in chords if c.bar >= 8], [0, 1, 2, 3, 4, 3, 2, 1], 0.5, 0.07, center=64,
+             pan_swing=0.45, length=1.0)
     bass_line(s, "bass", "bass", [c for c in chords if c.bar >= 8], [(0, "R", 1.8, 1.0), (2, "5", .9, .6), (3, "R", .9, .7)], 0.38)
     pads(s, "strings", "strings", [c for c in chords if c.bar >= 16], 0.06, center=62)
-    melody(s, "lead", "piano", 0, theme, 0.24, 0.1)
-    melody(s, "lead", "piano", 8, theme, 0.2, 0.1)
-    melody(s, "lead", "piano", 16, theme, 0.2, 0.1, transpose=12)
-    melody(s, "bells", "bell", 16, theme, 0.07, 0.3, transpose=12)
+    bubbles(s, "bubble", [c for c in chords if c.bar >= 8], every=4, vel=0.04)
+    melody(s, "lead", "piano", 0, theme, 0.22, 0.1)
+    melody(s, "lead", "piano", 8, theme, 0.18, 0.1)
+    melody(s, "kalimba", "kalimba", 8, theme, 0.08, -0.25, transpose=12)
+    melody(s, "soft", "soft_lead", 16, theme, 0.13, 0.1)
+    melody(s, "bells", "bell", 16, theme, 0.06, 0.3, transpose=12)
     for bar in range(8, 24):
-        for k in range(8):
-            s.hit(kit, "shaker", bar, k * 0.5 + 0.25, 0.07 if k % 2 else 0.1, -0.3)
-        s.hit(kit, "kick", bar, 0, 0.3)
-        s.hit(kit, "rim", bar, 3, 0.1, 0.2)
-        if bar >= 16:
-            s.hit(kit, "kick", bar, 2.5, 0.2)
-    s.note("fx", "swell", 15, 2, 2, 60, 0.04)
-    return s, mix(s, levels={"keys": -4, "pad": -14, "rhodes": -9, "bass": -6, "strings": -10, "lead": -2, "bells": -12, "drums": -10, "fx": -24},
-                  sends={"keys": 0.35, "pad": 0.4, "rhodes": 0.35, "strings": 0.45, "lead": 0.4, "bells": 0.45,
-                         "drums": 0.15, "fx": 0.4},
-                  duck=(), depth=0.0, room=2.6, echoes={"bells": (0.75 * s.beat, 0.3, 3)},
-                  autopan={"rhodes": (0.5 / s.beat, 0.25)})
+        s.hit(kit, "kick_soft", bar, 0, 0.3)
+        s.hit(kit, "snap", bar, 3, 0.14, 0.2)
+        for k in range(4):
+            s.hit(kit, "shaker", bar, k + 0.5, 0.06, -0.3)
+    s.note("fx", "swell", 15, 2, 2, 60, 0.03)
+    return s, mix(s, levels={"keys": -4, "pad": -12, "rhodes": -9, "bass": -7, "strings": -10, "lead": -2, "kalimba": -10,
+                             "soft": -5, "bells": -12, "drums": -12, "bubble": -16, "fx": -24},
+                  sends={"keys": 0.38, "pad": 0.45, "rhodes": 0.4, "strings": 0.5, "lead": 0.42, "kalimba": 0.45, "soft": 0.45,
+                         "bells": 0.5, "drums": 0.2, "bubble": 0.5, "fx": 0.4},
+                  duck=(), depth=0.0, room=2.8,
+                  echoes={"bells": (0.75 * s.beat, 0.3, 3), "kalimba": (0.75 * s.beat, 0.3, 3), "bubble": (0.75 * s.beat, 0.35, 4)},
+                  autopan={"rhodes": (0.5 / s.beat, 0.25)}, lowpass=8500.0, wobble=0.0015)
 
 
 def compose_sortie():
-    """"Blue Sortie" — 스테이지 선택·편성. A장조 124BPM, 32마디. 설레는 퓨처 펑크.
-    A(1~8) 플럭 분산화음 + 네 박 킥 / A'(9~16) 리드가 훅 / B(17~24) 두 번째 선율, 기타 커팅 / A''(25~32) 훅 + 종 옥타브."""
-    s = Song("sortie_theme", bpm=124, bars=32, seed=5393, shuffle=0.04)
+    """"Blue Sortie" — 스테이지 선택·편성. A장조 112BPM, 32마디. 몽글한 퓨처 펑크: 설레지만 뾰족하지 않다.
+    푹신한 네 박 킥에 맞춰 로즈·패드가 크게 숨 쉬고, 칼림바가 8분 분산화음을 굴린다.
+    A(1~8) 반주 / A'(9~16) 말랑한 리드가 훅 / B(17~24) 칼림바가 두 번째 선율 / A''(25~32) 훅 + 종 옥타브."""
+    s = Song("sortie_theme", bpm=112, bars=32, seed=5393, shuffle=0.06)
     kit = make_kit(s.seed + 1, tight=0.9)
     A = prog("Dmaj7:4 | E6:4 | C#m7:4 | F#m7:4 | Dmaj7:4 | E6:4 | C#m7:4 | F#m7:4 |")
     B = prog("Bm7:4 | C#m7:4 | Dmaj7:4 | E7sus4:2 E7:2 | Bm7:4 | C#7:4 | F#m7:4 | E7sus4:2 E7:2 |")
@@ -727,34 +915,29 @@ def compose_sortie():
                "G#5:1.5 B5:.5 G#5:.5 E5:.5 C#5:1 | A5:1.5 G#5:.5 F#5:2 |")
     theme_b = seq("F#5:1 A5:1 B5:1.5 A5:.5 | G#5:2 E5:1 r:1 | F#5:1 A5:1 C#6:1.5 B5:.5 | A5:2 G#5:1.5 r:.5 | "
                   "B5:1 A5:.5 B5:.5 D6:1 C#6:.5 B5:.5 | G#5:1.5 F5:.5 G#5:1 B5:1 | A5:2 F#5:1 E5:1 | E5:2 D5:1 r:1 |")
-    comp(s, "keys", "rhodes", chords, [(0, 0.4), (0.75, 0.25), (1.5, 0.4), (2.5, 0.25), (3.0, 0.4)], 0.1, center=64,
-         accent=(1.0, 0.7, 0.85, 0.7, 0.8))
-    arpeggio(s, "pluck", "pluck", chords, [0, 2, 4, 2, 1, 3, 5, 3], 0.25, 0.06, center=69, pan_swing=0.5)
-    bass_line(s, "bass", "bass", chords, [(0, "R", .4, 1.0), (.5, "8", .2, .6), (.75, "R", .2, .7), (1.5, "R", .4, .8),
-                                          (2, "8", .2, .6), (2.5, "R", .4, .85), (3, "5", .4, .7), (3.5, "A", .4, .75)], 0.5)
-    pads(s, "pad", "pad", chords[8:], 0.03, center=62)
-    comp(s, "gtr", "guitar", [c for c in chords if 16 <= c.bar < 24],
-         [(0.25, 0.1), (0.5, 0.1), (1.25, 0.1), (1.5, 0.1), (2.25, 0.1), (2.5, 0.1), (3.25, 0.1), (3.5, 0.1)], 0.06,
-         center=67, strum=0.005, spread=0.3, count=4)
-    melody(s, "lead", "lead", 8, hook, 0.13, 0.05)
-    melody(s, "lead", "lead", 16, theme_b, 0.12, 0.05)
-    melody(s, "lead", "lead", 24, hook, 0.11, 0.05)
-    melody(s, "bells", "bell", 24, hook, 0.08, -0.25, transpose=12)
+    comp(s, "keys", "soft_rhodes", chords, [(0.5, 0.45), (1.5, 0.45), (2.5, 0.45), (3.5, 0.45)], 0.12, center=64,
+         strum=0.012, accent=(1.0, 0.85, 0.95, 0.8))
+    arpeggio(s, "kalimba", "kalimba", chords, [0, 2, 1, 3, 2, 4, 3, 1], 0.5, 0.06, center=72, pan_swing=0.45)
+    bass_line(s, "bass", "bass", chords, [(0, "R", .45, 1.0), (.75, "R", .2, .55), (1.5, "8", .4, .7), (2, "R", .45, .85),
+                                          (3, "5", .4, .7), (3.5, "A", .4, .7)], 0.5)
+    pads(s, "pad", "pad", chords, 0.035, center=62)
+    bubbles(s, "bubble", chords[8:], every=2, vel=0.05)
+    melody(s, "lead", "soft_lead", 8, hook, 0.14, 0.05)
+    melody(s, "kalimba", "kalimba", 16, theme_b, 0.16, 0.15)
+    melody(s, "lead", "soft_lead", 16, theme_b, 0.06, -0.1)
+    melody(s, "lead", "soft_lead", 24, hook, 0.12, 0.05)
+    melody(s, "bells", "bell", 24, hook, 0.07, -0.25, transpose=12)
     for bar in range(32):
-        sec = bar // 8
-        if sec == 2:
-            groove_pop(s, kit, bar, v=0.9, kick=(0, 1.5, 2.5), fill=bar % 8 == 7, shaker=True)
-        else:
-            groove_four(s, kit, bar, v=0.8 if sec == 0 else 0.92, fill=bar % 8 == 7)
-        if bar % 8 == 0:
-            s.hit(kit, "crash", bar, 0, 0.13, 0.4)
-    s.note("fx", "swell", 15, 2, 2, 60, 0.05)
-    s.note("fx", "swell", 23, 2, 2, 60, 0.05)
-    return s, mix(s, levels={"drums": 0, "bass": -2, "keys": -5, "pluck": -10, "pad": -13, "gtr": -12, "lead": -6, "bells": -10, "fx": -22},
-                  sends={"drums": 0.06, "keys": 0.2, "pluck": 0.25, "pad": 0.35, "gtr": 0.15, "lead": 0.28, "bells": 0.35, "fx": 0.3},
-                  duck=("keys", "pad", "pluck", "gtr"), depth=0.35, room=1.7,
-                  echoes={"lead": (0.75 * s.beat, 0.25, 3), "pluck": (0.75 * s.beat, 0.2, 2)},
-                  autopan={"keys": (1 / (2 * s.beat), 0.15)})
+        groove_soft_four(s, kit, bar, v=0.75 if bar < 8 else 0.9, fill=bar % 8 == 7)
+    s.note("fx", "swell", 15, 2, 2, 60, 0.04)
+    s.note("fx", "swell", 23, 2, 2, 60, 0.04)
+    return s, mix(s, levels={"drums": 0, "bass": -3, "keys": -3, "kalimba": -7, "pad": -9, "lead": -6, "bells": -10,
+                             "bubble": -14, "fx": -24},
+                  sends={"drums": 0.1, "keys": 0.28, "kalimba": 0.35, "pad": 0.45, "lead": 0.38, "bells": 0.45, "bubble": 0.5,
+                         "fx": 0.4},
+                  duck=("keys", "pad", "kalimba"), depth=0.4, room=2.2,
+                  echoes={"lead": (0.75 * s.beat, 0.28, 3), "kalimba": (0.75 * s.beat, 0.22, 2), "bubble": (0.75 * s.beat, 0.35, 4)},
+                  autopan={"keys": (1 / (2 * s.beat), 0.15)}, lowpass=10500.0, wobble=0.001)
 
 
 def compose_land():
@@ -871,10 +1054,13 @@ def compose_sky():
 
 
 def compose_boss():
-    """"Crimson Protocol" — 보스 웨이브. D단조 138BPM, 32마디. 긴장감은 피아노 오스티나토와 8분 베이스가 만들고,
-    선율은 현·리드가 길게 끈다. A(1~8) 오스티나토 / A'(9~16) 주제 / B(17~24) 관계장조 쪽으로 열린다 / A''(25~32) 주제 + 합창."""
-    s = Song("battle_boss", bpm=138, bars=32, seed=5397)
-    kit = make_kit(s.seed + 1, tight=0.85)
+    """"Crimson Protocol" — 보스 웨이브. D단조 132BPM, 32마디. 클래식하고 웅장한 오케스트라.
+    현 스타카토가 8분으로 달리고, 호른 합주가 주제를, 바이올린이 한 옥타브 위를 노래한다.
+    팀파니·그란 카사가 박을 짚고 구간 끝마다 스네어 롤이 다음 구간을 부른다.
+    A(1~8) 오스티나토·저현·팀파니 / A'(9~16) 호른 주제 + 현 화음 / B(17~24) 바이올린 선율 + 호른 대선율 + 합창 /
+    A''(25~32) 호른·바이올린 주제 + 합창 + 글로켄."""
+    s = Song("battle_boss", bpm=132, bars=32, seed=5397, tail=5.0)
+    kit = make_kit(s.seed + 1)
     A = prog("Dm9:4 | Bbmaj7:4 | Gm7:4 | A7:4 | Dm9:4 | Bbmaj7:4 | Gm7:4 | A7:4 |")
     B = prog("Bbmaj7:4 | C:4 | Am7:4 | Dm9:4 | Bbmaj7:4 | C:4 | Gm7:4 | A7sus4:2 A7:2 |")
     chords = A + shift(A, 8) + shift(B, 16) + shift(A, 24)
@@ -882,46 +1068,35 @@ def compose_boss():
                 "D5:1 F5:1 A5:1 C6:1 | D6:1.5 C6:.5 Bb5:1 A5:1 | G5:1 Bb5:1 D6:1.5 C6:.5 | C#6:2 A5:1 r:1 |")
     theme_b = seq("D6:2 C6:1 A5:1 | G5:2 E5:1 C5:1 | A5:1.5 G5:.5 E5:2 | F5:2 E5:1 D5:1 | "
                   "D6:1.5 C6:.5 D6:1 F6:1 | E6:2 D6:1 C6:1 | Bb5:2 D6:1 Bb5:1 | D6:2 C#6:2 |")
-    # 피아노 오스티나토: 16분으로 근음-5도-옥타브-화음음
+    string_ostinato(s, chords, 0.16)
     for c in chords:
-        v = voice(c, None, 64, rootless=False, count=4)
-        v = v + [v[0] + 12] if len(v) < 4 else v
-        pat = [v[0], v[2], v[1], v[3], v[2], v[1]]
-        pos = 0.0
-        k = 0
-        while pos < c.beats - 1e-6:
-            s.note("keys", "piano", c.bar, c.beat + pos, 0.25, pat[k % len(pat)], 0.08 if k % 4 else 0.11, 0.25 if k % 2 else -0.15)
-            pos += 0.25
-            k += 1
-    bass_line(s, "bass", "synth_bass", chords, [(b * 0.5, "R" if b % 4 != 3 else "8", 0.4, 1.0 if b % 2 == 0 else 0.7)
-                                                for b in range(8)], 0.42)
-    pads(s, "pad", "pad", chords, 0.03, center=58)
-    pads(s, "strings", "strings", chords[8:], 0.05, center=62)
-    pads(s, "choir", "choir", chords[24:], 0.05, center=64, count=3)
-    melody(s, "lead", "strings", 8, theme, 0.14, 0.1)
-    melody(s, "lead", "lead", 8, theme, 0.07, -0.1)
-    melody(s, "lead", "lead", 16, theme_b, 0.12, 0.05)
-    melody(s, "lead", "strings", 24, theme, 0.12, 0.1, transpose=12)
-    melody(s, "lead", "lead", 24, theme, 0.08, -0.1)
+        s.note("low", "contrabass", c.bar, c.beat, c.beats, c.bass(), 0.3)
+    pads(s, "strings", "strings", chords[8:], 0.07, center=62)
+    pads(s, "choir", "choir", chords[16:], 0.06, center=64, count=3)
+    melody(s, "horn", "horn", 8, theme, 0.16, -0.2, transpose=-12)
+    melody(s, "lead", "strings", 8, theme, 0.1, 0.2)
+    melody(s, "lead", "strings", 16, theme_b, 0.14, 0.2)
+    melody(s, "horn", "horn", 16, theme_b, 0.1, -0.2, transpose=-12)
+    melody(s, "horn", "horn", 24, theme, 0.17, -0.2, transpose=-12)
+    melody(s, "lead", "strings", 24, theme, 0.13, 0.2)
+    melody(s, "bells", "bell", 24, theme, 0.06, 0.35, transpose=12)
     for bar in range(32):
-        sec = bar // 8
-        groove_break(s, kit, bar, v=0.8 if sec == 0 else 0.92, fill=bar % 8 == 7)
-        if bar % 4 == 0:
-            s.note("fx", "sub_hit", bar, 0, 1, 38, 0.18)
-        if bar % 8 == 0:
-            s.hit(kit, "crash", bar, 0, 0.14, -0.4)
-    s.note("fx", "swell", 23, 2, 2, 60, 0.05)
-    return s, mix(s, levels={"drums": 0, "bass": -2, "keys": -5, "pad": -12, "strings": -9, "choir": -11, "lead": -5, "fx": -8},
-                  sends={"drums": 0.07, "keys": 0.2, "pad": 0.35, "strings": 0.4, "choir": 0.45, "lead": 0.3, "fx": 0.2},
-                  duck=("keys", "pad", "strings"), depth=0.25, room=2.0,
-                  echoes={"lead": (0.75 * s.beat, 0.2, 3)}, autopan={})
+        orch_perc(s, kit, chords, bar, v=0.85 if bar < 8 else 1.0)
+    s.note("fx", "swell", 23, 2, 2, 60, 0.04)
+    return s, mix(s, levels={"stacc": -3, "low": -5, "strings": -9, "choir": -11, "horn": -4, "lead": -6, "bells": -14,
+                             "perc": -2, "drums": -3, "fx": -20},
+                  sends={"stacc": 0.25, "low": 0.2, "strings": 0.45, "choir": 0.5, "horn": 0.4, "lead": 0.4, "bells": 0.45,
+                         "perc": 0.3, "drums": 0.25, "fx": 0.3},
+                  duck=(), depth=0.0, room=2.8, echoes={}, autopan={}, lowpass=13000.0)
 
 
 def compose_final():
-    """"Last Sanctuary" — 최종 보스. C단조 146BPM, 32마디. 보스곡보다 넓다: 합창·현 오스티나토·낮은 붐.
-    A(1~8) 현 스타카토 + 피아노 / A'(9~16) 주제 / B(17~24) 장조 쪽으로 밀어 올리는 선율 / A''(25~32) 주제 옥타브 + 합창."""
-    s = Song("battle_final", bpm=146, bars=32, seed=5398)
-    kit = make_kit(s.seed + 1, tight=0.85)
+    """"Last Sanctuary" — 최종 보스. C단조 124BPM, 32마디. 보스곡보다 넓고 장엄하다: 오르간·합창이 바닥을 깔고,
+    팀파니는 반 박자 느낌으로 크게 짚는다. 하프가 B 에서 위로 쓸어 올린다.
+    A(1~8) 오르간·오스티나토·저현 / A'(9~16) 호른 주제 + 현·합창 / B(17~24) 바이올린 선율 + 호른 대선율 + 하프 /
+    A''(25~32) 호른·바이올린 주제 + 글로켄."""
+    s = Song("battle_final", bpm=124, bars=32, seed=5398, tail=6.0)
+    kit = make_kit(s.seed + 1)
     A = prog("Cm9:4 | Abmaj7:4 | Ebmaj7:4 | G7sus4:2 G7:2 | Cm9:4 | Abmaj7:4 | Ebmaj7:4 | G7:4 |")
     B = prog("Abmaj7:4 | Bb:4 | Gm7:4 | Cm9:4 | Fm9:4 | Bb7:4 | Ebmaj7:2 Abmaj7:2 | Dm7b5:2 G7:2 |")
     chords = A + shift(A, 8) + shift(B, 16) + shift(A, 24)
@@ -929,40 +1104,30 @@ def compose_final():
                 "Eb6:1.5 D6:.5 C6:1 G5:1 | Ab5:1.5 G5:.5 Eb5:1 C5:1 | D5:1 Eb5:1 G5:1 Bb5:1 | B5:2 G5:1 r:1 |")
     theme_b = seq("Eb6:2 C6:1 Ab5:1 | D6:2 Bb5:1 F5:1 | G5:1.5 Bb5:.5 D6:2 | Eb6:3 D6:1 | "
                   "C6:1.5 Ab5:.5 G5:1 Ab5:1 | F5:1.5 Ab5:.5 D6:2 | G5:1 Bb5:1 C6:1 Eb6:1 | D6:1 C6:1 B5:2 |")
-    # 오스티나토: 피아노 8분 옥타브 + 플럭 16분
+    string_ostinato(s, chords, 0.15, pattern=(0, 7, 12, 7))
     for c in chords:
-        r = c.bass() + 12
-        pos = 0.0
-        while pos < c.beats - 1e-6:
-            s.note("keys", "piano", c.bar, c.beat + pos, 0.45, r, 0.1, -0.2)
-            s.note("keys", "piano", c.bar, c.beat + pos + 0.25, 0.2, r + 12, 0.05, 0.2)
-            pos += 0.5
-    arpeggio(s, "pluck", "pluck", chords, [0, 2, 1, 3, 2, 4, 3, 1], 0.25, 0.04, center=67)
-    bass_line(s, "bass", "synth_bass", chords, [(b * 0.5, "R" if b % 4 != 3 else "8", 0.4, 1.0 if b % 2 == 0 else 0.7)
-                                                for b in range(8)], 0.42)
-    pads(s, "pad", "pad", chords, 0.03, center=58)
-    pads(s, "strings", "strings", chords[8:], 0.05, center=62)
-    pads(s, "choir", "choir", [c for c in chords if c.bar >= 16], 0.045, center=64, count=3)
-    melody(s, "lead", "strings", 8, theme, 0.14, 0.1)
-    melody(s, "lead", "lead", 8, theme, 0.07, -0.1)
-    melody(s, "lead", "lead", 16, theme_b, 0.12, 0.05)
-    melody(s, "lead", "strings", 16, theme_b, 0.08, 0.2)
-    melody(s, "lead", "strings", 24, theme, 0.12, 0.1, transpose=12)
-    melody(s, "lead", "lead", 24, theme, 0.08, -0.1)
+        s.note("low", "contrabass", c.bar, c.beat, c.beats, c.bass(), 0.3)
+    pads(s, "organ", "organ", chords, 0.05, center=58, count=4)
+    pads(s, "strings", "strings", chords[8:], 0.07, center=62)
+    pads(s, "choir", "choir", chords[8:], 0.06, center=64, count=3)
+    arpeggio(s, "harp", "harp", [c for c in chords if 16 <= c.bar < 24], [0, 1, 2, 3, 4, 5, 6, 7], 0.25, 0.08,
+             center=67, pan_swing=0.3, length=0.5)
+    melody(s, "horn", "horn", 8, theme, 0.16, -0.2, transpose=-12)
+    melody(s, "lead", "strings", 8, theme, 0.1, 0.2)
+    melody(s, "lead", "strings", 16, theme_b, 0.14, 0.2)
+    melody(s, "horn", "horn", 16, theme_b, 0.1, -0.2, transpose=-12)
+    melody(s, "horn", "horn", 24, theme, 0.17, -0.2, transpose=-12)
+    melody(s, "lead", "strings", 24, theme, 0.13, 0.2)
+    melody(s, "bells", "bell", 24, theme, 0.06, 0.35, transpose=12)
     for bar in range(32):
-        sec = bar // 8
-        groove_break(s, kit, bar, v=0.82 if sec == 0 else 0.95, fill=bar % 8 == 7, ride=sec == 2)
-        if bar % 2 == 0:
-            s.note("fx", "sub_hit", bar, 0, 1, 36, 0.16 if bar % 8 else 0.22)
-        if bar % 8 == 0:
-            s.hit(kit, "crash", bar, 0, 0.15, -0.4)
-    s.note("fx", "swell", 15, 2, 2, 60, 0.05)
-    s.note("fx", "swell", 23, 2, 2, 60, 0.06)
-    return s, mix(s, levels={"drums": 0, "bass": -2, "keys": -5, "pluck": -11, "pad": -12, "strings": -9, "choir": -10, "lead": -5, "fx": -8},
-                  sends={"drums": 0.07, "keys": 0.2, "pluck": 0.25, "pad": 0.35, "strings": 0.4, "choir": 0.5,
-                         "lead": 0.3, "fx": 0.2},
-                  duck=("keys", "pad", "strings", "pluck"), depth=0.25, room=2.2,
-                  echoes={"lead": (0.75 * s.beat, 0.2, 3)}, autopan={})
+        orch_perc(s, kit, chords, bar, v=0.85 if bar < 8 else 1.0, half=True)
+    s.note("fx", "swell", 15, 2, 2, 60, 0.04)
+    s.note("fx", "swell", 23, 2, 2, 60, 0.05)
+    return s, mix(s, levels={"stacc": -4, "low": -5, "organ": -11, "strings": -9, "choir": -10, "harp": -9, "horn": -4,
+                             "lead": -6, "bells": -14, "perc": -2, "drums": -3, "fx": -20},
+                  sends={"stacc": 0.25, "low": 0.2, "organ": 0.4, "strings": 0.45, "choir": 0.5, "harp": 0.4, "horn": 0.4,
+                         "lead": 0.4, "bells": 0.45, "perc": 0.3, "drums": 0.25, "fx": 0.3},
+                  duck=(), depth=0.0, room=3.2, echoes={}, autopan={}, lowpass=13000.0)
 
 
 def compose_victory():
@@ -1020,7 +1185,7 @@ def active_rms(x):
     return float(np.sqrt(e.mean()))
 
 
-def mix(s, levels, sends, duck, depth, room, echoes, autopan, loop_wrap=True):
+def mix(s, levels, sends, duck, depth, room, echoes, autopan, loop_wrap=True, lowpass=15000.0, wobble=0.0):
     """levels 는 dB 다: 각 버스의 (소리 나는 구간) RMS 를 이 값에 맞춘다. 드럼 0 을 기준으로 적는다.
     악기·세기를 고쳐도 균형이 흔들리지 않는다 — 믹스의 의도가 숫자 한 줄에 남는다."""
     s.levels = levels
@@ -1051,13 +1216,21 @@ def mix(s, levels, sends, duck, depth, room, echoes, autopan, loop_wrap=True):
         send += x * sends.get(name, 0.0)
     out += convolve(send, reverb_ir(room, np.random.default_rng(11)))
     # 테이프처럼 고역을 살짝 깎고 초저역을 정리한다 — 오래 틀어 둬도 귀가 피곤하지 않게.
-    out = np.stack([fft_band(out[0], 38, 15000), fft_band(out[1], 38, 15000)])
+    out = np.stack([fft_band(out[0], 38, lowpass), fft_band(out[1], 38, lowpass)])
     if not loop_wrap:
         fade = np.clip((s.n - np.arange(s.n)) / (1.0 * SR), 0, 1)
         return out * fade
     loop = out[:, : s.loop_len].copy()
     tail = out[:, s.loop_len:]
     loop[:, : tail.shape[1]] += tail
+    if wobble:
+        # 테이프 와우: 재생 위치를 wobble 초만큼 천천히 흔든다(음정이 몇 센트 출렁인다).
+        # 곡 한 바퀴에 정수 번 돌게 해서 반복 이음새에서 위상이 이어진다.
+        L = loop.shape[1]
+        idx = np.arange(L, dtype=np.float64)
+        cycles = max(1, round(0.35 * L / SR))
+        pos = idx + wobble * SR * np.sin(2 * np.pi * cycles * idx / L)
+        loop = np.stack([np.interp(pos, idx, ch, period=L) for ch in loop])
     return loop
 
 
