@@ -15,6 +15,22 @@
 | `bgm/battle_boss.ogg` | 보스 웨이브 | "Mammoth Stomp" — D단조 156BPM, 낮은 브라스·합창·탐 | 0:49.2 (32마디) | −16.5 LUFS |
 | `bgm/jingle_victory.ogg` | 결과 · 승리 (1회) | 브라스 팡파르, bVII→I | 0:08.5 | −17 LUFS |
 | `bgm/jingle_defeat.ogg` | 결과 · 패배 (1회) | 플루트가 조용히 내려앉음 | 0:08.5 | −19 LUFS |
+| `bgm/story_theme.ogg` | 스토리 화면 | **"Hearthlight"** 하이브리드 — D장조 80BPM. 피아노·기타·하프 → 현악·첼로 → 호른·슈퍼소·서브 | 1:12.0 (24마디) | −20 LUFS |
+| `bgm/sortie_theme.ogg` | 스테이지 선택 · 편성 | **"Rally of the Stone Tribes"** 하이브리드 — E단조 116BPM. 피아노 옥타브·스타카토 현·호른 주제·타이코 + 16분 펄스 베이스 | 1:06.2 (32마디) | −18.5 LUFS |
+| `bgm/battle_final.ogg` | 3챕터(하늘) 보스 웨이브 | **"Colossus of the Sky"** 하이브리드 — C단조 132BPM. 저현 16분·브라스·합창·팀파니/타이코 + 으르렁대는 신스 베이스·슈퍼소·라이저 | 0:58.2 (32마디) | −16.5 LUFS |
+
+### 하이브리드 오케스트레이션 3곡 (#537)
+
+세 층을 겹친다. 구간이 지날수록 층을 하나씩 더한다(Hearthlight: A 는 건반·기타만, A' 에 현악과 패드, B 에 호른·팀파니·서브).
+
+| 층 | 역할 | 악기 (`tools/gen_bgm.py`) |
+|---|---|---|
+| ① 건반·발현악기 | 곡의 뼈대와 감성 | `piano`(어긋난 배음·해머·댐퍼), `harp`, `guitar`(뜯는 위치·몸통 울림) |
+| ② 오케스트라 현·관악기 | 전투와 웅장한 연출 | `strings`·`violins`·`cello`·`staccato`(여러 연주자 합주), `horn`, `brass`, `timpani`, 타이코, `choir` |
+| ③ 전자 악기 | 추진력과 공간 | `supersaw`, `pulse_bass`(사이드체인), `growl`, `arp`·`sine_arp`, `riser` |
+
+메타 화면의 곡은 `main_screen_launcher.gd` 의 `SCREEN_MUSIC` 이 맨 위 화면으로 고른다(없으면 로비 곡, 결과 화면이면
+전투가 튼 징글을 그대로 둔다). 3챕터 보스 곡은 `TurnBattle._boss_music()` 이 고른다(없으면 `battle_boss`).
 
 전투곡은 `TurnBattle` 이 고른다: 스테이지 챕터 컨셉(`StageData.get_concept()`, 배경과 같은 규칙)으로 전투곡,
 적 중에 `EnemyTier.BOSS` 가 있는 웨이브는 보스곡, 결과 배너와 함께 징글(반복 없음, `.import` `loop=false`).

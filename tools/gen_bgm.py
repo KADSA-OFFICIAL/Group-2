@@ -207,7 +207,166 @@ def inst_low_brass(f, dur, vel):
     return vel * x * adsr(n, 0.015, 0.25, 0.7, 0.1, note_len=int(dur * SR))
 
 
+# ---- 하이브리드 오케스트레이션 (#537) ----------------------------------------
+# 1) 건반·발현악기: 곡의 뼈대와 감성
+
+def inst_piano(f, dur, vel):
+    """피아노: 약간 어긋난 배음(현의 강성), 배음마다 다른 감쇠, 두 줄의 맥놀이, 해머 소리.
+    건반을 놓으면(dur 뒤) 댐퍼가 빨리 누른다."""
+    tail = 0.35
+    n = int((dur + tail) * SR)
+    t = np.arange(n) / SR
+    base = 2.4 * (261.6 / max(f, 60.0)) ** 0.35   # 낮은 음일수록 오래 울린다
+    x = np.zeros(n)
+    for k in range(1, 13):
+        fk = k * f * np.sqrt(1 + 0.00035 * k * k)
+        if fk > SR * 0.45:
+            break
+        amp = (1.0 / k ** 1.15) * np.exp(-t / (base / k ** 0.65))
+        x += amp * (np.sin(2 * np.pi * fk * t) + 0.6 * np.sin(2 * np.pi * fk * 1.0012 * t))
+    hammer = fft_band(np.random.default_rng(int(f * 10)).standard_normal(n), 300, 3500) * np.exp(-t / 0.006) * 0.4
+    damp = np.where(t < dur, 1.0, np.exp(-(t - dur) / 0.09))
+    return vel * (x / 1.6 + hammer) * damp * np.clip(t / 0.002, 0, 1)
+
+
+def inst_harp(f, dur, vel):
+    n = int(2.2 * SR)
+    t = np.arange(n) / SR
+    x = np.zeros(n)
+    for k in range(1, 9):
+        if k * f > SR * 0.45:
+            break
+        x += (1.0 / k ** 1.6) * np.exp(-t / (1.6 / k ** 0.5)) * np.sin(2 * np.pi * k * f * t)
+    return vel * x * np.clip(t / 0.003, 0, 1)
+
+
+def inst_guitar(f, dur, vel):
+    """어쿠스틱(나일론) 기타: 뜯는 위치에 따른 배음 모양 + 짧은 몸통 울림."""
+    n = int(1.8 * SR)
+    t = np.arange(n) / SR
+    x = np.zeros(n)
+    for k in range(1, 15):
+        if k * f > SR * 0.45:
+            break
+        shape = abs(np.sin(np.pi * k * 0.18)) / k
+        x += shape * np.exp(-t / (1.3 / k ** 0.7)) * np.sin(2 * np.pi * k * f * t)
+    body = fft_band(np.random.default_rng(int(f * 7)).standard_normal(n), 90, 420) * np.exp(-t / 0.03) * 0.25
+    return vel * (x + body) * np.clip(t / 0.002, 0, 1)
+
+
+# 2) 오케스트라 현악기·관악기: 전투와 웅장한 연출
+
+def _section(f, n, voices, cutoff, vib_depth):
+    """현악 합주: 여러 연주자의 음정·떨림이 조금씩 어긋나 합주로 들린다."""
+    x = np.zeros(n)
+    for i in range(voices):
+        dc = (i - (voices - 1) / 2) * 7.0
+        x += additive(f, n, "saw", cutoff, dc, vib=(5.2 + 0.25 * i, vib_depth, 0.15 + 0.03 * i), max_h=28)
+    return x / voices
+
+
+def inst_strings(f, dur, vel):
+    n = int((dur + 0.5) * SR)
+    x = _section(f, n, 3, 2600.0, 0.005)
+    return vel * x * adsr(n, 0.22, 1.2, 0.9, 0.45, note_len=int(dur * SR))
+
+
+def inst_violins(f, dur, vel):
+    """선율용 바이올린군: 더 밝고 떨림이 깊다."""
+    n = int((dur + 0.4) * SR)
+    x = _section(f, n, 3, 3400.0, 0.007)
+    return vel * x * adsr(n, 0.09, 0.8, 0.85, 0.3, note_len=int(dur * SR))
+
+
+def inst_cello(f, dur, vel):
+    n = int((dur + 0.45) * SR)
+    x = _section(f, n, 2, 1700.0, 0.005) + 0.3 * np.sin(2 * np.pi * f * np.arange(n) / SR)
+    return vel * x * adsr(n, 0.12, 1.0, 0.85, 0.35, note_len=int(dur * SR))
+
+
+def inst_staccato(f, dur, vel):
+    """스타카토 현: 활을 짧게 끊는다. 오스티나토용."""
+    n = int(0.3 * SR)
+    t = np.arange(n) / SR
+    x = _section(f, n, 3, 2800.0 * (0.6 + 0.4 * np.exp(-t / 0.08)), 0.0)
+    return vel * x * np.clip(t / 0.006, 0, 1) * np.exp(-t / 0.07)
+
+
+def inst_horn(f, dur, vel):
+    """호른: 어둡고 둥근 브라스. 부풀듯 들어온다."""
+    n = int((dur + 0.3) * SR)
+    t = np.arange(n) / SR
+    cutoff = 650 + 700 * np.clip(t / 0.12, 0, 1)
+    x = (additive(f, n, "saw", cutoff, -4, vib=(4.8, 0.003, 0.3)) + additive(f, n, "saw", cutoff, 5)) / 2 + \
+        0.35 * np.sin(2 * np.pi * f * t)
+    return vel * x * adsr(n, 0.06, 0.6, 0.85, 0.2, note_len=int(dur * SR))
+
+
+def inst_timpani(f, dur, vel):
+    n = int(1.6 * SR)
+    t = np.arange(n) / SR
+    x = np.sin(2 * np.pi * f * t) * np.exp(-t / 0.7) + 0.5 * np.sin(2 * np.pi * f * 1.5 * t) * np.exp(-t / 0.4) + \
+        0.25 * np.sin(2 * np.pi * f * 1.99 * t) * np.exp(-t / 0.3)
+    thud = fft_band(np.random.default_rng(3).standard_normal(n), 60, 900) * np.exp(-t / 0.03) * 0.6
+    return vel * (x + thud) * np.clip(t / 0.002, 0, 1)
+
+
+# 3) 전자 악기·가상 악기
+
+def inst_supersaw(f, dur, vel):
+    """슈퍼소 패드: 톱니 다섯 겹을 넓게 어긋나게, 느리게 열린다."""
+    n = int((dur + 0.8) * SR)
+    t = np.arange(n) / SR
+    cutoff = 700 + 1800 * np.clip(t / max(dur, 0.5), 0, 1)
+    x = sum(additive(f, n, "saw", cutoff, dc, max_h=24) for dc in (-22.0, -11.0, 0.0, 11.0, 22.0)) / 5.0
+    return vel * x * adsr(n, 0.5, 1.0, 0.9, 0.7, note_len=int(dur * SR))
+
+
+def inst_pulse_bass(f, dur, vel):
+    n = int((dur + 0.05) * SR)
+    t = np.arange(n) / SR
+    x = 0.7 * additive(f, n, "saw", 250 + 1400 * np.exp(-t / 0.04)) + 0.5 * np.sin(2 * np.pi * f * t)
+    return vel * x * adsr(n, 0.002, 0.08, 0.6, 0.03, note_len=int(dur * SR))
+
+
+def inst_growl(f, dur, vel):
+    """최종 보스용 신스 베이스: 필터가 박자마다 열렸다 닫히며 으르렁거린다."""
+    n = int((dur + 0.08) * SR)
+    t = np.arange(n) / SR
+    wobble = 0.5 + 0.5 * np.sin(2 * np.pi * 4.0 * t - np.pi / 2)
+    x = additive(f, n, "saw", 220 + 1300 * wobble) + additive(f, n, "square", 300 + 900 * wobble, 6) * 0.6 + \
+        0.6 * np.sin(2 * np.pi * f * t)
+    return vel * np.tanh(1.6 * x) * adsr(n, 0.004, 0.2, 0.8, 0.05, note_len=int(dur * SR))
+
+
+def inst_sine_arp(f, dur, vel):
+    n = int(0.45 * SR)
+    t = np.arange(n) / SR
+    x = np.sin(2 * np.pi * f * t) + 0.3 * np.sin(2 * np.pi * 2 * f * t) * np.exp(-t / 0.05)
+    return vel * x * np.exp(-t / 0.16) * np.clip(t / 0.002, 0, 1)
+
+
+def inst_riser(f, dur, vel):
+    """구간 전환 직전의 상승음: 잡음 대역이 점점 올라가며 커진다. (f 는 쓰지 않는다)"""
+    n = int(dur * SR)
+    rng = np.random.default_rng(5)
+    chunks = 16
+    out = np.zeros(n)
+    step = n // chunks
+    for c in range(chunks):
+        a, b = c * step, (c + 1) * step if c < chunks - 1 else n
+        lo = 300 + 5000 * (c / chunks) ** 1.5
+        seg = fft_band(rng.standard_normal(b - a), lo, lo * 3)
+        out[a:b] = seg * (0.15 + 0.85 * (c / chunks) ** 2)
+    ramp = np.linspace(0, 1, n) ** 2
+    return vel * out * ramp
+
+
 INSTRUMENTS = {
+    "piano": inst_piano, "harp": inst_harp, "guitar": inst_guitar, "strings": inst_strings,
+    "violins": inst_violins, "cello": inst_cello, "staccato": inst_staccato, "horn": inst_horn,
+    "timpani": inst_timpani, "supersaw": inst_supersaw, "pulse_bass": inst_pulse_bass,
+    "growl": inst_growl, "sine_arp": inst_sine_arp, "riser": inst_riser,
     "steelpan": inst_steelpan, "arp": inst_arp, "square_lead": inst_square_lead, "choir": inst_choir,
     "low_brass": inst_low_brass,
     "ep": inst_ep, "brass": inst_brass, "lead": inst_lead, "bass_funk": inst_bass_funk,
@@ -257,6 +416,11 @@ def make_drums(seed, soft):
         d[name] = np.sin(2 * np.pi * np.cumsum(fr) / SR) * np.exp(-t / dec) +             0.2 * fft_band(rng.standard_normal(len(t)), 800, 5000) * np.exp(-t / 0.01)
     t = np.arange(int(0.12 * SR)) / SR
     d["rim"] = (np.sin(2 * np.pi * 1700 * t) * 0.5 + fft_band(rng.standard_normal(len(t)), 2000, 8000)) * np.exp(-t / 0.018)
+    # 타이코(#537): 자기 난수를 써서 위의 기존 드럼(과 기존 곡)을 바꾸지 않는다.
+    t = np.arange(int(1.2 * SR)) / SR
+    ft = 58 * (1 + 0.8 * np.exp(-t / 0.03))
+    d["taiko"] = np.sin(2 * np.pi * np.cumsum(ft) / SR) * np.exp(-t / 0.45) + \
+        0.35 * fft_band(np.random.default_rng(58).standard_normal(len(t)), 80, 1500) * np.exp(-t / 0.05)
     return {k: v / (np.max(np.abs(v)) + 1e-9) for k, v in d.items()}
 
 
@@ -327,6 +491,7 @@ class Song:
         self.rng = np.random.default_rng(seed)
         self.swing = swing
         self.buses = {}
+        self.cache = None   # 하이브리드 곡만 켠다(기존 곡은 합성 순서가 바뀌면 바이트가 달라진다)
 
     def bus(self, name):
         if name not in self.buses:
@@ -343,7 +508,15 @@ class Song:
 
     def note(self, bus, inst, bar, beat, beats, midi, vel=0.8, pan=0.0):
         v = vel * (1.0 + self.rng.normal(0, 0.06))
-        x = INSTRUMENTS[inst](mtof(midi), beats * self.beat, v)
+        if self.cache is not None:
+            # 악기는 세기에 선형이다: 같은 (악기, 음, 길이)는 한 번만 합성하고 세기만 곱한다.
+            # 오래 끄는 현악·패드 화음이 반복돼 합성 시간이 몇 배로 준다.
+            key = (inst, midi, round(beats * self.beat, 4))
+            if key not in self.cache:
+                self.cache[key] = INSTRUMENTS[inst](mtof(midi), beats * self.beat, 1.0)
+            x = self.cache[key] * v
+        else:
+            x = INSTRUMENTS[inst](mtof(midi), beats * self.beat, v)
         self.bus(bus).add(x, self.when(bar, beat), pan)
 
     def hit(self, drums, name, bar, beat, vel=0.8, pan=0.0):
@@ -805,6 +978,261 @@ def compose_defeat():
     return s, master
 
 
+# ------------------------------------------------------------------ hybrid orchestration (#537)
+# 세 층을 겹친다: ① 건반·발현악기(피아노·하프·기타)가 뼈대와 감정, ② 오케스트라(현·호른·
+# 트럼펫·팀파니·타이코·합창)가 크기와 긴장, ③ 전자 악기(슈퍼소·펄스 베이스·아르페·라이저)가
+# 추진력과 공간. 구간이 지날수록 층을 하나씩 더한다.
+
+def _broken_chord(s, bus, inst, bar, root, voice, vel, pan=-0.2, eighths=8):
+    """왼손 분산화음: 근음 → 5도 → 화음 음들을 8분으로."""
+    seq = [root, root + 7] + [m - 12 if m - 12 > root + 7 else m for m in voice]
+    for k in range(eighths):
+        s.note(bus, inst, bar, k * 0.5, 0.5 if k < eighths - 1 else 1.0, seq[k % len(seq)], vel * (1.0 if k % 4 == 0 else 0.8), pan)
+
+
+def compose_hearth():
+    """"Hearthlight" — 스토리 화면. D장조 80BPM, 24마디.
+    A(1~8): 피아노 선율 + 기타 분산화음 + 하프 — 이야기의 뼈대.
+    A'(9~16): 바이올린군이 선율을 받고 첼로가 대선율, 피아노는 분산화음으로 내려간다. 슈퍼소 패드가 깔린다.
+    B(17~24): 호른과 바이올린이 한 옥타브 위에서 노래하고, 팀파니·서브 베이스·사인 아르페가 크기를 더한다."""
+    s = Song("story_theme", bpm=80, bars=24, seed=541, tail=5.0)
+    s.cache = {}
+    drums = make_drums(s.seed + 1, soft=True)
+    # (보이싱, 베이스 근음)
+    A = [([62, 66, 69], 38), ([61, 64, 69], 37), ([62, 66, 71], 35), ([62, 67, 71], 43),
+         ([62, 66, 69], 42), ([62, 67, 71], 43), ([62, 67, 71], 40), ([61, 64, 69], 45)]   # D A/C# Bm G D/F# G Em7 A
+    B = [([62, 67, 71], 43), ([61, 64, 69], 45), ([61, 66, 69], 42), ([62, 66, 71], 35),
+         ([62, 67, 71], 43), ([61, 64, 69], 45), ([62, 66, 71], 35), ([61, 64, 67], 45)]   # G A F#m Bm G A Bm A7
+    prog = A + A + B
+    melody_a = [
+        (0, 0, 1, 74), (0, 1, 1, 76), (0, 2, 2, 78),
+        (1, 0, 1.5, 76), (1, 1.5, .5, 73), (1, 2, 2, 69),
+        (2, 0, 1, 71), (2, 1, 1, 73), (2, 2, 1, 74), (2, 3, 1, 78),
+        (3, 0, 3, 76), (3, 3, 1, 74),
+        (4, 0, 1, 74), (4, 1, 1, 76), (4, 2, 1, 78), (4, 3, 1, 81),
+        (5, 0, 2, 83), (5, 2, 1, 81), (5, 3, 1, 79),
+        (6, 0, 1, 78), (6, 1, 1, 76), (6, 2, 1, 74), (6, 3, 1, 73),
+        (7, 0, 4, 76),
+    ]
+    melody_b = [
+        (0, 0, 2, 79), (0, 2, 1, 81), (0, 3, 1, 83),
+        (1, 0, 2, 85), (1, 2, 1, 83), (1, 3, 1, 81),
+        (2, 0, 1.5, 81), (2, 1.5, .5, 78), (2, 2, 1, 76), (2, 3, 1, 78),
+        (3, 0, 3, 74), (3, 3, 1, 78),
+        (4, 0, 2, 79), (4, 2, 1, 83), (4, 3, 1, 86),
+        (5, 0, 2, 85), (5, 2, 2, 81),
+        (6, 0, 1, 83), (6, 1, 1, 81), (6, 2, 1, 78), (6, 3, 1, 76),
+        (7, 0, 2, 76), (7, 2, 1, 73), (7, 3, 1, 76),
+    ]
+    counter = [(0, 0, 4, 57), (1, 0, 4, 57), (2, 0, 2, 59), (2, 2, 2, 61), (3, 0, 4, 59),
+               (4, 0, 4, 57), (5, 0, 2, 59), (5, 2, 2, 62), (6, 0, 4, 55), (7, 0, 2, 57), (7, 2, 2, 61)]
+    for bar, (voice, root) in enumerate(prog):
+        sec = bar // 8   # 0 = A, 1 = A', 2 = B
+        # ① 건반·발현악기
+        if sec == 0:
+            for k in range(8):
+                seq = [root + 12, voice[0], voice[1], voice[2], voice[1] + 12, voice[2], voice[1], voice[0]]
+                s.note("keys", "guitar", bar, k * 0.5, 0.5, seq[k], 0.13, -0.3)
+            s.note("keys", "harp", bar, 3.5, 0.5, voice[2] + 12, 0.06, 0.4)
+        else:
+            _broken_chord(s, "keys", "piano", bar, root, voice, 0.12, -0.15)
+        if sec == 1:
+            for k in range(8):
+                s.note("keys", "harp", bar, 2 + k * 0.25, 0.25, (voice + [m + 12 for m in voice])[k % 6] + 12, 0.05, 0.45)
+        # ② 오케스트라
+        if sec >= 1:
+            for m in voice:
+                s.note("orch", "strings", bar, 0, 4, m, 0.07 if sec == 1 else 0.09, -0.3 + 0.3 * voice.index(m))
+            s.note("orch", "cello", bar, 0, 4, root if root > 40 else root + 12, 0.1, 0.2)
+        if sec == 2:
+            s.note("orch", "timpani", bar, 0, 1, root if root > 40 else root + 12, 0.28, 0.0)
+            if bar % 2 == 1:
+                s.note("orch", "timpani", bar, 3, 0.5, root + 7 if root + 7 < 50 else root - 5, 0.15, 0.0)
+        # ③ 전자
+        if sec >= 1:
+            for m in voice:
+                s.note("synth", "supersaw", bar, 0, 4, m - 12, 0.025)
+        if sec == 2:
+            s.note("synth", "pulse_bass", bar, 0, 3.5, root - 12 if root > 40 else root, 0.25)
+            for k in range(16):
+                s.note("synth", "sine_arp", bar, k * 0.25, 0.25, (voice + [voice[0] + 12])[[0, 1, 2, 3, 2, 1, 2, 3][k % 8]] + 12, 0.035, 0.5 if k % 2 else -0.5)
+            s.hit(drums, "taiko", bar, 0, 0.25, 0.0)
+            s.hit(drums, "taiko", bar, 2.5, 0.12, 0.0)
+    s.note("fx", "riser", 15, 0, 4, 60, 0.05)
+    play_line(s, "lead", "piano", 0, melody_a, 0.24, 0.1)
+    play_line(s, "lead", "violins", 8, melody_a, 0.1, 0.1)
+    play_line(s, "orch", "cello", 8, counter, 0.09, 0.25)
+    play_line(s, "lead", "horn", 16, melody_b, 0.12, -0.15)
+    play_line(s, "lead", "violins", 16, melody_b, 0.09, 0.2, transpose=0)
+    play_line(s, "lead", "piano", 16, melody_b, 0.1, 0.1, transpose=12)
+    master = mix(s, None, {"keys": 1.3, "orch": 1.1, "synth": 0.9, "lead": 1.25, "drums": 0.8, "fx": 0.7},
+                 {"keys": 0.35, "orch": 0.45, "synth": 0.4, "lead": 0.4, "drums": 0.2, "fx": 0.4}, room=2.6, lead_echo=0)
+    return s, master
+
+
+def compose_rally():
+    """"Rally of the Stone Tribes" — 스테이지 선택·편성. E단조 116BPM, 32마디.
+    스타카토 현과 피아노 옥타브가 8분 오스티나토로 달리고, 호른이 주제를, B 에서 트럼펫·바이올린이 이어받는다.
+    16분 펄스 베이스(사이드체인)와 아르페가 전자 층, 타이코·팀파니가 행군을 민다."""
+    s = Song("sortie_theme", bpm=116, bars=32, seed=542, tail=4.0)
+    s.cache = {}
+    drums = make_drums(s.seed + 1, soft=False)
+    A = [([64, 67, 71], 40), ([60, 64, 67], 36), ([62, 67, 71], 43), ([62, 66, 69], 38),
+         ([64, 67, 71], 40), ([60, 64, 67], 36), ([60, 64, 69], 45), ([63, 66, 71], 47)]   # Em C G D Em C Am B
+    B = [([60, 64, 67], 36), ([62, 66, 69], 38), ([64, 67, 71], 40), ([64, 67, 71], 40),
+         ([60, 64, 67], 36), ([62, 66, 69], 38), ([63, 66, 71], 47), ([63, 66, 71], 47)]   # C D Em Em C D B B
+    prog = A + A + B + B
+    theme = [
+        (0, 0, 1.5, 64), (0, 1.5, .5, 67), (0, 2, 2, 71),
+        (1, 0, 1.5, 72), (1, 1.5, .5, 71), (1, 2, 2, 67),
+        (2, 0, 1, 67), (2, 1, 1, 71), (2, 2, 1.5, 74), (2, 3.5, .5, 72),
+        (3, 0, 2, 71), (3, 2, 2, 69),
+        (4, 0, 1.5, 64), (4, 1.5, .5, 67), (4, 2, 1, 71), (4, 3, 1, 76),
+        (5, 0, 1.5, 76), (5, 1.5, .5, 74), (5, 2, 2, 72),
+        (6, 0, 1, 72), (6, 1, 1, 71), (6, 2, 1, 69), (6, 3, 1, 72),
+        (7, 0, 4, 71),
+    ]
+    high = [
+        (0, 0, 2, 76), (0, 2, 2, 79), (1, 0, 2, 78), (1, 2, 2, 74), (2, 0, 1, 79), (2, 1, 1, 78), (2, 2, 2, 76), (3, 0, 4, 71),
+        (4, 0, 2, 76), (4, 2, 1, 79), (4, 3, 1, 81), (5, 0, 2, 83), (5, 2, 2, 78), (6, 0, 1, 78), (6, 1, 1, 75), (6, 2, 1, 71), (6, 3, 1, 75),
+        (7, 0, 4, 78),
+    ]
+    for bar, (voice, root) in enumerate(prog):
+        sec = bar // 8
+        # ① 피아노 옥타브 오스티나토 + 하프 꾸밈
+        for k in range(8):
+            m = root + 12 if k % 2 == 0 else root + 24
+            s.note("keys", "piano", bar, k * 0.5, 0.5, m, 0.09 if sec == 0 else 0.07, -0.25)
+        if sec in (1, 3):
+            for k in range(4):
+                s.note("keys", "harp", bar, 3 + k * 0.25, 0.25, voice[k % 3] + 24, 0.05, 0.45)
+        # ② 스타카토 현 8분(1마디 두 번 강세), 첼로 근음, 팀파니
+        for k in range(8):
+            for m in voice[:2]:
+                s.note("orch", "staccato", bar, k * 0.5, 0.25, m, 0.1 if k % 4 == 0 else 0.07, 0.3 - 0.3 * voice.index(m))
+        s.note("orch", "cello", bar, 0, 3.5, root if root > 38 else root + 12, 0.08, 0.1)
+        if sec >= 2:
+            for m in voice:
+                s.note("orch", "strings", bar, 0, 4, m + 12, 0.05, -0.2)
+        if bar % 4 == 3:
+            s.note("orch", "timpani", bar, 3, 0.25, root if root > 40 else root + 12, 0.2)
+            s.note("orch", "timpani", bar, 3.5, 0.5, root if root > 40 else root + 12, 0.28)
+        # ③ 16분 펄스 베이스 + 아르페(뒤 두 구간)
+        for k in range(16):
+            s.note("synth", "pulse_bass", bar, k * 0.25, 0.22, root - 12 if root > 40 else root, 0.14 if k % 4 == 0 else 0.09)
+        if sec >= 1:
+            for k in range(8):
+                s.note("synth", "arp", bar, k * 0.5 + 0.25, 0.25, (voice + [voice[0] + 12])[k % 4] + 12, 0.05, 0.5 if k % 2 else -0.5)
+        if sec == 3:
+            for m in voice:
+                s.note("synth", "supersaw", bar, 0, 4, m, 0.022)
+        # 타악: 타이코 행군, 스네어 대신 탐
+        s.hit(drums, "taiko", bar, 0, 0.3)
+        s.hit(drums, "taiko", bar, 1.5, 0.16)
+        s.hit(drums, "taiko", bar, 2, 0.22)
+        s.hit(drums, "tom_hi", bar, 1, 0.22, 0.2)
+        s.hit(drums, "tom_hi", bar, 3, 0.22, 0.2)
+        for k in range(8):
+            s.hit(drums, "shaker", bar, k * 0.5, 0.12, 0.35)
+        if bar % 8 == 0:
+            s.hit(drums, "crash", bar, 0, 0.18, -0.3)
+    s.note("fx", "riser", 15, 0, 4, 60, 0.06)
+    s.note("fx", "riser", 31, 0, 4, 60, 0.05)
+    play_line(s, "lead", "horn", 0, theme, 0.15, 0.05)
+    play_line(s, "lead", "horn", 8, theme, 0.14, 0.05)
+    play_line(s, "lead", "violins", 8, theme, 0.06, -0.25, transpose=12)
+    play_line(s, "lead", "brass", 16, high, 0.1, 0.1)
+    play_line(s, "lead", "violins", 16, high, 0.08, -0.2)
+    play_line(s, "lead", "violins", 24, high, 0.1, -0.2)
+    play_line(s, "lead", "horn", 24, high, 0.1, 0.15, transpose=-12)
+    master = mix(s, [(bar, b) for bar in range(32) for b in (0, 2)],
+                 {"keys": 1.4, "orch": 1.5, "synth": 0.6, "lead": 1.7, "drums": 0.8, "fx": 0.7},
+                 {"keys": 0.3, "orch": 0.35, "synth": 0.25, "lead": 0.35, "drums": 0.15, "fx": 0.4}, room=2.2, lead_echo=0)
+    return s, master
+
+
+def compose_colossus():
+    """"Colossus of the Sky" — 3챕터(하늘) 보스. C단조 132BPM, 32마디.
+    저현 16분 오스티나토와 피아노 스탭이 뼈대, 브라스·합창·팀파니·타이코가 크기, 으르렁대는 신스 베이스와
+    슈퍼소·아르페·라이저가 전자 층. 뒤 절반에서 합창이 주제를 한 옥타브 위로 외친다."""
+    s = Song("battle_final", bpm=132, bars=32, seed=543, tail=4.0)
+    s.cache = {}
+    drums = make_drums(s.seed + 1, soft=False)
+    A = [([60, 63, 67], 36), ([60, 63, 68], 44), ([58, 63, 67], 39), ([58, 62, 65], 46),
+         ([60, 63, 67], 36), ([60, 63, 68], 44), ([60, 65, 68], 41), ([59, 62, 67], 43)]   # Cm Ab Eb Bb Cm Ab Fm G
+    B = [([60, 63, 68], 44), ([58, 62, 65], 46), ([58, 62, 67], 43), ([60, 63, 67], 36),
+         ([60, 63, 68], 44), ([58, 62, 65], 46), ([59, 62, 67], 43), ([59, 62, 65], 43)]   # Ab Bb Gm Cm Ab Bb G G7
+    prog = A + A + B + B
+    theme = [
+        (0, 0, 1, 72), (0, 1, 1, 75), (0, 2, 1.5, 79), (0, 3.5, .5, 77),
+        (1, 0, 2, 75), (1, 2, 2, 72),
+        (2, 0, 1, 70), (2, 1, 1, 75), (2, 2, 1, 79), (2, 3, 1, 82),
+        (3, 0, 2, 77), (3, 2, 2, 74),
+        (4, 0, 1, 72), (4, 1, 1, 75), (4, 2, 1.5, 79), (4, 3.5, .5, 84),
+        (5, 0, 2, 84), (5, 2, 2, 80),
+        (6, 0, 1, 80), (6, 1, 1, 79), (6, 2, 1, 77), (6, 3, 1, 75),
+        (7, 0, 2, 74), (7, 2, 1, 71), (7, 3, 1, 74),
+    ]
+    shout = [
+        (0, 0, 2, 84), (0, 2, 2, 87), (1, 0, 3, 86), (1, 3, 1, 82), (2, 0, 2, 82), (2, 2, 2, 79), (3, 0, 4, 84),
+        (4, 0, 2, 84), (4, 2, 1, 87), (4, 3, 1, 89), (5, 0, 2, 91), (5, 2, 2, 86), (6, 0, 1, 86), (6, 1, 1, 83), (6, 2, 1, 79), (6, 3, 1, 83),
+        (7, 0, 4, 86),
+    ]
+    for bar, (voice, root) in enumerate(prog):
+        sec = bar // 8
+        low = root if root < 44 else root - 12
+        # ① 피아노 스탭(엇박) — 뼈대
+        for beat in (0, 0.75, 1.5, 3.0):
+            for m in voice:
+                s.note("keys", "piano", bar, beat, 0.25, m, 0.07, -0.2 + 0.2 * voice.index(m))
+        # ② 저현 16분 오스티나토, 브라스 스탭, 합창, 팀파니
+        for k in range(16):
+            s.note("orch", "staccato", bar, k * 0.25, 0.2, low + (12 if k % 4 == 2 else 0) + 12, 0.08 if k % 4 == 0 else 0.055, 0.15)
+        chord_hits(s, "orch", "low_brass", bar, [(0, 0.5), (2.5, 0.5)] if bar % 2 == 0 else [(0, 0.5), (1.5, 0.25), (3.5, 0.5)], voice, 0.07, 0.35)
+        for m in voice:
+            s.note("orch", "choir", bar, 0, 4, m + 12, 0.035 if sec < 2 else 0.05)
+        s.note("orch", "timpani", bar, 0, 1, low + 12 if low < 40 else low, 0.2)
+        if bar % 2 == 1:
+            for k, beat in enumerate((3.0, 3.25, 3.5, 3.75)):
+                s.note("orch", "timpani", bar, beat, 0.25, (low + 12 if low < 40 else low) + (7 if k % 2 else 0), 0.14 + 0.03 * k)
+        # ③ 신스 베이스(8분, 으르렁), 슈퍼소, 아르페
+        for k in range(8):
+            s.note("synth", "growl", bar, k * 0.5, 0.45, low, 0.1 if k % 2 == 0 else 0.07)
+        if sec >= 1:
+            for k in range(16):
+                s.note("synth", "arp", bar, k * 0.25, 0.25, (voice + [voice[0] + 12])[[0, 2, 1, 3, 2, 1, 3, 0][k % 8]] + 24, 0.035, 0.5 if k % 2 else -0.5)
+        if sec >= 2:
+            for m in voice:
+                s.note("synth", "supersaw", bar, 0, 4, m, 0.02)
+        # 타악: 타이코 + 킥, 스네어 백비트
+        s.hit(drums, "taiko", bar, 0, 0.32)
+        s.hit(drums, "taiko", bar, 2, 0.24)
+        if bar % 2 == 1:
+            s.hit(drums, "taiko", bar, 3.5, 0.18)
+        for beat in (0, 1.5, 2, 3.25):
+            s.hit(drums, "kick", bar, beat, 0.18)
+        for beat in (1, 3):
+            s.hit(drums, "snare", bar, beat, 0.4, 0.05)
+        for k in range(8):
+            s.hit(drums, "hat", bar, k * 0.5 + 0.25, 0.1, 0.3)
+        if bar % 8 == 0:
+            s.hit(drums, "crash", bar, 0, 0.3, 0.4)
+    for b in (7, 15, 23, 31):
+        s.note("fx", "riser", b, 0, 4, 60, 0.05 if b != 15 else 0.08)
+    play_line(s, "lead", "horn", 0, theme, 0.15, 0.0)
+    play_line(s, "lead", "horn", 8, theme, 0.14, 0.0)
+    play_line(s, "lead", "violins", 8, theme, 0.08, 0.25, transpose=12)
+    play_line(s, "lead", "choir", 16, shout, 0.1, 0.0)
+    play_line(s, "lead", "brass", 16, shout, 0.1, -0.2, transpose=-12)
+    play_line(s, "lead", "choir", 24, shout, 0.11, 0.0)
+    play_line(s, "lead", "violins", 24, shout, 0.08, 0.25)
+    play_line(s, "lead", "brass", 24, shout, 0.11, -0.2, transpose=-12)
+    master = mix(s, [(bar, b) for bar in range(32) for b in (0, 2)],
+                 {"keys": 1.4, "orch": 1.5, "synth": 0.6, "lead": 1.8, "drums": 0.8, "fx": 0.7},
+                 {"keys": 0.25, "orch": 0.35, "synth": 0.25, "lead": 0.35, "drums": 0.12, "fx": 0.4}, room=2.2, lead_echo=0)
+    return s, master
+
+
 # ------------------------------------------------------------------ master
 
 def mix(s, sidechain_kicks, levels, reverb, room, lead_echo, loop_wrap=True):
@@ -822,7 +1250,7 @@ def mix(s, sidechain_kicks, levels, reverb, room, lead_echo, loop_wrap=True):
         x = bus.stereo() * levels.get(name, 0.8)
         if name == "lead" and lead_echo:
             x = echo(x, lead_echo, 0.28, 3)
-        if name in ("keys", "pad", "brass"):
+        if name in ("keys", "pad", "brass", "synth"):
             x = x * duck
         out += x
         send += x * reverb.get(name, 0.0)
@@ -889,6 +1317,10 @@ TRACKS = {
     "boss": (compose_boss, -16.5),
     "victory": (compose_victory, -17.0),
     "defeat": (compose_defeat, -19.0),
+    # 하이브리드 오케스트레이션 (#537)
+    "hearth": (compose_hearth, -20.0),
+    "rally": (compose_rally, -18.5),
+    "colossus": (compose_colossus, -16.5),
 }
 
 
