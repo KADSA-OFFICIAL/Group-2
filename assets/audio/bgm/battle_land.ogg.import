@@ -14,6 +14,6 @@ dest_files=["res://.godot/imported/battle_land.ogg-5d820ce73ef71e5c89ed69fdf2a7f
 
 loop=true
 loop_offset=0
-bpm=120
+bpm=140
 beat_count=0
 bar_beats=4
