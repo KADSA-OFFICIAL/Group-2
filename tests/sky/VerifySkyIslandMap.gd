@@ -5,16 +5,28 @@ extends Node
 
 const SKY_MAP := preload("res://stage/sky/SkyIslandMap.tscn")
 
-# 유닛이 놓이는 자리(맵 로컬 좌표). Stage.spawn_party 는 세계 (100, 100+i*40),
-# stage_1_1.tres 의 적은 (600~680, 230~320) 이고, 맵이 스테이지 안에서 (-240,-240)
-# 에 놓이므로 맵 로컬은 각각 +240 이다.
-#
 # 이 자리들이 섬으로 덮여 있지 않으면 **전투가 허공에서 시작된다.** 하늘 맵에만
 # 있는 위험이라 여기서 검사한다(초원·해변은 바닥이 맵 전체다).
-const SPAWN_POINTS := [
-	Vector2(340, 340), Vector2(340, 380), Vector2(340, 420),  # 파티 3인
-	Vector2(840, 470), Vector2(840, 560), Vector2(920, 560),  # 적
+#
+# 파티 자리는 **Stage 에서 가져온다**(#448) — 예전에는 좌표를 베껴 적었고, 스폰이
+# 바뀌면 이 파일이 조용히 낡았다. 맵이 스테이지 안에서 StageMaps.MAP_OFFSET 에
+# 놓이므로 맵 로컬로 바꾸려면 그 값을 뺀다.
+const PARTY_COUNT := 3
+
+# 적 자리는 stage_1_1.tres 의 저작값을 옮겨 적은 것이다(맵 로컬).
+const ENEMY_POINTS := [
+	Vector2(840, 470), Vector2(840, 560), Vector2(920, 560),
 ]
+
+
+# 검사할 자리 전부(맵 로컬).
+static func spawn_points() -> Array[Vector2]:
+	var points: Array[Vector2] = []
+	for i in PARTY_COUNT:
+		points.append(Stage.get_party_spawn_position(i) - StageMaps.MAP_OFFSET)
+	for p in ENEMY_POINTS:
+		points.append(p)
+	return points
 
 var _failures: Array[String] = []
 
@@ -62,7 +74,7 @@ func _ready() -> void:
 			"clouds must draw above the void but below the islands")
 
 	# **전투가 허공에서 시작되지 않아야 한다.** 스폰 자리가 모두 섬 위여야 한다.
-	for point in SPAWN_POINTS:
+	for point in spawn_points():
 		var cell := Vector2i(int(point.x) / 24, int(point.y) / 24)
 		_expect(islands.get_cell_source_id(cell) != -1,
 			"spawn point %s (cell %s) must be on an island, not in the void" % [point, cell])
@@ -134,7 +146,7 @@ func _ready() -> void:
 
 	# 허공은 막히고, 섬 안쪽과 스폰 자리는 막히지 않아야 한다.
 	# 스폰 자리가 막히면 유닛이 첫 프레임부터 충돌 안에 끼어 밀려난다 -- 가장 위험한 실패다.
-	for point in SPAWN_POINTS:
+	for point in spawn_points():
 		_expect(not _is_blocked(map, point),
 			"spawn point %s must not be blocked by void collision" % point)
 
