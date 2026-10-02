@@ -188,6 +188,13 @@ var _cutin_skill: Label = null
 
 ## 연출을 재생 중인가. 재생 중에는 다음 턴으로 넘어가지 않는다.
 var _playing: bool = false
+## 진행 루프의 세대 (#542). 재시작할 때 올린다.
+##
+## 진행 루프(`_play()`)는 `await` 로 연출을 기다리는 코루틴이라, 재시작해도 옛 루프가
+## 살아서 옛 연출 큐를 계속 재생했다. 그동안 `_playing` 이 true 로 남아 **새 전투를 아무도
+## 진행하지 않았고**, 옛 전투의 승패 신호가 새 전투 위로 날아갈 수도 있었다.
+## 루프는 `await` 에서 깨어날 때마다 세대를 확인하고, 바뀌었으면 조용히 빠진다.
+var _play_gen: int = 0
 ## 일시정지 중인가. 진행 루프와 연출 재생이 여기서 멈춘다.
 ##
 ## `get_tree().paused` 를 쓰지 않는 이유: 그쪽은 트리 전체를 멈춰서 HUD 의 `_process`
@@ -322,6 +329,20 @@ func _restart() -> void:
 	var stale := _flash_layer.get_node_or_null("ResultSummary")
 	if stale != null:
 		stale.queue_free()
+
+	# 돌고 있던 진행 루프를 끊는다. 옛 루프는 다음 `await` 에서 깨어나 세대를 보고 빠진다.
+	_play_gen += 1
+	_playing = false
+	_striker = null
+	# 옛 연출이 남긴 화면 상태를 되돌린다 — 히트스톱·슬로모션, 컷인, 숨긴 HUD, 배너.
+	_restore_time_scale()
+	if _cutin != null:
+		_cutin.visible = false
+		_cutin.modulate.a = 1.0
+	if hud != null:
+		hud.modulate.a = 1.0
+	if _banner != null:
+		_banner.modulate.a = 0.0
 
 	battle = TurnBattleManager.new()
 	_outcome_reported = false
@@ -592,6 +613,9 @@ func _start_battle() -> void:
 		use_seed = int(Time.get_unix_time_from_system())
 
 	# 첫 웨이브로 시작하고 나머지는 전투에 맡긴다. 아군 상태는 웨이브 사이에 이어진다.
+	# **한 턴씩 진행한다 (#542)** — 진행 루프가 그 턴의 연출을 다 재생한 뒤 다음 턴을 부른다.
+	# 이게 없으면 자동 전투에서 로직이 전투 전체를 한 번에 끝내고 HUD 만 앞서 간다.
+	battle.step_by_turn = true
 	battle.pending_waves = waves.slice(1)
 	battle.on_wave_started = _on_wave_started
 	battle.start(party, waves[0], ambush, use_seed)
@@ -699,95 +723,122 @@ func _wave_has_boss() -> bool:
 # 생성 프롬프트: docs/turn-battle-sprite-prompts.md
 func _build_shapes() -> void:
 	for unit in battle.units:
-		var shape := Node2D.new()
-		shape.z_index = 10
-
-		_anim_token[unit.unit_id] = 0
-		var box := ALLY_BODY if unit.is_ally() else ENEMY_BODY
-		var frames := _battle_frames_of(unit)
-		var art := _battle_sprite_of(unit)
-		if frames != null:
-			# 프레임 시트가 있으면 그쪽이 외형을 맡는다. `AnimatedSprite2D` 는 Node2D 라
-			# 중심 기준이므로, `TextureRect`(좌상단 기준)와 같은 자리에 서게 오프셋을 준다.
-			var anim := AnimatedSprite2D.new()
-			anim.sprite_frames = frames
-			anim.centered = false
-			var cell: Vector2 = BattleAnimation.cell_size(frames)
-			# 칸에 맞춰 줄인다. 늘리지 않는다 — 비율이 다르면 칸 안에서 맞춰 들어간다.
-			var scale_factor := 1.0
-			if cell.x > 0.0 and cell.y > 0.0:
-				scale_factor = minf(box.x / cell.x, box.y / cell.y)
-			anim.scale = Vector2(scale_factor, scale_factor)
-			# 발밑이 노드 원점이다. 셀 밑변이 발 기준선이므로 셀 높이만큼 위로 올린다.
-			anim.offset = Vector2(-cell.x * 0.5, -cell.y)
-			anim.animation = BattleAnimation.IDLE
-			anim.play()
-			shape.add_child(anim)
-		elif art != null:
-			# 늘리지 않는다 — 비율이 다른 그림은 칸 안에서 맞춰 들어간다.
-			var picture := TextureRect.new()
-			picture.texture = art
-			picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			picture.size = box
-			picture.position = -box * Vector2(0.5, 1.0)
-			picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			shape.add_child(picture)
-		else:
-			var body := ColorRect.new()
-			# 스프라이트가 아직 없는 유닛의 도형 색. **여기서 리터럴 hex 를 쓰지 않는다** —
-			# 색 값의 출처는 팔레트다(#489).
-			var tint := TurnCombat.COLOR_ENEMY_HP
-			if unit.is_ally() and unit.character != null:
-				tint = unit.character.tint
-			elif unit.enemy != null:
-				tint = unit.enemy.tint
-			body.color = tint
-			body.size = box
-			body.position = -box * Vector2(0.5, 1.0)
-			body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			shape.add_child(body)
-
-		# 접지 그림자 — 없으면 캐릭터가 떠 보인다 (설계서 §4.10.2).
-		# 발밑 그림자. **`ColorRect` 는 쓰지 않는다** — 단색 지면 위에서는 안 보였지만
-		# 배경이 그림으로 바뀌자(#505) 밝은 풀밭 위에 **회색 사각형 막대**로 드러났다.
-		# 타원으로 그리고 가장자리를 부드럽게 죽인다.
-		var shadow := _make_shadow()
-		shape.add_child(shadow)
-
-		# 원소 문양 — 색맹 대응으로 색과 형태를 함께 쓴다.
-		#
-		# 아이콘이 있으면 그림, 없으면 글자다(#506). 여기는 **어두운 배경 위**라
-		# 원소색을 그대로 곱한다 — HUD 의 원소색 판 위(잉크로 곱한다)와 반대다.
-		var glyph: Control = null
-		var icon_name := TurnCombat.element_icon(unit.element)
-		var icon_path := UITheme.icon_path(icon_name) if not icon_name.is_empty() else ""
-		if not icon_path.is_empty():
-			var icon_rect := TextureRect.new()
-			icon_rect.texture = load(icon_path) as Texture2D
-			icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			icon_rect.size = Vector2(GLYPH_ICON, GLYPH_ICON)
-			glyph = icon_rect
-		else:
-			var label := Label.new()
-			label.text = TurnCombat.element_glyph(unit.element)
-			label.add_theme_font_size_override("font_size", 22)
-			glyph = label
-		glyph.modulate = TurnCombat.element_color(unit.element)
-		# 정수리(-140) **바로 위**에 붙인다. 몸이 커지면 이 값도 함께 내려야 한다.
-		#
-		# 예전에는 정수리에서 34px 띄웠는데, 몸이 78 → 140 으로 커지자 그 여유가
-		# 화면 위쪽을 밀어내 **적 정보 카드가 우상단 토글과 겹쳤다.** 문양은 장식이고
-		# 원소 정보는 카드의 분절 칸이 이미 보여 주므로, 자리를 카드에 양보한다.
-		glyph.position = Vector2(-10, -162)
-		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		shape.add_child(glyph)
-
-		add_child(shape)
-		_shapes[unit.unit_id] = shape
-
+		_build_shape(unit)
 	_sync_shapes()
+
+
+# 웨이브가 바뀌었다: 지난 웨이브의 몸을 치우고 새로 들어온 적의 몸을 세운다 (#542).
+#
+# 전투(`TurnBattleManager._advance_wave()`)는 새 유닛을 만들지만 몸은 화면 몫이다.
+# 예전에는 전투 시작 때만 몸을 만들어서, 2웨이브부터 **적이 보이지 않았고**
+# 쓰러진 1웨이브 적의 그림이 그대로 서 있었다.
+#
+# 로직 콜백(`_on_wave_started`)이 아니라 웨이브 배너 연출에서 부른다 — 로직은 연출보다
+# 한 턴 앞설 수 있으므로, 지난 웨이브의 쓰러지는 연출이 끝난 뒤에 바꿔야 그림이 맞는다.
+func _sync_wave_shapes() -> void:
+	var present := {}
+	for unit in battle.units:
+		present[unit.unit_id] = true
+	for id in _shapes.keys():
+		if not present.has(id):
+			var old: Node2D = _shapes[id]
+			if old != null and is_instance_valid(old):
+				old.queue_free()
+			_shapes.erase(id)
+	for unit in battle.units:
+		if not _shapes.has(unit.unit_id):
+			_build_shape(unit)
+	_sync_shapes()
+
+
+func _build_shape(unit: TurnUnit) -> void:
+	var shape := Node2D.new()
+	shape.z_index = 10
+
+	_anim_token[unit.unit_id] = 0
+	var box := ALLY_BODY if unit.is_ally() else ENEMY_BODY
+	var frames := _battle_frames_of(unit)
+	var art := _battle_sprite_of(unit)
+	if frames != null:
+		# 프레임 시트가 있으면 그쪽이 외형을 맡는다. `AnimatedSprite2D` 는 Node2D 라
+		# 중심 기준이므로, `TextureRect`(좌상단 기준)와 같은 자리에 서게 오프셋을 준다.
+		var anim := AnimatedSprite2D.new()
+		anim.sprite_frames = frames
+		anim.centered = false
+		var cell: Vector2 = BattleAnimation.cell_size(frames)
+		# 칸에 맞춰 줄인다. 늘리지 않는다 — 비율이 다르면 칸 안에서 맞춰 들어간다.
+		var scale_factor := 1.0
+		if cell.x > 0.0 and cell.y > 0.0:
+			scale_factor = minf(box.x / cell.x, box.y / cell.y)
+		anim.scale = Vector2(scale_factor, scale_factor)
+		# 발밑이 노드 원점이다. 셀 밑변이 발 기준선이므로 셀 높이만큼 위로 올린다.
+		anim.offset = Vector2(-cell.x * 0.5, -cell.y)
+		anim.animation = BattleAnimation.IDLE
+		anim.play()
+		shape.add_child(anim)
+	elif art != null:
+		# 늘리지 않는다 — 비율이 다른 그림은 칸 안에서 맞춰 들어간다.
+		var picture := TextureRect.new()
+		picture.texture = art
+		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		picture.size = box
+		picture.position = -box * Vector2(0.5, 1.0)
+		picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shape.add_child(picture)
+	else:
+		var body := ColorRect.new()
+		# 스프라이트가 아직 없는 유닛의 도형 색. **여기서 리터럴 hex 를 쓰지 않는다** —
+		# 색 값의 출처는 팔레트다(#489).
+		var tint := TurnCombat.COLOR_ENEMY_HP
+		if unit.is_ally() and unit.character != null:
+			tint = unit.character.tint
+		elif unit.enemy != null:
+			tint = unit.enemy.tint
+		body.color = tint
+		body.size = box
+		body.position = -box * Vector2(0.5, 1.0)
+		body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shape.add_child(body)
+
+	# 접지 그림자 — 없으면 캐릭터가 떠 보인다 (설계서 §4.10.2).
+	# 발밑 그림자. **`ColorRect` 는 쓰지 않는다** — 단색 지면 위에서는 안 보였지만
+	# 배경이 그림으로 바뀌자(#505) 밝은 풀밭 위에 **회색 사각형 막대**로 드러났다.
+	# 타원으로 그리고 가장자리를 부드럽게 죽인다.
+	var shadow := _make_shadow()
+	shape.add_child(shadow)
+
+	# 원소 문양 — 색맹 대응으로 색과 형태를 함께 쓴다.
+	#
+	# 아이콘이 있으면 그림, 없으면 글자다(#506). 여기는 **어두운 배경 위**라
+	# 원소색을 그대로 곱한다 — HUD 의 원소색 판 위(잉크로 곱한다)와 반대다.
+	var glyph: Control = null
+	var icon_name := TurnCombat.element_icon(unit.element)
+	var icon_path := UITheme.icon_path(icon_name) if not icon_name.is_empty() else ""
+	if not icon_path.is_empty():
+		var icon_rect := TextureRect.new()
+		icon_rect.texture = load(icon_path) as Texture2D
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.size = Vector2(GLYPH_ICON, GLYPH_ICON)
+		glyph = icon_rect
+	else:
+		var label := Label.new()
+		label.text = TurnCombat.element_glyph(unit.element)
+		label.add_theme_font_size_override("font_size", 22)
+		glyph = label
+	glyph.modulate = TurnCombat.element_color(unit.element)
+	# 정수리(-140) **바로 위**에 붙인다. 몸이 커지면 이 값도 함께 내려야 한다.
+	#
+	# 예전에는 정수리에서 34px 띄웠는데, 몸이 78 → 140 으로 커지자 그 여유가
+	# 화면 위쪽을 밀어내 **적 정보 카드가 우상단 토글과 겹쳤다.** 문양은 장식이고
+	# 원소 정보는 카드의 분절 칸이 이미 보여 주므로, 자리를 카드에 양보한다.
+	glyph.position = Vector2(-10, -162)
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shape.add_child(glyph)
+
+	add_child(shape)
+	_shapes[unit.unit_id] = shape
 
 
 # 이 유닛의 전투 프레임 시트. 저작되지 않았으면 null (정지 스프라이트로 떨어진다).
@@ -896,10 +947,15 @@ func _play() -> void:
 	if _playing:
 		return
 	_playing = true
+	var gen := _play_gen
 
 	while true:
 		await _await_unpause()
-		await _drain_presentation()
+		if gen != _play_gen:
+			return  # 재시작됐다 — 새 전투의 루프가 따로 돈다. `_playing` 은 재시작이 이미 내렸다.
+		await _drain_presentation(gen)
+		if gen != _play_gen:
+			return
 		_sync_shapes(true)
 		hud.refresh()
 
@@ -923,13 +979,16 @@ func _play() -> void:
 # 연출 큐를 순차 재생한다.
 #
 # **배속은 여기서만 적용된다.** 로직은 배속을 모른다.
-func _drain_presentation() -> void:
+func _drain_presentation(gen: int = -1) -> void:
 	var queue := battle.presentation
 	if queue == null:
 		return
 
 	while not queue.is_empty():
 		await _await_unpause()
+		# 재시작됐으면 옛 큐를 더 재생하지 않는다(옛 유닛의 연출이 새 전투 위에 뜬다).
+		if gen >= 0 and gen != _play_gen:
+			return
 		var entry := queue.pop()
 		var event: int = entry["event"]
 		var data: Dictionary = entry["data"]
@@ -965,8 +1024,14 @@ func _drain_presentation() -> void:
 				await _play_death(data)
 
 			PresentationQueue.Event.CYCLE_START:
-				await _play_banner("%d CYCLE" % int(data.get("cycle", 1)),
-					TurnCombat.COLOR_TOUGHNESS, 0.35, 44)
+				if data.has("wave"):
+					# 웨이브 전환: 몸을 바꾸고 웨이브 배너를 띄운다 (#542).
+					_sync_wave_shapes()
+					await _play_banner("WAVE %d/%d" % [int(data["wave"]), battle.wave_total],
+						TurnCombat.COLOR_TOUGHNESS, 0.6, 56)
+				else:
+					await _play_banner("%d CYCLE" % int(data.get("cycle", 1)),
+						TurnCombat.COLOR_TOUGHNESS, 0.35, 44)
 
 			_:
 				pass
@@ -1009,6 +1074,9 @@ func _play_cast(data: Dictionary) -> void:
 	dash.tween_property(shape, "position", spot, _scaled(STRIKE_DASH_TIME)) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	await dash.finished
+	# 기다리는 사이 재시작되면 몸이 해제돼 있다(#542). 그때는 조용히 빠진다.
+	if not is_instance_valid(shape):
+		return
 
 	# 프레임 시트가 있으면 휘두르는 그림이 나오고, 없으면 파고드는 트윈만 남는다.
 	_play_unit_anim(unit, BattleAnimation.ATTACK)
@@ -1085,7 +1153,8 @@ func _play_hit(data: Dictionary) -> void:
 		TurnCombat.element_color(ctx.element))
 
 	# 넉백 — 방향성 있는 흔들림이 무작위보다 훨씬 좋다.
-	if target_shape != null:
+	# 히트스톱을 기다리는 사이 재시작되면 몸이 해제돼 있다(#542).
+	if target_shape != null and is_instance_valid(target_shape):
 		var knock := float(feedback.get("knockback_px", 0.0))
 		var direction := -1.0 if ctx.target.is_ally() else 1.0
 		var home := target_shape.position
@@ -1261,7 +1330,7 @@ func _play_break(data: Dictionary) -> void:
 
 			8:
 				# 적 비틀거림 + 붉은 실루엣 명멸.
-				if shape != null:
+				if shape != null and is_instance_valid(shape):
 					var tween := create_tween()
 					tween.tween_property(shape, "rotation", deg_to_rad(14.0), _scaled(0.12))
 					tween.tween_property(shape, "rotation", deg_to_rad(6.0), _scaled(0.12))
@@ -1405,13 +1474,16 @@ func _play_death(data: Dictionary) -> void:
 	if has_death:
 		# Let every authored frame be seen, then hold the final pose during fade.
 		await _play_unit_anim(unit, BattleAnimation.DEATH, true)
+		if not is_instance_valid(shape):
+			return
 	var tween := create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(shape, "modulate:a", 0.0, _scaled(0.35))
 	if not has_death:
 		tween.tween_property(shape, "rotation", deg_to_rad(-70.0), _scaled(0.35))
 	await tween.finished
-	shape.visible = false
+	if is_instance_valid(shape):
+		shape.visible = false
 
 
 func _show_result() -> void:
@@ -1535,12 +1607,11 @@ func _on_auto_toggled(enabled: bool) -> void:
 	#
 	# 소크 검증(`VerifyBattleSoak`)이 이 상태를 잡는다:
 	# `phase=VICTORY, is_over=true, _outcome_reported=false, _playing=false`.
+	#
+	# 기다리던 아군 턴은 **건너뛰지 않고** 자동 규칙으로 대신 진행한다 (#542).
+	# 예전에는 여기서 `advance()` 를 불러 그 아군의 턴이 통째로 사라졌다.
 	if enabled and battle.phase == TurnBattleManager.Phase.AWAITING_INPUT:
-		battle.advance()
-		_play()
-	if enabled and battle.phase == TurnBattleManager.Phase.AWAITING_INPUT:
-		# 자동으로 켜면 대기 중인 턴부터 바로 굴린다.
-		battle.advance()
+		battle.auto_act()
 		_play()
 
 

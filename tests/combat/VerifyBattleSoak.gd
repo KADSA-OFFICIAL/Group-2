@@ -147,6 +147,12 @@ func _soak() -> void:
 			battle.advance()
 			node.call("_play")
 
+		# **웨이브가 바뀐 뒤에도 몸이 맞는가 (#542).** 예전에는 끝에서만 봤다 — 전투가 끝나면
+		# 적이 모두 죽어 있으니 2웨이브부터 적이 안 보이던 버그를 한 번도 못 잡았다.
+		# 연출이 로직을 따라잡은 순간(큐가 빈 때)에만 본다. 그 전에는 한 턴 차이가 정상이다.
+		if battle.presentation.is_empty() and not battle.is_over():
+			_check_shapes_match(battle, node)
+
 		var print_now := _fingerprint(battle)
 		if print_now == last_print:
 			since_change += SAMPLE_SECONDS
@@ -210,6 +216,32 @@ func _fingerprint(battle) -> String:
 # 살아 있는 유닛의 몸이 화면에 있어야 한다.
 #
 # 죽지 않았는데 숨겨지면 "적이 안 보이는데 데미지 숫자만 뜨는" 상태가 된다.
+# 몸이 지금 전투의 유닛과 정확히 맞는가: 살아 있는 유닛은 몸이 보이고, 전투에 없는 유닛의 몸은 없다.
+var _shape_checks_failed := 0
+
+func _check_shapes_match(battle, node) -> void:
+	var shapes: Dictionary = node.get("_shapes")
+	var present := {}
+	for unit in battle.units:
+		present[unit.unit_id] = true
+		if unit.alive:
+			var shape = shapes.get(unit.unit_id)
+			if shape == null or not is_instance_valid(shape) or not shape.visible:
+				_report_shape_mismatch("웨이브 %d: 살아 있는 %s 의 몸이 보여야 한다"
+					% [battle.wave_index + 1, unit.unit_id])
+	for id in shapes:
+		if not present.has(id):
+			_report_shape_mismatch("웨이브 %d: 지난 웨이브 %s 의 몸이 남아 있으면 안 된다"
+				% [battle.wave_index + 1, id])
+
+
+# 같은 어긋남이 표본마다 반복해 쌓이지 않게 첫 번째만 실패로 남긴다.
+func _report_shape_mismatch(message: String) -> void:
+	_shape_checks_failed += 1
+	if _shape_checks_failed == 1:
+		_expect(false, message)
+
+
 func _check_alive_units_visible(battle, node) -> void:
 	var shapes: Dictionary = node.get("_shapes")
 	if shapes == null:

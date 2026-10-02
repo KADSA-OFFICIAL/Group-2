@@ -129,6 +129,10 @@ func _run() -> void:
 		_expect(node.get("_striker") == null, "아군 대상 스킬은 공격자로 남지 않는다")
 
 	# 3. 적 턴 — 시전 이벤트가 쌓인다.
+	#
+	# 이 절은 로직이 쌓은 이벤트를 **대기 중인 큐**에서 읽는다. 화면은 한 턴씩 진행해
+	# 그 턴의 이벤트를 곧바로 재생해 버리므로(#542), 여기서만 한 번에 진행시켜 큐에 남긴다.
+	battle.step_by_turn = false
 	battle.auto_battle = true
 	var enemy_casts := 0
 	elapsed = 0.0
