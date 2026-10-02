@@ -87,6 +87,8 @@ func _refresh() -> void:
 	_rows.add_child(_build_resolution_row())
 	_rows.add_child(HUDKit.rule())
 	_rows.add_child(_build_volume_row())
+	_rows.add_child(HUDKit.rule())
+	_rows.add_child(_build_cutin_row())
 
 
 # 창 모드: 두 값뿐이므로 토글 버튼 하나로 둔다.
@@ -164,6 +166,41 @@ func _resolution_button(size: Vector2i, locked: bool) -> Button:
 
 	button.pressed.connect(func(): SettingsSystem.set_window_size(size))
 	return button
+
+
+# 오의 연출 (#544): 풀 / 짧게 / 끄기. 해상도 행과 같은 버튼 묶음이다.
+func _build_cutin_row() -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	row.custom_minimum_size = Vector2(0, 56)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 0)
+	box.custom_minimum_size = Vector2(130, 0)
+	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(box)
+	box.add_child(HUDKit.label("오의 연출", 15, HUDKit.text_1(), 600))
+	box.add_child(HUDKit.caption("ultimate cut-in"))
+
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 6)
+	buttons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buttons.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	buttons.alignment = BoxContainer.ALIGNMENT_END
+	row.add_child(buttons)
+
+	for mode in [SettingsSystem.CutinMode.FULL, SettingsSystem.CutinMode.SHORT, SettingsSystem.CutinMode.OFF]:
+		var button := HUDKit.make_ghost(SettingsSystem.CUTIN_MODE_NAMES[mode], 100)
+		button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		if mode == SettingsSystem.ultimate_cutin_mode:
+			button.add_theme_stylebox_override("normal", HUDKit.cta())
+			button.add_theme_stylebox_override("hover", HUDKit.cta())
+			button.add_theme_stylebox_override("pressed", HUDKit.cta_pressed())
+			for state in ["font_color", "font_hover_color", "font_pressed_color"]:
+				button.add_theme_color_override(state, HUDKit.text_on_accent())
+		button.pressed.connect(func(): SettingsSystem.set_ultimate_cutin_mode(mode))
+		buttons.add_child(button)
+	return row
 
 
 # 마스터 볼륨: 0~100 을 슬라이더로. 값 변환(데시벨)은 SettingsSystem 이 감춘다.

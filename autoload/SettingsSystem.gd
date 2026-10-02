@@ -53,6 +53,15 @@ var window_size: Vector2i = WINDOW_SIZES[0]
 # 마스터 볼륨 (0.0 ~ 1.0). 데시벨 변환은 이 시스템이 감춘다.
 var master_volume: float = 1.0
 
+# 오의 연출 (#544). 전투 화면(`TurnBattle`)이 오의를 재생할 때 읽는다.
+#   FULL  — 화면 전체 연출(약 3초): 암전 · 스피드라인 · 캐릭터 등장 · 기술명 타이포 · 카메라
+#   SHORT — 사선 띠에 캐릭터와 기술명만 지나가는 압축판(약 1초)
+#   OFF   — 원소색 번쩍 + 기술명 배너만
+# 오의가 자주 나오는 만큼(#542) 매번 긴 연출이 부담스러운 플레이어를 위한 선택지다.
+enum CutinMode { FULL, SHORT, OFF }
+const CUTIN_MODE_NAMES := {CutinMode.FULL: "풀", CutinMode.SHORT: "짧게", CutinMode.OFF: "끄기"}
+var ultimate_cutin_mode: int = CutinMode.FULL
+
 
 func _ready() -> void:
 	name = "SettingsSystem"
@@ -104,6 +113,13 @@ func set_master_volume(value: float) -> void:
 		return
 	master_volume = clamped
 	_apply_volume()
+	settings_changed.emit()
+
+
+func set_ultimate_cutin_mode(value: int) -> void:
+	if not CUTIN_MODE_NAMES.has(value) or value == ultimate_cutin_mode:
+		return
+	ultimate_cutin_mode = value
 	settings_changed.emit()
 
 
@@ -170,6 +186,7 @@ func to_save_dict() -> Dictionary:
 		# JSON 은 Vector2i 를 모른다. [폭, 높이] 로 풀어서 저장한다.
 		"window_size": [window_size.x, window_size.y],
 		"master_volume": master_volume,
+		"ultimate_cutin_mode": ultimate_cutin_mode,
 	}
 
 
@@ -178,6 +195,8 @@ func from_save_dict(data: Dictionary) -> void:
 	fullscreen = bool(data.get("fullscreen", fullscreen))
 	window_size = _parse_window_size(data.get("window_size", null))
 	master_volume = clampf(float(data.get("master_volume", master_volume)), 0.0, 1.0)
+	var mode := int(data.get("ultimate_cutin_mode", ultimate_cutin_mode))
+	ultimate_cutin_mode = mode if CUTIN_MODE_NAMES.has(mode) else CutinMode.FULL
 	# 복원 직후 실제 시스템에 반영한다. _ready() 보다 먼저 불릴 수 있어 여기서도 적용한다.
 	apply_all()
 	settings_changed.emit()

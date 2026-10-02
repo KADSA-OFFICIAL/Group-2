@@ -783,9 +783,11 @@ UV 로 잘라 내고(가이드 §3.4), 세로 중심은 살짝 위에 둔다(정
 |---|---|---|
 | 초상 아이콘 (42×36) | 아군 하단 밴드 초상 프레임 | `PortraitSystem.get_portrait()` → `HUDKit.head_texture()` |
 | 초상 아이콘 (칩용) | 좌측 타임라인 칩의 26px 패치. 아군·적 공통 | 위와 같음. 적은 `EnemyData.portrait` |
-| 전신 일러스트 | 오의 컷인의 인물 | `HUDKit.trimmed_texture()` |
-| 오의 컷인 | 좌측 40% 타이포 + 우측 인물 + 원소 조명 | `TurnBattle._play_cutin()` |
-| 오의 엠블럼 | 컷인 타이포 뒤 워터마크 (208px) | `UITheme.role_emblem_path()` |
+| 오의 컷인 인물 (#544) | 컷인 판 오른쪽 | `UITheme.ultimate_cutin_path()` 의 전용 일러스트, 없으면 전투 프레임 공격 컷. **편성 초상은 그림체가 달라 쓰지 않는다** |
+| 오의 컷인 (#544) | 스타레일식 풀(약 3초) / 짧게 / 끄기 — `SettingsSystem.ultimate_cutin_mode` | `UltimateCutin` + `TurnBattle._play_cutin()` |
+| 오의 엠블럼 | 컷인 타이포 뒤 워터마크 | `UITheme.role_emblem_path()` |
+
+> 오의 컷인 일러스트 사양·프롬프트: [ultimate-cutin-art-spec.md](ultimate-cutin-art-spec.md)
 
 **어떤 그림을 쓸지는 `PortraitSystem`, 어떻게 자를지는 `HUDKit` 이 정한다.** 전투 화면이
 `character.portrait` 를 직접 읽거나 크롭을 다시 계산하지 않는다 — 그러면 편성 화면에서
