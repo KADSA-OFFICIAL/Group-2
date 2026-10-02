@@ -1345,25 +1345,37 @@ func _setup_cutin(unit: TurnUnit, skill: SkillData, color: Color) -> bool:
 	var icon_name := TurnCombat.element_icon(unit.element)
 	var glyph_path := UITheme.icon_path(icon_name) if not icon_name.is_empty() else ""
 	var glyph: Texture2D = load(glyph_path) if not glyph_path.is_empty() else null
-	_cutin.setup(art, bool(picked["dedicated"]), unit.display_name, skill.display_name, color, emblem, glyph)
+	_cutin.setup(art, bool(picked["dedicated"]), unit.display_name, skill.display_name, color, emblem, glyph,
+		picked.get("video"), _speed_multiplier())
 	return true
 
 
-# 컷인 그림 고르기. {"texture": Texture2D, "dedicated": 전용 일러스트인가}.
+# 지금 배속 배수(1·2·3). 컷인의 LD 공격 영상은 이 배수로 재생한다(기준 속도 0.7 로 늦추지 않는다).
+func _speed_multiplier() -> float:
+	if battle == null or battle.presentation == null:
+		return 1.0
+	return maxf(battle.presentation.speed / _base_presentation_speed(), 0.1)
+
+
+# 컷인 그림 고르기. {"texture": Texture2D, "dedicated": 전용 일러스트인가, "video": VideoStream 또는 null}.
+#
+# LD 공격 영상(#546)이 있으면 풀 연출이 그것을 재생하고, 정지 그림(결정 포즈)은 짧게 모드에 쓴다.
 func _cutin_art_for(unit: TurnUnit) -> Dictionary:
+	var video_path := UITheme.ultimate_video_path(unit.character.character_id)
+	var video: VideoStream = load(video_path) as VideoStream if not video_path.is_empty() else null
 	var path := UITheme.ultimate_cutin_path(unit.character.character_id)
 	if not path.is_empty():
 		var dedicated := load(path) as Texture2D
 		if dedicated != null:
-			return {"texture": dedicated, "dedicated": true}
+			return {"texture": dedicated, "dedicated": true, "video": video}
 	# 공격 프레임: 휘두르는 순간(가운데쯤)의 그림이 가장 역동적이다.
 	var frames := _battle_frames_of(unit)
 	if frames != null and frames.has_animation(BattleAnimation.ATTACK):
 		var count := frames.get_frame_count(BattleAnimation.ATTACK)
 		if count > 0:
 			return {"texture": frames.get_frame_texture(BattleAnimation.ATTACK, mini(count - 1, count / 2)),
-				"dedicated": false}
-	return {"texture": _battle_sprite_of(unit), "dedicated": false}
+				"dedicated": false, "video": video}
+	return {"texture": _battle_sprite_of(unit), "dedicated": false, "video": video}
 
 
 # HUD 를 부드럽게 내리거나 올린다. 노드를 숨기지 않고 알파만 건드린다 —

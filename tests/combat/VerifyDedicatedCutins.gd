@@ -6,6 +6,7 @@ extends Node
 #      오의 전용 일러스트(`UITheme.ultimate_cutin_path()`)뿐이다 — 예전 2400×1350 컷인과
 #      편성 초상은 쓰지 않는다. 하드코딩된 id 목록이 없다.
 #   2) 풀 / 짧게 연출이 정해진 길이 안에서 끝나고, 끝나면 판이 사라진다.
+#      6명 모두 LD 공격 애니메이션 영상(#546)이 있고 컷인 판에 실린다.
 #   3) 설정 "오의 연출"이 저장·복원되고, 잘못된 값은 풀로 돌아간다.
 #   4) 끄기 모드에서는 컷인 판이 뜨지 않는다.
 #
@@ -44,6 +45,11 @@ func _ready() -> void:
 		var path := texture.resource_path if texture != null else ""
 		check(not path.begins_with(legacy_dir), "그림체가 다른 예전 컷인을 쓰면 안 된다: " + path)
 		check(texture != PortraitSystem.get_portrait(character), "그림체가 다른 편성 초상을 쓰면 안 된다: " + String(id))
+		# LD 공격 애니메이션 (#546): 영상이 있으면 컷인 판에 실린다.
+		var video_path := UITheme.ultimate_video_path(id)
+		check(not video_path.is_empty(), "LD 공격 영상이 있어야 한다: " + String(id))
+		check(picked.get("video") != null, "컷인 그림 고르기가 영상을 넘겨야 한다: " + String(id))
+		check(field._cutin._video.stream != null, "컷인 판에 영상이 실려야 한다: " + String(id))
 		var dedicated_path := UITheme.ultimate_cutin_path(id)
 		check(bool(picked["dedicated"]) == not dedicated_path.is_empty(),
 			"전용 일러스트가 있으면 그것을, 없으면 전투 스프라이트를 써야 한다: " + String(id))
@@ -66,7 +72,8 @@ func _ready() -> void:
 	var t0 := Time.get_ticks_msec()
 	await field._cutin.play_full()
 	var full_s := (Time.get_ticks_msec() - t0) / 1000.0
-	check(full_s > 1.4 and full_s < 3.6, "풀 연출 길이가 맞지 않다: %.2fs" % full_s)
+	# 영상판: 등장(약 0.36초) + 영상 3초(배속 1) + 퇴장. 영상 없는 정지판은 2~3초.
+	check(full_s > 2.8 and full_s < 4.6, "풀 연출(영상) 길이가 맞지 않다: %.2fs" % full_s)
 	check(not field._cutin._slash.visible and not field._cutin._art_root.visible, "풀 연출이 끝나면 판이 사라져야 한다")
 	t0 = Time.get_ticks_msec()
 	await field._cutin.play_short()
