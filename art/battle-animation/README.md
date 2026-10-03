@@ -58,3 +58,9 @@ godot --headless --path . res://tests/combat/VerifyTurnStageBattle.tscn
 ## 검수 상태
 
 2026-09-12: 12체 / 168 PNG / 12 SpriteFrames 제작·연결 및 검수 완료. [최종 검수 보고서와 캐릭터별 비교표](VERIFICATION.md), [파일·크기·SHA-256 목록](frame-index.csv)을 확인할 수 있다.
+
+## #548 강지 그림체 교체 (2026-10-04)
+
+강지 14컷을 새 그림체 원화로 교체했다(`source-plates/gangji/`). 같은 도구로 다시 조립했고 처리 규칙은 바꾸지 않았다.
+원본·프롬프트는 [`../character-assets/v3-548/`](../character-assets/v3-548/README.md)에 있다.
+manifest 의 강지 `prompt` 는 #533 당시 문구로 남아 있으니, 새 원화의 생성 문구는 위 폴더의 `gangji_sd_prompts.json` 을 본다.

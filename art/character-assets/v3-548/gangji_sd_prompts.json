@@ -1,0 +1,60 @@
+{
+  "tool": "built-in image_gen",
+  "portrait": "Create a NEW full-body character illustration that belongs to the EXACT SAME illustrated cast as the four supplied ORIGINAL portraits. Reference images are the artist's STYLE, not subjects to include. No other reference images. Match the actual hand drawn lines, face anatomy and eye drawing of these four images precisely, especially Harang (mint buns) and Mina (blonde): bold flat burgundy upper lashes, broad horizontal eyes set low in the face, small sharply tapered chin, tiny mouth, slightly exaggerated expressive head, very sparse nose rendering, pink blush hatching; fine warm reddish contours, simple muted local-color blocks and 2-tone cel shadows. Copy their modest rendering complexity. Hair highlights are broad jagged white graphic bands. Do not use glossy detailed generic anime gacha rendering, painterly blending, realistic knit/leather texture or glossy skin. This must look drawn by the very same hand as the references.\n\nDraw ONLY GANGJI: kind adult human woman with light brown chin-length WAVY BOB, soft S-shaped loose curls clearly visible around both cheeks and neck. Green leaf hairpin above her left temple (viewer right), tiny gold hash hairpin viewer left. Olive green eyes and gentle relaxed slightly downturned outer eye corners, friendly tiny smile. Adult long-legged full-body proportions similar to Mina reference. No monster traits. Shy standing posture with knees close, one foot slightly ahead, head gently tilted, sleeve-covered hand held at chin and other hand by upper chest.\n\nPreserve these specific design elements: open long oversized cream cardigan, puffy sleeves with brown ribbon crisscross laces and bows, round X-stitched buttons; olive green thin-strap ribbed cropped camisole; brown pleated mini skirt with black bike shorts barely visible underneath; brown belt with silver buckle and hanging green leaf charm and dangling belt end; brown shoulder satchel with small leaf emblem; cream slouch socks; chunky brown lace-up ankle boots. Render all these in the simpler flat drawing style of the supplied originals, not with elaborate texture. Keep brown and olive palette true. Full body including entire boots in frame with comfortable margins. 1024x1536 vertical canvas. Fully transparent alpha background, no glow, gradients, vignette, floor, cast shadow or backdrop. One character, no text. This is an original new cast member portrait, not an edit of any earlier generated image.",
+  "sd_baseline": "Create Gangji battle idle sprite idle_0, one fullbody image, not a sheet. Image 1 is approved NEW portrait: use its gentle face, soft light brown WAVY BOB and green leaf clip as character identity. Images 2-4 are SD ART STYLE and PROPORTIONS references Harang, Mina, Seola. Image 5 is Gangji's existing SD COSTUME, STAFF and STANCE authority.\nDraw same character as approved portrait in EXACT SD proportions and rendering of three battle references: about 5 heads tall, big head, shortened legs; do not use tall portrait legs. Pose matches existing idle: facing screen RIGHT three-quarter, standing feet planted, holding wooden leafy staff with yellow orb diagonally upright in both hands. Keep SD outfit exactly: green ribbed HIGH TURTLENECK top fully covering torso, long open cream cardigan sleeve brown crisscross ribbon laces and bows, brown pleated skirt with black shorts, brown belt, brown satchel with leaf decoration, cream slouch socks, brown buckle boots. Do NOT use portrait's crop camisole or lace-up boots. Refresh face/hair: gentle expression, olive green eyes, new chin-length wavy brown bob, green leaf hairpin. Match thin warm brown outlines, clean simple cel shading and graphic hair highlights of three SD references.\n1024x1536 vertical, exact flat opaque solid magenta #FF00FF background edge-to-edge, no gradient, no vignette, no checkerboard, no shadow, no floor, no text, no glow. Gold orb no glow. Full body and full staff within frame, fixed soles near y1495 with small margin. Character centered and similar scale to existing SD reference. Single idle pose only.",
+  "frame_lock": "FRAME LOCK. Edit the attached Gangji idle_0 battle sprite to create ONE individual frame only. Same character, same exact canvas 1024x1536, same scale, same SHORTENED LEG proportions, same face, wavy light brown bob, leaf clip, green high turtleneck, cream cardigan ribbon sleeves, skirt/shorts, satchel, buckle boots, leafy wooden orb staff, colors and clean line art. NEVER lengthen thighs or shins. For standing frames, both boot silhouettes and soles stay at the EXACT SAME x and y coordinates as the reference. Change upper body around those anchors; no stepping or widening stance. Preserve head size, torso size and weapon length. No auto-fit or enlargement. Whole body AND entire staff inside canvas. FLAT OPAQUE PURE MAGENTA #FF00FF background with NO gradient, no shadow, no floor, no checkerboard or text. No outfit redesign. Single full-body sprite PNG, NOT a sheet. ",
+  "frames": [
+    [
+      "idle_1",
+      "Inhale: chest and shoulders rise about 1 percent of height, hair tips and hem drift slightly back. Only breathing, no expression, weapon, feet or facing direction changes."
+    ],
+    [
+      "idle_2",
+      "Top of breath: shoulders rise about 2 percent. Only breathing, no expression, weapon, feet or facing direction changes."
+    ],
+    [
+      "idle_3",
+      "Exhale halfway back toward idle_0 for a seamless breathing loop. Only breathing, no expression, weapon, feet or facing direction changes."
+    ],
+    [
+      "attack_0",
+      "Anticipation: torso winds back away from screen RIGHT, staff pulled back, weight on rear foot without moving feet. Raise orb staff to side preparing a forward swing. Gold orb no glow."
+    ],
+    [
+      "attack_1",
+      "Strike: swing the staff forward in an arc toward screen RIGHT. Torso leans into the attack, front knee bends around fixed foot. Thin pale motion arc attached to weapon only. Gold orb no glow."
+    ],
+    [
+      "attack_2",
+      "Follow-through: staff passes strike line toward screen RIGHT, torso still committed forward. Gold orb no glow."
+    ],
+    [
+      "attack_3",
+      "Recovery: return toward approved idle pose after staff swing, weapon held, no effects."
+    ],
+    [
+      "hit_0",
+      "Hit from screen RIGHT: head and upper body snap away from RIGHT, eyes squeezed shut, hair and clothing pushed back, staff still held. No wounds, blood or effects."
+    ],
+    [
+      "hit_1",
+      "Half recovered toward idle from hit from RIGHT side. Staff held. No wounds, blood or effects."
+    ],
+    [
+      "death_0",
+      "Cute nonviolent knockout: staggers backward, knees buckle, staff slipping. Death exception: lower body toward floor, same head/limb size with no scaling, fold knees to fit, consistent fall direction screen RIGHT. Lowest body part touches original bottom baseline. No blood, wounds, icons or effects."
+    ],
+    [
+      "death_1",
+      "Cute nonviolent knockout: falls to knees, head droops, staff lowered beside her. Death exception: lower body toward floor, same head/limb size with no scaling, fold knees to fit, consistent fall direction screen RIGHT. Lowest body part touches original bottom baseline. No blood, wounds, icons or effects."
+    ],
+    [
+      "death_2",
+      "Cute nonviolent knockout: collapses sideways toward screen RIGHT, head on RIGHT, knees folded opposite side; one elbow briefly supports torso. Death exception: lower body toward floor, same head/limb size with no scaling, fold knees to fit, consistent fall direction screen RIGHT. Lowest body part touches original bottom baseline. No blood, wounds, icons or effects."
+    ],
+    [
+      "death_3",
+      "Cute nonviolent knockout: rests lying curled on side, head at screen RIGHT, folded legs at LEFT, eyes closed as simple lines, staff lies beside her. Final held pose. Death exception: same head/limb size with no scaling, fold knees to fit, lowest body part at original bottom baseline. No blood, wounds, icons or effects."
+    ]
+  ]
+}

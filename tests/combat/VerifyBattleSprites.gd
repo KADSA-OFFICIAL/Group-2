@@ -81,7 +81,9 @@ func verify_restyled_portraits() -> void:
 		expect(portrait.resource_path == "res://assets/sprites/characters/portraits/"+id+".png", id+": revised portrait used by existing screens")
 		var img := Image.load_from_file(ProjectSettings.globalize_path(portrait.resource_path))
 		var bounds := img.get_used_rect()
-		expect(img.get_size() == Vector2i(941,1691) and img.get_pixel(0,0).a == 0, id+": normalized transparent portrait")
+		# 크기는 원본 해상도마다 다르다(normalize_portrait 는 리샘플링하지 않는다). 캔버스 비율만 공통이다.
+		var aspect := float(img.get_width()) / img.get_height()
+		expect(absf(aspect - 0.5566) < 0.002 and img.get_pixel(0,0).a == 0, id+": normalized transparent portrait")
 		expect(absf(float(bounds.size.y)/img.get_height()-0.92) < 0.002, id+": 92 percent figure height")
 		var head := PortraitSystem.get_head_rect(portrait)
 		expect(head.size.y > 0.14 and head.end.y < 0.25, id+": authored face crop available to HUD and formation")
