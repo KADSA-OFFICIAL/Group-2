@@ -1,4 +1,4 @@
-# 강지 새 그림체 — #548
+# 강지·아린 새 그림체 — #548
 
 하랑·미나·설아·태희와 그림체를 맞춘 강지의 LD 초상 1장과 SD 전투 원화 14장이다.
 디자인(갈색 웨이브 단발, 나뭇잎 핀, 크림 카디건, 갈색 치마, 노란 구슬 나무 지팡이)은 유지했다.
@@ -33,3 +33,21 @@ godot --headless --path . --script tools/build_battle_frames.gd
 
 - 4방향 워크 시트(`assets/sprites/characters/gangji_walk_frames.tres`)는 예전 그림체 그대로다.
 - 오의 LD 클립(#546/#549)은 예전 초상 기준이라 #549 에서 새 초상으로 다시 만든다.
+
+---
+
+## 아린 초상 (2026-10-04)
+
+| 파일 | 내용 |
+|---|---|
+| `arin_portrait_source.png` | 새 초상 원본(1024×1536, **자홍 배경** — 투명 재생성이 실패해 자홍으로 받음) |
+| `arin_generation_prompts.json` | 초상·오의 24장 생성 프롬프트와 참조 관계 |
+| `arin_validation.csv` | 제작 쪽 검증값(해상도·모서리 색·SHA-256) |
+
+게임용 `assets/sprites/characters/portraits/arin.png`:
+1. 자홍 배경 제거 — `prepare_animation_frames.py` 와 같은 식(배경색 정도 = min(R,B) − G)이되, 초상에는 보라 장식이 없어
+   "배경에서 먼 픽셀은 불투명" 보호를 끄고 불투명 기준을 0.10 으로 낮췄다. 그러지 않으면 머리카락 틈에 분홍 테두리가 남는다.
+2. 배경에서 15px 안의 픽셀은 자홍 번짐(min(R,B) − G)을 R·B 에서 뺐다. 얼굴 안쪽(볼 터치)은 건드리지 않는다.
+3. `normalize_portrait.gd` → 918×1649, 인물 92%. 얼굴 범위 `portrait_meta.tres` 의 `arin` 재측정.
+
+SD 전투 14컷은 받지 않았다 — #548 검토대로 SD 는 이미 6명 그림체가 같다. 4방향 워크 시트도 예전 그대로다.
