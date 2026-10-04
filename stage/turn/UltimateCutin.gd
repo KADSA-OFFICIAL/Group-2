@@ -15,12 +15,17 @@ class_name UltimateCutin
 #   1.60  흰 번쩍           판이 사라지고 필드로 돌아온다
 #   (이후 `TurnBattle` 이 캐스터 줌인 · 더치 앵글 · 원소 폭발을 이어 재생한다)
 #
+#   LD 공격 애니메이션이 있으면 0.25 부터 원화 24장(1배속 3초)이 넘어가고, 기술명은 공격 정점 장에서
+#   박힌다(`_play_full_anim`). 전체 약 3.4초.
+#
 # ## 짧게 (약 0.9초)
 #   화면 가운데 사선 띠에 캐릭터 상반신과 기술명만 지나간다.
 #
 # ## 그림
-#   `setup()` 이 받는 그림은 둘 중 하나다(고르는 것은 `TurnBattle`):
-#     - 오의 전용 일러스트(`UITheme.ultimate_cutin_path()`) — 사양: docs/ultimate-cutin-art-spec.md
+#   `setup()` 이 받는 그림은 셋 중 하나다(고르는 것은 `TurnBattle`):
+#     - LD 공격 애니메이션(#549) — 독립 원화 24장 `SpriteFrames`. 풀 연출은 이것을 재생하고,
+#       짧게 모드는 마지막 장(결정 포즈)을 쓴다. 만드는 법: tools/build_ultimate_frames.py
+#     - 오의 전용 정지 일러스트(`UITheme.ultimate_cutin_path()`) — 사양: docs/ultimate-cutin-art-spec.md
 #     - 없으면 전투 스프라이트의 공격 프레임 — 게임 그림체와 같다. 크게 키우면 조금 무르므로
 #       원소색 테두리(잔상)로 감싼다.
 #
@@ -34,16 +39,19 @@ class_name UltimateCutin
 ## 길이(초) -> 배속이 반영된 길이. `TurnBattle._scaled` 를 넣는다.
 var scaled: Callable = Callable()
 
-# ===== LD 공격 애니메이션 (#546) =====
-# 영상이 있으면 정지 그림 대신 영상을 재생한다. 영상은 **알파를 옆에 붙인 Theora** 다
-# (왼쪽 절반 = 색, 오른쪽 절반 = 알파). 만드는 법: tools/build_ultimate_videos.py
-## 영상 한쪽(색)의 가로세로 비. 1080x1920 원본의 9:16.
-const VIDEO_ASPECT: float = 9.0 / 16.0
-## 영상 길이(초)와 공격이 정점에 닿는 시점(초). 기술명 타이포를 정점에 맞춘다.
-const VIDEO_LENGTH: float = 3.0
-const VIDEO_STRIKE: float = 1.15
-## 영상이 끝나기 이만큼 전에 흰 번쩍으로 빠진다(마지막 결정 포즈가 0.625초 유지된다).
-const VIDEO_EXIT_LEAD: float = 0.1
+# ===== LD 공격 애니메이션 (#549) =====
+# 원화 24장을 장마다 정해진 길이(SpriteFrames 의 duration, 1/24초 단위)로 넘긴다.
+# 공격이 정점에 닿는 장(metadata/strike_frame)에서 기술명 타이포가 박힌다 — 캐릭터마다 다르다.
+# 예전 영상판(#546)은 정점이 6명 공통 상수(1.15초)였고, 첫 재생 때 디코딩이 늦게 시작했다.
+const ANIM_NAME := &"ult"
+## 애니메이션이 끝나기 이만큼(초, 원화 시간) 전에 흰 번쩍으로 빠진다.
+const ANIM_EXIT_LEAD: float = 0.1
+## 애니메이션 인물 높이(화면 높이 비). 24장 합집합으로 자른 그림이라 무기를 머리 위로 든 장까지
+## 들어 있다 — 화면보다 조금 크게 세워 정강이 아래를 잘라야 인물이 화면을 채운다(전신을 다 넣으면
+## 화면 높이의 약 70% 로 작게 보였다).
+const ANIM_HEIGHT: float = 1.18
+## 정점 장에서 판이 번쩍이는 세기(흰색 알파).
+const STRIKE_FLASH: float = 0.35
 
 var _token: int = 0
 var _color: Color = Color.WHITE
@@ -57,9 +65,14 @@ var _watermark: Label
 var _art_root: Control
 var _ghosts: Array[TextureRect] = []
 var _art: TextureRect
-var _video: VideoStreamPlayer
-var _video_stream: VideoStream = null
-var _video_speed: float = 1.0
+var _anim: SpriteFrames = null
+var _anim_speed: float = 1.0
+var _anim_tween: Tween = null
+var _anim_starts: PackedFloat32Array = PackedFloat32Array()   # 장마다 시작 시각(초, 원화 시간)
+var _anim_length: float = 0.0
+var _anim_strike: int = -1
+var _anim_frame: int = -1
+var _anim_struck: bool = false
 var _emblem: TextureRect
 var _type_root: Control
 var _caption: Label
@@ -184,27 +197,6 @@ void fragment() {
 	_art = _texture_rect()
 	_art_root.add_child(_art)
 
-	_video = VideoStreamPlayer.new()
-	_video.expand = true
-	_video.loop = false
-	_video.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_video.visible = false
-	var packed := Shader.new()
-	packed.code = """
-shader_type canvas_item;
-varying vec4 tint;
-void vertex() { tint = COLOR; }
-void fragment() {
-	// 왼쪽 절반 = 색, 오른쪽 절반 = 알파(회색조). 둘을 합쳐 원본 그대로의 외곽을 되살린다.
-	vec3 col = texture(TEXTURE, vec2(UV.x * 0.5, UV.y)).rgb;
-	float a = texture(TEXTURE, vec2(0.5 + UV.x * 0.5, UV.y)).r;
-	COLOR = vec4(col * tint.rgb, a * tint.a);
-}
-"""
-	var packed_mat := ShaderMaterial.new()
-	packed_mat.shader = packed
-	_video.material = packed_mat
-	_art_root.add_child(_video)
 
 	_type_root = Control.new()
 	_type_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -270,20 +262,25 @@ func _layout() -> void:
 	# 그림: 오른쪽 55~65%. 전용 일러스트는 화면보다 조금 크게(잘려 나가도 된다),
 	# 전투 스프라이트는 너무 키우면 무르므로 화면 높이의 90% 정도로 둔다.
 	var tex := _art.texture
+	if _anim != null:
+		tex = _anim.get_frame_texture(ANIM_NAME, 0)
 	var aspect := 0.66
-	if _video_stream != null:
-		aspect = VIDEO_ASPECT
-	elif tex != null and tex.get_height() > 0:
+	if tex != null and tex.get_height() > 0:
 		aspect = float(tex.get_width()) / float(tex.get_height())
-	var h := c.y * (1.10 if _dedicated else 1.02)
+	var h := c.y * (ANIM_HEIGHT if _anim != null else (1.10 if _dedicated else 1.02))
 	var w := h * aspect
 	var center_x := c.x * (0.66 if _dedicated else 0.70)
 	_art_root.size = Vector2(w, h)
-	_art_root.position = Vector2(center_x - w * 0.5, c.y - h * (0.96 if _dedicated else 0.95))
+	if _anim != null:
+		# 합집합 상자의 위쪽(머리 위로 든 무기)을 화면 위에 붙이고, 아래(정강이·발)를 잘라 낸다.
+		_art_root.position = Vector2(center_x - w * 0.5, c.y * 0.01)
+	else:
+		_art_root.position = Vector2(center_x - w * 0.5, c.y - h * (0.96 if _dedicated else 0.95))
 	_art_root.pivot_offset = Vector2(w * 0.5, h * 0.6)
-	for node in [_art, _video] + _ghosts:
+	for node in [_art] + _ghosts:
 		node.position = Vector2.ZERO
 		node.size = Vector2(w, h)
+		node.pivot_offset = Vector2(w * 0.5, h * 0.6)
 
 	_watermark.position = Vector2(c.x * 0.40, c.y * 0.20)
 
@@ -317,21 +314,26 @@ func _layout() -> void:
 
 # ===== 준비 =====
 
+# art: 정지 그림(짧게 모드·애니메이션이 없을 때). anim: LD 공격 애니메이션(없으면 null).
+# anim_speed: 배속 배수 — 애니메이션은 이 배수로 넘긴다.
 func setup(art: Texture2D, dedicated: bool, char_name: String, skill_name: String, color: Color,
-		emblem: Texture2D = null, glyph: Texture2D = null, video: VideoStream = null,
-		video_speed: float = 1.0) -> void:
+		emblem: Texture2D = null, glyph: Texture2D = null, anim: SpriteFrames = null,
+		anim_speed: float = 1.0) -> void:
 	_color = color
 	_dedicated = dedicated
 	_skill_text = skill_name
-	_video_stream = video
-	_video_speed = maxf(video_speed, 0.1)
-	_video.stop()
-	_video.stream = video
+	_stop_anim()
+	_anim = anim if anim != null and anim.has_animation(ANIM_NAME) \
+		and anim.get_frame_count(ANIM_NAME) > 0 else null
+	_anim_speed = maxf(anim_speed, 0.1)
+	_index_anim()
 
-	_art.texture = art
+	# 애니메이션이면 첫 장으로 등장한다(잔상도 첫 장). 정지 그림은 짧게 띠에만 쓴다.
+	var entry := _anim.get_frame_texture(ANIM_NAME, 0) if _anim != null else art
+	_art.texture = entry
 	_strip_art.texture = art
 	for ghost in _ghosts:
-		ghost.texture = art
+		ghost.texture = entry
 		ghost.modulate = Color(color.r, color.g, color.b, 0.0)
 
 	_emblem.texture = emblem
@@ -380,8 +382,7 @@ func setup(art: Texture2D, dedicated: bool, char_name: String, skill_name: Strin
 # 재생 중이던 연출을 끊고 처음 상태로 되돌린다(전투 재시작 등).
 func reset() -> void:
 	_token += 1
-	if _video != null:
-		_video.stop()
+	_stop_anim()
 	visible = false
 	modulate = Color.WHITE
 	_dim.color.a = 0.0
@@ -413,8 +414,8 @@ func play_full() -> void:
 	if not await _hold(0.15, token):
 		return
 
-	if _video_stream != null:
-		await _play_full_video(token)
+	if _anim != null:
+		await _play_full_anim(token)
 		return
 
 	# 0.25 캐릭터 등장 — 잔상을 끌며 들어온다. 실루엣 → 흰 번쩍 → 컬러.
@@ -474,29 +475,34 @@ func play_full() -> void:
 		return
 
 
-# 영상판 (#546): 0.25 에서 LD 캐릭터가 들어오며 공격 영상이 시작되고, 기술명 타이포는
-# 공격이 정점에 닿을 때 박힌다. 결정 포즈가 유지되는 동안 홀드하고, 영상 끝에서 흰 번쩍으로 빠진다.
-# 영상 쪽 시간은 실제 초를 배속(`_video_speed`)으로 나눈다 — 영상은 배속대로 재생된다.
-func _play_full_video(token: int) -> void:
+# 애니메이션판 (#549): 0.25 에서 LD 캐릭터가 잔상을 끌고 들어오며 원화 24장이 넘어가기 시작하고,
+# 기술명 타이포는 공격이 정점에 닿는 장에서 박힌다. 결정 포즈가 유지되는 동안 홀드하고,
+# 마지막 장 끝에서 흰 번쩍으로 빠진다.
+# 원화 시간은 배속 배수(`_anim_speed`)로 나눈다 — 기준 속도 0.7 로 늦추지 않는다.
+func _play_full_anim(token: int) -> void:
 	var c := size
-	_art.visible = false
-	for ghost in _ghosts:
-		ghost.visible = false
-	_video.visible = true
-	_video.speed_scale = _video_speed
-
 	var home := _art_root.position
 	_art_root.position = home + Vector2(c.x * 0.18, 0)
 	_art_root.modulate.a = 1.0
-	_video.modulate = Color(0, 0, 0, 1)
-	_video.play()
+	_art.modulate = Color(0, 0, 0, 1)
+	_show_anim_frame(0)
+	_anim_struck = false
+
 	var t := _tween()
 	t.set_parallel(true)
 	t.tween_property(_art_root, "position", home, _s(0.28)).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	# 실루엣 → 흰 번쩍 → 컬러를 짧게 — 길면 영상의 첫 동작(무기를 드는 순간)을 가린다.
+	# 잔상 — 첫 장의 원소색 실루엣 둘이 뒤따라 들어와 흩어진다(영상판에서는 빠져 있었다).
+	for i in _ghosts.size():
+		var ghost := _ghosts[i]
+		ghost.position = Vector2(c.x * 0.06 * float(i + 1), 0)
+		ghost.modulate.a = 0.5 - 0.15 * float(i)
+		t.tween_property(ghost, "position", Vector2(18.0 * float(i + 1), -6.0 * float(i + 1)),
+			_s(0.28 + 0.05 * float(i + 1))).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+		t.tween_property(ghost, "modulate:a", 0.0, _s(0.35)).set_delay(_s(0.2))
+	# 실루엣 → 흰 번쩍 → 컬러를 짧게 — 길면 첫 동작(무기를 드는 순간)을 가린다.
 	var flash := _tween()
-	flash.tween_property(_video, "modulate", Color(4, 4, 4, 1), _s(0.07)).set_delay(_s(0.04))
-	flash.tween_property(_video, "modulate", Color.WHITE, _s(0.14))
+	flash.tween_property(_art, "modulate", Color(4, 4, 4, 1), _s(0.07)).set_delay(_s(0.04))
+	flash.tween_property(_art, "modulate", Color.WHITE, _s(0.14))
 
 	# 이름 · ULTIMATE · 원소 문양
 	var type_home := _type_root.position
@@ -510,29 +516,98 @@ func _play_full_video(token: int) -> void:
 	t.tween_property(_name, "modulate:a", 1.0, _s(0.18)).set_delay(_s(0.25))
 	t.tween_property(_emblem, "modulate:a", 0.16, _s(0.3)).set_delay(_s(0.2))
 
-	# 공격 정점까지 기다렸다가 기술명을 박는다.
-	if not await _hold_real(VIDEO_STRIKE / _video_speed, token):
-		return
-	_pop_skill_letters()
-	var rest := (VIDEO_LENGTH - VIDEO_STRIKE) / _video_speed
+	# 원화를 넘긴다. 정점 장에 닿으면 `_seek_anim` 이 기술명을 박는다.
+	var real_length := _anim_length / _anim_speed
+	_anim_tween = create_tween()
+	_anim_tween.tween_method(_seek_anim, 0.0, _anim_length, real_length)
 	var push := _tween()
 	push.set_parallel(true)
-	push.tween_property(_art_root, "scale", Vector2(1.04, 1.04), rest)
-	push.tween_property(_watermark, "position:x", _watermark.position.x - 70.0, rest)
+	push.tween_property(_art_root, "scale", Vector2(1.04, 1.04), real_length)
+	push.tween_property(_watermark, "position:x", _watermark.position.x - 70.0, real_length)
 
-	# 결정 포즈 홀드 — 영상이 끝나기 직전까지.
-	if not await _hold_real(rest - VIDEO_EXIT_LEAD / _video_speed, token):
+	# 결정 포즈 홀드 — 마지막 장이 끝나기 직전까지.
+	if not await _hold_real(real_length - ANIM_EXIT_LEAD / _anim_speed, token):
 		return
 
 	t = _tween()
 	t.tween_property(_white, "color:a", 0.95, _s(0.06))
 	if not await _hold(0.06, token):
 		return
-	_video.stop()
+	_stop_anim()
 	_hide_full()
 	t = _tween()
 	t.tween_property(_white, "color:a", 0.0, _s(0.25))
 	await _hold(0.10, token)
+
+
+# 원화 시간 seconds 에 해당하는 장을 보인다. 정점 장을 처음 넘을 때 기술명을 박는다.
+func _seek_anim(seconds: float) -> void:
+	var idx := 0
+	while idx + 1 < _anim_starts.size() and _anim_starts[idx + 1] <= seconds:
+		idx += 1
+	_show_anim_frame(idx)
+	if not _anim_struck and idx >= _anim_strike:
+		_anim_struck = true
+		_on_strike()
+
+
+func _show_anim_frame(idx: int) -> void:
+	if _anim == null or idx == _anim_frame:
+		return
+	_anim_frame = idx
+	_art.texture = _anim.get_frame_texture(ANIM_NAME, idx)
+
+
+# 공격 정점: 기술명이 박히고, 판이 한 번 번쩍이며 그림이 살짝 튄다.
+func _on_strike() -> void:
+	_pop_skill_letters()
+	var t := _tween()
+	t.tween_property(_white, "color:a", STRIKE_FLASH, _s(0.03))
+	t.tween_property(_white, "color:a", 0.0, _s(0.16))
+	var kick := _tween()
+	kick.tween_property(_art, "scale", Vector2(1.03, 1.03), _s(0.04))
+	kick.tween_property(_art, "scale", Vector2.ONE, _s(0.12))
+
+
+# 장마다 시작 시각을 미리 세어 둔다. 길이 = SpriteFrames 의 duration(장 단위) / speed(fps).
+func _index_anim() -> void:
+	_anim_starts = PackedFloat32Array()
+	_anim_length = 0.0
+	_anim_frame = -1
+	_anim_strike = -1
+	if _anim == null:
+		return
+	var fps := maxf(_anim.get_animation_speed(ANIM_NAME), 1.0)
+	var count := _anim.get_frame_count(ANIM_NAME)
+	for i in count:
+		_anim_starts.append(_anim_length)
+		_anim_length += _anim.get_frame_duration(ANIM_NAME, i) / fps
+	_anim_strike = clampi(int(_anim.get_meta(&"strike_frame", count / 2)), 0, count - 1)
+
+
+func _stop_anim() -> void:
+	if _anim_tween != null and _anim_tween.is_valid():
+		_anim_tween.kill()
+	_anim_tween = null
+
+
+# 애니메이션의 마지막 장(결정 포즈)을 인물 상자만큼 잘라 정지 그림으로 쓴다(짧게 모드).
+# 상자는 빌드 도구가 metadata/final_rect 에 적어 둔다. 없으면 장 전체.
+static func final_pose_of(frames: SpriteFrames) -> Texture2D:
+	if frames == null or not frames.has_animation(ANIM_NAME):
+		return null
+	var count := frames.get_frame_count(ANIM_NAME)
+	if count == 0:
+		return null
+	var last := frames.get_frame_texture(ANIM_NAME, count - 1)
+	var rect: Variant = frames.get_meta(&"final_rect", null)
+	if last == null or not (rect is Rect2):
+		return last
+	var region := (rect as Rect2).grow(24.0).intersection(Rect2(Vector2.ZERO, last.get_size()))
+	var atlas := AtlasTexture.new()
+	atlas.atlas = last
+	atlas.region = region
+	return atlas
 
 
 # 기술명: 한 글자씩 크게 튀어 들어와 박히고, 밑줄이 따라 그어진다.
@@ -562,12 +637,12 @@ func _prepare_full() -> void:
 	for node in [_slash, _art_root, _emblem, _type_root, _watermark]:
 		node.visible = true
 	_slash.reveal = 0.0
-	_art.visible = _video_stream == null
+	_art.visible = true
 	for ghost in _ghosts:
-		ghost.visible = _video_stream == null
-	_video.visible = false
+		ghost.visible = true
 	_watermark.modulate.a = 0.0
 	_art_root.scale = Vector2.ONE
+	_art.scale = Vector2.ONE   # 정점 장의 튀김(`_on_strike`) 도중 끊겼을 수 있다
 	_art_root.modulate.a = 0.0
 	_emblem.modulate.a = 0.0
 	_caption.modulate.a = 0.0

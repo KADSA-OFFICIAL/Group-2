@@ -6,7 +6,8 @@ extends Node
 #      오의 전용 일러스트(`UITheme.ultimate_cutin_path()`)뿐이다 — 예전 2400×1350 컷인과
 #      편성 초상은 쓰지 않는다. 하드코딩된 id 목록이 없다.
 #   2) 풀 / 짧게 연출이 정해진 길이 안에서 끝나고, 끝나면 판이 사라진다.
-#      6명 모두 LD 공격 애니메이션 영상(#546)이 있고 컷인 판에 실린다.
+#      6명 모두 LD 공격 애니메이션(#549, 독립 원화 24장 SpriteFrames)이 있고 컷인 판에 실린다.
+#      장마다 길이가 있고, 공격 정점 장이 범위 안이며, 정점 장에서 기술명이 박힌다.
 #   3) 설정 "오의 연출"이 저장·복원되고, 잘못된 값은 풀로 돌아간다.
 #   4) 끄기 모드에서는 컷인 판이 뜨지 않는다.
 #
@@ -45,14 +46,24 @@ func _ready() -> void:
 		var path := texture.resource_path if texture != null else ""
 		check(not path.begins_with(legacy_dir), "그림체가 다른 예전 컷인을 쓰면 안 된다: " + path)
 		check(texture != PortraitSystem.get_portrait(character), "그림체가 다른 편성 초상을 쓰면 안 된다: " + String(id))
-		# LD 공격 애니메이션 (#546): 영상이 있으면 컷인 판에 실린다.
-		var video_path := UITheme.ultimate_video_path(id)
-		check(not video_path.is_empty(), "LD 공격 영상이 있어야 한다: " + String(id))
-		check(picked.get("video") != null, "컷인 그림 고르기가 영상을 넘겨야 한다: " + String(id))
-		check(field._cutin._video.stream != null, "컷인 판에 영상이 실려야 한다: " + String(id))
-		var dedicated_path := UITheme.ultimate_cutin_path(id)
-		check(bool(picked["dedicated"]) == not dedicated_path.is_empty(),
-			"전용 일러스트가 있으면 그것을, 없으면 전투 스프라이트를 써야 한다: " + String(id))
+		# LD 공격 애니메이션 (#549): 원화 24장이 컷인 판에 실린다.
+		var frames_path := UITheme.ultimate_frames_path(id)
+		check(not frames_path.is_empty(), "LD 공격 애니메이션이 있어야 한다: " + String(id))
+		var frames: SpriteFrames = picked.get("frames")
+		check(frames != null, "컷인 그림 고르기가 애니메이션을 넘겨야 한다: " + String(id))
+		check(field._cutin._anim == frames, "컷인 판에 애니메이션이 실려야 한다: " + String(id))
+		if frames != null:
+			var count := frames.get_frame_count(UltimateCutin.ANIM_NAME)
+			check(count == 24, "오의 원화는 24장이어야 한다: %s %d" % [id, count])
+			var strike := int(frames.get_meta(&"strike_frame", -1))
+			check(strike > 0 and strike < count - 1, "공격 정점 장이 범위 밖이다: %s %d" % [id, strike])
+			var size0 := frames.get_frame_texture(UltimateCutin.ANIM_NAME, 0).get_size()
+			for i in count:
+				var tex := frames.get_frame_texture(UltimateCutin.ANIM_NAME, i)
+				check(tex != null and tex.get_size() == size0, "장마다 같은 크기로 잘려야 한다: %s %d" % [id, i])
+			check(absf(field._cutin._anim_length - 3.0) < 0.6, "원화 길이가 1배속 약 3초여야 한다: %s %.2f" % [id, field._cutin._anim_length])
+			check(bool(picked["dedicated"]) and picked["texture"] is AtlasTexture,
+				"짧게 모드는 마지막 장(결정 포즈)을 잘라 써야 한다: " + String(id))
 
 		if DisplayServer.get_name() != "headless":
 			field._fade_hud(0.0, 0.01)
@@ -72,8 +83,11 @@ func _ready() -> void:
 	var t0 := Time.get_ticks_msec()
 	await field._cutin.play_full()
 	var full_s := (Time.get_ticks_msec() - t0) / 1000.0
-	# 영상판: 등장(약 0.36초) + 영상 3초(배속 1) + 퇴장. 영상 없는 정지판은 2~3초.
-	check(full_s > 2.8 and full_s < 4.6, "풀 연출(영상) 길이가 맞지 않다: %.2fs" % full_s)
+	# 애니메이션판: 등장(약 0.36초) + 원화 3초(배속 1) + 퇴장. 정지판은 2~3초.
+	check(full_s > 2.8 and full_s < 4.6, "풀 연출(애니메이션) 길이가 맞지 않다: %.2fs" % full_s)
+	check(field._cutin._anim_struck, "공격 정점 장에서 기술명이 박혀야 한다")
+	check(field._cutin._anim_frame == field._cutin._anim.get_frame_count(UltimateCutin.ANIM_NAME) - 1,
+		"마지막 장(결정 포즈)까지 재생해야 한다: %d" % field._cutin._anim_frame)
 	check(not field._cutin._slash.visible and not field._cutin._art_root.visible, "풀 연출이 끝나면 판이 사라져야 한다")
 	t0 = Time.get_ticks_msec()
 	await field._cutin.play_short()
@@ -87,6 +101,9 @@ func _ready() -> void:
 	await get_tree().create_timer(0.3).timeout
 	field._cutin.reset()
 	check(not field._cutin.visible, "reset() 하면 컷인이 사라져야 한다")
+	var frame_at_reset: int = field._cutin._anim_frame
+	await get_tree().create_timer(0.3).timeout
+	check(field._cutin._anim_frame == frame_at_reset, "reset() 하면 원화 넘김도 멈춰야 한다")
 
 	# 3) 설정 저장·복원
 	SettingsSystem.set_ultimate_cutin_mode(SettingsSystem.CutinMode.SHORT)

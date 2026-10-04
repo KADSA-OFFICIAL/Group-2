@@ -1,0 +1,109 @@
+[gd_resource type="SpriteFrames" load_steps=25 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_00.webp" id="f00"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_01.webp" id="f01"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_02.webp" id="f02"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_03.webp" id="f03"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_04.webp" id="f04"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_05.webp" id="f05"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_06.webp" id="f06"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_07.webp" id="f07"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_08.webp" id="f08"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_09.webp" id="f09"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_10.webp" id="f10"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_11.webp" id="f11"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_12.webp" id="f12"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_13.webp" id="f13"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_14.webp" id="f14"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_15.webp" id="f15"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_16.webp" id="f16"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_17.webp" id="f17"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_18.webp" id="f18"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_19.webp" id="f19"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_20.webp" id="f20"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_21.webp" id="f21"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_22.webp" id="f22"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/cutins/ult/arin/arin_ult_23.webp" id="f23"]
+
+[resource]
+animations = [{
+"frames": [
+{
+"duration": 3.0,
+"texture": ExtResource("f00")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f01")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f02")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f03")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f04")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f05")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f06")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f07")
+}, {
+"duration": 2.0,
+"texture": ExtResource("f08")
+}, {
+"duration": 2.0,
+"texture": ExtResource("f09")
+}, {
+"duration": 2.0,
+"texture": ExtResource("f10")
+}, {
+"duration": 2.0,
+"texture": ExtResource("f11")
+}, {
+"duration": 2.0,
+"texture": ExtResource("f12")
+}, {
+"duration": 2.0,
+"texture": ExtResource("f13")
+}, {
+"duration": 2.0,
+"texture": ExtResource("f14")
+}, {
+"duration": 2.0,
+"texture": ExtResource("f15")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f16")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f17")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f18")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f19")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f20")
+}, {
+"duration": 3.0,
+"texture": ExtResource("f21")
+}, {
+"duration": 4.0,
+"texture": ExtResource("f22")
+}, {
+"duration": 10.0,
+"texture": ExtResource("f23")
+}],
+"loop": false,
+"name": &"ult",
+"speed": 24.0
+}]
+metadata/strike_frame = 11
+metadata/final_rect = Rect2(86, 49, 636, 1019)
