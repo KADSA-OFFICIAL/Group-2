@@ -59,6 +59,18 @@ static func backdrop_path(backdrop_name: String) -> String:
 	return candidate if ResourceLoader.exists(candidate) else ""
 
 
+# 오의 전용 컷인 일러스트 (#544). **파일을 이 경로에 넣으면 전투가 바로 쓴다** — 코드·데이터를
+# 고칠 필요가 없다. 없으면 빈 문자열이고, 전투는 전투 스프라이트의 공격 프레임으로 연출한다.
+# 규격: docs/ultimate-cutin-art-spec.md
+const ULTIMATE_CUTIN_DIR := "res://assets/sprites/characters/cutins/ult"
+
+static func ultimate_cutin_path(character_id: StringName) -> String:
+	if String(character_id).is_empty():
+		return ""
+	var candidate: String = "%s/char_%s_ult.png" % [ULTIMATE_CUTIN_DIR, character_id]
+	return candidate if ResourceLoader.exists(candidate) else ""
+
+
 # 재화 아이콘 이름. "재화 id 로 아이콘 이름을 만든다"는 규칙이 이 한 곳에만 있다.
 static func currency_icon_name(currency_type: String) -> String:
 	return "icon_" + currency_type
