@@ -171,6 +171,8 @@ var _banner: Label = null
 
 ## 오의 컷인 판 (#544). 한 번 만들어 두고 오의마다 그림·글자만 갈아 끼운다.
 var _cutin: UltimateCutin = null
+## 오의 애니메이션 캐시. 경로 -> SpriteFrames (미리 읽기 중이면 null). `_preload_ultimates` 참고.
+var _ult_frames: Dictionary = {}
 
 ## 연출을 재생 중인가. 재생 중에는 다음 턴으로 넘어가지 않는다.
 var _playing: bool = false
@@ -520,6 +522,7 @@ func _start_battle() -> void:
 
 	var party := _resolve_party()
 	var waves := _resolve_waves()
+	_preload_ultimates(party)
 
 	if party.is_empty() or waves.is_empty():
 		push_error("TurnBattle: 파티나 적을 구성할 수 없습니다.")
@@ -1329,7 +1332,7 @@ func _play_ult_field(unit: TurnUnit, color: Color, full: bool) -> void:
 # 컷인에 이 오의의 그림·색·글자를 채운다. 쓸 그림이 없으면 false(배너로 떨어진다).
 #
 # 그림은 **게임 그림체와 같은 것만** 쓴다 (#544):
-#   1) 오의 전용 일러스트 — `UITheme.ultimate_cutin_path()` 에 파일이 있으면(사양: docs/ultimate-cutin-art-spec.md)
+#   1) LD 오의 애니메이션 마지막 장 또는 전용 일러스트 — `_cutin_art_for()` 참고
 #   2) 없으면 전투 스프라이트의 공격 프레임(없으면 정지 스프라이트)
 # 예전 2400×1350 컷인과 편성 초상은 그림체가 달라 쓰지 않는다.
 func _setup_cutin(unit: TurnUnit, skill: SkillData, color: Color) -> bool:
@@ -1346,36 +1349,66 @@ func _setup_cutin(unit: TurnUnit, skill: SkillData, color: Color) -> bool:
 	var glyph_path := UITheme.icon_path(icon_name) if not icon_name.is_empty() else ""
 	var glyph: Texture2D = load(glyph_path) if not glyph_path.is_empty() else null
 	_cutin.setup(art, bool(picked["dedicated"]), unit.display_name, skill.display_name, color, emblem, glyph,
-		picked.get("video"), _speed_multiplier())
+		picked.get("frames"), _speed_multiplier())
 	return true
 
 
-# 지금 배속 배수(1·2·3). 컷인의 LD 공격 영상은 이 배수로 재생한다(기준 속도 0.7 로 늦추지 않는다).
+# 지금 배속 배수(1·2·3). 컷인의 LD 공격 애니메이션은 이 배수로 재생한다(기준 속도 0.7 로 늦추지 않는다 —
+# 원화 타이밍이 1배속 3초로 짜여 있다).
 func _speed_multiplier() -> float:
 	if battle == null or battle.presentation == null:
 		return 1.0
 	return maxf(battle.presentation.speed / _base_presentation_speed(), 0.1)
 
 
-# 컷인 그림 고르기. {"texture": Texture2D, "dedicated": 전용 일러스트인가, "video": VideoStream 또는 null}.
+# 컷인 그림 고르기. {"texture": Texture2D, "dedicated": LD 그림인가, "frames": SpriteFrames 또는 null}.
 #
-# LD 공격 영상(#546)이 있으면 풀 연출이 그것을 재생하고, 정지 그림(결정 포즈)은 짧게 모드에 쓴다.
+# LD 공격 애니메이션(#549, 원화 24장)이 있으면 풀 연출이 그것을 재생하고, 짧게 모드는 그 마지막 장
+# (결정 포즈)을 쓴다. 없으면 전용 정지 일러스트, 그것도 없으면 전투 스프라이트의 공격 프레임.
 func _cutin_art_for(unit: TurnUnit) -> Dictionary:
-	var video_path := UITheme.ultimate_video_path(unit.character.character_id)
-	var video: VideoStream = load(video_path) as VideoStream if not video_path.is_empty() else null
+	var frames := _ultimate_frames_of(unit.character.character_id)
+	if frames != null:
+		var final_tex := UltimateCutin.final_pose_of(frames)
+		if final_tex != null:
+			return {"texture": final_tex, "dedicated": true, "frames": frames}
 	var path := UITheme.ultimate_cutin_path(unit.character.character_id)
 	if not path.is_empty():
 		var dedicated := load(path) as Texture2D
 		if dedicated != null:
-			return {"texture": dedicated, "dedicated": true, "video": video}
+			return {"texture": dedicated, "dedicated": true, "frames": null}
 	# 공격 프레임: 휘두르는 순간(가운데쯤)의 그림이 가장 역동적이다.
-	var frames := _battle_frames_of(unit)
-	if frames != null and frames.has_animation(BattleAnimation.ATTACK):
-		var count := frames.get_frame_count(BattleAnimation.ATTACK)
+	var battle_frames := _battle_frames_of(unit)
+	if battle_frames != null and battle_frames.has_animation(BattleAnimation.ATTACK):
+		var count := battle_frames.get_frame_count(BattleAnimation.ATTACK)
 		if count > 0:
-			return {"texture": frames.get_frame_texture(BattleAnimation.ATTACK, mini(count - 1, count / 2)),
-				"dedicated": false, "video": video}
-	return {"texture": _battle_sprite_of(unit), "dedicated": false, "video": video}
+			return {"texture": battle_frames.get_frame_texture(BattleAnimation.ATTACK, mini(count - 1, count / 2)),
+				"dedicated": false, "frames": null}
+	return {"texture": _battle_sprite_of(unit), "dedicated": false, "frames": null}
+
+
+# 파티의 오의 애니메이션을 전투 시작 때 미리 읽어 둔다 (#549).
+#
+# 예전 영상(#546)은 오의를 쓰는 순간 `load()` 하고 디코딩을 시작해서, 첫 오의의 첫 장면이
+# 0.2~0.3초 비었다(창 모드 캡처에서 실루엣이 늦게 떴다). 24장 텍스처를 그 순간에 읽어도 같은 일이 난다.
+func _preload_ultimates(party: Array[CharacterData]) -> void:
+	for member in party:
+		var path := UITheme.ultimate_frames_path(member.character_id)
+		if path.is_empty() or _ult_frames.has(path):
+			continue
+		if ResourceLoader.load_threaded_request(path) == OK:
+			_ult_frames[path] = null
+
+
+# 오의 애니메이션. 미리 읽기를 걸어 둔 것은 그 결과를(아직이면 끝날 때까지 기다린다), 아니면 바로 읽는다.
+func _ultimate_frames_of(character_id: StringName) -> SpriteFrames:
+	var path := UITheme.ultimate_frames_path(character_id)
+	if path.is_empty():
+		return null
+	var cached: Resource = _ult_frames.get(path)
+	if cached == null:
+		cached = ResourceLoader.load_threaded_get(path) if _ult_frames.has(path) else load(path)
+		_ult_frames[path] = cached
+	return cached as SpriteFrames
 
 
 # HUD 를 부드럽게 내리거나 올린다. 노드를 숨기지 않고 알파만 건드린다 —

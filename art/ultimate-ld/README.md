@@ -18,18 +18,45 @@
 - 참조: 편성 초상(그림체·의상) + 전투 프레임 공격 컷(무기). 생성 과정에서 의상·비율·무기·표정에 세부 차이가 있다.
 - 1080×1920 은 원화를 키워 렌더링한 크기다(원화 자체가 그 해상도는 아니다).
 
-## 게임 에셋으로 바꾸기
+## 게임 에셋 — 24장 시퀀스 (#549)
 
-투명 PNG 시퀀스 zip(`<id>_transparent_frames.zip`, 캐릭터당 약 60MB)은 저장소에 넣지 않는다.
-zip 이 있는 폴더를 넘겨 변환 스크립트를 돌린다:
+게임은 영상을 쓰지 않는다. 오의 한 번 = **원화 24장 `SpriteFrames`** 이고, 장마다 길이와 공격 정점 장을
+함께 싣는다(`stage/turn/UltimateCutin.gd`).
 
 ```bash
-python tools/build_ultimate_videos.py <zip 폴더>
-godot --headless --path . --import
+python tools/build_ultimate_frames.py <id> <24장 폴더|zip|3초 클립(.mp4/.ogv)>
+godot --headless --path . --editor --import --quit
 ```
 
-- `assets/video/ultimate/<id>.ogv` — 알파를 옆에 붙인 Theora(왼쪽 색 / 오른쪽 알파, 810×1440 ×2). 약 2MB
-- `assets/sprites/characters/cutins/ult/char_<id>_ult.png` — 마지막 프레임(결정 포즈) 정지 그림
+- `assets/sprites/characters/cutins/ult/<id>/<id>_ult_00.webp` ~ `_23.webp` — 24장 합집합 상자로 자르고
+  발 기준선을 맞춘 투명 WebP(높이 최대 1152). 가져오기는 VRAM 압축.
+- `assets/sprites/characters/cutins/ult/<id>/<id>_ult.tres` — 장마다 길이(기본 1배속 3초),
+  `metadata/strike_frame`(기술명이 박히는 장, 기본 11), `metadata/final_rect`(짧게 모드가 잘라 쓰는 결정 포즈 상자).
+- 타이밍을 캐릭터마다 바꾸려면 `timing/<id>.json` 에 `{"durations": [24개], "strike_frame": n}`.
 
-다시 뽑은 클립으로 교체할 때도 같은 이름으로 위 두 파일만 바뀌면 된다(코드 수정 없음).
-공격 정점 시점이 크게 다르면 `UltimateCutin.VIDEO_STRIKE`(기술명 타이포가 박히는 시점)를 맞춘다.
+### 지금 들어 있는 것
+
+| 캐릭터 | 상태 |
+|---|---|
+| 아린 | **독립 원화 24장** (2026-10-04, 초록 배경 → 배경·번짐 제거). 원본 PNG(약 39MB)는 저장소에 넣지 않았고, 프롬프트·검증값·제작 쪽 검수는 `arin-24f/` |
+| 설아 · 미나 · 태희 · 하랑 · 강지 | 임시본 — 아래 |
+
+아린 원화의 알려진 문제: **01~06장은 석궁이 화면 오른쪽, 07장부터 왼쪽**을 겨눠 06→07 에서 한 장 만에 뒤집힌다.
+키 04 를 왼쪽 조준으로 다시 뽑고 02·01·03·06·05 를 다시 채우면 고쳐진다(프롬프트: 사용자 로컬
+`Downloads/ultimate_24f_prompts/6-1_아린_수정_01-06.txt`).
+
+임시본은 **#546 클립(원화 6장 + 합성)에서 타이밍표대로 24장을 뽑은 것**이다.
+`2d74afe` 의 `assets/video/ultimate/<id>.ogv`(알파를 옆에 붙인 Theora, 알파가 정확하다)를 입력으로 썼다.
+그래서 독립 원화는 아직 캐릭터당 6장이고, 원화가 바뀌는 장에서 그림이 통째로 바뀐다.
+강지는 #548 이전 디자인이다. 새 원화 24장 제작 프롬프트: [docs/ultimate-ld-animation-prompts.md](../../docs/ultimate-ld-animation-prompts.md).
+
+### #546 클립에서 찾은 문제 (새 원화에서 고칠 것)
+
+| 문제 | 근거 |
+|---|---|
+| 원화 6장 사이가 끊긴다 | 장 사이 화소 차이가 평소 0.3~2, 원화가 바뀌는 5곳(11·23·29·37·49장)에서 14~43 |
+| 마지막 0.9초가 완전히 멈춘다 | 51장부터 72장까지 차이 0.0~0.1 |
+| 포즈마다 인물 크기·발 위치가 다르다 | 강지 기도 컷(24~29장)만 작고 떠 있다 |
+| 하랑 젖힘 컷이 뒤돌아 있다 | 정면 → 등 → 정면으로 몸이 뒤집혀 보인다 |
+| 강지가 예전 디자인이다 | 호박색 눈·생머리 단발. #548 새 디자인은 올리브 초록 눈·웨이브 단발 |
+| 인물이 작다 | 전신 + 여백(1080×1920 중 인물 약 65%)이라 컷인에서 화면 높이의 약 70% |

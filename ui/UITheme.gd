@@ -71,14 +71,12 @@ static func ultimate_cutin_path(character_id: StringName) -> String:
 	return candidate if ResourceLoader.exists(candidate) else ""
 
 
-# 오의 LD 공격 애니메이션 영상 (#546). 알파를 옆에 붙인 Theora — tools/build_ultimate_videos.py 가 만든다.
-# 있으면 풀 연출이 정지 그림 대신 이 영상을 재생한다.
-const ULTIMATE_VIDEO_DIR := "res://assets/video/ultimate"
-
-static func ultimate_video_path(character_id: StringName) -> String:
+# 오의 LD 공격 애니메이션 (#549). 독립 원화 24장의 SpriteFrames — tools/build_ultimate_frames.py 가 만든다.
+# 있으면 풀 연출이 이것을 재생하고, 짧게 모드는 마지막 장(결정 포즈)을 쓴다.
+static func ultimate_frames_path(character_id: StringName) -> String:
 	if String(character_id).is_empty():
 		return ""
-	var candidate: String = "%s/%s.ogv" % [ULTIMATE_VIDEO_DIR, character_id]
+	var candidate: String = "%s/%s/%s_ult.tres" % [ULTIMATE_CUTIN_DIR, character_id, character_id]
 	return candidate if ResourceLoader.exists(candidate) else ""
 
 

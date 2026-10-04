@@ -2,7 +2,7 @@
 
 > **#546 에서 방향이 바뀌었다.** 컷인 캐릭터는 SD 정지 일러스트가 아니라 **LD(편성 초상 그림체) 2D 공격
 > 애니메이션**을 쓴다. 현행 산출물·제작 경위는 [art/ultimate-ld](../art/ultimate-ld/README.md),
-> 영상 생성 프롬프트는 [ultimate-ld-animation-prompts.md](ultimate-ld-animation-prompts.md) 를 본다.
+> 24장 원화 제작 프롬프트(#549)는 [ultimate-ld-animation-prompts.md](ultimate-ld-animation-prompts.md) 를 본다.
 > 아래는 #544 당시의 SD 정지 일러스트 사양으로, 기록으로 남긴다.
 
 오의(궁극기) 연출에 들어갈 **캐릭터 6명의 컷인 일러스트**를 새로 받기 위한 사양서다.
