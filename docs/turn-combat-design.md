@@ -783,7 +783,7 @@ UV 로 잘라 내고(가이드 §3.4), 세로 중심은 살짝 위에 둔다(정
 |---|---|---|
 | 초상 아이콘 (42×36) | 아군 하단 밴드 초상 프레임 | `PortraitSystem.get_portrait()` → `HUDKit.head_texture()` |
 | 초상 아이콘 (칩용) | 좌측 타임라인 칩의 26px 패치. 아군·적 공통 | 위와 같음. 적은 `EnemyData.portrait` |
-| 오의 컷인 인물 (#544) | 컷인 판 오른쪽 | `UITheme.ultimate_cutin_path()` 의 전용 일러스트, 없으면 전투 프레임 공격 컷. **편성 초상은 그림체가 달라 쓰지 않는다** |
+| 오의 컷인 인물 (#544·#546) | 컷인 판 오른쪽 | 풀 연출: `UITheme.ultimate_video_path()` 의 LD 공격 애니메이션(알파를 옆에 붙인 Theora). 짧게·영상 없음: `ultimate_cutin_path()` 의 LD 결정 포즈. 둘 다 없으면 전투 프레임 공격 컷 |
 | 오의 컷인 (#544) | 스타레일식 풀(약 3초) / 짧게 / 끄기 — `SettingsSystem.ultimate_cutin_mode` | `UltimateCutin` + `TurnBattle._play_cutin()` |
 | 오의 엠블럼 | 컷인 타이포 뒤 워터마크 | `UITheme.role_emblem_path()` |
 

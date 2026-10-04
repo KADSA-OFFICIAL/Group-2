@@ -1,0 +1,16 @@
+Generation: built-in image_gen, transparent_background=true, one sheet per character.
+Each sheet uses the character's _1_portrait.png for appearance/style and _2_weapon.png for weapon/pose reference from the supplied folder.
+Original full character prompts are preserved in original_prompts.txt.
+
+Shared sheet instructions (last revision, used for Mina through Gangji):
+Create a professional 2D hand-drawn ANIMATION KEYFRAME SPRITE SHEET for an attack animation, using the two supplied reference images. Reference 1 dictates exact character identity, face, hair colors, outfit and illustration style. Reference 2 dictates weapon design and how the character holds it. Exactly SIX sequential full-body poses of the SAME character, arranged on an exact uniform 3-column by 2-row grid, reading left-to-right, top-to-bottom. Canvas 1536x1536. Each of the 3 columns is 512 pixels wide, each of the 2 rows is 768 pixels high. Each cell is PORTRAIT. Every cell same size, same scale, same camera, same foot baseline. CRITICAL: generous empty transparent gutter of 80 pixels between every figure and between rows. All weapon tips and hair must remain inside that figure's cell. No overlaps between neighboring sprites. Draw about 7-head adult proportions as first reference, NEVER chibi. Each figure occupies ~65% of cell height and stays entirely within its own cell. Consistent face and outfit and weapon across all poses. No border, no labels, no text, no cast shadows, no floor, no scenery, no grid lines. TRUE TRANSPARENT BACKGROUND. Clean thin linework and cel shading, beautiful reference-matched 2D anime illustration. Use no motion blur, no duplicate limbs, no huge effects. Weapon is physically held in the hands, preserve anatomy. Six clear animation beats: 1 ready, 2 anticipation, 3 maximum windup, 4 attacking, 5 follow-through, 6 final hold. Character attacks toward SCREEN LOWER LEFT. This is production animation artwork with solid coherent shapes, not a storyboard. 
+
+Seola used the same six-beat brief with square canvas and square-cell wording before the grid clarification. Resulting sheets are 1254x1254 RGBA.
+Seola: summon ice spear, draw back, wind up, thrust screen lower left, follow through, final spear extended and free hand beside face. Preserve actual barefoot legs and tail depicted in supplied references.
+Mina: ready with shield and baton, shield up, low brace, lower-left shield bash, follow through, shield forward and baton raised with fang grin.
+Taehee: twin blades ready, crouch, low windup, lower-left X slash, low follow-through, crossed blades at chest.
+Harang: greatsword low, raise with two hands, overhead windup, down-left slash, low follow-through, planted final pose. Remove reference spoon/bowl.
+Arin: crossbow low, raise to shoulder, aim lower left, fire with slight recoil, return to aim, one eye closed. Violet-white energy on crossbow only.
+Gangji: ready staff, bring to chest, pray eyes closed, sweep staff overhead with both hands, orb brightens, raised staff with eyes closed and gentle smile.
+
+Rendering decision: clean key-pose cuts and small body/hair motion. Optical-flow crossfades were tested and rejected due to ghosting; they are not used in final files.

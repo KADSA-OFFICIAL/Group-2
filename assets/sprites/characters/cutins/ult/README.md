@@ -1,8 +1,10 @@
-# 오의 컷인 일러스트 (#544)
+# 오의 컷인 그림 (#544, #546)
 
-여기에 `char_<id>_ult.png`(1600×2000, 투명 배경)를 넣으면 전투의 오의 연출이 바로 그 그림을 쓴다.
-없으면 전투 스프라이트의 공격 프레임으로 연출한다.
+`char_<id>_ult.png` — 오의 컷인에 쓰는 **LD(편성 초상 그림체) 결정 포즈** 정지 그림.
 
-규격·그림체·캐릭터별 프롬프트: [docs/ultimate-cutin-art-spec.md](../../../../../docs/ultimate-cutin-art-spec.md)
+- 풀 연출은 `assets/video/ultimate/<id>.ogv`(LD 공격 애니메이션)를 재생하고, 이 정지 그림은
+  **짧게 모드**와 영상이 없을 때 쓴다.
+- 둘 다 `tools/build_ultimate_videos.py` 가 만든다. 원본·제작 경위: [art/ultimate-ld](../../../../../art/ultimate-ld/README.md)
+- 파일이 없으면 전투 프레임 공격 컷(SD)으로 떨어진다.
 
-> 상위 폴더의 `char_<id>_cutin.png`(2400×1350)는 그림체가 지금 게임과 달라 #544 부터 쓰지 않는다.
+> 상위 폴더의 `char_<id>_cutin.png`(2400×1350)는 #544 부터 쓰지 않는다.

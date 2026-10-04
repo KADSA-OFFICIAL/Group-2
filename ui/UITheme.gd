@@ -71,6 +71,17 @@ static func ultimate_cutin_path(character_id: StringName) -> String:
 	return candidate if ResourceLoader.exists(candidate) else ""
 
 
+# 오의 LD 공격 애니메이션 영상 (#546). 알파를 옆에 붙인 Theora — tools/build_ultimate_videos.py 가 만든다.
+# 있으면 풀 연출이 정지 그림 대신 이 영상을 재생한다.
+const ULTIMATE_VIDEO_DIR := "res://assets/video/ultimate"
+
+static func ultimate_video_path(character_id: StringName) -> String:
+	if String(character_id).is_empty():
+		return ""
+	var candidate: String = "%s/%s.ogv" % [ULTIMATE_VIDEO_DIR, character_id]
+	return candidate if ResourceLoader.exists(candidate) else ""
+
+
 # 재화 아이콘 이름. "재화 id 로 아이콘 이름을 만든다"는 규칙이 이 한 곳에만 있다.
 static func currency_icon_name(currency_type: String) -> String:
 	return "icon_" + currency_type
