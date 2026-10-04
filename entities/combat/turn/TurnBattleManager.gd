@@ -76,6 +76,15 @@ var prep_points: int = 3
 ## 자동 전투인가.
 var auto_battle: bool = false
 
+## 한 번의 `advance()` 가 **한 턴만** 진행하는가 (#542).
+##
+## 기본(false)은 "아군 입력이 필요한 지점까지" 한 번에 돈다 — 헤드리스 검증이 이것에 기댄다.
+## 화면(`TurnBattle`)은 true 로 켠다. 그렇지 않으면 자동 전투에서 전투 **전체**가 한 번에
+## 끝나고, HUD 는 실시간 로직 상태(웨이브 2/2 · 전멸)를 보여 주는데 필드는 그 연출을 2분에
+## 걸쳐 재생한다. 실제로 그랬다 — "전투가 점프한 뒤 멈췄다"로 보였다.
+## 한 턴씩 진행하면 화면이 그 턴의 연출을 다 재생한 뒤 다음 턴을 부르므로 둘이 어긋나지 않는다.
+var step_by_turn: bool = false
+
 ## 사이클 제한. 이 사이클을 넘기면 패배한다. 0이면 제한 없음.
 ##
 ## 왜 필요한가 (실제로 겪은 문제): 파티에 힐러가 있고 적이 보스 한 마리면 **양쪽이 서로를
@@ -349,6 +358,9 @@ func advance() -> void:
 		guard += 1
 		if not _step():
 			return
+		# 한 턴을 마쳤다. 화면이 연출을 재생하고 다시 부른다(phase 는 TURN_END).
+		if step_by_turn:
+			return
 	push_warning("TurnBattleManager: 한 번의 advance() 가 %d턴을 넘겼습니다(중단)."
 		% ADVANCE_GUARD)
 
@@ -468,13 +480,27 @@ func act(skill: SkillData, target: TurnUnit = null) -> Dictionary:
 	if bool(result["consumed_turn"]):
 		_end_turn()
 		# 다음 아군 입력 지점(또는 전투 종료)까지 진행한다. 화면은 이 사이에 쌓인
-		# 연출 큐를 재생한다.
-		advance()
+		# 연출 큐를 재생한다. 턴 단위 진행이면 다음 턴은 화면이 이 행동의 연출을 다
+		# 재생한 뒤 부른다(phase 는 TURN_END 로 남는다).
+		if not step_by_turn:
+			advance()
 	else:
 		# 턴을 소모하지 않는 행동(오의)이면 같은 유닛의 입력 대기로 돌아온다.
 		phase = Phase.AWAITING_INPUT
 
 	return result
+
+
+# 입력을 기다리던 아군 턴을 자동 전투 규칙으로 대신 진행한다 (#542).
+#
+# 자동 전투를 **아군 턴 도중에** 켰을 때 쓴다. 예전 화면은 여기서 `advance()` 를 불렀는데,
+# 그러면 기다리던 아군의 턴을 건너뛰고 다음 유닛으로 넘어갔다.
+func auto_act() -> void:
+	if phase != Phase.AWAITING_INPUT or active_unit == null or not active_unit.is_ally():
+		return
+	_auto_ally_turn()
+	if not step_by_turn:
+		advance()
 
 
 # **오의를 발동한다. 턴 순서와 무관하게 언제든 부를 수 있다.**
@@ -495,19 +521,8 @@ func use_ultimate(unit: TurnUnit) -> Dictionary:
 	if not resources.can_use_ultimate(unit, ultimate):
 		return {"ok": false, "reason": resources.ultimate_blocked_reason(unit, ultimate)}
 
-	presentation.push(PresentationQueue.Event.ULTIMATE_CUTIN, {
-		"unit": unit,
-		"skill": ultimate,
-		"steps": PresentationQueue.ultimate_cutin_steps(unit, ultimate),
-	})
-
-	# 대상은 자동으로 고른다 — 오의는 턴 밖 발동이라 조준 UI를 띄우면 시간이 멈춘 것처럼
-	# 보이고, 대부분의 오의가 전체/아군전체다. 단일 오의는 어그로 규칙으로 고른다.
-	var target: TurnUnit = null
-	if ultimate.needs_target_pick():
-		var candidates := ranks.valid_targets(unit, ultimate)
-		if not candidates.is_empty():
-			target = candidates[0]
+	# 컷인은 `_run()` 이 붙인다 — 어느 경로로 쓰든 같은 연출이 나와야 한다 (#542).
+	var target := _ultimate_target(unit, ultimate)
 
 	var previous := phase
 	phase = Phase.RESOLVING
@@ -553,9 +568,10 @@ func _auto_ally_turn() -> void:
 	phase = Phase.RESOLVING
 
 	# 자동 전투도 오의를 먼저 판단한다 — 게이지가 넘쳐 낭비되지 않게.
+	# 대상은 수동 발동(`use_ultimate()`)과 같은 규칙으로 고른다.
 	if ai.should_use_ultimate(active_unit):
 		var ultimate := active_unit.character.get_turn_ultimate()
-		_run(active_unit, ultimate, null)
+		_run(active_unit, ultimate, _ultimate_target(active_unit, ultimate))
 
 	var choice := ai.choose_ally_action(active_unit, units)
 	var skill: SkillData = choice["skill"]
@@ -571,6 +587,18 @@ func _auto_ally_turn() -> void:
 # ===== 공통 실행 (Run) =====
 
 func _run(unit: TurnUnit, skill: SkillData, target: TurnUnit) -> Dictionary:
+	# **오의 컷인은 여기서 한 번만 붙인다 (#542).**
+	#
+	# 예전에는 초상 배지(`use_ultimate()`)만 컷인을 큐에 넣었다. 자동 전투와 스킬 목록에서 쓴
+	# 오의는 이 함수로 바로 들어와 일반 공격처럼 재생됐다 — 오의가 "안 나오는" 것처럼 보였다.
+	# 낼 수 없는 오의(게이지 부족)에는 컷인을 붙이지 않는다. 실행이 거절되면 연출만 남는다.
+	if skill != null and unit != null and unit.is_ally() and skill.is_turn_ultimate() 			and resources.can_use_ultimate(unit, skill):
+		presentation.push(PresentationQueue.Event.ULTIMATE_CUTIN, {
+			"unit": unit,
+			"skill": skill,
+			"steps": PresentationQueue.ultimate_cutin_steps(unit, skill),
+		})
+
 	presentation.push(PresentationQueue.Event.SKILL_CAST, {
 		"unit": unit, "skill": skill, "target": target,
 		"camera": PresentationQueue.camera_for(
@@ -580,6 +608,15 @@ func _run(unit: TurnUnit, skill: SkillData, target: TurnUnit) -> Dictionary:
 	var result := resolver.execute(unit, skill, target)
 	_absorb(result)
 	return result
+
+
+# 오의 대상. 오의는 턴 밖 발동이라 조준 UI 를 띄우면 시간이 멈춘 것처럼 보이고,
+# 대부분의 오의가 전체/아군전체다. 단일 오의는 어그로 규칙(유효 대상의 첫째)으로 고른다.
+func _ultimate_target(unit: TurnUnit, ultimate: SkillData) -> TurnUnit:
+	if ultimate == null or not ultimate.needs_target_pick():
+		return null
+	var candidates := ranks.valid_targets(unit, ultimate)
+	return candidates[0] if not candidates.is_empty() else null
 
 
 # 여러 실행 결과를 한꺼번에 반영한다 (특성이 여러 개 터질 수 있다).
