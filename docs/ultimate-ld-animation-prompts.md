@@ -84,18 +84,23 @@ small effect named for this frame, attached to the weapon.
 
 ### STEP 2 — 사이 18장
 
-첨부: 이웃한 두 장(앞 장 = Image 1, 뒷 장 = Image 2). 예) 02 는 01 과 04, 09 는 08 과 11.
-가까운 쪽부터 채운다(01 → 02 → 03, 05 → 06 → 07 …). 프롬프트 = 공통 머리말 + 아래.
+첨부: 이미 그린 두 장(앞 장 = Image 1, 뒷 장 = Image 2). **늘 두 장의 가운데부터** 채운다 — 생성 도구는
+"정확히 중간"을 가장 잘 그린다. 순서(괄호는 첨부할 두 장):
+
+`02(00·04) → 01(00·02) → 03(02·04) → 06(04·08) → 05(04·06) → 07(06·08) → 09(08·11) → 10(09·11) →
+12(11·16) → 13(12·16) → 14(13·16) → 15(14·16) → 19(16·23) → 17(16·19) → 18(17·19) → 21(19·23) → 20(19·21) → 22(21·23)`
+
+프롬프트 = 공통 머리말 + 아래. 캐릭터마다 장 번호·위치를 채운 완성본은 사용자 로컬 `Downloads/ultimate_24f_prompts/` 에 있다.
 
 ```
 IN-BETWEEN: Image 1 is frame {A}, Image 2 is frame {B}. Draw frame {NN}, {T} of the way from
-Image 1 to Image 2 (0 = Image 1, 1 = Image 2). Interpolate body, arms, weapon, hair and clothes
-between the two; do not invent a new gesture. The body leads, the weapon follows a little behind,
-hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon
-shape exactly as both images.
+Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not
+invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail
+lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
 ```
 
-`{T}`: 01 = 1/3, 02 = 1/2(01↔04), 03 = 2/3 … 처럼 두 키 사이 위치. 박자별 덧붙임:
+`{T}`: 대부분 halfway. 09 = one third, 12 = a small step(지나침), 13 = one quarter, 14·17 = one third, 22 = three quarters.
+박자별 덧붙임:
 
 | 장 | 덧붙임 |
 |---|---|
@@ -106,7 +111,7 @@ shape exactly as both images.
 
 ### STEP 3 — 저장
 
-`<id>/00.png` ~ `<id>/23.png` (예: `gangji/00.png`). 폴더째 넘겨 주면 4절대로 넣는다.
+`<id>/00.png` ~ `<id>/23.png` (예: `gangji/00.png`). 폴더째 넘겨 주면 6절대로 넣는다.
 
 ---
 
