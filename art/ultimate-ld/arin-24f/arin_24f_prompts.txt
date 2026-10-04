@@ -1,0 +1,339 @@
+﻿아린 (arin) 오의 원화 24장 프롬프트
+
+새 ChatGPT 대화 하나에서 [1]부터 [24]까지 순서대로 진행한다. 대화를 바꾸지 않는다.
+각 단계의 '첨부' 그림을 붙이고, 점선 아래 영어 프롬프트를 통째로 복사해 보낸다.
+마음에 안 들면 같은 단계를 다시 뽑는다. 승인한 그림은 '저장' 이름으로 저장한다.
+배경: pure green #00FF00 · 캔버스 1024x1536 세로
+
+※ 아린은 #548 새 초상(그림체 통일)을 받은 뒤에 진행한다. references 의 아린 초상은 예전 그림체다.
+
+======================================================================
+[1] 키 00
+첨부: references/arin_1_portrait.png (그림체·의상), references/arin_2_weapon.png (무기 모양)
+저장: arin/00.png
+----------------------------------------------------------------------
+ANIMATION FRAME 00 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+KEY POSE: holding the crossbow low in both hands, calm face
+Image 1 is the reference portrait (style, face, outfit). Image 2 shows the weapon design.
+
+======================================================================
+[2] 키 04
+첨부: arin/00.png (승인한 첫 장), arin/00.png (바로 앞 키)
+저장: arin/04.png
+----------------------------------------------------------------------
+ANIMATION FRAME 04 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+KEY POSE: snapping the crossbow up toward her shoulder, cardigan sleeves swaying
+Image 1 is frame 00 of this animation (identity, scale, ground line). Image 2 is the previous key frame 00.
+
+======================================================================
+[3] 키 08
+첨부: arin/00.png (승인한 첫 장), arin/04.png (바로 앞 키)
+저장: arin/08.png
+----------------------------------------------------------------------
+ANIMATION FRAME 08 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+KEY POSE: aiming to the lower left, one eye closed, string fully drawn, body still
+Image 1 is frame 00 of this animation (identity, scale, ground line). Image 2 is the previous key frame 04.
+
+======================================================================
+[4] 키 11
+첨부: arin/00.png (승인한 첫 장), arin/08.png (바로 앞 키)
+저장: arin/11.png
+----------------------------------------------------------------------
+ANIMATION FRAME 11 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+KEY POSE: STRIKE: firing; recoil pushes her shoulder back, hair flicks, purple-white sparks along the string and limbs
+Image 1 is frame 00 of this animation (identity, scale, ground line). Image 2 is the previous key frame 08.
+
+======================================================================
+[5] 키 16
+첨부: arin/00.png (승인한 첫 장), arin/11.png (바로 앞 키)
+저장: arin/16.png
+----------------------------------------------------------------------
+ANIMATION FRAME 16 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+KEY POSE: recovering from the recoil, crossbow coming back to aim
+Image 1 is frame 00 of this animation (identity, scale, ground line). Image 2 is the previous key frame 11.
+
+======================================================================
+[6] 키 23
+첨부: arin/00.png (승인한 첫 장), arin/16.png (바로 앞 키)
+저장: arin/23.png
+----------------------------------------------------------------------
+ANIMATION FRAME 23 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+KEY POSE: FINAL: still aiming to the lower left, one eye closed, steady and focused
+Image 1 is frame 00 of this animation (identity, scale, ground line). Image 2 is the previous key frame 16.
+
+======================================================================
+[7] 사이 02 (00와 04 사이)
+첨부: arin/00.png (Image 1), arin/04.png (Image 2)
+저장: arin/02.png
+----------------------------------------------------------------------
+ANIMATION FRAME 02 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 00, Image 2 is frame 04. Draw frame 02, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+
+======================================================================
+[8] 사이 01 (00와 02 사이)
+첨부: arin/00.png (Image 1), arin/02.png (Image 2)
+저장: arin/01.png
+----------------------------------------------------------------------
+ANIMATION FRAME 01 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 00, Image 2 is frame 02. Draw frame 01, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+
+======================================================================
+[9] 사이 03 (02와 04 사이)
+첨부: arin/02.png (Image 1), arin/04.png (Image 2)
+저장: arin/03.png
+----------------------------------------------------------------------
+ANIMATION FRAME 03 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 02, Image 2 is frame 04. Draw frame 03, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+
+======================================================================
+[10] 사이 06 (04와 08 사이)
+첨부: arin/04.png (Image 1), arin/08.png (Image 2)
+저장: arin/06.png
+----------------------------------------------------------------------
+ANIMATION FRAME 06 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 04, Image 2 is frame 08. Draw frame 06, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+
+======================================================================
+[11] 사이 05 (04와 06 사이)
+첨부: arin/04.png (Image 1), arin/06.png (Image 2)
+저장: arin/05.png
+----------------------------------------------------------------------
+ANIMATION FRAME 05 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 04, Image 2 is frame 06. Draw frame 05, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+
+======================================================================
+[12] 사이 07 (06와 08 사이)
+첨부: arin/06.png (Image 1), arin/08.png (Image 2)
+저장: arin/07.png
+----------------------------------------------------------------------
+ANIMATION FRAME 07 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 06, Image 2 is frame 08. Draw frame 07, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+
+======================================================================
+[13] 사이 09 (08와 11 사이)
+첨부: arin/08.png (Image 1), arin/11.png (Image 2)
+저장: arin/09.png
+----------------------------------------------------------------------
+ANIMATION FRAME 09 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 08, Image 2 is frame 11. Draw frame 09, one third of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Fast swing: the torso has already turned toward screen left, the weapon still trails behind.
+
+======================================================================
+[14] 사이 10 (09와 11 사이)
+첨부: arin/09.png (Image 1), arin/11.png (Image 2)
+저장: arin/10.png
+----------------------------------------------------------------------
+ANIMATION FRAME 10 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 09, Image 2 is frame 11. Draw frame 10, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Fast swing: the torso has already turned toward screen left, the weapon still trails behind.
+
+======================================================================
+[15] 사이 12 (11와 16 사이)
+첨부: arin/11.png (Image 1), arin/16.png (Image 2)
+저장: arin/12.png
+----------------------------------------------------------------------
+ANIMATION FRAME 12 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 11, Image 2 is frame 16. Draw frame 12, a small step of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Overshoot: the weapon travels slightly PAST the strike position of Image 1 (further than Image 1, not toward Image 2), hair still flying forward.
+
+======================================================================
+[16] 사이 13 (12와 16 사이)
+첨부: arin/12.png (Image 1), arin/16.png (Image 2)
+저장: arin/13.png
+----------------------------------------------------------------------
+ANIMATION FRAME 13 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 12, Image 2 is frame 16. Draw frame 13, one quarter of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Recoil: the body springs back a little from the overshoot, hair starts to fall.
+
+======================================================================
+[17] 사이 14 (13와 16 사이)
+첨부: arin/13.png (Image 1), arin/16.png (Image 2)
+저장: arin/14.png
+----------------------------------------------------------------------
+ANIMATION FRAME 14 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 13, Image 2 is frame 16. Draw frame 14, one third of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Recoil: the body keeps returning, hair falling.
+
+======================================================================
+[18] 사이 15 (14와 16 사이)
+첨부: arin/14.png (Image 1), arin/16.png (Image 2)
+저장: arin/15.png
+----------------------------------------------------------------------
+ANIMATION FRAME 15 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 14, Image 2 is frame 16. Draw frame 15, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+
+======================================================================
+[19] 사이 19 (16와 23 사이)
+첨부: arin/16.png (Image 1), arin/23.png (Image 2)
+저장: arin/19.png
+----------------------------------------------------------------------
+ANIMATION FRAME 19 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 16, Image 2 is frame 23. Draw frame 19, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Settling: hair, ribbons, tail and clothes are still settling.
+
+======================================================================
+[20] 사이 17 (16와 19 사이)
+첨부: arin/16.png (Image 1), arin/19.png (Image 2)
+저장: arin/17.png
+----------------------------------------------------------------------
+ANIMATION FRAME 17 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 16, Image 2 is frame 19. Draw frame 17, one third of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Settling: hair, ribbons, tail and clothes are still settling.
+
+======================================================================
+[21] 사이 18 (17와 19 사이)
+첨부: arin/17.png (Image 1), arin/19.png (Image 2)
+저장: arin/18.png
+----------------------------------------------------------------------
+ANIMATION FRAME 18 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 17, Image 2 is frame 19. Draw frame 18, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Settling: hair, ribbons, tail and clothes are still settling.
+
+======================================================================
+[22] 사이 21 (19와 23 사이)
+첨부: arin/19.png (Image 1), arin/23.png (Image 2)
+저장: arin/21.png
+----------------------------------------------------------------------
+ANIMATION FRAME 21 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 19, Image 2 is frame 23. Draw frame 21, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Settling: almost the final pose; only hair, ribbons, tail and clothes are still settling.
+
+======================================================================
+[23] 사이 20 (19와 21 사이)
+첨부: arin/19.png (Image 1), arin/21.png (Image 2)
+저장: arin/20.png
+----------------------------------------------------------------------
+ANIMATION FRAME 20 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 19, Image 2 is frame 21. Draw frame 20, halfway of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Settling: hair, ribbons, tail and clothes are still settling.
+
+======================================================================
+[24] 사이 22 (21와 23 사이)
+첨부: arin/21.png (Image 1), arin/23.png (Image 2)
+저장: arin/22.png
+----------------------------------------------------------------------
+ANIMATION FRAME 22 of 24 (00-23) for Arin's ultimate attack. Draw exactly ONE full-body image of the same character, not a sheet, not a comparison.
+FRAME LOCK: vertical 1024x1536 canvas. Same character, same scale and same camera as every attached frame of this animation: identical head size and body proportions (about 7 heads tall, as in the reference portrait), soles of both feet on the same ground line at y=1490, whole weapon and hair inside the canvas with margin. Do NOT shrink, enlarge, move up or crop the character to fit the pose.
+STYLE: the exact illustration style of the reference portrait - same lineart, same cel shading, same face, eyes, hair, outfit and accessories. The character always faces the viewer or three-quarter toward screen left; never show her back.
+BACKGROUND: flat solid pure green #00FF00, perfectly uniform. No gradient, floor, cast shadow, scenery, text, border or frame number. Nothing in pure green #00FF00 color on the character.
+EFFECTS: no motion blur, no smear, no speed lines, no duplicate limbs, no large effects; only the small effect named for this frame, attached to the weapon.
+CHARACTER: Arin, a composed girl: short blonde bob with gold hair pins, golden eyes, oversized cream cable-knit cardigan, white V-neck top, dark mini skirt, as in the reference portrait. Weapon: crossbow with purple lightning motifs.
+IN-BETWEEN: Image 1 is frame 21, Image 2 is frame 23. Draw frame 22, three quarters of the way from Image 1 to Image 2. Interpolate body, arms, weapon, hair and clothes between the two; do not invent a new gesture. The body leads, the weapon follows a little behind, hair, ribbons and tail lag behind the body (follow-through). Keep scale, ground line and weapon shape exactly as both images.
+Almost exactly Image 2 (the final pose); only the hair is slightly less settled.
+======================================================================
+끝. arin/00.png ~ arin/23.png 24장이 다 모였는지 확인하고 알려 주세요.

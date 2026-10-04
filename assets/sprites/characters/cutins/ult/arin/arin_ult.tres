@@ -106,4 +106,4 @@ animations = [{
 "speed": 24.0
 }]
 metadata/strike_frame = 11
-metadata/final_rect = Rect2(86, 49, 636, 1019)
+metadata/final_rect = Rect2(41, 11, 585, 1125)

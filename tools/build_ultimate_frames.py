@@ -68,8 +68,13 @@ ALPHA_CUT = 8          # 이 아래 알파는 인물로 보지 않는다(0..255)
 # 단색 배경 제거 — tools/prepare_animation_frames.py 와 같은 규칙(배경색 정도 = 배경 채널 - 나머지)
 FG_EXCESS = 0.24
 BG_EXCESS = 0.72
-BG_SEED = 0.55
+# 배경 시작점으로 볼 배경색 정도. 자홍은 보라 장식(아린 석궁 문양 등)을 지키려 높게 두고, 초록은 캐릭터에
+# 초록 장식이 없어(초록 배경은 초록이 없는 캐릭터만 쓴다) 낮춰서 가방끈·머리카락 틈의 작은 배경까지 잡는다.
+BG_SEED = {"magenta": 0.55, "green": 0.30}
 EDGE_REACH = 9
+# 번짐 제거 폭(px, 원본 해상도, 필터 크기). 배경에서 이만큼 안의 픽셀은 배경색 성분을 걷어 낸다
+# (아린 오의 불꽃·가방끈 둘레에 초록이 439px 남았다).
+SPILL_REACH = 31
 
 
 # ===== 읽기 =====
@@ -145,13 +150,23 @@ def key_out(rgb, key):
         key_rgb = np.array([0.0, 1.0, 0.0])
     alpha = np.clip((BG_EXCESS - ex) / (BG_EXCESS - FG_EXCESS), 0.0, 1.0)
     # 섞임은 배경 바로 옆에서만 생긴다 — 안쪽의 배경색 비슷한 장식은 불투명으로 지킨다.
-    bg = Image.fromarray(((ex >= BG_SEED) * 255).astype(np.uint8))
+    bg = Image.fromarray(((ex >= BG_SEED[key]) * 255).astype(np.uint8))
     near_bg = np.asarray(bg.filter(ImageFilter.MaxFilter(EDGE_REACH))) > 0
     alpha = np.where(near_bg, alpha, 1.0)
     safe = np.maximum(alpha, 1e-3)[..., None]
     color = np.clip((rgb - (1.0 - alpha)[..., None] * key_rgb) / safe, 0.0, 1.0)
     color = np.where((alpha >= 1.0)[..., None], rgb, color)
-    return np.dstack([color, alpha])
+    # 번짐 제거: 배경 둘레에서 배경색 쪽으로 기운 만큼(ex > 0)을 그 채널에서 뺀다. 안쪽은 건드리지 않는다.
+    spill_band = np.asarray(bg.filter(ImageFilter.MaxFilter(SPILL_REACH))) > 0
+    if key == "magenta":
+        cex = np.minimum(color[..., 0], color[..., 2]) - color[..., 1]
+        sub = np.where(spill_band, np.clip(cex, 0.0, None), 0.0)
+        color[..., 0] -= sub
+        color[..., 2] -= sub
+    else:
+        cex = color[..., 1] - np.maximum(color[..., 0], color[..., 2])
+        color[..., 1] -= np.where(spill_band, np.clip(cex, 0.0, None), 0.0)
+    return np.dstack([np.clip(color, 0.0, 1.0), alpha])
 
 
 # ===== 타이밍 =====
