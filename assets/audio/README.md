@@ -8,26 +8,34 @@
 
 | 파일 | 쓰이는 곳 | 곡 | 길이 | 음량 |
 |---|---|---|---|---|
-| `bgm/lobby_theme.ogg` | 로비(메타 화면) | "Pebble Plaza" — F장조 108BPM 스윙, 마림바·피치카토·플루트·튜바 | 1:11.1 (32마디) | −20 LUFS |
-| `bgm/battle_land.ogg` | 전투 · 1챕터(육지) | "Stone Rush" — D장조 140BPM 펑크, 일렉트릭 피아노·브라스·16분 베이스 | 0:54.9 (32마디) | −17 LUFS |
-| `bgm/battle_sea.ogg` | 전투 · 2챕터(바다) | "Tidepool Run" — A장조 124BPM 칼립소·보사, 스틸팬·콩가·클라베 | 1:01.9 (32마디) | −17.5 LUFS |
-| `bgm/battle_sky.ogg` | 전투 · 3챕터(하늘) | "Cloud Circuit" — E장조 150BPM, 쉬지 않는 16분 분산화음·사각파 리드 | 0:51.2 (32마디) | −17 LUFS |
-| `bgm/battle_boss.ogg` | 보스 웨이브 | "Mammoth Stomp" — D단조 156BPM, 낮은 브라스·합창·탐 | 0:49.2 (32마디) | −16.5 LUFS |
-| `bgm/jingle_victory.ogg` | 결과 · 승리 (1회) | 브라스 팡파르, bVII→I | 0:08.5 | −17 LUFS |
-| `bgm/jingle_defeat.ogg` | 결과 · 패배 (1회) | 플루트가 조용히 내려앉음 | 0:08.5 | −19 LUFS |
-| `bgm/story_theme.ogg` | 스토리 화면 | **"Hearthlight"** 하이브리드 — D장조 80BPM. 피아노·기타·하프 → 현악·첼로 → 호른·슈퍼소·서브 | 1:12.0 (24마디) | −20 LUFS |
-| `bgm/sortie_theme.ogg` | 스테이지 선택 · 편성 | **"Rally of the Stone Tribes"** 하이브리드 — E단조 116BPM. 피아노 옥타브·스타카토 현·호른 주제·타이코 + 16분 펄스 베이스 | 1:06.2 (32마디) | −18.5 LUFS |
-| `bgm/battle_final.ogg` | 3챕터(하늘) 보스 웨이브 | **"Colossus of the Sky"** 하이브리드 — C단조 132BPM. 저현 16분·브라스·합창·팀파니/타이코 + 으르렁대는 신스 베이스·슈퍼소·라이저 | 0:58.2 (32마디) | −16.5 LUFS |
+| `bgm/lobby_theme.ogg` | 로비(메타 화면) | "Afterschool Plaza" — D장조 88BPM **몽글한** 시티팝. 둥근 로즈·말랑한 리드·칼림바·방울, 푹신한 킥·스냅 | 1:27.3 (32마디) | −23 LUFS |
+| `bgm/story_theme.ogg` | 스토리 화면 | "Letters in Blue" — F장조 68BPM **몽글한** 피아노. 피아노 → 둥근 로즈·칼림바 → 현·말랑한 리드·종 | 1:24.7 (24마디) | −23.5 LUFS |
+| `bgm/sortie_theme.ogg` | 스테이지 선택 · 편성 | "Blue Sortie" — A장조 112BPM **몽글한** 퓨처 펑크. 푹신한 네 박 킥에 숨 쉬는 로즈·패드, 칼림바 분산화음 | 1:08.6 (32마디) | −22 LUFS |
+| `bgm/battle_land.ogg` | 전투 · 1챕터(육지) | "Schale Skirmish" — B단조/D장조 148BPM. 피아노 스탭·신스 베이스·브레이크비트 | 0:51.9 (32마디) | −21 LUFS |
+| `bgm/battle_sea.ogg` | 전투 · 2챕터(바다) | "Coral Parade" — E장조 122BPM 트로피컬 퓨처 펑크. 나무 건반·로즈 뒷박·셰이커 | 1:03.0 (32마디) | −21 LUFS |
+| `bgm/battle_sky.ogg` | 전투 · 3챕터(하늘) | "Skyline Rush" — G장조 156BPM. 16분 종 분산화음 위로 긴 음의 선율 | 0:49.2 (32마디) | −21 LUFS |
+| `bgm/battle_boss.ogg` | 보스 웨이브 | "Crimson Protocol" — D단조 132BPM **오케스트라**. 현 스타카토·호른 주제·콘트라베이스·합창·팀파니·그란 카사 | 0:58.2 (32마디) | −20.5 LUFS |
+| `bgm/battle_final.ogg` | 3챕터(하늘) 보스 웨이브 | "Last Sanctuary" — C단조 124BPM **오케스트라**. 오르간·합창·현 스타카토·호른·하프·팀파니 | 1:01.9 (32마디) | −20.5 LUFS |
+| `bgm/jingle_victory.ogg` | 결과 · 승리 (1회) | 로즈 화음 위로 종이 올라가 으뜸화음에서 멈춤 | 0:09.0 | −21 LUFS |
+| `bgm/jingle_defeat.ogg` | 결과 · 패배 (1회) | 로즈·피아노가 조용히 내려와 sus 화음에 머묾 | 0:09.8 | −23 LUFS |
 
-### 하이브리드 오케스트레이션 3곡 (#537)
+### 블루 아카이브 풍 배경음 (#539)
 
-세 층을 겹친다. 구간이 지날수록 층을 하나씩 더한다(Hearthlight: A 는 건반·기타만, A' 에 현악과 패드, B 에 호른·팀파니·서브).
+"옛날 게임 같다 / AI 같다 / 배경음치고 크다"는 피드백으로 10곡을 다시 썼다. 참고한 것은 블루 아카이브
+사운드트랙의 **분위기**(밝은 시티팝·퓨처 펑크, 7·9화음, 로즈 피아노, 사이드체인으로 숨 쉬는 패드)뿐이다.
 
-| 층 | 역할 | 악기 (`tools/gen_bgm.py`) |
-|---|---|---|
-| ① 건반·발현악기 | 곡의 뼈대와 감성 | `piano`(어긋난 배음·해머·댐퍼), `harp`, `guitar`(뜯는 위치·몸통 울림) |
-| ② 오케스트라 현·관악기 | 전투와 웅장한 연출 | `strings`·`violins`·`cello`·`staccato`(여러 연주자 합주), `horn`, `brass`, `timpani`, 타이코, `choir` |
-| ③ 전자 악기 | 추진력과 공간 | `supersaw`, `pulse_bass`(사이드체인), `growl`, `arp`·`sine_arp`, `riser` |
+- **칩튠 소리를 쓰지 않는다.** 사각파 리드·FM 브라스·슈퍼소 대신 로즈(`rhodes`)·피아노·카플러스-스트롱
+  하프(`harp`)·핑거 베이스(`bass`)·부드러운 리드(`lead`)·종(`bell`).
+- **여백.** 곡마다 첫 8마디는 반주·그루브만 흐르고, 선율은 쉼표를 두고 움직인다.
+- **작게.** 예전보다 3~4dB 낮다(일상 −23, 전투 −21, 보스 −20.5 LUFS). 마스터 고역을 15kHz 에서 살짝 깎아
+  오래 틀어도 귀가 피곤하지 않게 했다.
+- **일상 곡은 몽글몽글하게.** 로비·스토리·출격 준비는 어택이 둥근 `soft_rhodes`, 입김 섞인 `soft_lead`, `kalimba`,
+  가끔 떠오르는 `bubble`, 푹신한 `kick_soft`·`snap` 으로 편성하고, 템포를 낮추고, 잔향을 넓히고, 고역을 9~10kHz
+  에서 깎고, 테이프처럼 음정이 아주 살짝 출렁이게(`mix(wobble=...)`) 했다.
+- **보스곡은 클래식하고 웅장하게.** 보스·최종 보스는 현 스타카토 오스티나토(`staccato`), 호른 합주(`horn`),
+  `contrabass`, 합창, `timpani`·그란 카사(`bdrum`)·스네어 롤 중심의 오케스트라 편성이다. 최종 보스는 `organ`·`harp` 를 더한다.
+- **믹스 균형은 숫자로 남긴다.** 각 곡의 `mix(levels=...)` 는 버스별 목표 dB(드럼 0 기준)다. 악기나 세기를 고쳐도
+  균형이 흔들리지 않는다.
 
 메타 화면의 곡은 `main_screen_launcher.gd` 의 `SCREEN_MUSIC` 이 맨 위 화면으로 고른다(없으면 로비 곡, 결과 화면이면
 전투가 튼 징글을 그대로 둔다). 3챕터 보스 곡은 `TurnBattle._boss_music()` 이 고른다(없으면 `battle_boss`).
@@ -36,12 +44,11 @@
 적 중에 `EnemyTier.BOSS` 가 있는 웨이브는 보스곡, 결과 배너와 함께 징글(반복 없음, `.import` `loop=false`).
 곡 파일이 없으면 육지 전투곡으로 떨어진다.
 
-## 자체 작곡곡이다 (#535)
+## 자체 작곡곡이다 (#535, #539)
 
 모든 곡을 [`tools/gen_bgm.py`](../../tools/gen_bgm.py) 가 **외부 샘플 없이 합성**해 만든다. 멜로디·코드 진행·
-편곡은 그 파일에 직접 적은 자작곡이고, 참고한 것은 분위기뿐이다(전투: 소닉 매니아 Studiopolis·Flying Battery 의
-경쾌한 펑크·재즈 코드감, 로비: 트릭컬의 귀엽고 통통 튀는 스윙). **원곡의 멜로디를 옮기지 않는다** — 그러면
-같은 저작권 문제가 된다.
+편곡은 그 파일에 직접 적은 자작곡이고, 참고한 것은 분위기뿐이다(#539: 블루 아카이브 사운드트랙의 청량한
+시티팝·퓨처 펑크 감). **원곡의 멜로디를 옮기지 않는다** — 그러면 같은 저작권 문제가 된다.
 
 > 예전 `lobby_theme.ogg` 는 트릭컬의 상용 BGM 을 자리 채우기로 넣은 것이었다(#308). #535 에서 교체했다.
 > 저장소 기록(git history)에는 남아 있으므로, 배포 저장소를 따로 만들 때는 기록째 옮기지 않는다.
@@ -50,11 +57,11 @@
 
 ```bash
 python tools/gen_bgm.py                  # 전부
-python tools/gen_bgm.py lobby boss       # 골라서 (battle lobby sea sky boss victory defeat)
+python tools/gen_bgm.py lobby boss       # 골라서 (lobby story sortie land sea sky boss final victory defeat)
 ```
 
 음량을 정할 때의 기준: 곡 안의 리드(멜로디)는 반주보다 앞에 나오지 않게 섞었다 — 배경음이다.
-효과음은 각 −15dB 로 재생되므로(docs/battle-audio.md) 전투곡을 −17 LUFS 로 낮춰 타격음이 묻히지 않게 했다.
+효과음은 각 −15dB 로 재생되므로(docs/battle-audio.md) 전투곡을 −21 LUFS 로 낮춰 타격음이 묻히지 않게 했다.
 반복 이음새는 곡 끝에서 넘친 잔향을 곡 처음에 더해 없앤다.
 
 교체할 때 코드는 건드릴 필요가 없다. 같은 경로에 같은 이름으로 넣거나, `LOBBY_BGM` 이 가리키는

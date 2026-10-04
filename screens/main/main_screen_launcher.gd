@@ -24,8 +24,8 @@ const RESULT_SCREEN_PATH := "res://screens/result/ResultScreen.tscn"
 
 # 맨 위 화면에 따라 곡을 바꾼다(#537). 여기 없는 화면은 로비 곡이다.
 # 이 노드가 곡을 고르는 이유는 LOBBY_BGM 과 같다 — 화면을 아는 자리이기 때문이다.
-const STORY_BGM_PATH := "res://assets/audio/bgm/story_theme.ogg"     # Hearthlight
-const SORTIE_BGM_PATH := "res://assets/audio/bgm/sortie_theme.ogg"   # Rally of the Stone Tribes
+const STORY_BGM_PATH := "res://assets/audio/bgm/story_theme.ogg"     # Letters in Blue
+const SORTIE_BGM_PATH := "res://assets/audio/bgm/sortie_theme.ogg"   # Blue Sortie
 const SCREEN_MUSIC := {
 	"res://screens/story/StoryScreen.tscn": STORY_BGM_PATH,
 	"res://screens/story/StoryPlayerScreen.tscn": STORY_BGM_PATH,
