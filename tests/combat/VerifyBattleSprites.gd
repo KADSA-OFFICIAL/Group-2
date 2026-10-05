@@ -17,6 +17,7 @@ func _ready() -> void:
 	expect(manifest.size() == 12, "Expected 12 authored sprites")
 	for entry in manifest: verify_asset(entry)
 	verify_restyled_portraits()
+	verify_party_head_rects()
 	await verify_scene([&"harang", &"mina", &"seola", &"taehee"],
 		[&"mammoth_beastfolk", &"velociraptor_beastfolk", &"velociraptor_beastfolk_2", &"seoa"], "battle-party-a.png")
 	await verify_scene([&"arin", &"gangji", &"harang", &"mina"],
@@ -85,6 +86,21 @@ func verify_restyled_portraits() -> void:
 		expect(absf(float(bounds.size.y)/img.get_height()-0.92) < 0.002, id+": 92 percent figure height")
 		var head := PortraitSystem.get_head_rect(portrait)
 		expect(head.size.y > 0.14 and head.end.y < 0.25, id+": authored face crop available to HUD and formation")
+
+# #552: an authored head rect must start at the hair top (= figure bbox top) and end at the chin.
+# Harang's rect once pointed at her chest (y 0.185), so her HUD card showed her torso.
+func verify_party_head_rects() -> void:
+	for id in ["arin","gangji","harang","mina","seola","taehee"]:
+		var data: Resource = load("res://data/characters/"+id+".tres")
+		var portrait: Texture2D = data.get("portrait")
+		expect(portrait != null, id+": party portrait assigned")
+		if portrait == null: continue
+		var img := Image.load_from_file(ProjectSettings.globalize_path(portrait.resource_path))
+		var figure_top := float(img.get_used_rect().position.y) / img.get_height()
+		var head := PortraitSystem.get_head_rect(portrait)
+		expect(head.size.y > 0.0, id+": authored head rect exists")
+		expect(absf(head.position.y - figure_top) < 0.01, id+": head rect starts at hair top (figure top)")
+		expect(head.size.y < 0.20, id+": head rect ends at chin, not chest")
 
 func verify_scene(party: Array[StringName], enemies: Array[StringName], filename: String) -> void:
 	var scene := load("res://stage/turn/TurnBattle.tscn") as PackedScene
