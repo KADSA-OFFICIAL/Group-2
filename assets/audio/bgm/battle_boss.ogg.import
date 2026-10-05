@@ -14,6 +14,6 @@ dest_files=["res://.godot/imported/battle_boss.ogg-1ca9f0d62ad96c615da053a654d7c
 
 loop=true
 loop_offset=0
-bpm=156
+bpm=132
 beat_count=0
 bar_beats=4

@@ -14,6 +14,6 @@ dest_files=["res://.godot/imported/lobby_theme.ogg-9bf848cc9d04b205e4794e9fad3a7
 
 loop=true
 loop_offset=0
-bpm=108
+bpm=88
 beat_count=0
 bar_beats=4

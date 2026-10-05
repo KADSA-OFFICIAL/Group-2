@@ -90,7 +90,7 @@ const CONCEPT_BGM := {
 }
 ## 보스(`EnemyTier.BOSS`)가 선 웨이브에서 전투곡을 대신한다.
 const BOSS_BGM_PATH := "res://assets/audio/bgm/battle_boss.ogg"
-## 마지막 챕터(하늘)의 보스는 하이브리드 오케스트라 곡 "Colossus of the Sky" (#537). 없으면 보스곡.
+## 마지막 챕터(하늘)의 보스는 최종 보스곡 "Last Sanctuary" (#537, #539). 없으면 보스곡.
 const FINAL_BOSS_BGM_PATH := "res://assets/audio/bgm/battle_final.ogg"
 ## 결과 배너와 함께 한 번 재생한다(반복하지 않는다).
 const VICTORY_JINGLE_PATH := "res://assets/audio/bgm/jingle_victory.ogg"
