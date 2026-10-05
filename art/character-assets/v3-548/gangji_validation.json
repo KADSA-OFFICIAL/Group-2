@@ -1,0 +1,205 @@
+{
+  "frame_count": 14,
+  "dimensions_pass": true,
+  "approved_portrait_applied": true,
+  "pixel_anchoring_pass": false,
+  "exact_magenta_pass": false,
+  "files": [
+    {
+      "file": "gangji/idle_0.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        235,
+        13,
+        236
+      ],
+      "sha256": "65a633144d990f7ceab7486b2c5661a0dc9b4ebfbd97efffd0c12f4dc3f890f6"
+    },
+    {
+      "file": "gangji/idle_1.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        232,
+        16,
+        236
+      ],
+      "sha256": "32e0d1cb59ae26ab475709ae41d0b770d071b130643836d4a66b974571bf809d"
+    },
+    {
+      "file": "gangji/idle_2.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        237,
+        15,
+        238
+      ],
+      "sha256": "665d40e2c972cc712b6e65e72239cd764a95afe980fa31348cbcdbd7b576e97a"
+    },
+    {
+      "file": "gangji/idle_3.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        240,
+        14,
+        241
+      ],
+      "sha256": "47c0e21d2746eaef8333cb8a7ecb26d29b7ab19d7bff8b4e66e3abe7da549751"
+    },
+    {
+      "file": "gangji/attack_0.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        236,
+        16,
+        236
+      ],
+      "sha256": "b61a25f2fdbc8df9e4fb5af6a7b37ed2e003887bd43483e7dd68568048df9229"
+    },
+    {
+      "file": "gangji/attack_1.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        241,
+        14,
+        241
+      ],
+      "sha256": "5f4ce3e9f3ae5bb5658bc754d91f64f2b7d1eab78a62629c86680aeaebed8415"
+    },
+    {
+      "file": "gangji/attack_2.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        234,
+        14,
+        236
+      ],
+      "sha256": "31ce28b23ba5c0fdca9bd3a10dbe70f485f8775ba25717cca27fdfd04a75a280"
+    },
+    {
+      "file": "gangji/attack_3.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        237,
+        13,
+        239
+      ],
+      "sha256": "76ab0d292fc858edc65facac53a85fe4d87f30ca353127a3d1ae0dd155df5bd4"
+    },
+    {
+      "file": "gangji/hit_0.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        236,
+        16,
+        233
+      ],
+      "sha256": "2d9fa712c397bfecee6f7ed03a86abf2ccd9f11e406fe80f018c427e1a62d600"
+    },
+    {
+      "file": "gangji/hit_1.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        236,
+        16,
+        235
+      ],
+      "sha256": "d393a8e2db485d7624038c92c8a4f38ef6d4a8638d0e06364b13d4018f14daff"
+    },
+    {
+      "file": "gangji/death_0.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        231,
+        16,
+        233
+      ],
+      "sha256": "8a21f34e6333dde5e749dd52c750c68166a94cb3683379b7fc34fe26ddc537ed"
+    },
+    {
+      "file": "gangji/death_1.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        241,
+        14,
+        238
+      ],
+      "sha256": "f2ee34ac3ad087e8d7dc034dcf5ba6da47c5b4c5529864e35e311e776125bfcd"
+    },
+    {
+      "file": "gangji/death_2.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        236,
+        15,
+        239
+      ],
+      "sha256": "44f61b382958ac6aedeb60f011af91325dbccbd9448ee16cd1f64a565cfa4759"
+    },
+    {
+      "file": "gangji/death_3.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "corner_rgb": [
+        238,
+        13,
+        240
+      ],
+      "sha256": "9895fb6b0eed160d51cc48504ee7c604da3162696522f9b6d5997511991ad441"
+    }
+  ]
+}
