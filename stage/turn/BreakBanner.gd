@@ -1,6 +1,10 @@
 extends Control
 
-# 약점 격파 7단계 "BREAK" 타이포그래피 (#559) — 현세대 서브컬처 게임풍.
+# 약점 격파 7단계 타이포그래피 (#559) — 현세대 서브컬처 게임풍.
+#
+# 문구는 "RUPTURE"(위에 작은 "TOUGHNESS"). 인성치가 터져 갈라지는 순간이라는 뜻으로,
+# 칼선이 화면을 가르고 발광 띠가 벌어지는 연출과 맞춘 이름이다. "BREAK!" 는 흔하고 밋밋하다는
+# 리뷰로 바꿨다. 게임 안 용어(격파)와 코드 이름(BreakBanner, PresentationQueue.Event.BREAK)은 그대로다.
 #
 # 예전에는 다른 배너(WAVE · VICTORY · 스킬 이름)와 같은 Label 하나를 재사용했다.
 # 기본 폰트 글자에 원소 색을 modulate 로 입혀 0.4초 페이드할 뿐이라, 전투에서 가장 큰
@@ -13,9 +17,9 @@ extends Control
 #   1. 화면 어둡힘 — 아주 짧게 화면을 눌러 이 순간에 시선을 모은다.
 #   2. 슬래시      — 흰 칼선이 화면을 가로로 가르고, 그 자리에 원소 색 발광 띠가 벌어진다.
 #   3. 후광        — 글자 뒤 원소 색 타원 빛.
-#   4. 글자        — Barlow Condensed Black Italic(HUDKit.display_font). 흰 글자 + 원소 색
+#   4. 글자(TEXT)  — Barlow Condensed Black Italic(HUDKit.display_font). 흰 글자 + 원소 색
 #                    발광 윤곽. 처음엔 하얗게 타오르다(플래시) 식는다. 왼쪽에서 미끄러져 박힌다.
-#   5. 보조 문구   — 위에 작은 자간 넓은 "WEAKNESS" + 양옆 가는 선.
+#   5. 보조 문구   — 위에 작은 자간 넓은 "TOUGHNESS" + 양옆 가는 선.
 #   6. 유리 조각   — 빛나는 삼각 파편이 칼선을 따라 흩어진다.
 #   7. 빛줄기      — 가는 가로 선 몇 개가 빠르게 스쳐 지나간다(속도감).
 #
@@ -26,8 +30,8 @@ extends Control
 # 기울기 -8°는 설계서 §4.10.4 타이포그래피 규격(-8° ~ -12°)의 가장 얕은 값이다.
 # 폰트 자체가 기울임체라 더 기울이면 글자가 눕는다.
 
-const TEXT := "BREAK"
-const SUBTEXT := "WEAKNESS"
+const TEXT := "RUPTURE"
+const SUBTEXT := "TOUGHNESS"
 const FONT_SIZE := 168
 const SUB_SIZE := 30
 const TILT_DEG := -8.0
@@ -110,7 +114,7 @@ func play(color: Color, hold: float, k: float) -> void:
 	for l in [aura, main, flash]:
 		_center(l, Vector2(0.0, 8.0))
 
-	# 5. 보조 문구 "WEAKNESS" + 양옆 선
+	# 5. 보조 문구 + 양옆 선
 	var sub := _make_subtitle(glow)
 	root.add_child(sub)
 
@@ -262,7 +266,7 @@ func _make_halo(glow: Color) -> Control:
 	return halo
 
 
-# "WEAKNESS" — 자간을 넓힌 작은 영문 + 양옆 가는 선. 글자 위에 앉는다.
+# 보조 문구(SUBTEXT) — 자간을 넓힌 작은 영문 + 양옆 가는 선. 글자 위에 앉는다.
 func _make_subtitle(glow: Color) -> Control:
 	var box := Control.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
