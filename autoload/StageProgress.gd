@@ -59,6 +59,17 @@ func get_cleared_count() -> int:
 	return _clears.size()
 
 
+# 현재 스테이지 = 챕터 순서로 처음 만나는 안 깬 스테이지(#555, #557). 다 깼으면 빈 id.
+# 챕터 밖(테스트) 스테이지는 진행 경로가 아니므로 보지 않는다.
+# 홈의 출격 버튼(다음 스테이지)과 스테이지 리스트(NEW·파티 자리)가 같은 판정을 쓴다.
+func get_current_stage_id() -> StringName:
+	for chapter in StageDatabase.get_authored_chapters():
+		for id in StageDatabase.get_ids_by_chapter(chapter):
+			if not is_cleared(id):
+				return id
+	return &""
+
+
 # 방금 끝난 판의 결과. 아직 판이 끝난 적 없으면 빈 Dictionary.
 # 결과 화면은 자기가 받은 stage_id 와 대조한 뒤 쓴다(다른 판의 결과를 보여주지 않도록).
 func get_last_result() -> Dictionary:

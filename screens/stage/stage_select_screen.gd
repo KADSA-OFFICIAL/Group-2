@@ -7,11 +7,11 @@ extends Control
 # 데이터 출처 (단일 출처 원칙 — 여기서 재정의하지 않는다):
 #   스테이지 목록/정의 -> StageDatabase / StageData
 #   챕터·컨셉          -> StageData.chapter_to_display_name() (#408)
-#   클리어 기록        -> StageProgress
+#   클리어 기록·현재 스테이지 -> StageProgress
 #   파티               -> PartySystem (그림은 CharacterData.walk_frames)
 #   작전 설명          -> StageData.briefing
 #   주요 재화          -> CurrencySystem.get_primary_currencies()
-#   컨셉 배경 그림     -> TurnBattle.CONCEPT_BACKDROP (#505, 전투와 같은 그림)
+#   컨셉 배경 그림     -> HUDKit.load_concept_backdrop() (전투와 같은 그림, #505)
 #   색·조각            -> UITheme / HUDKit
 #
 # 레이아웃 (#555): 챕터 한 장 = 맵 한 장. 스테이지는 지그재그로 놓인 마름모 타일이고
@@ -44,10 +44,6 @@ const CONCEPT_COLOR := {
 # 챕터 밖(테스트) 타일과 보스 타일의 색.
 const EXTRA_COLOR := UITheme.STONE_GRAY
 const BOSS_COLOR := Color("8E2F3C")
-
-# 배경 그림의 출처는 전투 화면이다. 표를 여기 다시 적지 않고 그쪽 상수를 읽는다.
-# preload 하지 않는 이유: 화면 하나를 열 때 전투 스크립트 의존성까지 끌어오지 않으려고.
-const BATTLE_SCRIPT_PATH := "res://stage/turn/TurnBattle.gd"
 
 # 편성 화면은 경로만 둔다. 출격은 이 화면 -> 편성(출격 모드) 한 방향이라 순환은 아니지만,
 # 화면끼리 preload 하지 않는 이 프로젝트의 규약을 따른다.
@@ -107,7 +103,7 @@ func _ready() -> void:
 	_build_party()
 	_collect_pages()
 	_page_index = _initial_page()
-	_party_stage_id = _current_stage_id()
+	_party_stage_id = StageProgress.get_current_stage_id()
 	_show_page(false)
 	StageProgress.progress_changed.connect(_on_progress_changed)
 	resized.connect(_layout_tiles)
@@ -140,8 +136,8 @@ func _build() -> void:
 	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	add_child(_art)
 
-	add_child(_edge_shade(true))
-	add_child(_edge_shade(false))
+	add_child(HUDKit.edge_shade(true, 150.0))
+	add_child(HUDKit.edge_shade(false, 110.0))
 
 	_map = Control.new()
 	_map.name = "Map"
@@ -278,34 +274,6 @@ func _set_popup_offset(panel: Control, slide: float) -> void:
 	panel.offset_bottom = 170.0
 
 
-# 위(또는 아래) 가장자리를 어둡게 덮는 띠. 배경이 밝아도 상단 글자가 읽히게 한다.
-func _edge_shade(top: bool) -> Control:
-	var gradient := Gradient.new()
-	var dark := Color(UITheme.BG, 0.55)
-	var clear := Color(UITheme.BG, 0.0)
-	gradient.set_color(0, dark if top else clear)
-	gradient.set_color(1, clear if top else dark)
-
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill_from = Vector2(0.5, 0.0)
-	texture.fill_to = Vector2(0.5, 1.0)
-	texture.width = 4
-	texture.height = 64
-
-	var rect := TextureRect.new()
-	rect.texture = texture
-	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	rect.stretch_mode = TextureRect.STRETCH_SCALE
-	rect.set_anchors_preset(Control.PRESET_TOP_WIDE if top else Control.PRESET_BOTTOM_WIDE)
-	if top:
-		rect.offset_bottom = 150.0
-	else:
-		rect.offset_top = -110.0
-	return rect
-
-
 func _make_top_bar() -> Control:
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -340,10 +308,10 @@ func _make_top_bar() -> Control:
 	titles.add_theme_constant_override("separation", -2)
 	titles.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(titles)
-	var title := _outlined("스테이지 리스트", 30, 8)
+	var title := HUDKit.outlined_label("스테이지 리스트", 30, 8)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	titles.add_child(title)
-	_chapter_label = _outlined("", 16, 6)
+	_chapter_label = HUDKit.outlined_label("", 16, 6)
 	_chapter_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_chapter_label.add_theme_color_override("font_color", UITheme.AMBER.lightened(0.35))
 	titles.add_child(_chapter_label)
@@ -390,7 +358,7 @@ func _make_arrow(direction: int, caption: String) -> Control:
 	button.pressed.connect(_turn_page.bind(direction))
 	box.add_child(button)
 
-	box.add_child(_outlined(caption, 15, 6))
+	box.add_child(HUDKit.outlined_label(caption, 15, 6))
 	return box
 
 
@@ -407,7 +375,7 @@ func _collect_pages() -> void:
 
 # 처음 열 장 = 현재 스테이지가 있는 챕터. 다 깼으면 마지막 챕터.
 func _initial_page() -> int:
-	var current := _current_stage_id()
+	var current := StageProgress.get_current_stage_id()
 	var last_chapter_page := 0
 	for i in _pages.size():
 		if _pages[i].chapter == StageData.NO_CHAPTER:
@@ -416,16 +384,6 @@ func _initial_page() -> int:
 		if _pages[i].ids.has(current):
 			return i
 	return last_chapter_page
-
-
-# 챕터 순서로 처음 만나는 안 깬 스테이지. 없으면 빈 id.
-# 챕터 밖(테스트) 스테이지는 진행 경로가 아니므로 보지 않는다.
-func _current_stage_id() -> StringName:
-	for chapter in StageDatabase.get_authored_chapters():
-		for id in StageDatabase.get_ids_by_chapter(chapter):
-			if not StageProgress.is_cleared(id):
-				return id
-	return &""
 
 
 func _turn_page(step: int) -> void:
@@ -461,9 +419,9 @@ func _show_page(animate: bool, step: int = 0) -> void:
 		return
 
 	var page: Dictionary = _pages[_page_index]
-	_art.texture = _backdrop_for(page.chapter)
+	_art.texture = HUDKit.load_concept_backdrop(page.chapter)
 
-	var current := _current_stage_id()
+	var current := StageProgress.get_current_stage_id()
 	var locked_ids := _locked_ids(current)
 	var setups: Array = []
 
@@ -613,24 +571,6 @@ func _short_name(stage: StageData, number: String, id: StringName) -> String:
 	if not number.is_empty() and full.begins_with(number):
 		return full.substr(number.length()).strip_edges()
 	return full
-
-
-# 챕터의 컨셉 배경. 챕터 밖이면 육지 그림을 쓴다. 그림이 없으면 null(단색 바닥이 보인다).
-func _backdrop_for(chapter: int) -> Texture2D:
-	var battle := load(BATTLE_SCRIPT_PATH) as GDScript
-	if battle == null:
-		return null
-	var constants := battle.get_script_constant_map()
-	var table: Dictionary = constants.get("CONCEPT_BACKDROP", {})
-	var dir: String = constants.get("BACKDROP_DIR", "")
-	var concept := StageData.chapter_to_concept(chapter)
-	if concept < 0:
-		concept = StageData.Concept.LAND
-	var file_name: String = table.get(concept, "")
-	if file_name.is_empty() or dir.is_empty():
-		return null
-	var path := dir.path_join(file_name + ".png")
-	return load(path) as Texture2D if ResourceLoader.exists(path) else null
 
 
 # 저작된 스테이지가 없을 때. 오류가 아니라 정상 상태다.
@@ -931,15 +871,3 @@ func _open_party_select(stage_id: StringName) -> void:
 	if screen == null:
 		return
 	screen.set_sortie(stage_id)
-
-
-# ===== 공용 조각 =====
-
-# 배경 그림 위 글자. 밝은 글자 + 진한 윤곽선(레퍼런스의 제목 글자).
-func _outlined(text: String, font_size: int, outline: int) -> Label:
-	var label := HUDKit.label(text, font_size, UITheme.CREAM, 700)
-	label.add_theme_color_override("font_outline_color", UITheme.INK)
-	label.add_theme_constant_override("outline_size", outline)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
