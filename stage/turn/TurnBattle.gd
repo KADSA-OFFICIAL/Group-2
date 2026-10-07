@@ -436,7 +436,8 @@ func _build_scene() -> void:
 	_banner.text = ""
 	_banner.modulate = Color(1, 1, 1, 0)
 	_banner.position = Vector2(300, 300)
-	_banner.add_theme_font_size_override("font_size", 84)
+	# BREAK! 와 같은 디스플레이 폰트(#559). 색은 _play_banner 가 부를 때마다 입힌다.
+	HUDKit.style_display_label(_banner, 84, Color.WHITE, 12)
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash_layer.add_child(_banner)
 
@@ -1145,8 +1146,8 @@ func _spawn_text_number(unit: TurnUnit, text: String, color: Color,
 
 	var label := Label.new()
 	label.text = text
-	label.modulate = color
-	label.add_theme_font_size_override("font_size", int(20.0 * scale))
+	var number_size := int(20.0 * scale * 1.3)
+	HUDKit.style_display_label(label, number_size, color, maxi(6, int(number_size * 0.22)))
 	label.position = hud.unit_position(unit) + Vector2(
 		randf_range(-18.0, 18.0), -96.0)
 	label.z_index = 60
@@ -1652,8 +1653,12 @@ func _play_banner(text: String, color: Color, duration: float, size: int) -> voi
 	if _banner == null:
 		return
 	_banner.text = text
-	_banner.add_theme_font_size_override("font_size", size)
-	_banner.modulate = Color(color.r, color.g, color.b, 0)
+	# 흰 글자 + 연출 색 윤곽선(#559). 예전에는 modulate 로 글자 전체를 물들여
+	# 얇은 기본 폰트가 배경·이펙트 위에서 묻혔다. modulate 는 알파에만 쓴다.
+	# Bangers 는 좁은 글꼴이라 같은 자리를 채우도록 조금 키운다.
+	HUDKit.style_display_label(_banner, int(size * 1.15), Color.WHITE,
+		maxi(10, int(size * 0.16)), color.darkened(0.45))
+	_banner.modulate = Color(1, 1, 1, 0)
 	# 비스듬한 각도 — 설계서 §4.10.4 의 타이포그래피 규격(-8° ~ -12°).
 	_banner.rotation = deg_to_rad(-9.0)
 	_banner.pivot_offset = Vector2.ZERO
@@ -1680,9 +1685,11 @@ func _spawn_number(ctx: DamageContext, style: Dictionary) -> void:
 	label.text = str(ctx.final_damage())
 	if not String(style.get("label", "")).is_empty():
 		label.text = "%s\n%s" % [String(style["label"]), label.text]
-	label.modulate = style.get("color", Color.WHITE)
-	label.add_theme_font_size_override("font_size",
-		int(20.0 * float(style.get("scale", 1.0))))
+	# 색은 글자 채움으로, 진한 윤곽선을 둘러 이펙트 위에서도 읽히게 한다(#559).
+	# Bangers 는 좁은 글꼴이라 같은 자리를 채우도록 1.3배로 키운다.
+	var number_size := int(20.0 * float(style.get("scale", 1.0)) * 1.3)
+	HUDKit.style_display_label(label, number_size, style.get("color", Color.WHITE),
+		maxi(6, int(number_size * 0.22)))
 	label.position = hud.unit_position(ctx.target) + Vector2(
 		randf_range(-18.0, 18.0), -96.0)
 	label.z_index = 60
@@ -1757,8 +1764,8 @@ func _spawn_status_badge(unit: TurnUnit, status: int, color: Color) -> void:
 		return
 	var label := Label.new()
 	label.text = "[%s]" % TurnCombat.break_status_name(status)
-	label.modulate = color
-	label.add_theme_font_size_override("font_size", 22)
+	# 상태이상 이름은 한글이라 디스플레이 폰트의 한글 대체 글꼴로 그려진다(#559).
+	HUDKit.style_display_label(label, 24, color, 7)
 	label.position = hud.unit_position(unit) + Vector2(-30, -140)
 	label.scale = Vector2(2.2, 2.2)
 	label.z_index = 60

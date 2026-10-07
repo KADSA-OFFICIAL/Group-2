@@ -11,7 +11,7 @@ extends Control
 #   2. 사선 띠    — 원소 색 띠가 글자 뒤를 왼쪽에서 오른쪽으로 긋는다.
 #   3. 충격파 링  — 박히는 순간 퍼져 나간다.
 #   4. 잔상       — 원소 색 글자 두 장이 좌우로 밀려나며 사라진다.
-#   5. 글자       — Bangers. 흰 글자 + 진한 윤곽 + 원소 색 바깥 윤곽(이중 테두리) + 그림자.
+#   5. 글자       — Bangers(HUDKit.display_font, 파일이 없으면 기본 폰트). 흰 글자 + 진한 윤곽 + 원소 색 바깥 윤곽(이중 테두리) + 그림자.
 #   6. 불꽃 조각  — 박히는 순간 사방으로 튄다.
 #
 # 시간 규격(PresentationQueue.break_steps 7단계 0.40초)은 그대로 지킨다:
@@ -20,8 +20,6 @@ extends Control
 #
 # 기울기 -9°는 설계서 §4.10.4 타이포그래피 규격(-8° ~ -12°)이다.
 
-const FONT_PATH := "res://assets/fonts/Bangers-Regular.ttf"
-
 const TEXT := "BREAK!"
 const FONT_SIZE := 148
 const TILT_DEG := -9.0
@@ -29,23 +27,9 @@ const TILT_DEG := -9.0
 # 1280x720 기준 자리. 예전 배너와 같은 화면 가운데다.
 const BAND_HEIGHT := 128.0
 
-static var _font: Font = null
-
-
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-
-static func _load_font() -> Font:
-	if _font != null:
-		return _font
-	# 폰트 파일이 없어도 연출은 선다. 그때는 기본 폰트를 굵게 쓴다.
-	if ResourceLoader.exists(FONT_PATH):
-		_font = load(FONT_PATH) as Font
-	if _font == null:
-		_font = HUDKit.weight_font(0.8)
-	return _font
 
 
 # color: 원소 색. hold: 7단계가 막는 시간(배속 적용 후, 초).
@@ -148,7 +132,7 @@ func _make_text(fill: Color, outline: int, outline_color: Color) -> Label:
 	var label := Label.new()
 	label.text = TEXT
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.add_theme_font_override("font", _load_font())
+	label.add_theme_font_override("font", HUDKit.display_font())
 	label.add_theme_font_size_override("font_size", FONT_SIZE)
 	label.add_theme_color_override("font_color", fill)
 	if outline > 0:
