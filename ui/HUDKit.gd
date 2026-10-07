@@ -78,6 +78,47 @@ static func weight_font(embolden: float) -> FontVariation:
 	return f
 
 
+# 전투 글자 연출용 디스플레이 폰트(#559) — Barlow Condensed Black Italic. 현세대 서브컬처 게임풍의 좁고 굵은 기울임체. BREAK! · 배너 · 데미지 숫자 · 상태이상 배지가 같이 쓴다.
+#
+# Barlow Condensed 에는 한글이 없다. 스킬 이름("측정 사격")·상태이상 이름("출혈")처럼 한글이 섞이면
+# 그 글자만 대체 폰트(기본 폰트를 굵게)로 그린다 — 연출 글자가 비어 보이지 않게.
+# 폰트 파일이 없으면 대체 폰트만 돌려준다(연출은 그대로 선다).
+const DISPLAY_FONT_PATH := "res://assets/fonts/BarlowCondensed-BlackItalic.ttf"
+static var _display_font: Font = null
+
+static func display_font() -> Font:
+	if _display_font != null:
+		return _display_font
+	var fallback := weight_font(0.9)
+	var file: FontFile = null
+	if ResourceLoader.exists(DISPLAY_FONT_PATH):
+		file = load(DISPLAY_FONT_PATH) as FontFile
+	if file == null:
+		_display_font = fallback
+		return _display_font
+	# 원본 리소스의 fallbacks 를 건드리지 않도록 복제해서 붙인다.
+	var font := file.duplicate() as FontFile
+	font.fallbacks = [fallback]
+	_display_font = font
+	return _display_font
+
+
+# 디스플레이 폰트 글자의 공통 모양: 채움 색 + 진한 윤곽선 + 그림자.
+# 색을 modulate 로 입히지 않는다 — modulate 는 윤곽선까지 물들여 글자가 배경에 묻힌다.
+# modulate 는 알파 페이드에만 쓴다.
+static func style_display_label(l: Label, font_size: int, fill: Color, outline: int,
+		outline_color: Color = UITheme.INK) -> void:
+	l.add_theme_font_override("font", display_font())
+	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_color_override("font_color", fill)
+	l.add_theme_constant_override("outline_size", outline)
+	l.add_theme_color_override("font_outline_color", outline_color)
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.4))
+	l.add_theme_constant_override("shadow_offset_x", 3)
+	l.add_theme_constant_override("shadow_offset_y", 4)
+	l.add_theme_constant_override("shadow_outline_size", outline)
+
+
 # ===== 색 (UITheme 팔레트를 이 문법에 매핑) =====
 # 값의 출처는 UITheme 이다. 여기서 새 색을 만들지 않는다.
 #

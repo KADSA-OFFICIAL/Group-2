@@ -209,6 +209,10 @@ void fragment() {
 	_type_root.add_child(_glyph)
 
 	_caption = _label(18, 0.7)
+	# 영문 캡션("U L T I M A T E")만 BREAK! 와 같은 디스플레이 폰트를 쓴다(#559).
+	# 이름·기술명은 한글이라 지금의 기울인 굵은 글꼴을 그대로 둔다.
+	_caption.add_theme_font_override("font", HUDKit.display_font())
+	_caption.add_theme_font_size_override("font_size", 22)
 	_caption.position = Vector2(44, 0)
 	_type_root.add_child(_caption)
 

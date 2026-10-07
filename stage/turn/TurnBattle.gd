@@ -59,6 +59,9 @@ const ULT_DUTCH_DEG: float = -5.0
 ## 지면 밴드 높이. 아래에서 이만큼이 바닥이다.
 const GROUND_H: float = 420.0
 
+# 격파 7단계 타이포("RUPTURE") 전용 연출 (#559). 문구·폰트·이펙트는 그 스크립트가 소유한다.
+const BreakBannerScript := preload("res://stage/turn/BreakBanner.gd")
+
 # 전투 배경 아트 (#505). **챕터가 컨셉을 정한다** — 스테이지마다 따로 저작하지 않는다.
 # 그림이 없으면 아래 `_background` 단색으로 떨어진다(폴백은 지우지 않는다).
 const BACKDROP_DIR := "res://assets/sprites/backgrounds/battle"
@@ -166,8 +169,10 @@ var _flash: ColorRect = null
 var _flash_layer: CanvasLayer = null
 ## 데미지 숫자를 띄우는 레이어.
 var _numbers: Node2D = null
-## 격파 타이포그래피.
+## 배너 타이포그래피(WAVE · VICTORY · 스킬 이름 등). 격파는 아래 전용 연출을 쓴다.
 var _banner: Label = null
+## 격파 7단계 타이포("RUPTURE") 전용 연출 (#559).
+var _break_banner: Control = null
 
 ## 오의 컷인 판 (#544). 한 번 만들어 두고 오의마다 그림·글자만 갈아 끼운다.
 var _cutin: UltimateCutin = null
@@ -431,9 +436,14 @@ func _build_scene() -> void:
 	_banner.text = ""
 	_banner.modulate = Color(1, 1, 1, 0)
 	_banner.position = Vector2(300, 300)
-	_banner.add_theme_font_size_override("font_size", 84)
+	# 격파 타이포와 같은 디스플레이 폰트(#559). 색은 _play_banner 가 부를 때마다 입힌다.
+	HUDKit.style_display_label(_banner, 84, Color.WHITE, 12)
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash_layer.add_child(_banner)
+
+	_break_banner = BreakBannerScript.new()
+	_break_banner.name = "BreakBanner"
+	_flash_layer.add_child(_break_banner)
 
 	_build_cutin()
 
@@ -1136,8 +1146,8 @@ func _spawn_text_number(unit: TurnUnit, text: String, color: Color,
 
 	var label := Label.new()
 	label.text = text
-	label.modulate = color
-	label.add_theme_font_size_override("font_size", int(20.0 * scale))
+	var number_size := int(20.0 * scale * 1.3)
+	HUDKit.style_display_label(label, number_size, color, maxi(6, int(number_size * 0.22)))
 	label.position = hud.unit_position(unit) + Vector2(
 		randf_range(-18.0, 18.0), -96.0)
 	label.z_index = 60
@@ -1245,8 +1255,13 @@ func _play_break(data: Dictionary) -> void:
 				await _wait(duration * 0.5)
 
 			7:
-				# "BREAK!" 타이포그래피가 화면을 가로지른다.
-				await _play_banner("BREAK!", color, duration, 96)
+				# 격파 타이포("RUPTURE")가 화면에 박힌다(#559 전용 연출: 칼선·발광 띠·
+				# 후광·유리 조각·빛줄기). 막는 시간은 규격대로 duration 이고,
+				# 퇴장 꼬리만 다음 단계와 겹친다.
+				if _break_banner != null:
+					await _break_banner.play(color, _scaled(duration), _scaled(1.0))
+				else:
+					await _play_banner(BreakBannerScript.TEXT, color, duration, 96)
 
 			8:
 				# 적 비틀거림 + 붉은 실루엣 명멸.
@@ -1638,8 +1653,12 @@ func _play_banner(text: String, color: Color, duration: float, size: int) -> voi
 	if _banner == null:
 		return
 	_banner.text = text
-	_banner.add_theme_font_size_override("font_size", size)
-	_banner.modulate = Color(color.r, color.g, color.b, 0)
+	# 흰 글자 + 연출 색 윤곽선(#559). 예전에는 modulate 로 글자 전체를 물들여
+	# 얇은 기본 폰트가 배경·이펙트 위에서 묻혔다. modulate 는 알파에만 쓴다.
+	# 디스플레이 폰트(Barlow Condensed)는 좁은 글꼴이라 같은 자리를 채우도록 조금 키운다.
+	HUDKit.style_display_label(_banner, int(size * 1.15), Color.WHITE,
+		maxi(10, int(size * 0.16)), color.darkened(0.45))
+	_banner.modulate = Color(1, 1, 1, 0)
 	# 비스듬한 각도 — 설계서 §4.10.4 의 타이포그래피 규격(-8° ~ -12°).
 	_banner.rotation = deg_to_rad(-9.0)
 	_banner.pivot_offset = Vector2.ZERO
@@ -1666,9 +1685,11 @@ func _spawn_number(ctx: DamageContext, style: Dictionary) -> void:
 	label.text = str(ctx.final_damage())
 	if not String(style.get("label", "")).is_empty():
 		label.text = "%s\n%s" % [String(style["label"]), label.text]
-	label.modulate = style.get("color", Color.WHITE)
-	label.add_theme_font_size_override("font_size",
-		int(20.0 * float(style.get("scale", 1.0))))
+	# 색은 글자 채움으로, 진한 윤곽선을 둘러 이펙트 위에서도 읽히게 한다(#559).
+	# 디스플레이 폰트(Barlow Condensed)는 좁은 글꼴이라 같은 자리를 채우도록 1.3배로 키운다.
+	var number_size := int(20.0 * float(style.get("scale", 1.0)) * 1.3)
+	HUDKit.style_display_label(label, number_size, style.get("color", Color.WHITE),
+		maxi(6, int(number_size * 0.22)))
 	label.position = hud.unit_position(ctx.target) + Vector2(
 		randf_range(-18.0, 18.0), -96.0)
 	label.z_index = 60
@@ -1743,8 +1764,8 @@ func _spawn_status_badge(unit: TurnUnit, status: int, color: Color) -> void:
 		return
 	var label := Label.new()
 	label.text = "[%s]" % TurnCombat.break_status_name(status)
-	label.modulate = color
-	label.add_theme_font_size_override("font_size", 22)
+	# 상태이상 이름은 한글이라 디스플레이 폰트의 한글 대체 글꼴로 그려진다(#559).
+	HUDKit.style_display_label(label, 24, color, 7)
 	label.position = hud.unit_position(unit) + Vector2(-30, -140)
 	label.scale = Vector2(2.2, 2.2)
 	label.z_index = 60
