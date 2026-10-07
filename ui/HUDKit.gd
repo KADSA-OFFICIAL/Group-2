@@ -78,10 +78,10 @@ static func weight_font(embolden: float) -> FontVariation:
 	return f
 
 
-# 전투 글자 연출용 디스플레이 폰트(#559) — Barlow Condensed Black Italic. 현세대 서브컬처 게임풍의 좁고 굵은 기울임체. BREAK! · 배너 · 데미지 숫자 · 상태이상 배지가 같이 쓴다.
+# 전투 글자 연출용 디스플레이 폰트(#559) — Barlow Condensed Black Italic. 현세대 서브컬처 게임풍의 좁고 굵은 기울임체. 격파 타이포 · 배너 · 데미지 숫자 · 상태이상 배지가 같이 쓴다.
 #
 # Barlow Condensed 에는 한글이 없다. 스킬 이름("측정 사격")·상태이상 이름("출혈")처럼 한글이 섞이면
-# 그 글자만 대체 폰트(기본 폰트를 굵게)로 그린다 — 연출 글자가 비어 보이지 않게.
+# 그 글자만 대체 폰트로 그린다 — 1순위 도현(#561, 같은 톤으로 기울임), 없으면 기본 폰트를 굵게.
 # 폰트 파일이 없으면 대체 폰트만 돌려준다(연출은 그대로 선다).
 const DISPLAY_FONT_PATH := "res://assets/fonts/BarlowCondensed-BlackItalic.ttf"
 static var _display_font: Font = null
@@ -89,18 +89,48 @@ static var _display_font: Font = null
 static func display_font() -> Font:
 	if _display_font != null:
 		return _display_font
-	var fallback := weight_font(0.9)
+	# 한글 대체 체인: 도현(Barlow 톤에 맞춰 기울임) -> 기본 폰트 굵게.
+	var fallbacks: Array[Font] = []
+	var korean := _korean_display_font()
+	if korean != null:
+		fallbacks.append(korean)
+	fallbacks.append(weight_font(0.9))
+
 	var file: FontFile = null
 	if ResourceLoader.exists(DISPLAY_FONT_PATH):
 		file = load(DISPLAY_FONT_PATH) as FontFile
 	if file == null:
-		_display_font = fallback
+		# 영문 폰트가 없으면 한글 폰트(있으면)를 맨 앞에 세운다.
+		var only := FontVariation.new()
+		only.base_font = fallbacks[0]
+		only.fallbacks = fallbacks.slice(1)
+		_display_font = only
 		return _display_font
 	# 원본 리소스의 fallbacks 를 건드리지 않도록 복제해서 붙인다.
 	var font := file.duplicate() as FontFile
-	font.fallbacks = [fallback]
+	font.fallbacks = fallbacks
 	_display_font = font
 	return _display_font
+
+
+# 디스플레이 폰트의 한글 담당(#561) — 도현(Do Hyeon). 세로로 길고 어깨가 좁은 굵은 고딕이라
+# 좁은 Barlow Condensed 와 비율이 맞는다. 도현은 똑바른 글꼴이라 Barlow Black **Italic** 과
+# 나란히 서면 한글만 서 있어 보인다 — 같은 방향으로 기울인다(오의 컷인 글자와 같은 기울기 0.2).
+# 굵기도 Barlow Black 에 맞춰 조금 더한다. 파일이 없으면 null(호출부가 기본 폰트로 떨어진다).
+const KOREAN_DISPLAY_FONT_PATH := "res://assets/fonts/DoHyeon-Regular.ttf"
+const DISPLAY_ITALIC_SKEW := 0.2
+
+static func _korean_display_font() -> Font:
+	if not ResourceLoader.exists(KOREAN_DISPLAY_FONT_PATH):
+		return null
+	var file := load(KOREAN_DISPLAY_FONT_PATH) as FontFile
+	if file == null:
+		return null
+	var v := FontVariation.new()
+	v.base_font = file
+	v.variation_embolden = 0.35
+	v.variation_transform = Transform2D(Vector2(1, 0), Vector2(DISPLAY_ITALIC_SKEW, 1), Vector2.ZERO)
+	return v
 
 
 # 디스플레이 폰트 글자의 공통 모양: 채움 색 + 진한 윤곽선 + 그림자.
