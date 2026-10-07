@@ -36,7 +36,10 @@ enum Type {
 # ===== 식별 (Identity) =====
 @export var stage_id: StringName = &""   # 고유 식별자 (예: &"stage_1_1")
 @export var display_name: String = ""     # 화면 표시 이름
-@export_multiline var description: String = ""
+@export_multiline var description: String = ""   # 개발 메모. 플레이어 화면에 띄우지 않는다.
+# 플레이어에게 보여 주는 작전 설명(#555). 스테이지 리스트의 팝업이 쓴다.
+# description 은 저작 의도·밸런스 근거를 적는 개발 메모라 화면에 그대로 내면 안 된다.
+@export_multiline var briefing: String = ""
 
 # ===== 챕터와 컨셉 (Chapter & Concept) — #408 =====
 #

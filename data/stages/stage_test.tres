@@ -83,6 +83,7 @@ spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_boss_queen"), SubReso
 script = ExtResource("1_stagedata")
 stage_id = &"stage_test"
 display_name = "테스트 스테이지"
+briefing = "웨이브와 보스가 이어서 나오는 시험장. 직접 짠 파티가 끝까지 버티는지 확인한다."
 description = "**웨이브 + 보스 시험장**(#375). 1-1 이 시너지 체인 하나를 순혈 3인으로 보여 주는 튜토리얼이라면, 여기는 **플레이어가 짠 파티가 실제로 버티는지** 보는 자리다.
 
 forced_party 를 비워 둔다 — 편성은 자유다. 시너지는 강제되지 않고, 어떤 파티로 들어오느냐에 따라 웨이브별 난이도가 달라지는 것이 이 스테이지의 요점이다. 설계 §8.1 의 죽은 구간(역할 2카운트)에 걸린 파티는 3파에서 눈에 띄게 막힌다.

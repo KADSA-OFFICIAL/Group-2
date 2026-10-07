@@ -2,8 +2,8 @@ extends Control
 
 # 스테이지 리스트의 마름모 타일 하나 (#555).
 #
-# 아이소메트릭 블록(윗면 + 왼쪽·오른쪽 옆면)을 _draw 로 그리고, 번호 알약·이름·NEW·
-# 파티 캐릭터는 자식 노드로 얹는다. 그림 에셋이 없어도 서도록 모양은 전부 코드로 그린다.
+# 아이소메트릭 블록(윗면 + 왼쪽·오른쪽 옆면)을 _draw 로 그리고, 번호 알약·이름·NEW 는
+# 자식 노드로 얹는다. 파티(도트 캐릭터)는 타일 사이를 걸어 다니므로 화면이 따로 그린다. 그림 에셋이 없어도 서도록 모양은 전부 코드로 그린다.
 #
 # 이 타일은 **보여 주기만** 한다. 어떤 스테이지인지·잠겼는지·현재인지는 화면
 # (stage_select_screen.gd)이 StageDatabase / StageProgress 에서 읽어 넘겨 준다.
@@ -33,6 +33,8 @@ var _boss := false
 var _locked := false
 var _hover := false
 var _down := false
+var _selected := false
+var _occupied := false
 
 # 윗면 위에 얹는 자식(알약·캐릭터)을 담는 판. 떠오를 때 블록과 함께 움직인다.
 var _overlay: Control
@@ -63,16 +65,12 @@ func _init() -> void:
 # ===== 설정 (화면이 부른다) =====
 
 # number_text: 알약 글자("1-1"). name_text: 그 아래 이름. 비어 있으면 줄을 만들지 않는다.
-# party: 이 타일 위에 세울 캐릭터(CharacterData). 현재 스테이지에만 넘긴다.
 # 알약 크기를 재야 하므로 **트리에 붙인 뒤에** 부른다.
 func setup(base: Color, number_text: String, name_text: String, boss: bool, locked: bool,
-		is_new: bool, party: Array) -> void:
+		is_new: bool) -> void:
 	_base = _vivid(base)
 	_boss = boss
 	_locked = locked
-
-	if not party.is_empty():
-		_overlay.add_child(_make_party(party))
 
 	var plate := VBoxContainer.new()
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -112,6 +110,28 @@ func setup(base: Color, number_text: String, name_text: String, boss: bool, lock
 		badge.rotation_degrees = 8.0
 
 
+# 고른 타일 표시(팝업이 이 스테이지를 보여 주는 중). 윗면 둘레가 밝게 빛난다.
+func set_selected(on: bool) -> void:
+	if _selected == on:
+		return
+	_selected = on
+	queue_redraw()
+
+
+# 파티가 이 타일 위에 서 있는가. 서 있으면 자물쇠를 그리지 않는다 — 자물쇠 자리를
+# 파티가 덮어 둘이 겹쳐 보인다(어차피 그림뿐인 표시다).
+func set_occupied(on: bool) -> void:
+	if _occupied == on:
+		return
+	_occupied = on
+	queue_redraw()
+
+
+# 이 타일 윗면 가운데(타일 좌표). 화면이 파티를 세울 자리를 여기서 잡는다.
+static func top_anchor() -> Vector2:
+	return Vector2(HALF_W, HEAD_ROOM + HALF_H)
+
+
 # ===== 그리기 =====
 
 # 팔레트 색(UITheme)은 패널용이라 배경 그림 위에서는 흐릿하게 묻힌다.
@@ -121,7 +141,7 @@ static func _vivid(c: Color) -> Color:
 
 
 func _top_center() -> Vector2:
-	return Vector2(HALF_W, HEAD_ROOM + HALF_H)
+	return top_anchor()
 
 
 func _lift() -> float:
@@ -186,7 +206,12 @@ func _draw() -> void:
 	draw_polyline(PackedVector2Array([left, left + d, bottom + d, right + d, right]), outline, OUTLINE_WIDTH, true)
 	draw_line(bottom, bottom + d, outline, OUTLINE_WIDTH, true)
 
-	if _locked:
+	if _selected:
+		var glow := PackedVector2Array([top, right, bottom, left, top])
+		draw_polyline(glow, Color(UITheme.CREAM, 0.45), 11.0, true)
+		draw_polyline(glow, UITheme.CREAM, 4.0, true)
+
+	if _locked and not _occupied:
 		_draw_lock(c + Vector2(0.0, -HALF_H * 0.30))
 
 
@@ -309,58 +334,3 @@ func _outlined_label(text: String, font_size: int) -> Label:
 	label.add_theme_constant_override("outline_size", 7)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
-
-
-# 현재 스테이지 위에 선 파티. 전투 스프라이트를 같은 키로 맞춰 두 줄로 세운다.
-const PARTY_HEIGHT: float = 104.0
-
-func _make_party(party: Array) -> Control:
-	var holder := Control.new()
-	holder.name = "Party"
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	var c := _top_center()
-	# 뒷줄 둘, 앞줄 둘. 넷을 넘으면 넷까지만 세운다(파티 정원이 넷이다).
-	var spots := [
-		Vector2(-34.0, -22.0), Vector2(34.0, -22.0),
-		Vector2(-62.0, 4.0), Vector2(62.0, 4.0)]
-	if party.size() <= 2:
-		spots = [Vector2(-30.0, -6.0), Vector2(30.0, -6.0)]
-	elif party.size() == 3:
-		spots = [Vector2(0.0, -26.0), Vector2(-52.0, 0.0), Vector2(52.0, 0.0)]
-
-	for i in mini(party.size(), spots.size()):
-		var character: CharacterData = party[i]
-		var texture := HUDKit.trimmed_texture(character.battle_sprite) if character.battle_sprite != null else null
-		if texture == null:
-			continue
-		var tex_size := texture.get_size()
-		var scale_k := PARTY_HEIGHT / maxf(tex_size.y, 1.0)
-		var draw_size := tex_size * scale_k
-
-		var feet: Vector2 = c + spots[i] + Vector2(0.0, -HALF_H * 0.18)
-
-		var shadow := _ellipse(Vector2(draw_size.x * 0.42, 7.0), Color(0, 0, 0, 0.22))
-		shadow.position = feet - shadow.size * 0.5
-		holder.add_child(shadow)
-
-		var rect := TextureRect.new()
-		rect.texture = texture
-		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
-		rect.size = draw_size
-		rect.position = feet - Vector2(draw_size.x * 0.5, draw_size.y)
-		holder.add_child(rect)
-	return holder
-
-
-func _ellipse(radii: Vector2, color: Color) -> Control:
-	var e := Panel.new()
-	e.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var box := StyleBoxFlat.new()
-	box.bg_color = color
-	box.set_corner_radius_all(int(maxf(radii.x, radii.y)))
-	e.add_theme_stylebox_override("panel", box)
-	e.size = radii * 2.0
-	return e
