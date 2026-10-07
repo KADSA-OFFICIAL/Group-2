@@ -59,6 +59,9 @@ const ULT_DUTCH_DEG: float = -5.0
 ## 지면 밴드 높이. 아래에서 이만큼이 바닥이다.
 const GROUND_H: float = 420.0
 
+# 격파 7단계 "BREAK!" 전용 연출 (#559). 폰트·이펙트는 그 스크립트가 소유한다.
+const BreakBannerScript := preload("res://stage/turn/BreakBanner.gd")
+
 # 전투 배경 아트 (#505). **챕터가 컨셉을 정한다** — 스테이지마다 따로 저작하지 않는다.
 # 그림이 없으면 아래 `_background` 단색으로 떨어진다(폴백은 지우지 않는다).
 const BACKDROP_DIR := "res://assets/sprites/backgrounds/battle"
@@ -166,8 +169,10 @@ var _flash: ColorRect = null
 var _flash_layer: CanvasLayer = null
 ## 데미지 숫자를 띄우는 레이어.
 var _numbers: Node2D = null
-## 격파 타이포그래피.
+## 배너 타이포그래피(WAVE · VICTORY · 스킬 이름 등). 격파는 아래 전용 연출을 쓴다.
 var _banner: Label = null
+## 격파 7단계 "BREAK!" 전용 연출 (#559).
+var _break_banner: Control = null
 
 ## 오의 컷인 판 (#544). 한 번 만들어 두고 오의마다 그림·글자만 갈아 끼운다.
 var _cutin: UltimateCutin = null
@@ -434,6 +439,10 @@ func _build_scene() -> void:
 	_banner.add_theme_font_size_override("font_size", 84)
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash_layer.add_child(_banner)
+
+	_break_banner = BreakBannerScript.new()
+	_break_banner.name = "BreakBanner"
+	_flash_layer.add_child(_break_banner)
 
 	_build_cutin()
 
@@ -1245,8 +1254,13 @@ func _play_break(data: Dictionary) -> void:
 				await _wait(duration * 0.5)
 
 			7:
-				# "BREAK!" 타이포그래피가 화면을 가로지른다.
-				await _play_banner("BREAK!", color, duration, 96)
+				# "BREAK!" 타이포그래피가 화면에 박힌다(#559 전용 연출: 폰트·이중 윤곽·띠·
+				# 집중선·충격파·잔상·불꽃). 막는 시간은 규격대로 duration 이고,
+				# 퇴장 꼬리만 다음 단계와 겹친다.
+				if _break_banner != null:
+					await _break_banner.play(color, _scaled(duration), _scaled(1.0))
+				else:
+					await _play_banner("BREAK!", color, duration, 96)
 
 			8:
 				# 적 비틀거림 + 붉은 실루엣 명멸.
