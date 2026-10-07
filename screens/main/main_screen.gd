@@ -27,6 +27,11 @@ extends Control
 #   대표 캐릭터 -> PartySystem (플레이어가 조작 중인 멤버)
 #   캐릭터      -> CharacterData (표시 이름/역할/외형 tint/portrait)
 #   색·치수     -> UITheme
+#   배경 그림   -> HUDKit.load_concept_backdrop() (현재 챕터 = StageProgress.get_current_stage_id())
+#
+# 시각 언어는 스테이지 리스트(#555)와 같다(#557): 챕터 그림 배경 + 위아래 그늘 띠,
+# 그림 위 글자는 윤곽선 글자(HUDKit.outlined_label), 버튼·칩은 크림 테두리.
+# 홈 -> 출격으로 넘어갈 때 배경 그림과 글자 톤이 이어지게 하려는 것이다.
 #
 # 화면 전환은 ScreenManager가 한다. 이 화면은 자신을 pop 할 뿐 다음 화면을 모른다.
 
@@ -75,6 +80,7 @@ var _nameplate: Control      # 좌하단 이름표
 var _profile_holder: Control # 상단 프로필 칩이 들어가는 자리
 var _guide_holder: Control   # 길라잡이 문구가 들어가는 자리 (퀘스트 아이콘 옆)
 var _mail_holder: Control    # 우편 버튼 자리 (미수령 배지 때문에 다시 채운다)
+var _next_stage_label: Label # 출격 버튼 아래 "다음 스테이지" 줄
 
 
 func _ready() -> void:
@@ -91,6 +97,10 @@ func _ready() -> void:
 	# 우편 미수령 개수의 출처는 MailSystem 이다. 여기서 세지 않는다.
 	EventBus.mail_added.connect(func(_id): _fill_mail_button())
 	EventBus.mail_claimed.connect(func(_id): _fill_mail_button())
+	# 배경 챕터와 출격 버튼의 "다음 스테이지"는 진행도에서 나온다.
+	StageProgress.progress_changed.connect(func():
+		_fill_art()
+		_fill_next_stage())
 
 
 func _refresh_featured() -> void:
@@ -127,7 +137,8 @@ func _build() -> void:
 	# 프로필·재화 칩은 화면 맨 위에 붙는다. 위 여백을 최소로 둔다.
 	overlay.add_theme_constant_override("margin_top", 6)
 	# 하단 버튼은 화면 맨 아래에 바짝 붙는다. 아래 여백을 두지 않는다.
-	overlay.add_theme_constant_override("margin_bottom", 0)
+	# 라벨이 윤곽선 글자가 되면서 화면 끝에 닿아 보여 조금 띄운다(#557).
+	overlay.add_theme_constant_override("margin_bottom", 8)
 	add_child(overlay)
 
 	var column := VBoxContainer.new()
@@ -160,15 +171,18 @@ func _fill_art() -> void:
 		return
 	_clear(_art_layer)
 
+	# 초상 뒤를 **먼저** 채운다 — 초상은 세로에 맞춰 세우므로 좌우가 남고,
+	# 그 자리가 비면 화면 배경색이 그대로 드러나 인물이 오려 붙인 것처럼 보인다.
+	# 지금 진행 중인 챕터의 그림을 깐다(#557). 파티가 비어 있어도 배경은 보인다.
+	# 그림이 없으면 예전 그라데이션(대표 캐릭터 tint)으로 떨어진다.
 	var character := _featured_character()
+	if not _fill_art_backdrop() and character != null:
+		_fill_art_gradient(character)
 	if character == null:
+		_add_edge_shades()
 		return
 
 	# 어떤 초상을 쓸지는 PortraitSystem 이 정한다(캐릭터 화면에서 고른 값 > 저작 기본값).
-	# 초상이 있어도 그라데이션을 **먼저** 깐다 — 초상은 세로에 맞춰 세우므로 좌우가 남고,
-	# 그 자리가 비면 화면 배경색이 그대로 드러나 인물이 오려 붙인 것처럼 보인다.
-	_fill_art_gradient(character)
-
 	var portrait := PortraitSystem.get_portrait(character)
 	if portrait != null:
 		var art := TextureRect.new()
@@ -181,11 +195,74 @@ func _fill_art() -> void:
 		# 세로에 맞춰 전신이 들어오게 두고, 남는 좌우는 아래 그라데이션이 채운다.
 		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# 그림 배경 위에 서면 인물이 떠 보인다. 발밑에 옅은 그림자를 먼저 깐다.
+		_art_layer.add_child(_ground_shadow())
 		_art_layer.add_child(art)
+		_add_edge_shades()
 		# 초상이 섰으면 워터마크는 두지 않는다. 둘이 겹치면 배경이 시끄럽다.
 		return
 
 	_fill_art_mark(character)
+	_add_edge_shades()
+
+
+# 지금 진행 중인 챕터의 배경 그림. 스테이지 리스트가 그 챕터를 열 때와 같은 그림이다.
+# 다 깼으면 마지막 챕터. 깔았으면 true.
+func _fill_art_backdrop() -> bool:
+	var texture := HUDKit.load_concept_backdrop(_current_chapter())
+	if texture == null:
+		return false
+	var picture := TextureRect.new()
+	picture.name = "Backdrop"
+	picture.texture = texture
+	picture.set_anchors_preset(Control.PRESET_FULL_RECT)
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_art_layer.add_child(picture)
+	return true
+
+
+# 위아래 그늘 띠. 상단 프로필·재화와 하단 메뉴 글자가 밝은 그림 위에서도 읽히게 한다.
+# 인물 위에 얹는다 — 하단 메뉴는 인물 다리 위에 놓이기 때문이다.
+func _add_edge_shades() -> void:
+	_art_layer.add_child(HUDKit.edge_shade(true, 130.0))
+	_art_layer.add_child(HUDKit.edge_shade(false, 190.0, 0.7))
+
+
+# 대표 캐릭터 발밑 그림자. 초상은 세로에 맞춰 가운데 서므로 발은 화면 아래 가운데에 온다.
+func _ground_shadow() -> Control:
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(0, 0, 0, 0.38))
+	gradient.set_color(1, Color(0, 0, 0, 0.0))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	texture.width = 128
+	texture.height = 128
+
+	var shadow := TextureRect.new()
+	shadow.name = "GroundShadow"
+	shadow.texture = texture
+	shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shadow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	shadow.stretch_mode = TextureRect.STRETCH_SCALE
+	shadow.anchor_left = 0.36
+	shadow.anchor_right = 0.64
+	shadow.anchor_top = 0.90
+	shadow.anchor_bottom = 0.99
+	return shadow
+
+
+func _current_chapter() -> int:
+	var current := StageProgress.get_current_stage_id()
+	var stage := StageDatabase.get_stage(current) if StageDatabase.has_stage(current) else null
+	if stage != null:
+		return stage.chapter
+	var chapters := StageDatabase.get_authored_chapters()
+	return chapters.back() if not chapters.is_empty() else 1
 
 
 # 배경 그라데이션. 초상이 있든 없든 항상 깔린다.
@@ -254,19 +331,16 @@ func _fill_nameplate() -> void:
 		_nameplate.add_child(_chip_text("편성된 파티가 없습니다."))
 		return
 
-	var plate := PanelContainer.new()
-	plate.add_theme_stylebox_override("panel", UITheme.overlay_text_pill())
-	_nameplate.add_child(plate)
-
+	# 판 없이 그림 위에 윤곽선 글자로 얹는다(스테이지 리스트의 제목과 같은 글자).
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	plate.add_child(row)
+	row.add_theme_constant_override("separation", 8)
+	_nameplate.add_child(row)
 
 	for role in character.get_roles():
-		var icon := _make_icon(UITheme.role_icon_name(role), UITheme.ICON_ROUND)
-		if icon != null:
-			row.add_child(icon)
-	row.add_child(_text(character.display_name, 20, UITheme.INK_ON_DARK, 700))
+		row.add_child(_round_icon(UITheme.role_icon_name(role), 34, 20))
+	var name_label := HUDKit.outlined_label(character.display_name, 30, 8)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	row.add_child(name_label)
 
 	# 남는 가로 공간을 밀어내 이름표가 좌측에 붙게 한다.
 	var tail := Control.new()
@@ -332,9 +406,10 @@ func _fill_guide() -> void:
 	plate.custom_minimum_size = Vector2(0, 40)
 	plate.add_theme_font_size_override("font_size", 13)
 	plate.add_theme_color_override("font_color", UITheme.INK_ON_DARK)
-	plate.add_theme_stylebox_override("normal", UITheme.overlay_text_pill())
-	plate.add_theme_stylebox_override("hover", UITheme.overlay_text_pill(UITheme.SURFACE_DEEP))
-	plate.add_theme_stylebox_override("pressed", UITheme.overlay_text_pill(UITheme.SURFACE_DEEP))
+	plate.add_theme_stylebox_override("normal", _cream_rim_pill(0.72))
+	plate.add_theme_stylebox_override("hover", _cream_rim_pill(0.88))
+	plate.add_theme_stylebox_override("pressed", _cream_rim_pill(0.95))
+	plate.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	plate.pressed.connect(_on_guide_pressed)
 	_guide_holder.add_child(plate)
 
@@ -362,26 +437,40 @@ func _fill_profile() -> void:
 # 레벨·이름은 PlayerProfile 이, 파티 인원은 PartySystem 이 출처다.
 # 이름이 비어 있으면 PlayerProfile 이 기본 이름을 만들지 않으므로 여기서 대체 문구를 쓴다.
 func _build_profile() -> Control:
-	var plate := PanelContainer.new()
-	plate.add_theme_stylebox_override("panel", UITheme.overlay_text_pill())
-
+	# 스테이지 리스트의 제목 자리와 같은 모양: 판 없이 윤곽선 글자 두 줄(#557).
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	plate.add_child(row)
+	row.add_theme_constant_override("separation", 10)
 
-	var avatar := ColorRect.new()
-	avatar.custom_minimum_size = Vector2(24, 24)
-	avatar.color = UITheme.AMBER
+	# 아바타 자리. 초상 아트가 정해지기 전까지 크림 테두리 원판으로 둔다.
+	var avatar := Panel.new()
+	avatar.custom_minimum_size = Vector2(48, 48)
+	avatar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var disc := StyleBoxFlat.new()
+	disc.bg_color = UITheme.AMBER
+	disc.border_color = UITheme.CREAM
+	disc.set_border_width_all(3)
+	disc.set_corner_radius_all(999)
+	disc.shadow_color = UITheme.SHADOW_STRONG
+	disc.shadow_size = 4
+	avatar.add_theme_stylebox_override("panel", disc)
 	row.add_child(avatar)
 
-	row.add_child(_text("삼각근 Lv.%d" % PlayerProfile.deltoid_level, 14, UITheme.ACCENT, 700))
+	var lines := VBoxContainer.new()
+	lines.add_theme_constant_override("separation", -4)
+	lines.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(lines)
 
 	# 이름이 비었을 때의 문구는 OrderSystem 이 정한다(화면마다 다르게 적지 않는다).
-	var display_name := OrderSystem.get_leader_display_name()
-	row.add_child(_text(display_name, 14, UITheme.INK_ON_DARK))
+	var display_name := HUDKit.outlined_label(OrderSystem.get_leader_display_name(), 22, 7)
+	display_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	lines.add_child(display_name)
+	var level := HUDKit.outlined_label("삼각근 Lv.%d" % PlayerProfile.deltoid_level, 15, 6,
+		UITheme.AMBER.lightened(0.35))
+	level.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	lines.add_child(level)
 	# 파티 인원은 넣지 않는다. 편성 화면이 그 정보를 이미 보여주고,
 	# 상단 칩에 정보가 셋이 되면 무엇이 중요한지 흐려진다.
-	return plate
+	return row
 
 
 # 재화 칩. 누르면 창고로 간다(모든 재화를 보는 곳이다).
@@ -391,21 +480,12 @@ func _build_profile() -> Control:
 # 잡아 주지 않아 아이콘과 숫자가 겹친다(실제로 그렇게 깨졌다).
 # 패널로 크기를 잡고 그 위에 투명 버튼을 덮는다(로스터 카드·하단 탭과 같은 방식).
 func _make_currency_chip(currency_type: String) -> Control:
-	var chip := PanelContainer.new()
-	chip.add_theme_stylebox_override("panel", UITheme.overlay_text_pill())
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 4)
-	chip.add_child(row)
-
-	var icon := _make_icon(UITheme.currency_icon_name(currency_type), UITheme.ICON_PILL)
-	if icon != null:
-		row.add_child(icon)
-
+	# 칩 모양은 스테이지 리스트와 같은 HUDKit.currency_chip 이다(#557).
 	# 재화는 즉시 최종값으로 보인다(#145). 카운트업은 메타 화면에서 걷어냈다.
-	var label := _text(_comma(CurrencySystem.get_balance(currency_type)), 13, UITheme.INK_ON_DARK, 700)
-	row.add_child(label)
-	_currency_labels[currency_type] = label
+	var chip := HUDKit.currency_chip(currency_type, _comma(CurrencySystem.get_balance(currency_type)), 20)
+	var labels := chip.find_children("*", "Label", true, false)
+	if not labels.is_empty():
+		_currency_labels[currency_type] = labels.back()
 
 	var button := Button.new()
 	button.flat = true
@@ -426,7 +506,7 @@ func _make_round_button(icon_path: String, tooltip: String, scene: PackedScene) 
 	var button := Button.new()
 	button.tooltip_text = tooltip
 	button.icon = _load_texture(icon_path)
-	button.custom_minimum_size = Vector2(32, 32)
+	button.custom_minimum_size = Vector2(40, 40)
 	button.expand_icon = true
 	# HBoxContainer 는 자식을 줄 높이에 맞춰 늘린다. 그대로 두면 옆의 재화 칩(글자가 있어
 	# 더 높다) 높이까지 늘어나 원형 버튼이 세로로 긴 타원이 됐다. 늘리지 않는다.
@@ -483,7 +563,7 @@ func _build_bottom_bar() -> Control:
 # 눌러도 아무 일이 없는 버튼은 화면을 난잡하게만 만든다.
 func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 	var holder := Control.new()
-	holder.custom_minimum_size = Vector2(58, 62)
+	holder.custom_minimum_size = Vector2(66, 82)
 
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -492,17 +572,13 @@ func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(box)
 
-	var icon := _make_icon(icon_path, UITheme.ICON_NAV)
-	if icon != null:
-		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		box.add_child(icon)
+	# 아이콘은 원판 위에 얹는다 — 스테이지 리스트의 화살표 버튼과 같은 모양(#557).
+	var disc := _round_icon(icon_path, 52, UITheme.ICON_NAV)
+	disc.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	box.add_child(disc)
 
-	# 라벨은 그림 위에 바로 얹히므로 외곽선을 넣어 어떤 배경에서도 읽히게 한다.
-	var text := _text(label, 12, UITheme.INK_ON_DARK)
-	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	text.add_theme_color_override("font_outline_color", UITheme.OUTLINE)
-	text.add_theme_constant_override("outline_size", 4)
-	box.add_child(text)
+	# 라벨은 그림 위에 바로 얹히므로 윤곽선 글자로 둔다.
+	box.add_child(HUDKit.outlined_label(label, 14, 5))
 
 	# 눌리는 영역만 담당하는 투명 버튼. 배경·테두리 없음.
 	var button := Button.new()
@@ -518,53 +594,92 @@ func _make_tab(label: String, icon_path: String, scene: PackedScene) -> Control:
 	return holder
 
 
-# 출격만 알약 배경을 가진다. 유일한 주요 동작이라 눈에 띄어야 하기 때문이다.
-# 나머지 메뉴 버튼에는 배경을 두지 않는다.
+# 출격만 크고 밝다. 유일한 주요 동작이라 눈에 띄어야 하기 때문이다.
+# 모양은 스테이지 리스트의 번호 알약과 같은 크림 테두리 알약이다(#557).
+# 아래 줄에 다음 스테이지(번호·이름)를 적는다 — 누르면 어디로 가는지가 버튼에 보인다.
 #
 # 아이콘을 Button.icon 으로 넣지 않고 직접 조립한다.
 # Button.icon 은 텍스처를 원본 크기(SVG 임포트 기준 64px)로 그리기 때문에
 # 버튼이 그보다 낮으면 아이콘이 잘린다. TextureRect 로 크기를 지정해 얹는다.
 func _build_battle_button() -> Control:
 	var holder := Control.new()
-	holder.custom_minimum_size = Vector2(172, 62)
+	holder.custom_minimum_size = Vector2(236, 86)
 
 	var plate := PanelContainer.new()
-	plate.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	plate.offset_top = -54
-	plate.offset_bottom = -4
-	plate.add_theme_stylebox_override("panel", UITheme.overlay_accent(26))
+	plate.set_anchors_preset(Control.PRESET_FULL_RECT)
+	plate.offset_bottom = -8
+	plate.add_theme_stylebox_override("panel", _battle_plate(false))
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(plate)
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 8)
+	row.add_theme_constant_override("separation", 10)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	plate.add_child(row)
 
-	var icon := _make_icon(BATTLE_ICON, UITheme.ICON_CTA)
+	var icon := _make_icon(BATTLE_ICON, 40)
 	if icon != null:
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(icon)
 
-	var label := _text("출격", 20, UITheme.INK, 700)
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(label)
+	var lines := VBoxContainer.new()
+	lines.add_theme_constant_override("separation", -2)
+	lines.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(lines)
 
-	# 눌리는 영역만 담당하는 투명 버튼.
+	lines.add_child(_text("출격", 26, UITheme.INK, 700))
+	_next_stage_label = _text("", 13, UITheme.INK.lightened(0.15), 600)
+	lines.add_child(_next_stage_label)
+	_fill_next_stage()
+
+	# 눌리는 영역만 담당하는 투명 버튼. 누르면 판이 살짝 가라앉는다.
 	var button := Button.new()
 	button.flat = true
-	button.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	button.offset_top = -54
-	button.offset_bottom = -4
-	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("pressed", UITheme.overlay_pill(UITheme.SURFACE_DEEP))
-	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	button.offset_bottom = -8
+	for state in ["normal", "hover", "pressed", "focus"]:
+		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	button.text = ""
 	button.tooltip_text = "출격"
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.mouse_entered.connect(func(): plate.add_theme_stylebox_override("panel", _battle_plate(true)))
+	button.mouse_exited.connect(func(): plate.add_theme_stylebox_override("panel", _battle_plate(false)))
+	button.button_down.connect(func(): plate.position.y += 3)
+	button.button_up.connect(func(): plate.position.y -= 3)
 	button.pressed.connect(_on_battle_pressed)
 	holder.add_child(button)
 	return holder
+
+
+func _battle_plate(hot: bool) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	# 팔레트 앰버는 패널용이라 그림 위에서는 바랜다. 채도를 올려 그림 앞으로 꺼낸다
+	# (스테이지 리스트 타일과 같은 처리).
+	var amber := Color.from_hsv(UITheme.ACCENT.h, minf(UITheme.ACCENT.s * 1.5, 1.0), minf(UITheme.ACCENT.v * 1.06, 1.0))
+	box.bg_color = amber.lightened(0.12) if hot else amber
+	box.border_color = UITheme.CREAM
+	box.set_border_width_all(4)
+	box.set_corner_radius_all(999)
+	box.content_margin_left = 22
+	box.content_margin_right = 26
+	box.shadow_color = UITheme.SHADOW_STRONG
+	box.shadow_size = 8
+	box.shadow_offset = Vector2(0, 4)
+	return box
+
+
+# 출격 버튼 아래 줄: 다음 스테이지. 출처는 StageProgress(현재 스테이지)와 StageData(번호·이름).
+# 다 깼거나 스테이지가 없으면 줄을 숨긴다 — 출격 자체는 그대로 된다.
+func _fill_next_stage() -> void:
+	if not is_instance_valid(_next_stage_label):
+		return
+	var current := StageProgress.get_current_stage_id()
+	var stage := StageDatabase.get_stage(current) if StageDatabase.has_stage(current) else null
+	_next_stage_label.visible = stage != null
+	if stage != null:
+		_next_stage_label.text = stage.display_name
 
 
 # 출격 = 스테이지 선택 화면을 연다.
@@ -614,6 +729,40 @@ func _chip_text(value: String) -> Control:
 
 func _make_icon(icon_name: String, size: int) -> TextureRect:
 	return HUDKit.make_icon(icon_name, size)
+
+
+# 반투명 원판 위 아이콘. 스테이지 리스트의 화살표 버튼과 같은 원판이다.
+func _round_icon(icon_name: String, disc_size: int, icon_size: int) -> Control:
+	var disc := PanelContainer.new()
+	disc.custom_minimum_size = Vector2(disc_size, disc_size)
+	disc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(UITheme.BG, 0.5)
+	box.border_color = Color(UITheme.CREAM, 0.75)
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(999)
+	disc.add_theme_stylebox_override("panel", box)
+	var icon := _make_icon(icon_name, icon_size)
+	if icon != null:
+		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		disc.add_child(icon)
+	return disc
+
+
+# 크림 테두리 반투명 알약(길라잡이). 스테이지 리스트의 NEW 배지·번호 알약과 같은 테두리다.
+func _cream_rim_pill(alpha: float) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(UITheme.BG, alpha)
+	box.border_color = UITheme.CREAM
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(999)
+	box.content_margin_left = 16
+	box.content_margin_right = 16
+	box.content_margin_top = 6
+	box.content_margin_bottom = 7
+	return box
 
 
 # 아이콘 **이름**("icon_back")을 받는다. 경로와 확장자 해석은 UITheme 이 한다.

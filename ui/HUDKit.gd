@@ -1039,6 +1039,72 @@ static func load_backdrop(backdrop_name: String) -> Texture2D:
 	return load(path) as Texture2D
 
 
+# 챕터의 컨셉 배경 그림(#555, #557). 출처는 전투 화면의 표(TurnBattle.CONCEPT_BACKDROP)다 —
+# 표를 여기 다시 적지 않고 그쪽 상수를 읽는다. 홈과 스테이지 리스트가 같은 그림을 쓴다.
+# 챕터 밖이면 육지 그림. 그림이 없으면 null(호출부가 단색/그라데이션으로 떨어진다).
+#
+# preload 하지 않는 이유: UI 조각 하나를 쓸 때 전투 스크립트 의존성까지 끌어오지 않으려고.
+const BATTLE_SCRIPT_PATH := "res://stage/turn/TurnBattle.gd"
+
+static func load_concept_backdrop(chapter: int) -> Texture2D:
+	var battle := load(BATTLE_SCRIPT_PATH) as GDScript
+	if battle == null:
+		return null
+	var constants := battle.get_script_constant_map()
+	var table: Dictionary = constants.get("CONCEPT_BACKDROP", {})
+	var dir: String = constants.get("BACKDROP_DIR", "")
+	var concept := StageData.chapter_to_concept(chapter)
+	if concept < 0:
+		concept = StageData.Concept.LAND
+	var file_name: String = table.get(concept, "")
+	if file_name.is_empty() or dir.is_empty():
+		return null
+	var path := dir.path_join(file_name + ".png")
+	return load(path) as Texture2D if ResourceLoader.exists(path) else null
+
+
+# 그림 위에 바로 얹는 글자. 밝은 글자 + 진한 윤곽선이라 어떤 배경에서도 읽힌다(#555).
+# 패널 안 글자는 label() 을 쓴다 — 윤곽선이 패널 위에서는 지저분하다.
+static func outlined_label(text: String, font_size: int, outline: int,
+		color: Color = UITheme.CREAM) -> Label:
+	var l := label(text, font_size, color, 700)
+	l.add_theme_color_override("font_outline_color", UITheme.INK)
+	l.add_theme_constant_override("outline_size", outline)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l
+
+
+# 위(또는 아래) 가장자리를 어둡게 덮는 띠. 배경 그림이 밝아도 가장자리 UI 글자가 읽히게 한다.
+# extent: 띠의 두께(px). 그림 배경을 쓰는 메타 화면(홈·스테이지 리스트)이 함께 쓴다.
+static func edge_shade(top: bool, extent: float, alpha: float = 0.55) -> Control:
+	var gradient := Gradient.new()
+	var dark := Color(UITheme.BG, alpha)
+	var clear := Color(UITheme.BG, 0.0)
+	gradient.set_color(0, dark if top else clear)
+	gradient.set_color(1, clear if top else dark)
+
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = Vector2(0.5, 0.0)
+	texture.fill_to = Vector2(0.5, 1.0)
+	texture.width = 4
+	texture.height = 64
+
+	var rect := TextureRect.new()
+	rect.name = "EdgeShadeTop" if top else "EdgeShadeBottom"
+	rect.texture = texture
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.set_anchors_preset(Control.PRESET_TOP_WIDE if top else Control.PRESET_BOTTOM_WIDE)
+	if top:
+		rect.offset_bottom = extent
+	else:
+		rect.offset_top = -extent
+	return rect
+
+
 static func make_icon(icon_name: String, size: int) -> TextureRect:
 	var texture := load_icon(icon_name)
 	if texture == null:
