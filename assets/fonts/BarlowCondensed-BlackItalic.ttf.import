@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://duui76qx7hwcl"
-path="res://.godot/imported/Bangers-Regular.ttf-1096e4d6e36d932f856599d7c9cc030f.fontdata"
+uid="uid://781she63xpa5"
+path="res://.godot/imported/BarlowCondensed-BlackItalic.ttf-0ff67cac2263edec22b7d19155e2ab46.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/Bangers-Regular.ttf"
-dest_files=["res://.godot/imported/Bangers-Regular.ttf-1096e4d6e36d932f856599d7c9cc030f.fontdata"]
+source_file="res://assets/fonts/BarlowCondensed-BlackItalic.ttf"
+dest_files=["res://.godot/imported/BarlowCondensed-BlackItalic.ttf-0ff67cac2263edec22b7d19155e2ab46.fontdata"]
 
 [params]
 

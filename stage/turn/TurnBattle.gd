@@ -1655,7 +1655,7 @@ func _play_banner(text: String, color: Color, duration: float, size: int) -> voi
 	_banner.text = text
 	# 흰 글자 + 연출 색 윤곽선(#559). 예전에는 modulate 로 글자 전체를 물들여
 	# 얇은 기본 폰트가 배경·이펙트 위에서 묻혔다. modulate 는 알파에만 쓴다.
-	# Bangers 는 좁은 글꼴이라 같은 자리를 채우도록 조금 키운다.
+	# 디스플레이 폰트(Barlow Condensed)는 좁은 글꼴이라 같은 자리를 채우도록 조금 키운다.
 	HUDKit.style_display_label(_banner, int(size * 1.15), Color.WHITE,
 		maxi(10, int(size * 0.16)), color.darkened(0.45))
 	_banner.modulate = Color(1, 1, 1, 0)
@@ -1686,7 +1686,7 @@ func _spawn_number(ctx: DamageContext, style: Dictionary) -> void:
 	if not String(style.get("label", "")).is_empty():
 		label.text = "%s\n%s" % [String(style["label"]), label.text]
 	# 색은 글자 채움으로, 진한 윤곽선을 둘러 이펙트 위에서도 읽히게 한다(#559).
-	# Bangers 는 좁은 글꼴이라 같은 자리를 채우도록 1.3배로 키운다.
+	# 디스플레이 폰트(Barlow Condensed)는 좁은 글꼴이라 같은 자리를 채우도록 1.3배로 키운다.
 	var number_size := int(20.0 * float(style.get("scale", 1.0)) * 1.3)
 	HUDKit.style_display_label(label, number_size, style.get("color", Color.WHITE),
 		maxi(6, int(number_size * 0.22)))

@@ -78,12 +78,12 @@ static func weight_font(embolden: float) -> FontVariation:
 	return f
 
 
-# 전투 글자 연출용 디스플레이 폰트(#559). BREAK! · 배너 · 데미지 숫자 · 상태이상 배지가 같이 쓴다.
+# 전투 글자 연출용 디스플레이 폰트(#559) — Barlow Condensed Black Italic. 현세대 서브컬처 게임풍의 좁고 굵은 기울임체. BREAK! · 배너 · 데미지 숫자 · 상태이상 배지가 같이 쓴다.
 #
-# Bangers 에는 한글이 없다. 스킬 이름("측정 사격")·상태이상 이름("출혈")처럼 한글이 섞이면
+# Barlow Condensed 에는 한글이 없다. 스킬 이름("측정 사격")·상태이상 이름("출혈")처럼 한글이 섞이면
 # 그 글자만 대체 폰트(기본 폰트를 굵게)로 그린다 — 연출 글자가 비어 보이지 않게.
 # 폰트 파일이 없으면 대체 폰트만 돌려준다(연출은 그대로 선다).
-const DISPLAY_FONT_PATH := "res://assets/fonts/Bangers-Regular.ttf"
+const DISPLAY_FONT_PATH := "res://assets/fonts/BarlowCondensed-BlackItalic.ttf"
 static var _display_font: Font = null
 
 static func display_font() -> Font:
