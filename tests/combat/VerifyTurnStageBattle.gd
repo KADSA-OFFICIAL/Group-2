@@ -35,7 +35,11 @@ func _ready() -> void:
 	_test_authored_stages_resolve()
 	_test_wave_sequencing()
 	_test_wave_preserves_party_state()
+	_test_level_bonus_units()
+	_test_level_bonus_manager()
+	_test_stage_level_bonus_field()
 	await _test_stage_battle_lifecycle()
+	await _test_stage_level_bonus_reaches_battle()
 
 	if _failures.is_empty():
 		print("PASS: 턴제 스테이지 연동 검증 %d개 통과" % _checks)
@@ -351,6 +355,213 @@ func _test_stage_battle_lifecycle() -> void:
 	TurnCombatConfig.tuning.presentation_enabled = was_enabled
 
 
+# ===== 스테이지별 적 레벨 보정 (#565) =====
+#
+# **이 검사들이 잡는 것**: 보정이 한 곳에서만 빠지는 회귀다. 적 유닛을 만드는 곳이 둘
+# (`start()` 1파, `_advance_wave()` 2파 이후)이고, 파티 레벨 계산이 또 따로 있다. 한 곳이
+# 빠지면 **전투는 정상으로 돌아가는데** 2파 적만 보정을 못 받거나 방어 계수가 어긋난다.
+
+func _test_level_bonus_units() -> void:
+	# 보정 0 은 기존과 같아야 한다 — 이 필드가 없는 스테이지가 전부 이쪽이다.
+	for id in EnemyDatabase.get_all_ids():
+		var data: EnemyData = EnemyDatabase.get_enemy(id)
+		if data == null:
+			continue
+		var plain := TurnUnit.from_enemy(data, 1)
+		var zero := TurnUnit.from_enemy(data, 1, "", 0)
+		_expect(plain.level == data.turn_level and zero.level == data.turn_level,
+			"%s: 보정 0 이면 유닛 레벨이 turn_level(%d)과 같아야 한다 (실제 %d)"
+				% [id, data.turn_level, zero.level])
+		_expect(zero.get_max_hp() == data.get_turn_hp() and plain.get_max_hp() == data.get_turn_hp(),
+			"%s: 보정 0 이면 유닛 HP 가 get_turn_hp() 와 같아야 한다 (회귀)" % id)
+
+	# 보정 5.
+	var mammoth: EnemyData = EnemyDatabase.get_enemy(&"mammoth_beastfolk")
+	var base := TurnUnit.from_enemy(mammoth, 1, "", 0)
+	var boosted := TurnUnit.from_enemy(mammoth, 1, "", 5)
+	var level := mammoth.turn_level + 5
+	_expect(boosted.level == level,
+		"보정 5 면 유닛 레벨이 turn_level + 5(%d)여야 한다 (실제 %d)" % [level, boosted.level])
+	_expect(boosted.get_max_hp() == mammoth.get_turn_hp_at(level),
+		"보정 5 의 HP 는 get_turn_hp_at(%d) 와 같아야 한다 (실제 %d)"
+			% [level, boosted.get_max_hp()])
+	_expect(boosted.get_max_hp() > base.get_max_hp(),
+		"보정 5 의 HP 가 보정 0 보다 커야 한다 (%d vs %d)" % [boosted.get_max_hp(), base.get_max_hp()])
+	_expect(boosted.get_attack() > base.get_attack() and boosted.get_defense() > base.get_defense(),
+		"보정 5 의 공격력·방어력도 보정 0 보다 커야 한다")
+	_expect(absi(boosted.get_attack() - mammoth.get_turn_attack_at(level)) <= 2,
+		"역산한 근력이 보정 레벨의 목표 공격력을 만들어야 한다 (%d vs %d)"
+			% [boosted.get_attack(), mammoth.get_turn_attack_at(level)])
+	_expect(absi(boosted.get_defense() - mammoth.get_turn_defense_at(level)) <= 2,
+		"역산한 방어력이 보정 레벨의 목표 방어력을 만들어야 한다 (%d vs %d)"
+			% [boosted.get_defense(), mammoth.get_turn_defense_at(level)])
+
+	# 위임: 레벨을 받는 형태에 turn_level 을 넘기면 기존 함수와 같다.
+	_expect(mammoth.get_turn_hp_at(mammoth.turn_level) == mammoth.get_turn_hp()
+			and mammoth.get_turn_attack_at(mammoth.turn_level) == mammoth.get_turn_attack()
+			and mammoth.get_turn_defense_at(mammoth.turn_level) == mammoth.get_turn_defense(),
+		"get_turn_*_at(turn_level) 은 get_turn_*() 과 같아야 한다")
+
+	# 같은 정의로 보정을 달리해 두 번 만들어도 저작 리소스가 오염되지 않는다.
+	var again := TurnUnit.from_enemy(mammoth, 1, "", 0)
+	_expect(again.get_max_hp() == base.get_max_hp(),
+		"보정 유닛을 만든 뒤에도 보정 0 유닛의 HP 가 그대로여야 한다 (저작 리소스 오염 없음)")
+
+	# 레벨은 1 미만으로 내려가지 않는다.
+	var floored := TurnUnit.from_enemy(mammoth, 1, "", -1000)
+	_expect(floored.level == 1, "레벨은 1 미만으로 내려가면 안 된다 (실제 %d)" % floored.level)
+
+	# 절대 지정은 레벨과 무관하다 — 손으로 맞춘 보스가 보정에 흔들리면 안 된다.
+	var fixed := EnemyData.new()
+	fixed.enemy_id = &"verify_fixed_boss"
+	fixed.display_name = "고정 보스"
+	fixed.tier = TurnCombat.EnemyTier.BOSS
+	fixed.turn_level = 25
+	fixed.turn_hp_override = 777777
+	fixed.turn_attack_override = 600
+	fixed.turn_defense_override = 1234
+	fixed.stats = PlayerStats.new()
+	var fixed_base := TurnUnit.from_enemy(fixed, 1, "", 0)
+	var fixed_boosted := TurnUnit.from_enemy(fixed, 1, "", 5)
+	_expect(fixed_boosted.level == 30, "절대 지정 적도 레벨 자체는 보정을 받는다 (실제 %d)" % fixed_boosted.level)
+	_expect(fixed_boosted.get_max_hp() == 777777 and fixed_base.get_max_hp() == 777777,
+		"turn_hp_override 가 있으면 보정과 무관하게 그 HP 여야 한다 (실제 %d)" % fixed_boosted.get_max_hp())
+	_expect(absi(fixed_boosted.get_attack() - 600) <= 2 and absi(fixed_boosted.get_defense() - 1234) <= 2,
+		"turn_attack/defense_override 도 보정과 무관해야 한다 (공격 %d · 방어 %d)"
+			% [fixed_boosted.get_attack(), fixed_boosted.get_defense()])
+
+
+func _test_level_bonus_manager() -> void:
+	var raptor: EnemyData = EnemyDatabase.get_enemy(&"velociraptor_beastfolk")
+	var mammoth: EnemyData = EnemyDatabase.get_enemy(&"mammoth_beastfolk")
+	var seoa: EnemyData = EnemyDatabase.get_enemy(&"seoa")
+	var bonus := 5
+
+	var wave2_levels: Array[int] = []
+	var wave2_hp: Array[int] = []
+
+	var battle := TurnBattleManager.new()
+	battle.auto_battle = true
+	battle.cycle_limit = 60
+	battle.enemy_level_bonus = bonus
+	battle.pending_waves = [[mammoth, seoa]]
+	battle.on_wave_started = func(index: int, _total: int) -> void:
+		if index != 1:
+			return
+		for unit in battle.enemies():
+			wave2_levels.append(unit.level)
+			wave2_hp.append(unit.get_max_hp())
+	battle.start(_party([&"mina", &"harang", &"seola", &"gangji"]), [raptor, mammoth], 0, 5150)
+	battle.presentation.enabled = false
+
+	# 1파: 적 레벨과 파티 레벨(자동)이 모두 보정을 포함한다.
+	var top := maxi(raptor.turn_level, mammoth.turn_level) + bonus
+	for unit in battle.enemies():
+		_expect(unit.level == unit.enemy.turn_level + bonus,
+			"1파 %s 의 레벨은 turn_level + %d 여야 한다 (실제 %d)"
+				% [unit.display_name, bonus, unit.level])
+	for unit in battle.allies():
+		_expect(unit.level == top,
+			"파티 레벨(자동)은 1파 (turn_level + 보정) 최고값 %d 여야 한다 (%s 실제 %d)"
+				% [top, unit.display_name, unit.level])
+
+	battle.begin_battle()
+	var guard := 0
+	while not battle.is_over() and guard < 4000:
+		guard += 1
+		battle.advance()
+
+	# 2파: `_advance_wave()` 로 놓인 적도 보정을 받는다.
+	_expect(wave2_levels.size() == 2,
+		"2파에 도달해 적 2체가 놓여야 한다 (실제 %d체) — 1파에서 졌다면 시드를 다시 잡을 것"
+			% wave2_levels.size())
+	if wave2_levels.size() == 2:
+		_expect(wave2_levels.has(mammoth.turn_level + bonus) and wave2_levels.has(seoa.turn_level + bonus),
+			"2파 적도 turn_level + %d 이어야 한다 (실제 %s)" % [bonus, str(wave2_levels)])
+		_expect(wave2_hp.has(mammoth.get_turn_hp_at(mammoth.turn_level + bonus)),
+			"2파 매머드 HP 가 보정 레벨의 HP 여야 한다 (실제 %s)" % str(wave2_hp))
+
+	# 파티 레벨은 **1파 기준**이다 — 2파가 더 높아져도 아군 레벨이 따라 오르지 않는다(기존 규칙 유지).
+	for unit in battle.allies():
+		_expect(unit.level == top,
+			"파티 레벨은 웨이브가 넘어가도 1파 기준 %d 로 유지되어야 한다 (실제 %d)" % [top, unit.level])
+
+	# 기본값 0: 설정하지 않은 전투는 기존과 같다.
+	var plain := TurnBattleManager.new()
+	_expect(plain.enemy_level_bonus == 0, "enemy_level_bonus 의 기본값은 0 이어야 한다")
+	plain.start(_party([&"mina"]), [mammoth], 0, 1)
+	_expect(plain.enemies()[0].level == mammoth.turn_level
+			and plain.allies()[0].level == mammoth.turn_level,
+		"보정을 주지 않으면 적·파티 레벨이 turn_level 그대로여야 한다")
+
+
+func _test_stage_level_bonus_field() -> void:
+	# 기존 스테이지는 보정이 0 이다 — 전투 결과가 그대로여야 한다.
+	for id in [&"stage_1_1", &"stage_1_2", &"stage_1_3", &"stage_2_1", &"stage_test"]:
+		var stage: StageData = StageDatabase.get_stage(id)
+		_expect(stage != null, "%s 를 조회할 수 있어야 한다" % id)
+		if stage != null:
+			_expect(stage.turn_level_bonus == 0,
+				"%s 의 turn_level_bonus 는 0 이어야 한다 (실제 %d)" % [id, stage.turn_level_bonus])
+
+	# validate() 는 음수를 거부하고 0 이상은 받아들인다.
+	var source: StageData = StageDatabase.get_stage(&"stage_1_1")
+	var probe := source.duplicate(true) as StageData
+	_expect(probe.validate().is_empty(), "복제한 기준 스테이지는 유효해야 한다: %s" % str(probe.validate()))
+	probe.turn_level_bonus = -1
+	var problems := probe.validate()
+	var rejected := false
+	for problem in problems:
+		if problem.contains("turn_level_bonus"):
+			rejected = true
+	_expect(rejected, "음수 turn_level_bonus 는 validate() 가 거부해야 한다 (실제 %s)" % str(problems))
+	probe.turn_level_bonus = 8
+	_expect(probe.validate().is_empty(), "turn_level_bonus 8 은 유효해야 한다: %s" % str(probe.validate()))
+
+
+# 전투 화면이 스테이지의 보정을 매니저까지 전달하는가. 위 검사들은 매니저에 값을 직접
+# 넣었으므로 **화면 -> 매니저** 연결은 여기서만 확인된다.
+func _test_stage_level_bonus_reaches_battle() -> void:
+	var was_enabled := TurnCombatConfig.tuning.presentation_enabled
+	TurnCombatConfig.tuning.presentation_enabled = false
+
+	var source: StageData = StageDatabase.get_stage(&"stage_1_1")
+	var probe := source.duplicate(true) as StageData
+	probe.stage_id = &"verify_level_bonus_stage"
+	probe.turn_level_bonus = 4
+	StageDatabase._stages[probe.stage_id] = probe
+
+	var previous := StageSystem.get_current_id()
+	StageSystem.request_stage(probe.stage_id)
+
+	var scene: PackedScene = load("res://stage/turn/TurnBattle.tscn")
+	var node := scene.instantiate()
+	node.set("use_stage", true)
+	node.set("battle_seed", 20260909)
+	add_child(node)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var battle = node.get("battle")
+	_expect(battle != null, "보정 스테이지에서도 전투 화면이 전투를 만들어야 한다")
+	if battle != null:
+		_expect(int(battle.enemy_level_bonus) == 4,
+			"전투 화면이 스테이지의 turn_level_bonus(4)를 매니저에 넘겨야 한다 (실제 %d)"
+				% int(battle.enemy_level_bonus))
+		var enemies: Array = battle.enemies()
+		_expect(not enemies.is_empty(), "스테이지의 적이 놓여야 한다")
+		for unit in enemies:
+			_expect(unit.level == unit.enemy.turn_level + 4,
+				"화면이 만든 적 %s 의 레벨이 turn_level + 4 여야 한다 (실제 %d)"
+					% [unit.display_name, unit.level])
+
+	node.queue_free()
+	await get_tree().process_frame
+	StageDatabase._stages.erase(probe.stage_id)
+	StageSystem.request_stage(previous)
+	TurnCombatConfig.tuning.presentation_enabled = was_enabled
+
+
 # 전투 UI 가 메타 화면(메인화면/편성/결과)보다 **아래**에 있어야 한다.
 #
 # 왜 검사하는가: 전투 HUD 를 `ScreenManager.SCREEN_LAYER` 와 같은 번호(10)에 두었더니
@@ -376,12 +587,18 @@ func _check_hud_below_meta_screens(node: Node) -> void:
 
 # ===== 헬퍼 =====
 
+# 로스터의 **사본**을 성장 배수 1.0 으로 고정해 돌려준다. `PlayerProfile` 이 세이브의 삼각근
+# Lv. 을 원본에 넣어 두므로(#563 이후 전투 유닛까지 간다), 원본을 쓰면 검사 결과가 실행하는
+# 사람의 세이브에 따라 달라진다.
 func _party(ids: Array) -> Array[CharacterData]:
 	var out: Array[CharacterData] = []
 	for id in ids:
-		var character: CharacterData = CharacterDatabase.get_character(id)
-		if character != null:
-			out.append(character)
+		var source: CharacterData = CharacterDatabase.get_character(id)
+		if source == null:
+			continue
+		var copy := source.duplicate(true) as CharacterData
+		copy.get_stats().set_growth_multiplier(1.0)
+		out.append(copy)
 	return out
 
 

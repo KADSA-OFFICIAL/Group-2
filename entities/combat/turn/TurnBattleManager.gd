@@ -95,6 +95,15 @@ var step_by_turn: bool = false
 ## 이 시스템에 원래 있어야 하는 축이다. 스테이지가 값을 정한다.
 var cycle_limit: int = 0
 
+## 적 전원의 레벨 보정 (#565). 적 레벨 = `EnemyData.turn_level` + 이 값.
+##
+## `start()` 전에 설정한다(`pending_waves` · `step_by_turn` 과 같은 방식). 1파(`start()`)와
+## 2파 이후(`_advance_wave()`) 적 생성이 모두 이 값을 쓴다.
+##
+## 스테이지가 아니라 **숫자를 받는 이유**: 전투는 스테이지를 모른다 — 웨이브도 번호만
+## 알린다(`on_wave_started`). 그 경계를 지켜야 헤드리스 검사와 `use_stage = false` 경로가 산다.
+var enemy_level_bonus: int = 0
+
 ## 유닛별 누적 턴 수. `unit_id` -> 턴 수. 특성 주기 판정이 읽는다.
 var _turn_counts: Dictionary = {}
 
@@ -151,7 +160,7 @@ func _signal(signal_name: StringName, args: Array = []) -> void:
 #           전투 밖 행동이 전투 안 유불리로 연결되는 접합부다.
 # `seed_value`: 결정론적 RNG 시드. 같은 시드는 같은 전투를 재현한다 — 리플레이와
 #               버그 재현에 필수이고, 헤드리스 테스트가 이것에 의존한다.
-# `party_level`: 0이면 **조우의 레벨에 맞춘다**(가장 높은 적의 레벨).
+# `party_level`: 0이면 **조우의 레벨에 맞춘다**(1파에서 가장 높은 적의 레벨, `enemy_level_bonus` 포함).
 #
 # 왜 0을 기본으로 두는가 (실제로 겪은 문제): 파티 레벨은 방어계수의 분모
 # (`150 + 8 x 공격자레벼`)에 들어간다. 처음에 `PlayerProfile.deltoid_level`(1부터
@@ -170,7 +179,7 @@ func start(party: Array[CharacterData], enemies: Array[EnemyData],
 		level = 1
 		for enemy in enemies:
 			if enemy != null:
-				level = maxi(level, enemy.turn_level)
+				level = maxi(level, enemy.turn_level + enemy_level_bonus)
 
 	var t := _tuning()
 	presentation = PresentationQueue.new(t.presentation_enabled, t.presentation_speed)
@@ -209,7 +218,8 @@ func start(party: Array[CharacterData], enemies: Array[EnemyData],
 			continue
 		if enemy_index > TurnCombat.ENEMY_RANK_COUNT:
 			break
-		var unit := TurnUnit.from_enemy(enemy, enemy_index, "#%d" % enemy_index)
+		var unit := TurnUnit.from_enemy(enemy, enemy_index, "#%d" % enemy_index,
+			enemy_level_bonus)
 		units.append(unit)
 		enemy_index += 1
 
@@ -700,7 +710,8 @@ func _advance_wave() -> void:
 			break
 		# `unit_id` 에 웨이브 번호를 넣는다 — 같은 적이 웨이브마다 나오면 id 가 겹치고,
 		# 타임라인의 AV 딕셔너리가 앞 웨이브의 값을 그대로 쓴다.
-		var unit := TurnUnit.from_enemy(data, index, "#w%d_%d" % [wave_index, index])
+		var unit := TurnUnit.from_enemy(data, index, "#w%d_%d" % [wave_index, index],
+			enemy_level_bonus)
 		units.append(unit)
 		statuses.reset(unit)
 		index += 1

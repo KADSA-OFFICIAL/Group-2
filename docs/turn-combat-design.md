@@ -471,7 +471,33 @@ HP를 수만으로 둬도 몇십 초에 끝난다. 턴제는 한 사이클에 �
 
 **삼각근 Lv.은 성장 채널(기초 스텟 배수)이고 전투 레벨이 아니다.** 캐릭터 레벨 시스템은
 아직 없으므로(Phase 2), `TurnBattleManager.start()`의 `party_level`이 0이면
-**조우 레벨(가장 높은 적의 레벨)에 맞춘다.**
+**조우 레벨(1파에서 가장 높은 적의 레벨)에 맞춘다.** 스테이지의 적 레벨 보정
+(`enemy_level_bonus`, #565)도 이 레벨에 **포함된다** — `turn_level + 보정`의 최고값이다.
+1파 기준이라는 규칙은 그대로다(보스 웨이브까지 포함하면 1-3 · 2-3 · 3-3 이 쉬워진다).
+
+### 스테이지별 적 레벨 보정 (#565)
+
+적 레벨이 적 정의(`EnemyData.turn_level`)마다 고정이면 같은 적을 다시 쓸 때 뒤 챕터도
+1챕터와 같은 강도다. 적 정의를 레벨만 바꿔 복제하면 단일 출처가 깨지고 적 씬·아트까지
+따라 늘어난다. 그래서 **스테이지가 강도를 정한다.**
+
+```
+턴제 적 레벨 = EnemyData.turn_level + StageData.turn_level_bonus   (기본 0)
+```
+
+- `StageData.turn_level_bonus` (`@export_group("턴제")`, 기본 0, 음수는 `validate()` 가 거부).
+  이 필드가 없는 기존 `.tres` 는 그대로 동작한다.
+- `EnemyData.get_turn_hp_at(level)` · `get_turn_attack_at(level)` · `get_turn_defense_at(level)`
+  이 레벨을 받아 파생한다. 기존 `get_turn_*()` 는 `turn_level` 로 위임한다.
+  **절대 지정(`turn_*_override`)은 레벨과 무관하게 그대로다** — 손으로 맞춘 보스를 보정이
+  흔들지 않는다.
+- `TurnUnit.from_enemy(data, rank, suffix, level_bonus := 0)`.
+- `TurnBattleManager.enemy_level_bonus` 를 `start()` 전에 설정한다. 1파(`start()`)와 2파 이후
+  (`_advance_wave()`)가 모두 이 값을 쓴다. **전투는 스테이지를 모르므로 숫자를 받는다** —
+  그 경계를 지켜야 헤드리스 검사와 `use_stage = false` 경로가 산다.
+  `TurnBattle._start_battle()` 이 `_stage.turn_level_bonus` 를 넣는다.
+- Lv20 → Lv30 이면 HP ×2.4 · 공격 ×1.9 · 방어 ×1.6 (적 기준 곡선 `enemy_base_*`).
+- **실시간 전투는 이 값을 읽지 않는다** (실시간에는 레벨 개념이 없다).
 
 ### 저작된 적
 
@@ -958,8 +984,11 @@ godot --headless --path . --import
 # 턴제 코어 (411개 검사, 헤드리스)
 godot --headless --path . res://tests/combat/VerifyTurnCombat.tscn
 
-# 스테이지 연동 (132개 검사, 헤드리스)
+# 스테이지 연동 (헤드리스) — 적 레벨 보정(#565) 검사 포함
 godot --headless --path . res://tests/combat/VerifyTurnStageBattle.tscn
+
+# 스테이지 난이도 실측 (#565) — 저작된 스테이지를 자동 전투로 재서 표를 찍는다
+godot --headless --path . res://tests/stage/VerifyStageDifficulty.tscn
 
 # 회귀
 godot --headless --path . res://tests/stage/VerifyStageMaps.tscn
@@ -985,6 +1014,13 @@ godot --headless --path . res://tests/story/VerifyStoryChapters.tscn
 - 웨이브가 넘어갈 때 아군 HP·오의가 **이어지는지**
 - 승패 신호가 **정확히 한 번** 나가는지 (여러 번이면 결과 화면이 겹친다)
 - **`stage_started` 가 나가지 않는지** — 나가면 실시간 튜토리얼이 활성화되어 진행 불가로 멈춘다
+- **적 레벨 보정(#565)이 1파 · 2파 이후 · 파티 레벨 계산 · 전투 화면 연결 어디서도 빠지지 않는지**,
+  절대 지정(`turn_*_override`)이 보정과 무관한지, `validate()` 가 음수를 거부하는지
+
+`VerifyStageDifficulty` 는 **밸런스 도구**다. 챕터에 속한 저작 스테이지 전부를 시드 8개 ·
+사이클 제한 60 으로 자동 전투해 `승 n/8 · 평균 사이클 · 평균 격파 · 남은 HP%` 표를 찍는다.
+스테이지를 저작하는 PR 은 이 표를 본문에 붙인다. 읽는 법과 목표는
+[`data/stages/README.md`](../data/stages/README.md) "난이도 실측" 절.
 
 수동 확인:
 

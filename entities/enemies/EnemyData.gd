@@ -356,25 +356,45 @@ func get_lock_count_range() -> Vector2i:
 
 # 이 적의 턴제 HP. 절대 지정이 있으면 그것을, 없으면 레벨·등급 파생값에 개성 배수를 곱한다.
 func get_turn_hp() -> int:
-	if turn_hp_override > 0:
-		return turn_hp_override
-	var base := PlayerStats.get_tuning_turn().enemy_base_hp(turn_level, tier)
-	return maxi(int(round(float(base) * maxf(turn_hp_multiplier, 0.01))), 1)
+	return get_turn_hp_at(turn_level)
 
 
 # 이 적의 턴제 공격력. `PlayerStats.get_physical_attack()`이 돌려줄 목표값이다.
 func get_turn_attack() -> int:
-	if turn_attack_override > 0:
-		return turn_attack_override
-	var base := PlayerStats.get_tuning_turn().enemy_base_attack(turn_level, tier)
-	return maxi(int(round(float(base) * maxf(turn_attack_multiplier, 0.01))), 1)
+	return get_turn_attack_at(turn_level)
 
 
 # 이 적의 턴제 방어력. `PlayerStats.get_physical_defense()`가 돌려줄 목표값이다.
 func get_turn_defense() -> int:
+	return get_turn_defense_at(turn_level)
+
+
+# ===== 레벨을 받는 파생 (#565) =====
+#
+# 스테이지가 적 레벨을 올릴 수 있게(`StageData.turn_level_bonus`) 레벨을 인자로 받는 형태를
+# 둔다. 위의 `get_turn_*()` 는 `turn_level` 로 여기에 위임하므로 호출부는 바뀌지 않는다.
+#
+# **절대 지정(`turn_*_override`)은 레벨과 무관하게 그대로다.** "보스 하나를 손으로 맞춘다"는
+# 탈출구의 뜻을 지킨다 — 레벨 보정이 손으로 맞춘 값을 조용히 흔들면 안 된다.
+
+func get_turn_hp_at(level: int) -> int:
+	if turn_hp_override > 0:
+		return turn_hp_override
+	var base := PlayerStats.get_tuning_turn().enemy_base_hp(level, tier)
+	return maxi(int(round(float(base) * maxf(turn_hp_multiplier, 0.01))), 1)
+
+
+func get_turn_attack_at(level: int) -> int:
+	if turn_attack_override > 0:
+		return turn_attack_override
+	var base := PlayerStats.get_tuning_turn().enemy_base_attack(level, tier)
+	return maxi(int(round(float(base) * maxf(turn_attack_multiplier, 0.01))), 1)
+
+
+func get_turn_defense_at(level: int) -> int:
 	if turn_defense_override > 0:
 		return turn_defense_override
-	var base := PlayerStats.get_tuning_turn().enemy_base_defense(turn_level)
+	var base := PlayerStats.get_tuning_turn().enemy_base_defense(level)
 	return maxi(int(round(float(base) * maxf(turn_defense_multiplier, 0.0))), 0)
 
 
