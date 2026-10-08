@@ -1,0 +1,92 @@
+[gd_resource type="Resource" script_class="StageData" load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
+[ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
+[ext_resource type="Script" path="res://entities/stage/StageWave.gd" id="3_wave"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk.tscn" id="4_raptor"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk2.tscn" id="5_raptor2"]
+[ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="6_mammoth"]
+[ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="7_seoa"]
+
+; ===== 1파 — 길목의 척후 =====
+; 해변 맵(BeachMap)의 젖은 모래 · 얕은 물 띠(y 240~410)에서 싸움이 일어나게 잡았다(2-1 과 같은 이유).
+; 파티 시작 (100, 100~180)에서 가장 가까운 랩터가 탐지 범위(600) 안이라 진입하자마자 접근이 일어난다.
+; 서아는 가장 뒤(700, 200)에서 쏜다 -- 후열 원거리를 처음부터 섞어 "뒤를 먼저 노릴까"를 묻는다.
+
+[sub_resource type="Resource" id="Spawn_w1_raptor"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("4_raptor")
+position = Vector2(520, 260)
+count = 2
+offset = Vector2(80, 40)
+
+[sub_resource type="Resource" id="Spawn_w1_raptor2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("5_raptor2")
+position = Vector2(600, 340)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w1_seoa"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_seoa")
+position = Vector2(700, 200)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Wave_1"]
+script = ExtResource("3_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w1_raptor"), SubResource("Spawn_w1_raptor2"), SubResource("Spawn_w1_seoa")])
+label = "길목의 척후"
+is_boss = false
+
+; ===== 2파 — 행렬을 끊는 무리 =====
+; 앞을 뚫은 뒤에 오는 단단한 쪽. 서아가 또 뒤에서 받쳐 준다.
+
+[sub_resource type="Resource" id="Spawn_w2_mammoth"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_mammoth")
+position = Vector2(640, 300)
+count = 2
+offset = Vector2(70, 40)
+
+[sub_resource type="Resource" id="Spawn_w2_seoa"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_seoa")
+position = Vector2(760, 220)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Wave_2"]
+script = ExtResource("3_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w2_mammoth"), SubResource("Spawn_w2_seoa")])
+label = "행렬을 끊는 무리"
+is_boss = false
+
+[resource]
+script = ExtResource("1_stagedata")
+stage_id = &"stage_2_2"
+display_name = "2-2 갯바위 길목"
+chapter = 2
+number = 2
+briefing = "마을 사람들을 이끌고 해안을 따라가는 길, 갯바위 틈 길목에서 수인 무리가 행렬을 막아선다. 앞을 뚫으면 뒤를 끊으러 매머드 수인들이 몰려온다. 뒤에서 쏘아 대는 서아를 먼저 노리자."
+description = "**2챕터(바다) 두 번째 스테이지(#566, 설계 #564).** 일반 스테이지 — 힐러가 있는 파티에게는 레벨 보정이 거의 안 먹고 재료를 모으는 자리다. type = BATTLE(소탕), spawns 는 비우고 웨이브만 쓴다(섞지 않는 편이 낫다: data/stages/README.md). 적은 기존 6종 재사용(바다 전용 적은 후속 #568).
+
+1파 「길목의 척후」 벨로시랩터 수인 ×2 · 벨로시랩터 수인 2 · 서아 / 2파 「행렬을 끊는 무리」 매머드 수인 ×2 · 서아. 서아(후열 원거리)를 처음부터 섞어 후열 처리를 묻는다.
+
+**turn_level_bonus = 3** → 턴제 적 레벨 랩터 23 · 매머드/서아 25 (실시간은 레벨이 없어 읽지 않는다). 좌표는 해변 맵의 젖은 모래 · 얕은 물 띠(y 240~410)에서 싸움이 일어나게 잡았다(2-1 과 같은 이유). 파티 시작 (100, 100~180)에서 가장 가까운 랩터가 탐지 범위 600 안이다.
+
+보상 [임시값] gold 160 / protein 160 / iron_ore 6 / coal 2 / tin 6 (재화 5종 이하). 2챕터 첫 클리어 + 2-3 ×2 + 2-2 ×1 → 철 4부위(ore 36 · coal 14 · gold 1040)를 맞춘다. 청동 거울(tin 6 · copper 6)은 2-2 · 2-3 첫 클리어로 맞춰진다.
+
+실측 (VerifyStageDifficulty, 표준 파티 미나·하랑·설아·강지, 시드 8, 예상 프로필 P1 = 삼각근 Lv.5 + 돌 장비): 8/8 승 · 평균 10.2사이클 · 남은 HP 98% / 딜러 파티(미나·하랑·아린·태희) 8/8 · 69%. 48시드: 48/48. 성장 없이 장비만도 48/48 · 89%, 장비·성장 없이(P0)는 43/48 — 재료를 모으는 스테이지로서 막히지 않는다."
+type = 0
+turn_level_bonus = 3
+clear_rewards = {
+"gold": 160,
+"protein": 160,
+"iron_ore": 6,
+"coal": 2,
+"tin": 6
+}
+spawns = Array[ExtResource("2_spawn")]([])
+waves = Array[ExtResource("3_wave")]([SubResource("Wave_1"), SubResource("Wave_2")])

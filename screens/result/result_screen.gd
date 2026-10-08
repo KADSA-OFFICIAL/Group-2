@@ -20,7 +20,7 @@ var _stage_id: StringName = &""
 
 var _title: Label
 var _subtitle: Label
-var _reward_row: HBoxContainer
+var _reward_row: HFlowContainer
 
 
 func _ready() -> void:
@@ -52,6 +52,9 @@ func _build() -> void:
 	panel.offset_right = 230.0
 	panel.offset_top = -120.0
 	panel.offset_bottom = 120.0
+	# 보상 줄이 두 줄이 되면 판이 커진다. 한쪽으로만 자라면 중앙에서 벗어나므로 양쪽으로 키운다.
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	panel.add_theme_stylebox_override("panel", HUDKit.panel(20))
 	add_child(panel)
 
@@ -68,9 +71,12 @@ func _build() -> void:
 	_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_subtitle)
 
-	_reward_row = HBoxContainer.new()
-	_reward_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_reward_row.add_theme_constant_override("separation", 6)
+	# 칩이 재화 5종 + 「첫 클리어」 + 「삼각근 Lv.」 까지 7개가 될 수 있다(#566). 한 줄
+	# HBoxContainer 는 폭 460 판 밖으로 넘치므로, 넘치면 줄바꿈되는 컨테이너를 쓴다.
+	_reward_row = HFlowContainer.new()
+	_reward_row.alignment = FlowContainer.ALIGNMENT_CENTER
+	_reward_row.add_theme_constant_override("h_separation", 6)
+	_reward_row.add_theme_constant_override("v_separation", 6)
 	box.add_child(_reward_row)
 
 	box.add_child(HUDKit.rule())
