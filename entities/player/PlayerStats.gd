@@ -27,6 +27,9 @@ class_name PlayerStats
 #
 # 적(EnemyData.stats)도 이 클래스를 공유하므로 여기서 PlayerProfile 을 직접 읽지
 # 않는다. 그러면 적까지 같이 강해진다. 장비(equip_*)·버프(buff_*) 와 같은 입력 채널이다.
+#
+# **전투용 사본은 duplicate(true) 가 아니라 duplicate_for_battle() 로 만든다.** 비-export 변수는
+# Resource.duplicate() 에서 기본값으로 돌아가므로, 이 채널을 옮기는 일은 그 함수 한 곳이 맡는다(#563).
 var growth_multiplier: float = 1.0
 
 # ===== 장비 보너스 (Equipment Bonuses) =====
@@ -252,6 +255,23 @@ func apply_damage_taken(damage: int) -> int:
 # 이제 성장의 출처는 PlayerProfile 의 삼각근 Lv. 하나다.
 func set_growth_multiplier(value: float) -> void:
 	growth_multiplier = maxf(value, 0.0)
+
+# 전투용 사본을 만든다 — 저작 값(@export)에 더해 **런타임 채널**까지 옮긴다 (#563).
+#
+# 왜 duplicate(true) 만으로는 안 되는가: Godot 4 의 Resource.duplicate() 는 @export 가
+# 아닌 스크립트 변수를 복사하지 않는다. growth_multiplier 는 세이브 진행도라 일부러
+# @export 가 아니므로, 그냥 복제하면 사본은 항상 1.0 이 되어 삼각근 Lv. 이 전투에
+# 닿지 않는다. (@export_storage 로 풀면 1.0 이 아닌 값이 든 리소스를 저장할 때 .tres 에
+# 굳을 수 있어 "저작 파일에 진행도를 남기지 않는다"는 원칙과 어긋난다.)
+#
+# 버프(buff_*)는 옮기지 않는다 — 저작된 값이 이미 @export 로 복제되고, 전투 중의
+# 버프는 사본에서만 변해야 원본이 오염되지 않는다.
+#
+# 새 런타임(비-export) 채널이 생기면 이 함수 한 곳에 더한다.
+func duplicate_for_battle() -> PlayerStats:
+	var copy := duplicate(true) as PlayerStats
+	copy.growth_multiplier = growth_multiplier
+	return copy
 
 # 장비 방어 보너스를 갱신한다 (장비 시스템에서 호출).
 func set_equipment_defense(physical: int, magic: int) -> void:

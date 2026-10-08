@@ -48,6 +48,7 @@ func _ready() -> void:
 	_test_presentation_specs()
 	_test_authored_data()
 	_test_enemy_baseline()
+	_test_growth_reaches_battle_units()
 	_test_full_battle()
 	_test_standard_encounter()
 	_test_cycle_limit()
@@ -78,6 +79,21 @@ func _expect_near(actual: float, expected: float, tolerance: float, message: Str
 
 func _tuning() -> TurnCombatTuning:
 	return TurnCombatConfig.tuning
+
+
+# 로스터 캐릭터의 **사본**을 성장 배수 1.0 으로 고정해 돌려준다 (#563).
+#
+# 왜 필요한가: PlayerProfile 이 시작할 때 세이브의 삼각근 Lv. 을 CharacterDatabase 원본에
+# 밀어 넣는다. 복제에서 성장이 사라지던 때는 티가 안 났지만, 고친 뒤에는 원본을 그대로
+# 쓰는 전투 검사가 **실행하는 사람의 세이브에 따라 결과가 달라진다.** 사본을 만들어
+# 배수를 1.0 으로 덮으면 검사 결과가 세이브와 무관해지고 원본도 건드리지 않는다.
+func _roster_copy(id: StringName) -> CharacterData:
+	var source: CharacterData = CharacterDatabase.get_character(id)
+	if source == null:
+		return null
+	var copy := source.duplicate(true) as CharacterData
+	copy.get_stats().set_growth_multiplier(1.0)
+	return copy
 
 
 # 합성 캐릭터. 저작 데이터에 의존하지 않는 순수 수치 검증에 쓴다.
@@ -1424,7 +1440,7 @@ func _test_authored_data() -> void:
 func _test_full_battle() -> void:
 	var party: Array[CharacterData] = []
 	for id in [&"mina", &"harang", &"seola", &"gangji"]:
-		var character: CharacterData = CharacterDatabase.get_character(id)
+		var character: CharacterData = _roster_copy(id)
 		if character != null:
 			party.append(character)
 	_expect(party.size() == 4, "4인 파티를 구성할 수 있어야 한다")
@@ -1634,6 +1650,84 @@ func _test_enemy_baseline() -> void:
 			"같은 정의로 만든 두 유닛의 HP 가 같아야 한다 (저작 리소스 오염 없음)")
 
 
+# ===== 삼각근 성장이 전투 유닛까지 간다 (#563) =====
+#
+# **이 검사가 잡는 것**: Godot 4 의 Resource.duplicate() 는 @export 가 아닌 변수를 복사하지
+# 않는다. growth_multiplier 는 세이브 진행도라 일부러 비-export 이므로, 전투 유닛이 스텟을
+# 그냥 duplicate(true) 로 복제하면 배수가 조용히 1.0 으로 돌아간다 — 캐릭터 화면은 성장한
+# 값(HP 1440)을 보여 주는데 전투는 성장 전 값(1200)으로 싸우고, 어떤 에러도 나지 않는다.
+func _test_growth_reaches_battle_units() -> void:
+	var base_mina := _roster_copy(&"mina")
+	_expect(base_mina != null, "미나 사본을 만들 수 있어야 한다")
+	if base_mina == null:
+		return
+	var base_hp := base_mina.get_stats().get_max_hp()
+	var base_speed := base_mina.get_stats().get_speed()
+
+	# --- 복제 헬퍼 자체 ---
+	var grown := _roster_copy(&"mina")
+	grown.get_stats().set_growth_multiplier(1.2)
+	var stat_copy := grown.get_stats().duplicate_for_battle()
+	_expect(stat_copy != grown.get_stats(), "전투용 스텟은 원본과 다른 인스턴스여야 한다")
+	_expect_near(stat_copy.growth_multiplier, 1.2, 0.0001,
+		"복제 헬퍼가 성장 배수(비-export 런타임 채널)를 옮겨야 한다")
+	_expect(stat_copy.hp == grown.get_stats().hp and stat_copy.speed == grown.get_stats().speed,
+		"복제 헬퍼가 저작 값(@export)도 그대로 옮겨야 한다")
+	# 그냥 duplicate(true) 는 배수를 잃는다 — 이 가정이 깨지면(엔진이 바뀌면) 헬퍼가 필요 없어졌다는 뜻이다.
+	var plain := grown.get_stats().duplicate(true) as PlayerStats
+	_expect_near(plain.growth_multiplier, 1.0, 0.0001,
+		"비-export 변수는 Resource.duplicate(true) 에서 기본값으로 돌아간다 (헬퍼가 필요한 이유)")
+
+	# --- 턴제 아군 유닛 ---
+	var unit := TurnUnit.from_character(grown, 1)
+	_expect_near(unit.stats.growth_multiplier, 1.2, 0.0001,
+		"턴제 아군 유닛이 원본과 같은 성장 배수를 가져야 한다")
+	_expect(unit.get_max_hp() == grown.get_stats().get_max_hp(),
+		"턴제 유닛 최대 HP 가 캐릭터 화면 값과 같아야 한다 (%d vs %d)"
+			% [unit.get_max_hp(), grown.get_stats().get_max_hp()])
+	_expect(unit.get_max_hp() == int(round(float(base_hp) * 1.2)),
+		"성장 배수 1.2 면 최대 HP 가 %d 의 1.2 배여야 한다 (실제 %d)"
+			% [base_hp, unit.get_max_hp()])
+	_expect(unit.stats.get_speed() == grown.get_stats().get_speed()
+			and unit.stats.get_speed() > base_speed,
+		"턴제 유닛 속도가 캐릭터 화면 값과 같고 성장 전보다 커야 한다 (%d vs %d)"
+			% [unit.stats.get_speed(), base_speed])
+	_expect(unit.current_hp == unit.get_max_hp(), "성장한 최대 HP 로 가득 찬 채 시작해야 한다")
+
+	# 복제의 원래 목적: 전투 중 버프가 저작 데이터로 새지 않는다.
+	unit.stats.set_buff_bonuses({"max_hp": 500}, {"physical_attack": 0.5})
+	_expect(grown.get_stats().buff_max_hp == 0
+			and is_zero_approx(grown.get_stats().buff_physical_attack_percent),
+		"전투 유닛의 버프가 원본 스텟으로 새면 안 된다")
+	_expect_near(grown.get_stats().growth_multiplier, 1.2, 0.0001,
+		"유닛을 만들어도 원본의 성장 배수는 그대로여야 한다")
+
+	# --- 적은 성장 배수를 받지 않는다 ---
+	var enemy: EnemyData = (EnemyDatabase.get_enemy(&"mammoth_boss").duplicate(true)
+			as EnemyData)
+	enemy.get_stats().set_growth_multiplier(1.5)
+	var foe := TurnUnit.from_enemy(enemy, 1)
+	_expect_near(foe.stats.growth_multiplier, 1.0, 0.0001,
+		"적 유닛의 성장 배수는 1.0 이어야 한다 (삼각근 Lv. 은 플레이어 진행도)")
+	_expect(foe.get_max_hp() == enemy.get_turn_hp(),
+		"적 HP 는 성장 배수와 무관하게 레벨·등급에서 파생되어야 한다")
+
+	# --- 실시간 플레이어 ---
+	var player := Player.new()
+	player.data = grown
+	var runtime := player.get_stats()
+	_expect(runtime != grown.get_stats(), "실시간 런타임 스텟은 원본과 다른 인스턴스여야 한다")
+	_expect_near(runtime.growth_multiplier, 1.2, 0.0001,
+		"실시간 Player 의 런타임 스텟도 성장 배수를 가져야 한다")
+	_expect(runtime.get_max_hp() == grown.get_stats().get_max_hp(),
+		"실시간 Player 의 최대 HP 도 캐릭터 화면 값과 같아야 한다 (%d vs %d)"
+			% [runtime.get_max_hp(), grown.get_stats().get_max_hp()])
+	runtime.set_buff_bonuses({"max_hp": 500}, {})
+	_expect(grown.get_stats().buff_max_hp == 0,
+		"실시간 Player 의 버프가 원본 스텟으로 새면 안 된다")
+	player.free()
+
+
 # ===== 표준 조우 =====
 #
 # **이 검사가 잡는 것**: 자동 전투 정책이 회복 스킬을 후보에서 빼먹는 회귀다.
@@ -1642,7 +1736,7 @@ func _test_enemy_baseline() -> void:
 func _test_standard_encounter() -> void:
 	var party: Array[CharacterData] = []
 	for id in [&"mina", &"harang", &"seola", &"gangji"]:
-		var character: CharacterData = CharacterDatabase.get_character(id)
+		var character: CharacterData = _roster_copy(id)
 		if character != null:
 			party.append(character)
 
@@ -1697,7 +1791,7 @@ func _test_cycle_limit() -> void:
 	# 양쪽이 서로를 죽이지 못해 수천 턴이 흐르고, 그것은 "아주 긴 전투"로 보여서
 	# 버그로 인식되지 않는다.
 	var party: Array[CharacterData] = []
-	var character: CharacterData = CharacterDatabase.get_character(&"gangji")
+	var character: CharacterData = _roster_copy(&"gangji")
 	if character != null:
 		party.append(character)
 
@@ -1741,7 +1835,7 @@ func _test_cycle_limit() -> void:
 func _test_enemy_retargets_dead_announcement() -> void:
 	var party: Array[CharacterData] = []
 	for id in [&"mina", &"harang"]:
-		var character: CharacterData = CharacterDatabase.get_character(id)
+		var character: CharacterData = _roster_copy(id)
 		if character != null:
 			party.append(character)
 	var enemies: Array[EnemyData] = []
