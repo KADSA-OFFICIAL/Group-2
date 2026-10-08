@@ -1,0 +1,126 @@
+[gd_resource type="Resource" script_class="StageData" load_steps=20 format=3]
+
+[ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
+[ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
+[ext_resource type="Script" path="res://entities/stage/StageWave.gd" id="3_wave"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk.tscn" id="4_raptor"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk2.tscn" id="5_raptor2"]
+[ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="6_seoa"]
+[ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="7_mammoth"]
+
+; ===== 1파 — 성문 앞 초병 =====
+; 3연속 소모전의 첫 판. 좌표는 본섬 안쪽 80% 타원 안이다(3-1 과 같다).
+
+[sub_resource type="Resource" id="Spawn_w1_raptor_1"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("4_raptor")
+position = Vector2(460, 200)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w1_raptor2_2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("5_raptor2")
+position = Vector2(520, 300)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w1_seoa_3"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_seoa")
+position = Vector2(640, 240)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Wave_1"]
+script = ExtResource("3_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w1_raptor_1"), SubResource("Spawn_w1_raptor2_2"), SubResource("Spawn_w1_seoa_3")])
+label = "성문 앞 초병"
+is_boss = false
+
+; ===== 2파 — 문지기 =====
+; 아군 HP · 오의 게이지 · 상태이상이 이어진 채로 두 번째 무리가 온다 — 힐러 없는 파티를 압박한다.
+
+[sub_resource type="Resource" id="Spawn_w2_mammoth_1"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_mammoth")
+position = Vector2(560, 240)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w2_raptor2_2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("5_raptor2")
+position = Vector2(480, 320)
+count = 2
+offset = Vector2(80, 0)
+
+[sub_resource type="Resource" id="Wave_2"]
+script = ExtResource("3_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w2_mammoth_1"), SubResource("Spawn_w2_raptor2_2")])
+label = "문지기"
+is_boss = false
+
+; ===== 3파 — 성문 수비대 =====
+; 보스 등급을 두지 않는다 — 하늘 챕터의 BOSS 등급은 3-3 2파에만 둔다(TurnBattle._boss_music() 이 최종 보스곡을 건다).
+
+[sub_resource type="Resource" id="Spawn_w3_seoa_1"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_seoa")
+position = Vector2(660, 200)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w3_mammoth_2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_mammoth")
+position = Vector2(580, 300)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w3_raptor_3"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("4_raptor")
+position = Vector2(480, 240)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w3_raptor2_4"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("5_raptor2")
+position = Vector2(500, 360)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Wave_3"]
+script = ExtResource("3_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w3_seoa_1"), SubResource("Spawn_w3_mammoth_2"), SubResource("Spawn_w3_raptor_3"), SubResource("Spawn_w3_raptor2_4")])
+label = "성문 수비대"
+is_boss = false
+[resource]
+script = ExtResource("1_stagedata")
+stage_id = &"stage_3_2"
+display_name = "3-2 여왕의 성문"
+chapter = 3
+number = 2
+briefing = "여왕의 성으로 들어가는 마지막 관문. 문지기들이 세 차례에 걸쳐 몰려온다. 숨 돌릴 틈 없는 소모전이니 회복을 아끼지 말자."
+description = "**3챕터 두 번째 스테이지(#567, 설계 #564).** 일반 스테이지 — 3연속 소모전이다. 아군 HP · 오의 게이지 · 상태이상이 웨이브 사이에 이어지므로 힐러 없는 파티를 압박한다(힐러 파티에게는 레벨 보정이 거의 안 먹는다). type = BATTLE(소탕), spawns 는 비우고 웨이브만 쓴다. 보스 등급을 두지 않는다 — 하늘 챕터의 BOSS 등급은 3-3 2파에만 둔다(TurnBattle._boss_music() 이 하늘 컨셉의 보스 웨이브에 최종 보스곡을 건다).
+
+1파 「성문 앞 초병」 랩터 수인 · 랩터 수인 2 · 서아 / 2파 「문지기」 매머드 수인 · 랩터 수인 2 ×2 / 3파 「성문 수비대」 서아 · 매머드 수인 · 랩터 수인 · 랩터 수인 2 (3 · 3 · 4 = 10체).
+
+**turn_level_bonus = 7** → 랩터 27 · 매머드/서아 29. 좌표는 하늘 본섬 안쪽 80% 타원 안이다(3-1 과 같다). 실시간으로 진입해 모든 웨이브의 적이 섬 위에서 움직이는 것을 확인했다.
+
+보상 [임시값] gold 320 / protein 320 / iron_ore 4 / coal 4 / hudamantium 6.
+
+실측 (표준 파티, 시드 8, 예상 프로필 P2, #563 반영): 8/8 승 · 평균 18.9사이클 · 남은 HP 91% / 딜러 파티 7/8 · 49%. 48시드: 표준 48/48 · 92%, 성장 없이 철 장비만 47/48 · 89%, 딜러 파티 45/48 · 57%. 일반 스테이지는 재료 수급용이라 막히지 않는 것이 의도다."
+type = 0
+turn_level_bonus = 7
+clear_rewards = {
+"gold": 320,
+"protein": 320,
+"iron_ore": 4,
+"coal": 4,
+"hudamantium": 6
+}
+spawns = Array[ExtResource("2_spawn")]([])
+waves = Array[ExtResource("3_wave")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3")])

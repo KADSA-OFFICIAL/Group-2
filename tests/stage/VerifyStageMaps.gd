@@ -21,10 +21,15 @@ var _failures: Array[String] = []
 func _ready() -> void:
 	await get_tree().process_frame
 
-	# 2챕터가 저작되었다 — 이 검사의 전제이자 #438 이 한 일이다.
-	_expect(StageDatabase.get_authored_chapters() == [1, 2],
-		"저작된 챕터는 [1, 2] 여야 한다: " + str(StageDatabase.get_authored_chapters()))
+	# 3챕터가 모두 저작되었다 — 이 검사의 전제다(2챕터 #438 · #566, 3챕터 #567).
+	_expect(StageDatabase.get_authored_chapters() == [1, 2, 3],
+		"저작된 챕터는 [1, 2, 3] 여야 한다: " + str(StageDatabase.get_authored_chapters()))
 	_expect(StageDatabase.has_stage(&"stage_2_1"), "stage_2_1 이 로드되어야 한다")
+	_expect(StageDatabase.has_stage(&"stage_3_1"), "stage_3_1 이 로드되어야 한다")
+	for chapter in [1, 2, 3]:
+		_expect(StageDatabase.get_ids_by_chapter(chapter).size() == StageData.STAGES_PER_CHAPTER,
+			"%d챕터는 스테이지가 %d개여야 한다 (실제 %d)" % [chapter, StageData.STAGES_PER_CHAPTER,
+				StageDatabase.get_ids_by_chapter(chapter).size()])
 
 	for id in StageDatabase.get_ordered_ids():
 		_verify_stage(id)
