@@ -1,0 +1,91 @@
+[gd_resource type="Resource" script_class="StageData" load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
+[ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
+[ext_resource type="Script" path="res://entities/stage/StageWave.gd" id="3_wave"]
+[ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="4_mammoth"]
+[ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="5_seoa"]
+[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk2.tscn" id="6_raptor2"]
+[ext_resource type="PackedScene" path="res://entities/enemies/PterosaurQueen.tscn" id="7_queen"]
+
+; ===== 1파 — 여왕의 근위대 =====
+; 근위대. 매머드 수인이 앞(560,260)에서 막고 서아가 뒤(660,220)에서 쏘며 랩터 수인 2 둘이 돌아 든다.
+
+[sub_resource type="Resource" id="Spawn_w1_mammoth_1"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("4_mammoth")
+position = Vector2(560, 260)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w1_seoa_2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("5_seoa")
+position = Vector2(660, 220)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w1_raptor2_3"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_raptor2")
+position = Vector2(480, 300)
+count = 2
+offset = Vector2(80, 40)
+
+[sub_resource type="Resource" id="Wave_1"]
+script = ExtResource("3_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w1_mammoth_1"), SubResource("Spawn_w1_seoa_2"), SubResource("Spawn_w1_raptor2_3")])
+label = "여왕의 근위대"
+is_boss = false
+
+; ===== 2파 — 여왕 =====
+; 여왕(Lv.33)이 랩터 수인 2 하나를 데리고 날아든다. 이 웨이브가 하늘 챕터의 유일한 BOSS 등급이라 TurnBattle._boss_music() 이
+; 최종 보스곡(battle_final.ogg)을 건다. 1파는 하늘 전투곡이다.
+; 전격 · 광휘 / 관통 · 참격 약점 → 아린 · 강지.
+
+[sub_resource type="Resource" id="Spawn_w2_queen_1"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("7_queen")
+position = Vector2(640, 280)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Spawn_w2_raptor2_2"]
+script = ExtResource("2_spawn")
+enemy_scene = ExtResource("6_raptor2")
+position = Vector2(520, 340)
+count = 1
+offset = Vector2(100, 0)
+
+[sub_resource type="Resource" id="Wave_2"]
+script = ExtResource("3_wave")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w2_queen_1"), SubResource("Spawn_w2_raptor2_2")])
+label = "여왕"
+is_boss = true
+[resource]
+script = ExtResource("1_stagedata")
+stage_id = &"stage_3_3"
+display_name = "3-3 하늘섬의 여왕"
+chapter = 3
+number = 3
+briefing = "허락 없이 성에 들어선 구출대를 여왕의 근위대가 맞는다. 근위대가 무너지면 여왕이 직접 날아든다. 친구를 되찾아라!"
+description = "**3챕터의 최종 보스 스테이지(#567, 설계 #564).** 9스테이지의 끝이다. type = BATTLE(소탕), spawns 는 비우고 웨이브만 쓴다.
+
+1파 「여왕의 근위대」 매머드 수인 · 서아 · 랩터 수인 2 ×2 / 2파 「여왕」 익룡 여왕 + 랩터 수인 2 (is_boss). **BOSS 등급은 이 2파에만 있다** — TurnBattle._boss_music() 이 하늘 컨셉의 보스 웨이브에 최종 보스곡(battle_final.ogg)을 건다. 1파는 하늘 전투곡이다. 여왕 약점: 전격 · 광휘 / 관통 · 참격 → 아린 · 강지.
+
+**turn_level_bonus = 8** → 1파 매머드/서아 30 · 랩터 28, 여왕 Lv.33. 좌표는 하늘 본섬 안쪽 80% 타원 안이다. 실시간으로 진입해 두 웨이브의 적이 모두 섬 위에서 움직이는 것을 확인했다.
+
+보상 [임시값] gold 480 / protein 480 / iron_ore 6 / coal 6 / hudamantium 10.
+
+실측 (표준 파티, 시드 8, 예상 프로필 P2 = 삼각근 Lv.7 + 철 장비, #563 반영): 8/8 승 · 평균 19.0사이클 · 남은 HP 72% / 다음 프로필 P3(Lv.8 + 후다만티움) 8/8 · 82% / 성장 없이 철 장비만 2/8 · 9% / 딜러 파티 6/8 · 58%. **48시드로 다시 재면**: P2 44/48(92%) · HP 65% / P3 47/48 · 77% / 장비만 8/48(17%) · 9% / P1 22/48 / 딜러 P2 38/48(79%). 설계 목표(예상 프로필 5/8 ~ 7/8)보다 **쉬운 쪽**이다 — 성장 없이 장비만은 목표(4/8 이하)에 든다. 보정 민감도(48시드, P2): +8 92% · +9 77% · +10 62% · +11 52%. 최종 보스치고 쉽다면 #568 에서 근위대를 보강하거나 보정을 올린다(설계 #564)."
+type = 0
+turn_level_bonus = 8
+clear_rewards = {
+"gold": 480,
+"protein": 480,
+"iron_ore": 6,
+"coal": 6,
+"hudamantium": 10
+}
+spawns = Array[ExtResource("2_spawn")]([])
+waves = Array[ExtResource("3_wave")]([SubResource("Wave_1"), SubResource("Wave_2")])

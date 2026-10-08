@@ -39,6 +39,7 @@ func _ready() -> void:
 	_test_level_bonus_manager()
 	_test_stage_level_bonus_field()
 	_test_chapter2_stages()
+	_test_chapter3_stages()
 	await _test_stage_battle_lifecycle()
 	await _test_stage_level_bonus_reaches_battle()
 
@@ -592,6 +593,104 @@ func _test_chapter2_stages() -> void:
 			_expect(int(stage.clear_rewards.get(key, -1)) == int(want[key]),
 				"%s 보상 %s 은 %d 여야 한다 (실제 %s)"
 					% [id, key, int(want[key]), str(stage.clear_rewards.get(key))])
+
+
+# 3챕터 저작(#567): 설계(#564)의 레벨 곡선 · 웨이브 구성 · 보스 규칙 · 보상.
+func _test_chapter3_stages() -> void:
+	# 스테이지 -> [보정, 웨이브별 {적 id: 기대 레벨}, 웨이브별 적 수]
+	var expected := {
+		&"stage_3_1": {"bonus": 6, "counts": [4, 3], "waves": [
+			{&"velociraptor_beastfolk_2": 26, &"velociraptor_beastfolk": 26, &"seoa": 28},
+			{&"mammoth_beastfolk": 28, &"seoa": 28, &"velociraptor_beastfolk_2": 26}]},
+		&"stage_3_2": {"bonus": 7, "counts": [3, 3, 4], "waves": [
+			{&"velociraptor_beastfolk": 27, &"velociraptor_beastfolk_2": 27, &"seoa": 29},
+			{&"mammoth_beastfolk": 29, &"velociraptor_beastfolk_2": 27},
+			{&"seoa": 29, &"mammoth_beastfolk": 29, &"velociraptor_beastfolk": 27,
+				&"velociraptor_beastfolk_2": 27}]},
+		&"stage_3_3": {"bonus": 8, "counts": [4, 2], "waves": [
+			{&"mammoth_beastfolk": 30, &"seoa": 30, &"velociraptor_beastfolk_2": 28},
+			{&"pterosaur_queen": 33, &"velociraptor_beastfolk_2": 28}]},
+	}
+	for id in expected:
+		var stage: StageData = StageDatabase.get_stage(id)
+		_expect(stage != null and stage.validate().is_empty(),
+			"%s 가 로드되고 validate() 문제가 없어야 한다" % id)
+		if stage == null:
+			continue
+		_expect(stage.chapter == 3 and stage.type == StageData.Type.BATTLE,
+			"%s 는 3챕터 소탕(BATTLE) 이어야 한다 (점령 타입은 턴제에서 쉬워진다)" % id)
+		_expect(stage.spawns.is_empty(), "%s 는 웨이브만 쓴다(spawns 비움)" % id)
+		_expect(stage.forced_party.is_empty(), "%s 에 강제 파티를 두지 않는다" % id)
+		_expect(stage.turn_level_bonus == int(expected[id]["bonus"]),
+			"%s 의 turn_level_bonus 는 %d 여야 한다 (실제 %d)"
+				% [id, int(expected[id]["bonus"]), stage.turn_level_bonus])
+
+		var waves := TurnStageEncounter.waves_for(stage)
+		var want: Array = expected[id]["waves"]
+		var counts: Array = expected[id]["counts"]
+		_expect(waves.size() == want.size(),
+			"%s 의 웨이브는 %d개여야 한다 (실제 %d)" % [id, want.size(), waves.size()])
+		for w in mini(waves.size(), want.size()):
+			var enemies: Array[EnemyData] = waves[w]["enemies"]
+			_expect(enemies.size() == int(counts[w]),
+				"%s %d파 적은 %d체여야 한다 (실제 %d)" % [id, w + 1, int(counts[w]), enemies.size()])
+			for enemy in enemies:
+				var unit := TurnUnit.from_enemy(enemy, 1, "", stage.turn_level_bonus)
+				var level_want: int = int(want[w].get(enemy.enemy_id, -1))
+				_expect(unit.level == level_want,
+					"%s %d파 %s 의 레벨은 %d 여야 한다 (실제 %d)"
+						% [id, w + 1, enemy.enemy_id, level_want, unit.level])
+
+	# **하늘 챕터의 BOSS 등급은 3-3 2파에만 둔다.** `TurnBattle._boss_music()` 이 하늘 컨셉의
+	# 보스 웨이브에 최종 보스곡을 건다 — 3-1 · 3-2 에 보스를 넣으면 최종곡이 미리 나온다.
+	for id in [&"stage_3_1", &"stage_3_2", &"stage_3_3"]:
+		var stage: StageData = StageDatabase.get_stage(id)
+		if stage == null:
+			continue
+		var boss_waves: Array[int] = []
+		var boss_tiers: Array[int] = []
+		for w in stage.waves.size():
+			if stage.waves[w].is_boss:
+				boss_waves.append(w)
+		var encounter := TurnStageEncounter.waves_for(stage)
+		for w in encounter.size():
+			for enemy in encounter[w]["enemies"]:
+				if enemy.tier == TurnCombat.EnemyTier.BOSS:
+					boss_tiers.append(w)
+		if id == &"stage_3_3":
+			_expect(boss_waves == [1] and boss_tiers == [1],
+				"3-3 은 2파만 is_boss · BOSS 등급이어야 한다 (is_boss %s, BOSS 등급 %s)"
+					% [str(boss_waves), str(boss_tiers)])
+		else:
+			_expect(boss_waves.is_empty() and boss_tiers.is_empty(),
+				"%s 에는 보스 웨이브도 BOSS 등급도 없어야 한다 — 최종 보스곡이 미리 나온다 (is_boss %s, BOSS 등급 %s)"
+					% [id, str(boss_waves), str(boss_tiers)])
+
+	# 보상: 후다만티움이 들어오고, 재화는 5종 이하(결과 화면 칩).
+	var rewards := {
+		&"stage_3_1": {"gold": 240, "protein": 240, "iron_ore": 3, "coal": 3, "hudamantium": 4},
+		&"stage_3_2": {"gold": 320, "protein": 320, "iron_ore": 4, "coal": 4, "hudamantium": 6},
+		&"stage_3_3": {"gold": 480, "protein": 480, "iron_ore": 6, "coal": 6, "hudamantium": 10},
+	}
+	for id in rewards:
+		var stage: StageData = StageDatabase.get_stage(id)
+		if stage == null:
+			continue
+		var want: Dictionary = rewards[id]
+		_expect(stage.clear_rewards.size() == want.size() and want.size() <= 5,
+			"%s 보상은 재화 %d종(5종 이하)이어야 한다 (실제 %d종)"
+				% [id, want.size(), stage.clear_rewards.size()])
+		for key in want:
+			_expect(int(stage.clear_rewards.get(key, -1)) == int(want[key]),
+				"%s 보상 %s 은 %d 여야 한다 (실제 %s)"
+					% [id, key, int(want[key]), str(stage.clear_rewards.get(key))])
+
+	# 새 챕터의 첫 스테이지는 앞 챕터 보스보다 덜 준다 (2-1 < 1-3, 3-1 < 2-3).
+	var boss_prev: StageData = StageDatabase.get_stage(&"stage_2_3")
+	var first: StageData = StageDatabase.get_stage(&"stage_3_1")
+	if boss_prev != null and first != null:
+		_expect(int(first.clear_rewards.get("gold", 0)) < int(boss_prev.clear_rewards.get("gold", 0)),
+			"3-1 의 gold 는 2-3 보다 적어야 한다 — 새 챕터 첫 스테이지가 앞 챕터 보스보다 주면 보스를 도는 편이 낫다")
 
 
 # 전투 화면이 스테이지의 보정을 매니저까지 전달하는가. 위 검사들은 매니저에 값을 직접
