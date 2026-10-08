@@ -80,12 +80,19 @@ func _verify_stage(id: StringName) -> void:
 #
 # 사거리의 출처는 EnemyData 다 — 여기에 숫자를 적지 않고 씬에서 읽는다.
 func _verify_spawn_distance(stage: StageData) -> void:
-	if stage.spawns.is_empty():
-		return  # 웨이브만 저작된 스테이지(stage_test)는 시작 배치가 없다.
+	# 시작 배치(spawns)가 있으면 그것을, 웨이브만 저작된 **소탕(BATTLE)** 스테이지는 1파를 본다(#566).
+	# 점령 타입(1-2, 1-3)은 플레이어가 존으로 다가가는 것이 전제라 거리를 요구하지 않는다.
+	# stage_test 는 1파 (600, 200) 가 504px 라 통과한다.
+	var start_spawns: Array[StageSpawn] = stage.spawns
+	if start_spawns.is_empty():
+		if stage.type != StageData.Type.BATTLE or stage.waves.is_empty() \
+				or stage.waves[0] == null:
+			return
+		start_spawns = stage.waves[0].spawns
 
 	var nearest := INF
 	var nearest_range := 0.0
-	for spawn in stage.spawns:
+	for spawn in start_spawns:
 		if spawn == null or spawn.enemy_scene == null:
 			continue
 		var probe := spawn.enemy_scene.instantiate()

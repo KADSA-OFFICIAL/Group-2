@@ -106,7 +106,7 @@ description = "**2페이즈 보스 스테이지**(#439). 1페이즈는 점령전
 
 **점령이 2페이즈 진입 조건이다**(#442). 2파에 requires_capture = true 를 저작했으므로 1파를 전멸시키는 것만으로는 보스가 오지 않는다 — 점을 확보해야 등장한다. 확보하지 못하면 전장에 적이 없는 채로 게이지만 차고, 점령이 미완이라 승리로 끝나지도 않는다. 그래서 보스를 먼저 잡고 아무도 없는 점을 채우는 마무리가 생기지 않는다.
 
-확보 시간은 hold_seconds = 0 으로 두어 CombatTuning.capture_hold_seconds(10초)를 따른다. forced_party 를 두지 않는다 — 1-1 만 튜토리얼로 강제하고, 여기는 배운 것을 자기 편성으로 시험하는 자리다. 보상은 1-2(90/100/55) 보다 크게 잡았으나 [임시값]이며, 보스 전용 드롭 테이블은 아직 없다(보상 규칙이 clear_rewards 하나뿐이다)."
+확보 시간은 hold_seconds = 0 으로 두어 CombatTuning.capture_hold_seconds(10초)를 따른다. forced_party 를 두지 않는다 — 1-1 만 튜토리얼로 강제하고, 여기는 배운 것을 자기 편성으로 시험하는 자리다. 보상은 1-2(90/100/55) 보다 크게 잡았으나 [임시값]이며, 보스 전용 드롭 테이블은 아직 없다(보상 규칙이 clear_rewards 하나뿐이다). **석탄 2 는 #566 에서 더했다** — 돌 갑옷의 재료(석탄 2)가 게임 안에서 들어올 길이 없었다(설계 #564 §3)."
 type = 2
 spawns = Array[ExtResource("2_spawn")]([])
 waves = Array[ExtResource("4_wave")]([SubResource("Wave_1"), SubResource("Wave_2")])
@@ -114,5 +114,6 @@ capture_zones = Array[ExtResource("3_zone")]([SubResource("CaptureZone_hill")])
 clear_rewards = {
 "gold": 180,
 "protein": 200,
-"stone": 110
+"stone": 110,
+"coal": 2
 }
