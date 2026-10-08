@@ -607,9 +607,9 @@ func _test_chapter3_stages() -> void:
 			{&"mammoth_beastfolk": 29, &"velociraptor_beastfolk_2": 27},
 			{&"seoa": 29, &"mammoth_beastfolk": 29, &"velociraptor_beastfolk": 27,
 				&"velociraptor_beastfolk_2": 27}]},
-		&"stage_3_3": {"bonus": 8, "counts": [4, 2], "waves": [
-			{&"mammoth_beastfolk": 30, &"seoa": 30, &"velociraptor_beastfolk_2": 28},
-			{&"pterosaur_queen": 33, &"velociraptor_beastfolk_2": 28}]},
+		&"stage_3_3": {"bonus": 9, "counts": [4, 2], "waves": [
+			{&"mammoth_beastfolk": 31, &"seoa": 31, &"velociraptor_beastfolk_2": 29},
+			{&"pterosaur_queen": 34, &"velociraptor_beastfolk_2": 29}]},
 	}
 	for id in expected:
 		var stage: StageData = StageDatabase.get_stage(id)
