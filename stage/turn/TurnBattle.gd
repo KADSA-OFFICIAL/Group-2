@@ -546,6 +546,8 @@ func _start_battle() -> void:
 	# **한 턴씩 진행한다 (#542)** — 진행 루프가 그 턴의 연출을 다 재생한 뒤 다음 턴을 부른다.
 	# 이게 없으면 자동 전투에서 로직이 전투 전체를 한 번에 끝내고 HUD 만 앞서 간다.
 	battle.step_by_turn = true
+	# 스테이지가 적 레벨을 올린다(#565). 전투는 스테이지를 모르므로 숫자만 넘긴다.
+	battle.enemy_level_bonus = _stage.turn_level_bonus if _stage != null else 0
 	battle.pending_waves = waves.slice(1)
 	battle.on_wave_started = _on_wave_started
 	battle.start(party, waves[0], ambush, use_seed)

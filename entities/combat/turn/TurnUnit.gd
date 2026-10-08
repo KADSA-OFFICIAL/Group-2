@@ -127,14 +127,18 @@ static func from_character(data: CharacterData, unit_rank: int, id_suffix: Strin
 	return unit
 
 
-static func from_enemy(data: EnemyData, unit_rank: int, id_suffix: String = "") -> TurnUnit:
+## `level_bonus`: 스테이지가 정한 적 레벨 보정(`StageData.turn_level_bonus`, #565).
+## 레벨 = `data.turn_level + level_bonus` (1 미만으로는 내려가지 않는다). 전투는 스테이지를
+## 모르므로 숫자로 받는다.
+static func from_enemy(data: EnemyData, unit_rank: int, id_suffix: String = "",
+		level_bonus: int = 0) -> TurnUnit:
 	var unit := TurnUnit.new()
 	unit.enemy = data
 	unit.side = TurnCombat.Side.ENEMY
 	unit.rank = unit_rank
 	unit.display_name = data.display_name
 	unit.unit_id = StringName(String(data.enemy_id) + id_suffix)
-	unit.level = data.turn_level
+	unit.level = maxi(data.turn_level + level_bonus, 1)
 	unit.element = data.turn_element
 	unit.physical_type = data.turn_physical_type
 	unit.battle_class = TurnCombat.BattleClass.BREAKER
@@ -142,7 +146,7 @@ static func from_enemy(data: EnemyData, unit_rank: int, id_suffix: String = "") 
 	unit.stats = data.get_stats().duplicate(true) as PlayerStats
 	# 턴제 스텟을 복제본에 심는다. 원본에 쓰면 전투를 반복할 때마다 값이 다시 덮이고,
 	# 실시간 전투가 읽는 저작 데이터가 오염된다.
-	_apply_turn_baseline(unit.stats, data)
+	_apply_turn_baseline(unit.stats, data, unit.level)
 
 	unit.current_hp = unit.stats.get_max_hp()
 	unit.energy = 0
@@ -171,17 +175,17 @@ static func from_enemy(data: EnemyData, unit_rank: int, id_suffix: String = "") 
 # 근력+방어력 -> 방어력)의 소유자는 `PlayerStats` 이고 계수는 `CombatTuning` 이다.
 # 여기서 공격력을 직접 대입하면 그 규칙을 우회하는 두 번째 경로가 생긴다. 원하는
 # 파생값이 나오는 기초 스텟을 계산해 넣으면 규칙은 하나로 남는다.
-static func _apply_turn_baseline(target: PlayerStats, data: EnemyData) -> void:
+static func _apply_turn_baseline(target: PlayerStats, data: EnemyData, level: int) -> void:
 	var coefficients := PlayerStats.get_tuning()
 
-	target.hp = data.get_turn_hp()
+	target.hp = data.get_turn_hp_at(level)
 
 	# 공격력 = 근력 x strength_to_phys_atk
-	var want_attack := float(data.get_turn_attack())
+	var want_attack := float(data.get_turn_attack_at(level))
 	target.strength = maxi(int(round(want_attack / maxf(coefficients.strength_to_phys_atk, 0.01))), 1)
 
 	# 방어력 = 근력 x strength_to_phys_def + 방어력 x defense_to_phys_def
-	var want_defense := float(data.get_turn_defense())
+	var want_defense := float(data.get_turn_defense_at(level))
 	var from_strength := float(target.strength) * coefficients.strength_to_phys_def
 	target.defense = maxi(int(round((want_defense - from_strength)
 		/ maxf(coefficients.defense_to_phys_def, 0.01))), 0)

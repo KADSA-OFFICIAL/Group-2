@@ -144,6 +144,18 @@ enum Concept {
 # 보상 정의가 이 하나로 합쳐졌다.
 @export var clear_rewards: Dictionary = {}
 
+# ===== 턴제 (Turn-based) — #565 =====
+#
+# 턴제 전투에서만 읽는 값. `turn_` 접두어는 `EnemyData.turn_level` 과 짝이고 턴제 전용
+# 필드의 규약(`turn_*`)을 따른 것이다.
+@export_group("턴제")
+## 이 스테이지 적 전원의 레벨 보정. 턴제 적 레벨 = `EnemyData.turn_level` + 이 값.
+## 같은 적 정의를 재사용하면서 뒤 챕터를 더 세게 만드는 수단이다(적 정의를 레벨만 바꿔
+## 복제하지 않는다 — 단일 출처가 깨지고 적 씬·아트까지 따라 늘어난다).
+## 기본 0 이라 이 필드가 없는 기존 `.tres` 는 그대로 동작한다.
+## 실시간 전투는 레벨 개념이 없어 이 값을 읽지 않는다.
+@export var turn_level_bonus: int = 0
+
 
 # ----- 여기에 없는 것과 그 이유 (Extensibility) -----
 # 아래는 설계 문서에서 아직 [미정] 이므로 **필드를 만들지 않았다.**
@@ -371,6 +383,11 @@ func validate() -> Array[String]:
 			problems.append("clear_rewards['%s']는 0 이상의 정수여야 합니다." % str(key))
 		elif not CurrencySystem.DEFAULT_CURRENCIES.has(str(key)):
 			problems.append("clear_rewards['%s']는 알 수 없는 재화입니다." % str(key))
+
+	# 턴제 적 레벨 보정(#565). 음수는 아직 쓰임새가 없고, 적 레벨이 1 미만이 되는
+	# 저작 실수를 막는다. 필요해지면 그때 푼다.
+	if turn_level_bonus < 0:
+		problems.append("turn_level_bonus는 0 이상이어야 합니다: %d" % turn_level_bonus)
 
 	# 점령 존(#377). 소탕과 같은 이유로 양쪽을 다 잡는다 —
 	# 존이 없으면 클리어 불가이고, 필요 없는데 저작돼 있으면 화면에 존이 뜨는데 아무 의미가 없다.
