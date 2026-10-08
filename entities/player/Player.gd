@@ -79,12 +79,13 @@ func get_stats() -> PlayerStats:
 
 # 정의(또는 씬에 주입된 stats)에서 이 노드만의 스텟 사본을 만든다.
 # 처음 get_stats()가 불릴 때 한 번만 만들어지므로, 씬이 export로 주입한 값이 반영된 뒤다.
-# duplicate(true): 이후 PlayerStats에 하위 리소스가 추가되어도 같이 복제되게 한다.
+# duplicate_for_battle(): deep 복제에 더해 비-export 런타임 채널(삼각근 Lv. 성장 배수)까지
+# 옮긴다. 그냥 duplicate(true) 로는 성장이 사본에서 사라진다(#563).
 func _make_runtime_stats() -> PlayerStats:
 	var source: PlayerStats = data.get_stats() if data != null else stats
 	if source == null:
 		return PlayerStats.new()
-	return source.duplicate(true)
+	return source.duplicate_for_battle()
 
 
 func _ready() -> void:

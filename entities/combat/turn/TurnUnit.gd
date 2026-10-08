@@ -114,8 +114,9 @@ static func from_character(data: CharacterData, unit_rank: int, id_suffix: Strin
 	unit.battle_class = data.battle_class
 
 	# 정의의 스텟을 복제한다. deep 복제여야 한다 — 얕은 복제는 같은 인스턴스를 공유해
-	# 버프가 저작 데이터로 새어 들어간다.
-	unit.stats = data.get_stats().duplicate(true) as PlayerStats
+	# 버프가 저작 데이터로 새어 들어간다. 그냥 duplicate(true) 로는 비-export 인 성장
+	# 배수(삼각근 Lv.)가 사라지므로 전투용 복제 헬퍼를 쓴다(#563).
+	unit.stats = data.get_stats().duplicate_for_battle()
 	unit.current_hp = unit.stats.get_max_hp()
 	unit.energy = 0
 
