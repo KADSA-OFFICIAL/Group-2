@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="40_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_ranged.tres" id="60_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_strike.tres" id="61_turn"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
+[ext_resource type="PackedScene" path="res://entities/combat/Projectile.tscn" id="11_projectile"]
+
+[sub_resource type="Resource" id="PlayerStats_pterosaur_beastfolk"]
+script = ExtResource("2_stats")
+hp = 840
+strength = 59
+defense = 72
+intelligence = 100
+faith = 100
+speed = 118
+
+[resource]
+script = ExtResource("1_enemydata")
+enemy_id = &"pterosaur_beastfolk"
+display_name = "익룡 수인"
+description = "하늘 챕터 테마 잡몹(#568). 스토리 5장의 적인 **여왕의 익룡 부하**다 — 하늘 챕터에 육지 수인(벨로시랩터 · 매머드)이 나오던 것을 대체한다. **아트가 아직 없다** — 도형 플레이스홀더(tint)로 선다(필요 아트: assets/sprites/enemies/README.md). 턴제 프로필 [임시값]: 잡몹 · Lv.21 · 풍압 / 관통 · 약점 한기 · 충격 / 강타 → 설아 · 하랑이 인성치를 깎는다(수룡 수인은 아린 · 태희). 개성 배수 HP 0.6 / 공격 0.9 / 방어 0.6(잘 죽는 후열 사격수). 선호 랭크 2·3. 스킬은 공용 「원거리 사격」 · 「돌진」. 실시간: 서아처럼 **원거리 추적형**이다(사거리 250, 투사체). 표준 적 대비 HP x0.7 · 공격 x0.9 · 방어 x0.6, 이동 0.7. 밸런스는 턴제 기준이다."
+stats = SubResource("PlayerStats_pterosaur_beastfolk")
+balance_tier = 1
+hp_multiplier = 0.7
+attack_multiplier = 0.9
+defense_multiplier = 0.6
+sprite_texture = ExtResource("9_shape")
+tint = Color(0.75, 0.65, 0.9, 1)
+sprite_scale = Vector2(1.5, 1.5)
+ai_enabled = true
+detection_range = 600.0
+attack_range = 250.0
+move_speed_multiplier = 0.7
+attack_speed_multiplier = 0.8
+projectile_scene = ExtResource("11_projectile")
+projectile_speed = 320.0
+projectile_hit_radius = 14.0
+tier = 0
+turn_level = 21
+turn_element = 4
+turn_physical_type = 1
+weak_elements = Array[int]([2, 0])
+weak_physical = Array[int]([2])
+turn_skills = Array[ExtResource("40_skilldef")]([ExtResource("60_turn"), ExtResource("61_turn")])
+preferred_ranks = Array[int]([2, 3])
+turn_hp_multiplier = 0.6
+turn_attack_multiplier = 0.9
+turn_defense_multiplier = 0.6

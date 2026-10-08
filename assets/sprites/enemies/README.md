@@ -114,3 +114,19 @@ godot --headless --path . --script res://tools/normalize_walk_sheet.gd -- <입�
 서아는 #419 규격을 따른다. 셀 128x128, 인물 키 108px, 발 기준선 y=120
 (셀 중심 기준 +56), 배율 1이다. 충돌 캡슐의 바닥 F=14에 맞추면
 `walk_sprite_offset.y = 14 - 56 = -42`이고 화면 키는 108px다.
+
+## 아트 대기 중인 적 (#568)
+
+아래 세 적은 **정의만 있고 그림이 없다.** 도형 플레이스홀더(tint 네모)로 서 있으며, 그림이 들어와도 스테이지·밸런스는 건드리지 않는다.
+
+| 적 | id | 필요 아트 |
+|---|---|---|
+| 수룡 수인 | `water_dragon_beastfolk` | 워크 시트 · 턴제 전투 프레임 · 턴제 정지 스프라이트 · 초상 |
+| 수룡 수인 우두머리 | `water_dragon_chief` | 수룡 수인 아트를 `walk_sprite_scale` 로 크게 재사용(매머드 우두머리 선례, #376). 별도 초상 |
+| 익룡 수인 | `pterosaur_beastfolk` | 워크 시트 · 턴제 전투 프레임 · 턴제 정지 스프라이트 · 초상 |
+
+규약은 위 "시트 규약"과 같다: 실시간 워크 시트 4방향 × 3프레임, 턴제 전투 프레임 idle / attack / hit / death
+([`docs/battle-animation-prompts.md`](../../docs/battle-animation-prompts.md)), 턴제 정지 스프라이트
+([`docs/turn-battle-sprite-prompts.md`](../../docs/turn-battle-sprite-prompts.md)), 초상(스토리 화자로도 쓰인다 —
+`StoryLineData` 는 `EnemyDatabase` 에서 화자를 해석한다). 아트를 끼운 뒤에는 `VerifyBattleSprites` ·
+`VerifyBattleFrames` · `VerifyMissingPortraits`(목록에 새 적을 추가) 를 돌린다.

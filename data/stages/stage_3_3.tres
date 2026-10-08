@@ -5,11 +5,11 @@
 [ext_resource type="Script" path="res://entities/stage/StageWave.gd" id="3_wave"]
 [ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="4_mammoth"]
 [ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="5_seoa"]
-[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk2.tscn" id="6_raptor2"]
+[ext_resource type="PackedScene" path="res://entities/enemies/PterosaurBeastfolk.tscn" id="6_ptero"]
 [ext_resource type="PackedScene" path="res://entities/enemies/PterosaurQueen.tscn" id="7_queen"]
 
 ; ===== 1파 — 여왕의 근위대 =====
-; 근위대. 매머드 수인이 앞(560,260)에서 막고 서아가 뒤(660,220)에서 쏘며 랩터 수인 2 둘이 돌아 든다.
+; 근위대. 매머드 수인이 앞(560,260)에서 막고 서아가 뒤(660,220)에서 쏘며 익룡 수인 둘이 돌아 든다.
 
 [sub_resource type="Resource" id="Spawn_w1_mammoth_1"]
 script = ExtResource("2_spawn")
@@ -25,21 +25,21 @@ position = Vector2(660, 220)
 count = 1
 offset = Vector2(100, 0)
 
-[sub_resource type="Resource" id="Spawn_w1_raptor2_3"]
+[sub_resource type="Resource" id="Spawn_w1_ptero_3"]
 script = ExtResource("2_spawn")
-enemy_scene = ExtResource("6_raptor2")
+enemy_scene = ExtResource("6_ptero")
 position = Vector2(480, 300)
 count = 2
 offset = Vector2(80, 40)
 
 [sub_resource type="Resource" id="Wave_1"]
 script = ExtResource("3_wave")
-spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w1_mammoth_1"), SubResource("Spawn_w1_seoa_2"), SubResource("Spawn_w1_raptor2_3")])
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w1_mammoth_1"), SubResource("Spawn_w1_seoa_2"), SubResource("Spawn_w1_ptero_3")])
 label = "여왕의 근위대"
 is_boss = false
 
 ; ===== 2파 — 여왕 =====
-; 여왕(Lv.34)이 랩터 수인 2 하나를 데리고 날아든다. 이 웨이브가 하늘 챕터의 유일한 BOSS 등급이라 TurnBattle._boss_music() 이
+; 여왕(Lv.34)이 익룡 수인 하나를 데리고 날아든다. 이 웨이브가 하늘 챕터의 유일한 BOSS 등급이라 TurnBattle._boss_music() 이
 ; 최종 보스곡(battle_final.ogg)을 건다. 1파는 하늘 전투곡이다.
 ; 전격 · 광휘 / 관통 · 참격 약점 → 아린 · 강지.
 
@@ -50,16 +50,16 @@ position = Vector2(640, 280)
 count = 1
 offset = Vector2(100, 0)
 
-[sub_resource type="Resource" id="Spawn_w2_raptor2_2"]
+[sub_resource type="Resource" id="Spawn_w2_ptero_2"]
 script = ExtResource("2_spawn")
-enemy_scene = ExtResource("6_raptor2")
+enemy_scene = ExtResource("6_ptero")
 position = Vector2(520, 340)
 count = 1
 offset = Vector2(100, 0)
 
 [sub_resource type="Resource" id="Wave_2"]
 script = ExtResource("3_wave")
-spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w2_queen_1"), SubResource("Spawn_w2_raptor2_2")])
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w2_queen_1"), SubResource("Spawn_w2_ptero_2")])
 label = "여왕"
 is_boss = true
 [resource]
@@ -68,16 +68,16 @@ stage_id = &"stage_3_3"
 display_name = "3-3 하늘섬의 여왕"
 chapter = 3
 number = 3
-briefing = "허락 없이 성에 들어선 구출대를 여왕의 근위대가 맞는다. 근위대가 무너지면 여왕이 직접 날아든다. 친구를 되찾아라!"
-description = "**3챕터의 최종 보스 스테이지(#567, 설계 #564).** 9스테이지의 끝이다. type = BATTLE(소탕), spawns 는 비우고 웨이브만 쓴다.
+briefing = "허락 없이 성에 들어선 구출대를 여왕의 익룡 근위대가 맞는다. 근위대가 무너지면 여왕이 직접 날아든다. 친구를 되찾아라!"
+description = "**3챕터의 최종 보스 스테이지(#567, 설계 #564, 테마 적 교체 #568).** 9스테이지의 끝이다. type = BATTLE(소탕), spawns 는 비우고 웨이브만 쓴다.
 
-1파 「여왕의 근위대」 매머드 수인 · 서아 · 랩터 수인 2 ×2 / 2파 「여왕」 익룡 여왕 + 랩터 수인 2 (is_boss). **BOSS 등급은 이 2파에만 있다** — TurnBattle._boss_music() 이 하늘 컨셉의 보스 웨이브에 최종 보스곡(battle_final.ogg)을 건다. 1파는 하늘 전투곡이다. 여왕 약점: 전격 · 광휘 / 관통 · 참격 → 아린 · 강지.
+1파 「여왕의 근위대」 매머드 수인 · 서아 · 익룡 수인 ×2 / 2파 「여왕」 익룡 여왕 + 익룡 수인 (is_boss). 근위대와 여왕의 부하가 익룡 수인이다(#568 이 랩터 수인 2 를 교체). 익룡 수인은 **아트가 아직 없어 도형 플레이스홀더**로 선다. **BOSS 등급은 이 2파에만 있다** — TurnBattle._boss_music() 이 하늘 컨셉의 보스 웨이브에 최종 보스곡(battle_final.ogg)을 건다. 1파는 하늘 전투곡이다. 여왕 약점: 전격 · 광휘 / 관통 · 참격 → 아린 · 강지.
 
-**turn_level_bonus = 9** → 1파 매머드/서아 31 · 랩터 29, 여왕 Lv.34. 설계(#564)의 +8 은 이 하네스로 재면 목표보다 쉬웠다(P2 48시드 92%) — 민감도(48시드, 표준 파티 P2): +8 92% · **+9 77%** · +10 62% · +11 52% — 그래서 +9 로 올렸다. 좌표는 하늘 본섬 안쪽 80% 타원 안이다. 실시간으로 진입해 두 웨이브의 적이 모두 섬 위에서 움직이는 것을 확인했다.
+**turn_level_bonus = 9** → 1파 매머드/서아 31 · 익룡 수인 30, 여왕 Lv.34. 설계(#564)의 +8 은 이 하네스로 재면 목표보다 쉬웠다(P2 48시드 92%) — 그래서 +9 로 올렸다. 좌표는 하늘 본섬 안쪽 80% 타원 안이다. 실시간으로 진입해 두 웨이브의 적이 모두 섬 위에서 움직이는 것을 확인했다.
 
 보상 [임시값] gold 480 / protein 480 / iron_ore 6 / coal 6 / hudamantium 10.
 
-실측 (VerifyStageDifficulty, 표준 파티, 시드 8, 예상 프로필 P2 = 삼각근 Lv.7 + 철 장비, #563 반영): 6/8 승 · 평균 17.4사이클 · 남은 HP 62% / 다음 프로필 P3(Lv.8 + 후다만티움) 8/8 · 80% / 성장 없이 철 장비만 2/8 · 20% / 딜러 파티 7/8 · 71%. **48시드로 다시 재면**: P2 37/48(77%) · HP 56% / P3 46/48 · 75% / 장비만 5/48(10%) · 7% / 딜러 P2 40/48(83%) · 60%. 목표(예상 프로필 5/8 ~ 7/8 · 남은 HP 35 ~ 70%, 장비만 4/8 이하)에 든다. 최종 보스치고 쉽다면 #568 에서 근위대로 보강한다."
+실측 (VerifyStageDifficulty, 표준 파티, 시드 8, 예상 프로필 P2 = 삼각근 Lv.7 + 철 장비, #563 반영): 7/8 승 · 평균 24.9사이클 · 남은 HP 58% / 다음 프로필 P3(Lv.8 + 후다만티움) 8/8 · 69% / 성장 없이 철 장비만 1/8 · 6% / 딜러 파티 8/8 · 68%. **48시드**: P2 33/48(69%) · HP 49% / P3 47/48 · 73% / 장비만 4/48(8%) · 4% / P1 9/48 / 딜러 P2 43/48(90%) · 62%. 목표(예상 프로필 5/8 ~ 7/8 · 남은 HP 35 ~ 70%, 장비만 4/8 이하)에 든다. 최종 보스치고 쉽다면 근위대를 보강한다."
 type = 0
 turn_level_bonus = 9
 clear_rewards = {

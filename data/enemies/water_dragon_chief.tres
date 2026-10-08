@@ -1,0 +1,67 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_strike.tres" id="60_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_cleave.tres" id="61_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_shove.tres" id="62_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_wipe.tres" id="63_turn"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="40_skilldef"]
+[ext_resource type="Resource" path="res://data/enemies/skills/boss_charge.tres" id="12_charge"]
+[ext_resource type="Resource" path="res://data/enemies/skills/boss_leap_slam.tres" id="13_leap"]
+
+[sub_resource type="Resource" id="PlayerStats_water_dragon_chief"]
+script = ExtResource("2_stats")
+hp = 9600
+strength = 143
+defense = 192
+intelligence = 100
+faith = 100
+speed = 96
+energy_max = 100
+
+[resource]
+script = ExtResource("1_enemydata")
+enemy_id = &"water_dragon_chief"
+display_name = "수룡 수인 우두머리"
+description = "바다 챕터 보스(#568). 2-3 「물가의 주인」 2파에 단독으로 선다 — #566 에서 임시로 서 있던 매머드 수인 우두머리를 대체한다(같은 보스를 두 번 잡지 않는다). **수룡 수인(water_dragon_beastfolk)의 외형을 크게 쓴다** — 매머드 우두머리 선례(#376): 아트가 들어오면 같은 시트를 walk_sprite_scale 로 키우고, 지금은 도형 플레이스홀더를 sprite_scale 2.7(수룡 수인 1.5 의 1.8배)로 키웠다. 충돌 캡슐도 씬에서 함께 키웠다. **아트가 아직 없다**(필요 아트: assets/sprites/enemies/README.md). 턴제 프로필 [임시값]: 보스 · Lv.25 · 한기 / 강타 · 약점 침식 · 충격 / 강타 · 참격 → 태희 · 하랑. 인성치 200 · 격파 저항 0.3 · 한기 저항 0.2. 방어 개성 1.2. 스킬은 매머드 우두머리와 같은 공용 넷(돌진 · 쓸어치기 · 밀치기 · 전멸기). **보스 셋이 서로 다른 캐릭터 쌍을 요구하게** 약점을 골랐다: 1-3 매머드 우두머리(한기 · 화염) → 설아 · 미나, 2-3 이 수룡 우두머리(침식 · 충격) → 태희 · 하랑, 3-3 여왕(전격 · 광휘) → 아린 · 강지. 실시간 값은 매머드 우두머리와 같은 규격(표준 적 대비 HP x8.0 · 공격 x2.2 · 방어 x1.6, 대시, 체력 임계선 특별 스킬 2종)이다 — 실시간 전용 새 AI 동작은 만들지 않았다(MammothBoss 안무를 그대로 쓴다). 밸런스는 턴제 기준이다."
+stats = SubResource("PlayerStats_water_dragon_chief")
+balance_tier = 1
+hp_multiplier = 8.0
+attack_multiplier = 2.2
+defense_multiplier = 1.6
+skills = Array[ExtResource("40_skilldef")]([])
+sprite_texture = ExtResource("9_shape")
+tint = Color(0.2, 0.5, 0.85, 1)
+sprite_scale = Vector2(2.7, 2.7)
+ai_enabled = true
+detection_range = 800.0
+attack_range = 110.0
+move_speed_multiplier = 0.4
+attack_speed_multiplier = 0.45
+charged_attack_threshold = 2
+charged_attack_damage_multiplier = 1.5
+charged_attack_effect = &"stun"
+basic_attack_aoe_radius = 130.0
+dash_speed = 900.0
+dash_duration = 0.4
+dash_cooldown = 6.0
+dash_hit_radius = 90.0
+dash_damage_multiplier = 1.2
+phase_skill_hp_step = 0.25
+phase_skills = Array[ExtResource("40_skilldef")]([ExtResource("12_charge"), ExtResource("13_leap")])
+tier = 2
+turn_level = 25
+turn_element = 2
+turn_physical_type = 2
+weak_elements = Array[int]([5, 0])
+weak_physical = Array[int]([2, 0])
+toughness = 200
+element_resistances = {
+2: 0.2
+}
+break_resistance = 0.3
+turn_skills = Array[ExtResource("40_skilldef")]([ExtResource("60_turn"), ExtResource("61_turn"), ExtResource("62_turn"), ExtResource("63_turn")])
+preferred_ranks = Array[int]([1])
+turn_defense_multiplier = 1.2

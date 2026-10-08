@@ -40,6 +40,7 @@ func _ready() -> void:
 	_test_stage_level_bonus_field()
 	_test_chapter2_stages()
 	_test_chapter3_stages()
+	_test_themed_enemies()
 	await _test_stage_battle_lifecycle()
 	await _test_stage_level_bonus_reaches_battle()
 
@@ -71,6 +72,10 @@ func _test_enemy_scene_resolution() -> void:
 		"Seoa": "res://entities/enemies/Seoa.tscn",
 		"MammothBoss": "res://entities/enemies/MammothBoss.tscn",
 		"PterosaurQueen": "res://entities/enemies/PterosaurQueen.tscn",
+		# 테마 적(#568) — 못 꺼내면 2-3 · 하늘 스테이지의 웨이브가 통째로 비워진다.
+		"WaterDragonBeastfolk": "res://entities/enemies/WaterDragonBeastfolk.tscn",
+		"WaterDragonChief": "res://entities/enemies/WaterDragonChief.tscn",
+		"PterosaurBeastfolk": "res://entities/enemies/PterosaurBeastfolk.tscn",
 	}
 
 	for label in scenes:
@@ -531,9 +536,8 @@ func _test_chapter2_stages() -> void:
 			{&"velociraptor_beastfolk": 23, &"velociraptor_beastfolk_2": 23, &"seoa": 25},
 			{&"mammoth_beastfolk": 25, &"seoa": 25}]},
 		&"stage_2_3": {"bonus": 5, "waves": [
-			{&"mammoth_beastfolk": 27, &"seoa": 27, &"velociraptor_beastfolk": 25,
-				&"velociraptor_beastfolk_2": 25},
-			{&"mammoth_boss": 30}]},
+			{&"water_dragon_beastfolk": 26, &"seoa": 27},
+			{&"water_dragon_chief": 30}]},
 	}
 	for id in expected:
 		var stage: StageData = StageDatabase.get_stage(id)
@@ -600,16 +604,16 @@ func _test_chapter3_stages() -> void:
 	# 스테이지 -> [보정, 웨이브별 {적 id: 기대 레벨}, 웨이브별 적 수]
 	var expected := {
 		&"stage_3_1": {"bonus": 6, "counts": [4, 3], "waves": [
-			{&"velociraptor_beastfolk_2": 26, &"velociraptor_beastfolk": 26, &"seoa": 28},
+			{&"pterosaur_beastfolk": 27, &"velociraptor_beastfolk": 26, &"seoa": 28},
 			{&"mammoth_beastfolk": 28, &"seoa": 28, &"velociraptor_beastfolk_2": 26}]},
 		&"stage_3_2": {"bonus": 7, "counts": [3, 3, 4], "waves": [
-			{&"velociraptor_beastfolk": 27, &"velociraptor_beastfolk_2": 27, &"seoa": 29},
-			{&"mammoth_beastfolk": 29, &"velociraptor_beastfolk_2": 27},
+			{&"velociraptor_beastfolk": 27, &"pterosaur_beastfolk": 28, &"seoa": 29},
+			{&"mammoth_beastfolk": 29, &"velociraptor_beastfolk_2": 27, &"pterosaur_beastfolk": 28},
 			{&"seoa": 29, &"mammoth_beastfolk": 29, &"velociraptor_beastfolk": 27,
-				&"velociraptor_beastfolk_2": 27}]},
+				&"pterosaur_beastfolk": 28}]},
 		&"stage_3_3": {"bonus": 9, "counts": [4, 2], "waves": [
-			{&"mammoth_beastfolk": 31, &"seoa": 31, &"velociraptor_beastfolk_2": 29},
-			{&"pterosaur_queen": 34, &"velociraptor_beastfolk_2": 29}]},
+			{&"mammoth_beastfolk": 31, &"seoa": 31, &"pterosaur_beastfolk": 30},
+			{&"pterosaur_queen": 34, &"pterosaur_beastfolk": 30}]},
 	}
 	for id in expected:
 		var stage: StageData = StageDatabase.get_stage(id)
@@ -691,6 +695,113 @@ func _test_chapter3_stages() -> void:
 	if boss_prev != null and first != null:
 		_expect(int(first.clear_rewards.get("gold", 0)) < int(boss_prev.clear_rewards.get("gold", 0)),
 			"3-1 의 gold 는 2-3 보다 적어야 한다 — 새 챕터 첫 스테이지가 앞 챕터 보스보다 주면 보스를 도는 편이 낫다")
+
+
+# 테마 적 3종(#568): 정의 · 약점 구성 · 스테이지 교체.
+#
+# 보스 셋(1-3 매머드 우두머리 · 2-3 수룡 우두머리 · 3-3 여왕)의 약점이 겹치지 않아야 한다 —
+# 겹치면 같은 캐릭터 쌍이 세 보스를 다 푼다. 보스마다 편성을 바꿀 이유를 만드는 것이 설계 의도다.
+func _test_themed_enemies() -> void:
+	var spec := {
+		&"water_dragon_beastfolk": {"tier": TurnCombat.EnemyTier.MINION, "level": 21,
+			"element": TurnCombat.Element.CRYO, "physical": TurnCombat.PhysicalType.BLUNT,
+			"weak": [TurnCombat.Element.VOLT, TurnCombat.Element.CORROSION],
+			"weak_physical": [TurnCombat.PhysicalType.BLUNT], "ranks": [1, 2]},
+		&"water_dragon_chief": {"tier": TurnCombat.EnemyTier.BOSS, "level": 25,
+			"element": TurnCombat.Element.CRYO, "physical": TurnCombat.PhysicalType.BLUNT,
+			"weak": [TurnCombat.Element.CORROSION, TurnCombat.Element.IMPACT],
+			"weak_physical": [TurnCombat.PhysicalType.BLUNT, TurnCombat.PhysicalType.SLASH],
+			"ranks": [1]},
+		&"pterosaur_beastfolk": {"tier": TurnCombat.EnemyTier.MINION, "level": 21,
+			"element": TurnCombat.Element.GALE, "physical": TurnCombat.PhysicalType.PIERCE,
+			"weak": [TurnCombat.Element.CRYO, TurnCombat.Element.IMPACT],
+			"weak_physical": [TurnCombat.PhysicalType.BLUNT], "ranks": [2, 3]},
+	}
+	for id in spec:
+		_expect(EnemyDatabase.has_enemy(id), "%s 가 EnemyDatabase 에 로드되어야 한다" % id)
+		var enemy: EnemyData = EnemyDatabase.get_enemy(id)
+		if enemy == null:
+			continue
+		_expect(enemy.validate().is_empty(),
+			"%s 의 validate() 문제가 없어야 한다: %s" % [id, ", ".join(enemy.validate())])
+		_expect(enemy.validate_turn().is_empty(),
+			"%s 의 validate_turn() 문제가 없어야 한다: %s" % [id, ", ".join(enemy.validate_turn())])
+		var want: Dictionary = spec[id]
+		_expect(enemy.tier == want["tier"], "%s 의 등급이 설계와 같아야 한다" % id)
+		_expect(enemy.turn_level == int(want["level"]),
+			"%s 의 turn_level 은 %d 여야 한다 (실제 %d)" % [id, int(want["level"]), enemy.turn_level])
+		_expect(int(enemy.turn_element) == int(want["element"])
+				and int(enemy.turn_physical_type) == int(want["physical"]),
+			"%s 의 원소 / 물리가 설계와 같아야 한다" % id)
+		var weak: Array[int] = []
+		for e in enemy.weak_elements:
+			weak.append(int(e))
+		var weak_want: Array[int] = []
+		for e in want["weak"]:
+			weak_want.append(int(e))
+		_expect(weak == weak_want, "%s 의 약점 원소가 설계와 같아야 한다 (실제 %s)" % [id, str(weak)])
+		var weak_phys: Array[int] = []
+		for p in enemy.weak_physical:
+			weak_phys.append(int(p))
+		var weak_phys_want: Array[int] = []
+		for p in want["weak_physical"]:
+			weak_phys_want.append(int(p))
+		_expect(weak_phys == weak_phys_want, "%s 의 약점 물리가 설계와 같아야 한다 (실제 %s)" % [id, str(weak_phys)])
+		var ranks: Array[int] = []
+		for r in enemy.preferred_ranks:
+			ranks.append(int(r))
+		var ranks_want: Array[int] = []
+		for r in want["ranks"]:
+			ranks_want.append(int(r))
+		_expect(ranks == ranks_want, "%s 의 선호 랭크가 설계와 같아야 한다 (실제 %s)" % [id, str(ranks)])
+		_expect(not enemy.turn_skills.is_empty(), "%s 에 턴제 행동표가 있어야 한다" % id)
+		# 아트가 없어도 서야 한다 — 도형 플레이스홀더(tint)가 있어야 전장에 보인다.
+		_expect(enemy.sprite_texture != null and enemy.tint.a > 0.0,
+			"%s 는 도형 플레이스홀더(sprite_texture · tint)로 설 수 있어야 한다" % id)
+
+		# 턴제 유닛으로 변환되어 HP 가 레벨 · 등급 파생값과 같다.
+		var unit := TurnUnit.from_enemy(enemy, 1)
+		_expect(unit.get_max_hp() == enemy.get_turn_hp() and unit.max_toughness > 0,
+			"%s 가 턴제 유닛으로 변환되어야 한다 (HP %d)" % [id, unit.get_max_hp()])
+
+	var chief: EnemyData = EnemyDatabase.get_enemy(&"water_dragon_chief")
+	if chief != null:
+		_expect(chief.toughness == 200 and is_equal_approx(chief.break_resistance, 0.3),
+			"수룡 수인 우두머리의 인성치는 200, 격파 저항은 0.3 이어야 한다")
+		_expect(chief.turn_skills.size() == 4,
+			"수룡 수인 우두머리는 공용 스킬 넷(돌진 · 쓸어치기 · 밀치기 · 전멸기)을 쓴다 (실제 %d)"
+				% chief.turn_skills.size())
+
+	# 보스 셋의 약점 원소는 서로 겹치지 않는다.
+	var boss_ids: Array[StringName] = [&"mammoth_boss", &"water_dragon_chief", &"pterosaur_queen"]
+	var seen := {}
+	for id in boss_ids:
+		var boss: EnemyData = EnemyDatabase.get_enemy(id)
+		if boss == null:
+			continue
+		_expect(boss.tier == TurnCombat.EnemyTier.BOSS, "%s 는 보스 등급이어야 한다" % id)
+		for e in boss.weak_elements:
+			_expect(not seen.has(int(e)),
+				"보스 셋의 약점이 겹치면 안 된다 — %s 의 약점 %s 이 다른 보스와 같다"
+					% [id, TurnCombat.element_name(int(e))])
+			seen[int(e)] = id
+
+	# 스테이지 교체: 2-3 은 더 이상 매머드 우두머리를 쓰지 않고, 하늘 스테이지는 익룡 수인이 선다.
+	var used := {}
+	for sid in [&"stage_2_3", &"stage_3_1", &"stage_3_2", &"stage_3_3"]:
+		var stage: StageData = StageDatabase.get_stage(sid)
+		var ids := {}
+		if stage != null:
+			for entry in TurnStageEncounter.waves_for(stage):
+				for enemy in entry["enemies"]:
+					ids[enemy.enemy_id] = true
+		used[sid] = ids
+	_expect(not used[&"stage_2_3"].has(&"mammoth_boss") and used[&"stage_2_3"].has(&"water_dragon_chief")
+			and used[&"stage_2_3"].has(&"water_dragon_beastfolk"),
+		"2-3 은 수룡 수인 무리 + 수룡 수인 우두머리여야 한다 (매머드 우두머리는 1-3 의 보스다)")
+	for sid in [&"stage_3_1", &"stage_3_2", &"stage_3_3"]:
+		_expect(used[sid].has(&"pterosaur_beastfolk"),
+			"%s 에 익룡 수인이 서야 한다 (하늘 챕터의 테마 적)" % sid)
 
 
 # 전투 화면이 스테이지의 보정을 매니저까지 전달하는가. 위 검사들은 매니저에 값을 직접

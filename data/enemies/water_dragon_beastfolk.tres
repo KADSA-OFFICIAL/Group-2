@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://entities/enemies/EnemyData.gd" id="1_enemydata"]
+[ext_resource type="Script" path="res://entities/character/SkillData.gd" id="40_skilldef"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_strike.tres" id="60_turn"]
+[ext_resource type="Resource" path="res://data/skills/turn/enemy/enemy_turn_shove.tres" id="62_turn"]
+[ext_resource type="Script" path="res://entities/player/PlayerStats.gd" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://d07riox8x7dj6" path="res://assets/sprites/placeholder/shape_enemy.svg" id="9_shape"]
+
+[sub_resource type="Resource" id="PlayerStats_water_dragon_beastfolk"]
+script = ExtResource("2_stats")
+hp = 1800
+strength = 72
+defense = 120
+intelligence = 100
+faith = 100
+speed = 100
+
+[resource]
+script = ExtResource("1_enemydata")
+enemy_id = &"water_dragon_beastfolk"
+display_name = "수룡 수인"
+description = "바다 챕터 테마 잡몹(#568). 스토리 3장 「물가로」의 상대인 **물가에 먼저 살던 수룡**의 병사다. **아트가 아직 없다** — 도형 플레이스홀더(tint)로 선다. 턴제 전투는 battle_frames → battle_sprite → tint 네모 순으로 물러나고, 실시간은 walk_frames 가 없으면 sprite_texture 도형이 선다(EnemyBase). 그림이 들어오면 .tres 에 텍스처만 끼우면 되고 밸런스는 흔들리지 않는다(필요 아트: assets/sprites/enemies/README.md). 턴제 프로필 [임시값]: 잡몹 · Lv.21 · 한기 / 강타 · 약점 전격 · 침식 / 강타 → 아린 · 태희가 인성치를 깎는다. 개성 배수 HP 0.9 / 공격 0.9 / 방어 1.0. 스킬은 공용 「돌진」 · 「밀치기」(원소 · 물리는 시전자에게서 오므로 스킬을 복제하지 않는다). 실시간 값도 저작했다(열려야 한다): 매머드 수인보다 가볍고 빠른 근접 — 표준 적(서아) 대비 HP x1.5 · 공격 x1.1 · 방어 x1.0. 밸런스는 턴제 기준이다."
+stats = SubResource("PlayerStats_water_dragon_beastfolk")
+balance_tier = 1
+hp_multiplier = 1.5
+attack_multiplier = 1.1
+defense_multiplier = 1.0
+sprite_texture = ExtResource("9_shape")
+tint = Color(0.25, 0.55, 0.8, 1)
+sprite_scale = Vector2(1.5, 1.5)
+ai_enabled = true
+detection_range = 600.0
+attack_range = 45.0
+move_speed_multiplier = 0.5
+attack_speed_multiplier = 0.8
+tier = 0
+turn_level = 21
+turn_element = 2
+turn_physical_type = 2
+weak_elements = Array[int]([3, 5])
+weak_physical = Array[int]([2])
+turn_skills = Array[ExtResource("40_skilldef")]([ExtResource("60_turn"), ExtResource("62_turn")])
+preferred_ranks = Array[int]([1, 2])
+turn_hp_multiplier = 0.9
+turn_attack_multiplier = 0.9
+turn_defense_multiplier = 1.0

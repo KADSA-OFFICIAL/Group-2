@@ -1,89 +1,83 @@
-[gd_resource type="Resource" script_class="StageData" load_steps=16 format=3]
+[gd_resource type="Resource" script_class="StageData" load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://entities/stage/StageData.gd" id="1_stagedata"]
 [ext_resource type="Script" path="res://entities/stage/StageSpawn.gd" id="2_spawn"]
 [ext_resource type="Script" path="res://entities/stage/StageWave.gd" id="3_wave"]
-[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk.tscn" id="4_raptor"]
-[ext_resource type="PackedScene" path="res://entities/enemies/VelociraptorBeastfolk2.tscn" id="5_raptor2"]
-[ext_resource type="PackedScene" path="res://entities/enemies/MammothBeastfolk.tscn" id="6_mammoth"]
-[ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="7_seoa"]
-[ext_resource type="PackedScene" path="res://entities/enemies/MammothBoss.tscn" id="8_boss"]
+[ext_resource type="PackedScene" path="res://entities/enemies/WaterDragonBeastfolk.tscn" id="4_wdragon"]
+[ext_resource type="PackedScene" path="res://entities/enemies/Seoa.tscn" id="5_seoa"]
+[ext_resource type="PackedScene" path="res://entities/enemies/WaterDragonChief.tscn" id="6_chief"]
 
 ; ===== 1파 — 물가를 지키는 무리 =====
-; 2-2 보다 한 단계 단단한 구성: 매머드 수인이 앞(560)에서 막고, 서아가 뒤(700, 220)에서 쏘며,
-; 랩터 둘이 남쪽 물가(y 360~400)로 돌아 든다. 좌표는 젖은 모래 · 얕은 물 띠(y 240~410) 안이다.
-; 가장 가까운 매머드가 파티 시작에서 탐지 범위(600) 안이다.
+; 수룡 수인 3 + 서아. 2-2 보다 한 단계 단단한 구성이다: 수룡 수인이 앞(560,280)에서 막고, 서아가 뒤(700,220)에서 쏘며,
+; 수룡 수인 둘이 남쪽 물가(y 360~400)로 돌아 든다. 좌표는 젖은 모래 · 얕은 물 띠(y 240~410) 안이다.
+; 가장 가까운 수룡 수인이 파티 시작에서 탐지 범위(600) 안이다. 수룡 수인(전격 · 침식 약점) → 아린 · 태희가 인성치를 깎는다.
 
-[sub_resource type="Resource" id="Spawn_w1_mammoth"]
+[sub_resource type="Resource" id="Spawn_w1_wdragon_1"]
 script = ExtResource("2_spawn")
-enemy_scene = ExtResource("6_mammoth")
+enemy_scene = ExtResource("4_wdragon")
 position = Vector2(560, 280)
 count = 1
 offset = Vector2(100, 0)
 
-[sub_resource type="Resource" id="Spawn_w1_seoa"]
+[sub_resource type="Resource" id="Spawn_w1_seoa_2"]
 script = ExtResource("2_spawn")
-enemy_scene = ExtResource("7_seoa")
+enemy_scene = ExtResource("5_seoa")
 position = Vector2(700, 220)
 count = 1
 offset = Vector2(100, 0)
 
-[sub_resource type="Resource" id="Spawn_w1_raptor"]
+[sub_resource type="Resource" id="Spawn_w1_wdragon_3"]
 script = ExtResource("2_spawn")
-enemy_scene = ExtResource("4_raptor")
+enemy_scene = ExtResource("4_wdragon")
 position = Vector2(520, 360)
 count = 1
 offset = Vector2(100, 0)
 
-[sub_resource type="Resource" id="Spawn_w1_raptor2"]
+[sub_resource type="Resource" id="Spawn_w1_wdragon_4"]
 script = ExtResource("2_spawn")
-enemy_scene = ExtResource("5_raptor2")
+enemy_scene = ExtResource("4_wdragon")
 position = Vector2(600, 400)
 count = 1
 offset = Vector2(100, 0)
 
 [sub_resource type="Resource" id="Wave_1"]
 script = ExtResource("3_wave")
-spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w1_mammoth"), SubResource("Spawn_w1_seoa"), SubResource("Spawn_w1_raptor"), SubResource("Spawn_w1_raptor2")])
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w1_wdragon_1"), SubResource("Spawn_w1_seoa_2"), SubResource("Spawn_w1_wdragon_3"), SubResource("Spawn_w1_wdragon_4")])
 label = "물가를 지키는 무리"
 is_boss = false
 
 ; ===== 2파 — 우두머리 =====
-; 단독이다(1-3 과 같은 이유): 웨이브는 앞 무리를 전멸시켜야 다음이 오므로 보스가 나올 때
-; 1파는 이미 죽어 있고 예고(준비자세 · 착지)를 읽을 여유가 유지된다.
-; 지금은 매머드 수인 우두머리가 임시로 선다(스토리상 상대인 수룡은 #568).
+; 단독이다(1-3 과 같은 이유): 웨이브는 앞 무리를 전멸시켜야 다음이 오므로 보스가 나올 때 1파는 이미 죽어 있고
+; 예고(준비자세 · 착지)를 읽을 여유가 유지된다. 수룡 수인 우두머리(#568) — 침식 · 충격 약점 → 태희 · 하랑.
 
-[sub_resource type="Resource" id="Spawn_w2_boss"]
+[sub_resource type="Resource" id="Spawn_w2_chief_1"]
 script = ExtResource("2_spawn")
-enemy_scene = ExtResource("8_boss")
+enemy_scene = ExtResource("6_chief")
 position = Vector2(720, 320)
 count = 1
 offset = Vector2(100, 0)
 
 [sub_resource type="Resource" id="Wave_2"]
 script = ExtResource("3_wave")
-spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w2_boss")])
+spawns = Array[ExtResource("2_spawn")]([SubResource("Spawn_w2_chief_1")])
 label = "우두머리"
 is_boss = true
-
 [resource]
 script = ExtResource("1_stagedata")
 stage_id = &"stage_2_3"
 display_name = "2-3 물가의 주인"
 chapter = 2
 number = 3
-briefing = "드디어 찾아낸 물가. 그런데 이미 그곳에 터를 잡은 무리가 당장 꺼지라며 막아선다. 지키는 무리를 물리치면 우두머리가 직접 나선다."
-description = "**2챕터(바다)의 보스 스테이지(#566, 설계 #564).** 2챕터의 벽이다 — 성장과 장비를 점검한다. type = BATTLE(소탕), spawns 는 비우고 웨이브만 쓴다.
+briefing = "드디어 찾아낸 물가. 그런데 이미 그곳에 터를 잡은 수룡 수인 무리가 당장 꺼지라며 막아선다. 지키는 무리를 물리치면 덩치 큰 수룡 수인 우두머리가 직접 나선다."
+description = "**2챕터(바다)의 보스 스테이지(#566, 설계 #564, 테마 적 교체 #568).** 2챕터의 벽이다 — 성장과 장비를 점검한다. type = BATTLE(소탕), spawns 는 비우고 웨이브만 쓴다.
 
-1파 「물가를 지키는 무리」 매머드 수인 · 서아 · 벨로시랩터 수인 · 벨로시랩터 수인 2 / 2파 「우두머리」 매머드 수인 우두머리 단독(is_boss). 단독인 이유는 1-3 과 같다 — 1파가 다 죽은 뒤에 와야 예고를 읽을 여유가 있다. 한기·화염 약점 → 설아·미나, 그리고 힐러 점검(1-3 과 같은 성질).
+1파 「물가를 지키는 무리」 수룡 수인 ×3 · 서아 / 2파 「우두머리」 수룡 수인 우두머리 단독(is_boss). 스토리 3장 「물가로」의 상대인 물가에 먼저 살던 수룡이다(#568 이 임시로 서 있던 매머드 수인 우두머리를 교체 — 같은 보스를 1-3 과 두 번 잡지 않는다). 단독인 이유는 1-3 과 같다 — 1파가 다 죽은 뒤에 와야 예고를 읽을 여유가 있다. 수룡 수인(전격 · 침식 약점) → 아린 · 태희, 수룡 우두머리(침식 · 충격 약점) → 태희 · 하랑. 보스 셋의 약점이 겹치지 않는다(1-3 한기 · 화염 → 설아 · 미나 / 2-3 침식 · 충격 / 3-3 전격 · 광휘 → 아린 · 강지). 수룡 적은 **아트가 아직 없어 도형 플레이스홀더**로 선다.
 
-**임시 보스**: 스토리상 상대는 수룡이지만 수룡 적이 생길 때까지(#568) 매머드 수인 우두머리가 선다. 그래서 briefing 에 종족 이름을 쓰지 않는다.
-
-**turn_level_bonus = 5** → 1파 매머드·서아 27, 랩터 25, 우두머리 30. 바다 컨셉이라 2파 보스곡은 일반 보스곡(battle_boss.ogg)이다(최종곡은 하늘 챕터 보스 웨이브만). 좌표는 2-2 와 같은 물가 띠(y 240~410) 안이다.
+**turn_level_bonus = 5** → 1파 수룡 수인 26 · 서아 27, 우두머리 30. 바다 컨셉이라 2파 보스곡은 일반 보스곡(battle_boss.ogg)이다(최종곡은 하늘 챕터 보스 웨이브만). 좌표는 2-2 와 같은 물가 띠(y 240~410) 안이다.
 
 보상 [임시값] gold 280 / protein 280 / iron_ore 10 / coal 4 / copper 6 (재화 5종 이하).
 
-실측 (VerifyStageDifficulty, 표준 파티, 시드 8, 예상 프로필 P1): 5/8 승 · 평균 19.2사이클 · 남은 HP 45% / 다음 프로필 P2(삼각근 Lv.7 + 철 장비) 8/8 · 86% / 성장 없이 돌 장비만 6/8 · 54%(8시드 표본). 딜러 파티는 0/8 — 힐러 점검이라 보정이 만든 결과가 아니다(1-3 도 P0 딜러 파티 0/8). **48시드로 다시 재면**: P1 35/48(73%) · HP 54% / 성장 없이 장비만 18/48(37.5%) · 27% / 성장·장비 없이 2/48 / P2 48/48 · 81% — 8시드 읽기는 한두 판 흔들린다(특히 장비만 6/8 은 표본 잡음이다). 의도: 보스는 '반복 → 장비·성장 → 진행' 루프를 만든다."
+실측 (VerifyStageDifficulty, 표준 파티 미나·하랑·설아·강지, 시드 8, 예상 프로필 P1 = 삼각근 Lv.5 + 돌 장비, #563 반영): 8/8 승 · 평균 20.2사이클 · 남은 HP 70% / 다음 프로필 P2 8/8 · 76% / 성장 없이 돌 장비만 3/8 · 18% / 딜러 파티(미나·하랑·아린·태희) 2/8 · 7%. **48시드**: P1 40/48(83%) · HP 52% / 장비만 17/48(35%) · 22% / P2 48/48 · 74% / 성장·장비 없이 6/48 / 딜러 9/48. 8시드의 8/8 은 표본 잡음이다(장기 승률 83%는 목표 5~7/8 안). 의도: 보스는 '반복 → 장비·성장 → 진행' 루프를 만든다."
 type = 0
 turn_level_bonus = 5
 clear_rewards = {

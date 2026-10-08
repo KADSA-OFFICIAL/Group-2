@@ -42,6 +42,22 @@
 
 실제 적 수치/밸런스는 팀이 저작한다.
 
+## 테마 적 (#568)
+
+| 적 | id | 쓰는 곳 | 등급 · Lv |
+|---|---|---|---|
+| 수룡 수인 | `water_dragon_beastfolk` | 2-3 1파 | 잡몹 · 21 |
+| 수룡 수인 우두머리 | `water_dragon_chief` | 2-3 2파(보스) | 보스 · 25 |
+| 익룡 수인 | `pterosaur_beastfolk` | 3-1 · 3-2 · 3-3 | 잡몹 · 21 |
+
+- **정의가 아트보다 먼저다.** 세 적 모두 `walk_frames` · `battle_frames` · `battle_sprite` · `portrait` 가 비어 있다. 턴제는 `battle_frames` →
+  `battle_sprite` → `tint` 네모 순으로 물러나고, 실시간은 `sprite_texture` 도형으로 서며, 초상이 없는 자리는 도형 표식이 대신한다.
+  그림이 들어오면 `.tres` 에 텍스처만 끼우면 되고 밸런스는 흔들리지 않는다(필요 아트는 [`assets/sprites/enemies/README.md`](../../assets/sprites/enemies/README.md)).
+- 수룡 수인 우두머리는 **매머드 수인 우두머리와 같은 실시간 안무**(`MammothBoss.gd`: 돌진 · 도약)를 쓴다 — 실시간 전용 새 AI 동작은 만들지 않았다.
+  씬(`WaterDragonChief.tscn`)이 그 스크립트를 가리킨다.
+- 스킬은 공용(`data/skills/turn/enemy/`)만 쓴다. 원소 · 물리는 시전자에게서 오므로 스킬을 복제하지 않는다.
+- 설계 표와 수치의 근거는 [`docs/turn-combat-design.md`](../../docs/turn-combat-design.md) §12 "저작된 적". 모두 `[임시값]` 이다.
+
 ## 보스가 쓰는 행동 (#376)
 
 `EnemyData` 에 있는 아래 필드는 **저작하지 않으면 꺼져 있다**(기본값 0/false). 그래서 기존
