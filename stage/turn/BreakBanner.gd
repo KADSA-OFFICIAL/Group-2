@@ -115,7 +115,7 @@ func play(color: Color, hold: float, k: float) -> void:
 	root.add_child(streaks)
 
 	# 4. 글자: 발광 윤곽(가산) -> 본 글자 -> 플래시(가산, 흰색이 식는다)
-	var aura := _make_text(TEXT, FONT_SIZE, Color(glow, 0.0), 30, Color(glow, 0.55))
+	var aura := _make_text(TEXT, FONT_SIZE, Color(glow, 0.0), 20, Color(glow, 0.32))
 	aura.material = _additive()
 	root.add_child(aura)
 	var main := _make_text(TEXT, FONT_SIZE, Color.WHITE, 5, glow.darkened(0.55))
@@ -272,7 +272,7 @@ func _make_band(glow: Color, span: float) -> Control:
 # 글자 뒤 타원 후광(가산 혼합).
 func _make_halo(glow: Color) -> Control:
 	var gradient := Gradient.new()
-	gradient.set_color(0, Color(glow.lightened(0.3), 0.75))
+	gradient.set_color(0, Color(glow.lightened(0.3), 0.45))
 	gradient.set_color(1, Color(glow, 0.0))
 	var texture := GradientTexture2D.new()
 	texture.gradient = gradient

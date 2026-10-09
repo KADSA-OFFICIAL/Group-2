@@ -375,8 +375,8 @@ func setup(art: Texture2D, dedicated: bool, char_name: String, skill_name: Strin
 	_underline.color = color
 	_watermark.text = skill_name
 	# 판 위의 큰 외곽선 글자: 예전 알파 0.16 은 배경에 묻혀 장식 구실을 못 했다(#574).
-	_watermark.add_theme_color_override("font_color", Color(color.lightened(0.5), 0.09))
-	_watermark.add_theme_color_override("font_outline_color", Color(color.lightened(0.55), 0.38))
+	_watermark.add_theme_color_override("font_color", Color(color.lightened(0.5), 0.04))
+	_watermark.add_theme_color_override("font_outline_color", Color(color.lightened(0.55), 0.22))
 	for line in _strip_lines:
 		line.color = color
 
