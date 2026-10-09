@@ -38,6 +38,13 @@ const TILT_DEG := -8.0
 
 const BAND_HEIGHT := 150.0
 
+# 파편: 칼선이 그어지는 순간(작게)과 글자가 박히는 순간(크게) 두 번 터진다.
+const SHARDS_SLASH := 14
+const SHARDS_IMPACT := 34
+
+## 글자가 박히는 순간 부른다(#574). 전투 화면이 흔들림을 넣는 데 쓴다 — 연출판은 카메라를 모른다.
+var on_impact: Callable = Callable()
+
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -70,6 +77,14 @@ func play(color: Color, hold: float, k: float) -> void:
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	holder.add_child(dim)
 
+	# 박히는 순간의 화면 번쩍임(기울이지 않는다). 가산 혼합이라 어두운 화면에서도 빛으로 읽힌다.
+	var punch := ColorRect.new()
+	punch.color = Color(glow.lightened(0.5), 0.0)
+	punch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	punch.set_anchors_preset(Control.PRESET_FULL_RECT)
+	punch.material = _additive()
+	holder.add_child(punch)
+
 	var root := Control.new()
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.position = canvas * 0.5
@@ -100,7 +115,7 @@ func play(color: Color, hold: float, k: float) -> void:
 	root.add_child(streaks)
 
 	# 4. 글자: 발광 윤곽(가산) -> 본 글자 -> 플래시(가산, 흰색이 식는다)
-	var aura := _make_text(TEXT, FONT_SIZE, Color(glow, 0.0), 30, Color(glow, 0.55))
+	var aura := _make_text(TEXT, FONT_SIZE, Color(glow, 0.0), 20, Color(glow, 0.32))
 	aura.material = _additive()
 	root.add_child(aura)
 	var main := _make_text(TEXT, FONT_SIZE, Color.WHITE, 5, glow.darkened(0.55))
@@ -165,15 +180,27 @@ func play(color: Color, hold: float, k: float) -> void:
 	st.tween_property(sub, "modulate:a", 1.0, 0.1 * k).set_delay(0.12 * k)
 	st.tween_property(sub, "position", sub_rest, 0.16 * k).set_delay(0.12 * k).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 
+	# 칼선이 그어지는 순간: 작은 파편이 먼저 튄다(글자가 오기 전에 이미 깨지는 중이다).
+	var slash_at := 0.03 * k
+	await get_tree().create_timer(slash_at).timeout
+	if not is_instance_valid(holder):
+		return
+	_spawn_shards(shards, glow, span, k, SHARDS_SLASH, 0.6)
+
 	var impact := 0.15 * k
-	await get_tree().create_timer(impact).timeout
+	await get_tree().create_timer(impact - slash_at).timeout
 	if not is_instance_valid(holder):
 		return
 
-	# ── 박히는 순간: 유리 조각 · 빛줄기 · 화면 덜컥 ──
-	_spawn_shards(shards, glow, span, k)
+	# ── 박히는 순간: 유리 조각 · 빛줄기 · 화면 번쩍임 · 덜컥 ──
+	_spawn_shards(shards, glow, span, k, SHARDS_IMPACT, 1.0)
 	_spawn_streaks(streaks, glow, k)
 	_jolt(root, k)
+	var pt := punch.create_tween()
+	pt.tween_property(punch, "color:a", 0.34, 0.025 * k)
+	pt.tween_property(punch, "color:a", 0.0, 0.16 * k).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if on_impact.is_valid():
+		on_impact.call()
 
 	var rest_time := hold - impact
 	if rest_time > 0.0:
@@ -191,6 +218,7 @@ func play(color: Color, hold: float, k: float) -> void:
 	exit.tween_property(band, "scale:y", 0.0, out).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	exit.tween_property(halo, "modulate:a", 0.0, out)
 	exit.tween_property(dim, "color:a", 0.0, out)
+	exit.tween_property(punch, "color:a", 0.0, out)
 	exit.chain().tween_callback(holder.queue_free)
 
 
@@ -244,7 +272,7 @@ func _make_band(glow: Color, span: float) -> Control:
 # 글자 뒤 타원 후광(가산 혼합).
 func _make_halo(glow: Color) -> Control:
 	var gradient := Gradient.new()
-	gradient.set_color(0, Color(glow.lightened(0.3), 0.75))
+	gradient.set_color(0, Color(glow.lightened(0.3), 0.45))
 	gradient.set_color(1, Color(glow, 0.0))
 	var texture := GradientTexture2D.new()
 	texture.gradient = gradient
@@ -286,8 +314,14 @@ func _make_subtitle(glow: Color) -> Control:
 	box.add_child(label)
 	_center(label)
 
+	# 글자 폭은 폰트로 직접 잰다. 트리에 붙기 전의 Label 은 크기가 0 으로 나와(자간·윤곽 미반영),
+	# 예전에는 오른쪽 선이 "NESS" 를 가로질렀다(#574). 자간은 글자마다 붙으므로 끝 글자 뒤 한 번은 뺀다.
+	var text_w := spaced.get_string_size(SUBTEXT, HORIZONTAL_ALIGNMENT_LEFT, -1, SUB_SIZE).x
+	text_w -= float(spaced.spacing_glyph)
+	label.size.x = text_w
+	label.position.x = -text_w * 0.5
 	var line_w := 120.0
-	var gap := label.size.x * 0.5 + 34.0
+	var gap := text_w * 0.5 + 40.0
 	for side in [-1.0, 1.0]:
 		var line := ColorRect.new()
 		line.color = glow.lightened(0.4)
@@ -303,21 +337,23 @@ func _make_subtitle(glow: Color) -> Control:
 
 # 유리 조각: 흰 꼭짓점에서 원소 색으로 번지는 삼각 파편(가산 혼합).
 # 칼선을 따라 좌우로 흩어지고 조금 위아래로 퍼진다.
-func _spawn_shards(holder: Control, glow: Color, span: float, k: float) -> void:
-	for i in 16:
+func _spawn_shards(holder: Control, glow: Color, span: float, k: float, count: int, power: float) -> void:
+	for i in count:
 		var shard := Polygon2D.new()
-		var s := randf_range(10.0, 26.0)
+		# 크기를 섞는다: 작은 조각이 대부분이고 큰 조각이 드문드문 — 한 덩어리가 깨진 느낌.
+		var s := randf_range(8.0, 22.0) * (1.0 + 1.1 * float(randf() < 0.18)) * lerpf(0.7, 1.0, power)
 		shard.polygon = PackedVector2Array([
 			Vector2(0, -s), Vector2(s * randf_range(0.35, 0.7), s * 0.6), Vector2(-s * randf_range(0.2, 0.5), s * 0.4)])
 		shard.vertex_colors = PackedColorArray([Color.WHITE, Color(glow, 0.9), Color(glow.darkened(0.2), 0.7)])
 		shard.material = _additive()
 		var side := -1.0 if i % 2 == 0 else 1.0
-		shard.position = Vector2(randf_range(40.0, 220.0) * side, randf_range(-30.0, 30.0))
+		shard.position = Vector2(randf_range(30.0, 260.0) * side, randf_range(-40.0, 40.0))
 		shard.rotation = randf_range(0.0, TAU)
 		holder.add_child(shard)
 
-		var target := shard.position + Vector2(randf_range(180.0, span * 0.32) * side, randf_range(-160.0, 160.0))
-		var life := randf_range(0.35, 0.6) * k
+		var target := shard.position + Vector2(
+			randf_range(180.0, span * 0.34) * side * power, randf_range(-220.0, 220.0) * power)
+		var life := randf_range(0.45, 0.8) * k
 		var t := shard.create_tween().set_parallel(true)
 		t.tween_property(shard, "position", target, life).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 		t.tween_property(shard, "rotation", shard.rotation + randf_range(-3.0, 3.0), life)
