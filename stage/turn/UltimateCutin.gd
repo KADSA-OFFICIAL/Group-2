@@ -52,6 +52,12 @@ const ANIM_EXIT_LEAD: float = 0.1
 const ANIM_HEIGHT: float = 1.18
 ## 정점 장에서 판이 번쩍이는 세기(흰색 알파).
 const STRIKE_FLASH: float = 0.35
+## 기술명 글자 크기 범위(px)와, 기술명이 쓸 수 있는 폭(화면 폭 비). 예전엔 76px 고정이라 왼쪽 판이 비어 보였다(#574).
+## 글자 하나가 차지하는 폭 / 글자 크기 — 굵은 기울임 폰트의 실측값(약 0.8). 이 폭으로 판 안에 들어갈 크기를 정한다.
+const SKILL_SIZE_MIN: int = 56
+const SKILL_SIZE_MAX: int = 130
+const SKILL_ROW_WIDTH: float = 0.34
+const SKILL_ADVANCE: float = 0.8
 
 var _token: int = 0
 var _color: Color = Color.WHITE
@@ -176,7 +182,7 @@ void fragment() {
 	# 판 위의 커다란 외곽선 글자(기술명). 홀드 동안 천천히 흐른다.
 	_watermark = _label(230, 1.4)
 	_watermark.add_theme_color_override("font_color", Color(0, 0, 0, 0))
-	_watermark.add_theme_constant_override("outline_size", 6)
+	_watermark.add_theme_constant_override("outline_size", 8)
 	_watermark.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0))
 	_watermark.rotation = deg_to_rad(-8.0)
 	add_child(_watermark)
@@ -216,13 +222,13 @@ void fragment() {
 	_caption.position = Vector2(44, 0)
 	_type_root.add_child(_caption)
 
-	_name = _label(30, 0.9)
-	_name.position = Vector2(0, 36)
+	_name = _label(40, 0.9)
+	_name.position = Vector2(0, 34)
 	_type_root.add_child(_name)
 
 	_skill_row = HBoxContainer.new()
 	_skill_row.add_theme_constant_override("separation", 0)
-	_skill_row.position = Vector2(-6, 80)
+	_skill_row.position = Vector2(-6, 88)
 	_skill_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_type_root.add_child(_skill_row)
 
@@ -353,8 +359,12 @@ func setup(art: Texture2D, dedicated: bool, char_name: String, skill_name: Strin
 	for child in _skill_row.get_children():
 		_skill_row.remove_child(child)
 		child.queue_free()
+	# 기술명은 왼쪽 판을 채울 만큼 크게(#574). 글자 수가 많으면 판 폭(화면의 SKILL_ROW_WIDTH)에 맞춰 줄인다.
+	var avail := (size.x if size.x > 0.0 else 1920.0) * SKILL_ROW_WIDTH
+	var skill_px := clampi(int(avail / float(maxi(skill_name.length(), 1)) / SKILL_ADVANCE), SKILL_SIZE_MIN, SKILL_SIZE_MAX)
+	_underline.position.y = 88.0 + float(skill_px) * 1.22
 	for ch in skill_name:
-		var l := _label(76, 1.3)
+		var l := _label(skill_px, 1.3)
 		l.text = ch
 		l.add_theme_color_override("font_color", UITheme.CREAM)
 		l.add_theme_color_override("font_outline_color", color.darkened(0.55))
@@ -364,11 +374,14 @@ func setup(art: Texture2D, dedicated: bool, char_name: String, skill_name: Strin
 
 	_underline.color = color
 	_watermark.text = skill_name
-	_watermark.add_theme_color_override("font_outline_color", Color(color.lightened(0.45), 0.16))
+	# 판 위의 큰 외곽선 글자: 예전 알파 0.16 은 배경에 묻혀 장식 구실을 못 했다(#574).
+	_watermark.add_theme_color_override("font_color", Color(color.lightened(0.5), 0.09))
+	_watermark.add_theme_color_override("font_outline_color", Color(color.lightened(0.55), 0.38))
 	for line in _strip_lines:
 		line.color = color
 
-	_slash.fill = Color(color.darkened(0.35), 0.92)
+	# 원소 색을 어둡게만 누르면 노랑이 탁한 올리브가 된다. 명도를 낮추되 채도는 지켜 색이 그대로 읽히게 한다(#574).
+	_slash.fill = Color.from_hsv(color.h, clampf(color.s * 1.05 + 0.05, 0.55, 1.0), clampf(color.v * 0.82, 0.55, 0.88), 0.94)
 	_slash.edge = color.lightened(0.35)
 	_speed.material.set_shader_parameter("tint", Color(color.lightened(0.5), 0.55))
 

@@ -443,6 +443,8 @@ func _build_scene() -> void:
 
 	_break_banner = BreakBannerScript.new()
 	_break_banner.name = "BreakBanner"
+	# 글자가 박히는 순간 화면이 덜컥(#574). 배너는 카메라를 모르므로 콜백으로 받는다.
+	_break_banner.set("on_impact", func() -> void: _shake(11.0, 0.22))
 	_flash_layer.add_child(_break_banner)
 
 	_build_cutin()
