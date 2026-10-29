@@ -133,6 +133,27 @@ static func _korean_display_font() -> Font:
 	return v
 
 
+# 전투 상태 알림·결과 글자용 한글 폰트(#576) — 도현(Do Hyeon) 한 계열.
+#
+# 디스플레이 폰트(`display_font`)는 Barlow 의 영문에 도현을 한글 대체로 붙이고 기울인 것이라
+# 한글만 억지로 눕고 굵게 부풀어 임시 UI 처럼 보였다. 상태 알림은 **한글만** 쓰므로 도현을
+# 그대로(기울임·부풀림 없이) 쓰고, 위계는 크기로만 만든다. 라이선스: assets/fonts/OFL-DoHyeon.txt.
+# 파일이 없으면 기본 폰트를 굵게 한 대체로 떨어진다(글자가 사라지지는 않는다).
+static var _notice_font: Font = null
+
+static func notice_font() -> Font:
+	if _notice_font != null:
+		return _notice_font
+	var file: FontFile = null
+	if ResourceLoader.exists(KOREAN_DISPLAY_FONT_PATH):
+		file = load(KOREAN_DISPLAY_FONT_PATH) as FontFile
+	if file == null:
+		_notice_font = weight_font(0.6)
+	else:
+		_notice_font = file
+	return _notice_font
+
+
 # 디스플레이 폰트 글자의 공통 모양: 채움 색 + 진한 윤곽선 + 그림자.
 # 색을 modulate 로 입히지 않는다 — modulate 는 윤곽선까지 물들여 글자가 배경에 묻힌다.
 # modulate 는 알파 페이드에만 쓴다.

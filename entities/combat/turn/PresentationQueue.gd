@@ -75,11 +75,13 @@ const FEEDBACK := {
 }
 
 # ===== 데미지 숫자 규격표 (설계서 §4.10.6) =====
+# label 은 숫자 위 작은 한글 캡션이다(#576). 격파는 같은 순간 적 카드 위에 "약점 격파" 알림이 뜨므로
+# 숫자에는 캡션을 다시 달지 않는다.
 const NUMBER_STYLE := {
 	"normal": {"color": Color("FFFFFF"), "scale": 1.0, "label": ""},
-	"crit": {"color": Color("FFD54F"), "scale": 1.6, "label": "CRITICAL"},
+	"crit": {"color": Color("FFD54F"), "scale": 1.6, "label": "치명타"},
 	"weakness": {"color": Color("FFFFFF"), "scale": 1.2, "label": ""},   # 색은 원소색으로 덮는다
-	"break": {"color": Color("FF4757"), "scale": 2.0, "label": "BREAK"},
+	"break": {"color": Color("FF4757"), "scale": 2.0, "label": ""},
 	"dot": {"color": Color("FFFFFF"), "scale": 0.8, "label": ""},        # 색은 상태이상색
 	"heal": {"color": Color("66D9A6"), "scale": 1.0, "label": ""},
 }

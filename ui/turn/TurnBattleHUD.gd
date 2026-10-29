@@ -387,6 +387,19 @@ func _draw_toggles() -> void:
 	_register_hit(Rect2(pause_pos, Vector2(TOGGLE_SIDE, TOGGLE_SIDE)), "pause", {})
 
 
+# 전투 진행 알림(라운드·웨이브)을 띄울 자리 — 웨이브 알약 바로 오른쪽, 알약과 같은 높이의 아래 가장자리 (#576).
+# 칩은 이 점에서 **왼쪽 끝을 맞춰** 선다.
+func progress_notice_anchor() -> Vector2:
+	return Vector2(EDGE + _wave_pill_width() + 8.0, TOP + TOPBAR_H)
+
+
+func _wave_pill_width() -> float:
+	var total := maxi(battle.wave_total, 1) if battle != null else 1
+	var current := mini(battle.wave_index + 1, total) if battle != null else 1
+	return TOPBAR_PAD * 2.0 + TOPBAR_ICON + 6.0 \
+		+ _width("웨이브 %d" % current, SIZE_LABEL, true) + _width(" / %d" % total, SIZE_LABEL, false)
+
+
 # --- 현재 웨이브 (좌상단) ---
 #
 # 메인 화면의 재화 칩과 같은 알약이다. 핍을 세는 대신 글자로 적는다 —
@@ -399,7 +412,7 @@ func _draw_wave() -> void:
 
 	var label_w := _width(label, SIZE_LABEL, true)
 	var tail_w := _width(tail, SIZE_LABEL, false)
-	var width := TOPBAR_PAD * 2.0 + TOPBAR_ICON + 6.0 + label_w + tail_w
+	var width := _wave_pill_width()
 
 	var pos := Vector2(EDGE, TOP)
 	_pill(pos, Vector2(width, TOPBAR_H), _overlay_fill(), _overlay_line())

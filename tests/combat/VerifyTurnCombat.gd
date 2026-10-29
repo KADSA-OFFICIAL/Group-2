@@ -1310,8 +1310,8 @@ func _test_presentation_specs() -> void:
 		"치명타 숫자는 1.6배")
 	_expect_near(float(PresentationQueue.NUMBER_STYLE["break"]["scale"]), 2.0, 0.001,
 		"격파 숫자는 2.0배")
-	_expect(String(PresentationQueue.NUMBER_STYLE["crit"]["label"]) == "CRITICAL",
-		"치명타에 CRITICAL 라벨이 있어야 한다")
+	_expect(String(PresentationQueue.NUMBER_STYLE["crit"]["label"]) == "치명타",
+		"치명타에 한글 '치명타' 캡션이 있어야 한다 (#576)")
 
 	# 자물쇠 해제음은 **상승 음계**여야 한다. 연속 해제가 음악이 되게 하려는 것이다.
 	var pitches: Array[float] = []
