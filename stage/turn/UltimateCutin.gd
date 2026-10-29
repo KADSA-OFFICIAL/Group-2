@@ -13,12 +13,12 @@ class_name UltimateCutin
 #   0.15~0.55  클로즈업      얼굴·조준하는 눈·무기가 오른쪽에서 들어오며 천천히 밀려 든다. 이름이 뜬다
 #   0.55~0.95  조준          조준 고리가 발사 방향의 한 점으로 모이고, 작은 전기는 총구로 빨려 든다. 기술명이 뜬다
 #   0.95~1.10  정적          모든 움직임이 멈춘다 — 발사 직전의 긴장
-#   1.10~1.35  발사          발사 방향(왼쪽)으로 가는 가는 번개 한 줄 + 짧은 반동
+#   1.10~1.35  발사          공격 정점 장 + 총구 불꽃 + 조준점이 터지며 짧은 반동 (화면을 가로지르는 광선은 없다)
 #   ~1.45      컷인 퇴장     (여기까지가 이 파일 `play_full`)
 #   이후       피격          필드에서 번개가 실제 대상에게 이어지고 피격 효과가 난다 (`TurnBattle`)
 #   마지막     UI 복구       잔광을 정리하고 전투 UI 가 돌아온다 (`TurnBattle`)
 #
-# 밝은 전면 플래시와 지속 흔들림은 쓰지 않는다. 빛은 조준점·번개·잔 전기에만 모은다.
+# 밝은 전면 플래시와 지속 흔들림은 쓰지 않는다. 빛은 조준점·총구 불꽃·잔 전기에만 모은다.
 # 시간·크기·색은 아래 상수로 조정한다. 모든 길이는 `scaled` 콜백(배속 반영)을 거친다.
 #
 # ## 짧게 (약 0.9초)
@@ -96,7 +96,6 @@ var _dim: ColorRect
 var _deep: TextureRect
 var _crop: Control
 var _art: TextureRect
-var _aim_line: TextureRect
 var _reticle: Reticle
 var _fx: Control
 var _type_root: Control
@@ -220,13 +219,6 @@ func _build() -> void:
 	_art.stretch_mode = TextureRect.STRETCH_SCALE
 	_crop.add_child(_art)
 
-	# 발사 방향으로 뻗는 조준선(총구에서 왼쪽 가장자리까지, 끝으로 갈수록 옅다).
-	_aim_line = TextureRect.new()
-	_aim_line.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_aim_line.stretch_mode = TextureRect.STRETCH_SCALE
-	_aim_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_aim_line)
-
 	_reticle = Reticle.new()
 	_reticle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_reticle)
@@ -311,18 +303,13 @@ func _layout() -> void:
 	# 확대는 얼굴 쪽(위쪽, 가운데보다 오른쪽)을 중심으로 한다 — 총구가 크게 밀려나지 않게.
 	_art.pivot_offset = Vector2(box_w * 0.55, box_h * 0.22)
 
-	# 총구의 화면 좌표(정적 때의 확대 배율 기준). 조준선·번개가 여기서 나간다.
+	# 총구의 화면 좌표(정적 때의 확대 배율 기준). 전기가 여기로 모이고 발사 불꽃이 여기서 튄다.
 	var muzzle_px := _muzzle if _muzzle != Vector2.ZERO else _frame_size * MUZZLE_DEFAULT
 	var m := muzzle_px * art_scale
 	var zoomed := _art.pivot_offset + (m - _art.pivot_offset) * ZOOM_END
 	_muzzle_screen = _crop.position + zoomed
 
-	# 조준선: 총구에서 왼쪽 가장자리까지.
-	_aim_line.position = Vector2(0.0, _muzzle_screen.y - 1.0)
-	_aim_line.size = Vector2(maxf(_muzzle_screen.x, 1.0), 2.0)
-	_aim_line.pivot_offset = Vector2(_aim_line.size.x, 1.0)
-
-	# 조준점: 총구에서 발사 방향(왼쪽)으로 뻗은 조준선 위. 고리는 여기서 한 점으로 모인다.
+	# 조준점: 총구 높이에서 발사 방향(왼쪽) 여백 위. 고리는 여기서 한 점으로 모인다.
 	_aim_point = Vector2(c.x * AIM_POINT_X, _muzzle_screen.y)
 	var reticle_box := c.y * RETICLE_START * 2.0 + 40.0
 	_reticle.size = Vector2(reticle_box, reticle_box)
@@ -415,7 +402,6 @@ func setup(art: Texture2D, dedicated: bool, char_name: String, skill_name: Strin
 
 	# 막: 원소색 색조를 지키며 아주 어둡게. 노랑이 올리브로 탁해지지 않게 채도는 남긴다.
 	_deep.texture = _make_deep_texture(color)
-	_aim_line.texture = _make_aim_texture(color)
 	_reticle.color = color.lightened(0.5)
 
 	_strip_bg.fill = Color(0.09, 0.08, 0.07, 0.95)
@@ -462,20 +448,6 @@ func _make_deep_texture(color: Color) -> GradientTexture2D:
 	return texture
 
 
-# 왼쪽 끝은 투명, 총구 쪽은 선명한 가로 그라데이션 한 줄.
-func _make_aim_texture(color: Color) -> GradientTexture2D:
-	var gradient := Gradient.new()
-	gradient.set_color(0, Color(color.lightened(0.5), 0.0))
-	gradient.set_color(1, Color(color.lightened(0.6), 0.85))
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill_from = Vector2(0.0, 0.5)
-	texture.fill_to = Vector2(1.0, 0.5)
-	texture.width = 256
-	texture.height = 2
-	return texture
-
-
 # ===== 풀 연출 =====
 
 # 컷인 부분(약 1.45초)을 재생한다. 끝나면 **남색 막이 필드 위에서 걷히는 중**이므로
@@ -518,9 +490,6 @@ func play_full() -> void:
 	t.tween_property(_reticle, "modulate:a", 1.0, _s(0.12))
 	t.tween_property(_reticle, "radius", 14.0, _s(T_AIM)) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	t.tween_property(_aim_line, "scale:x", 1.0, _s(T_AIM)) \
-		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	t.tween_property(_aim_line, "modulate:a", 1.0, _s(0.12))
 	t.tween_property(_skill, "modulate:a", 1.0, _s(0.16))
 	t.tween_property(_skill, "position", skill_home, _s(0.24)) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -548,7 +517,6 @@ func play_full() -> void:
 	t.set_parallel(true)
 	t.tween_property(_crop, "modulate:a", 0.0, _s(T_EXIT))
 	t.tween_property(_type_root, "modulate:a", 0.0, _s(T_EXIT))
-	t.tween_property(_aim_line, "modulate:a", 0.0, _s(T_EXIT))
 	t.tween_property(_reticle, "modulate:a", 0.0, _s(T_EXIT))
 	var tail := _tween()
 	tail.tween_property(_deep, "modulate:a", 0.0, _s(T_FADE_TAIL))
@@ -578,12 +546,11 @@ func _fire() -> void:
 			frames.tween_interval(_s(RECOIL_FRAME_STEP))
 			frames.tween_callback(_show_anim_frame.bind(idx))
 
-	# 조준 고리는 터지듯 사라지고, 번개가 나간다.
+	# 조준 고리는 터지듯 사라진다. 화면을 가로지르는 광선은 쏘지 않는다 — 맞는 것은 필드 연출이 보여 준다.
 	var ring := _tween()
 	ring.set_parallel(true)
 	ring.tween_property(_reticle, "radius", 90.0, _s(0.14)).set_ease(Tween.EASE_OUT)
 	ring.tween_property(_reticle, "modulate:a", 0.0, _s(0.14))
-	_spawn_bolt(_muzzle_screen, Vector2(-24.0, _muzzle_screen.y + 2.0), 0.26, 1.0)
 	_spawn_sparks(_muzzle_screen, 10)
 	_spawn_sparks(_aim_point, 6)
 
@@ -611,29 +578,6 @@ func _spawn_converging_arcs(token: int) -> void:
 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 		t.chain().tween_property(arc, "modulate:a", 0.0, _s(0.05))
 		t.chain().tween_callback(arc.queue_free)
-
-
-# 번개 한 줄: 꺾은선 두 겹(굵은 원소색 후광 + 가는 흰 심지). 오래 두지 않고 곧 걷는다.
-func _spawn_bolt(from: Vector2, to: Vector2, life: float, power: float) -> void:
-	var points := jagged(from, to, 9.0 * power, 46.0)
-	var glow := Line2D.new()
-	glow.width = 14.0 * power
-	glow.default_color = Color(_color.lightened(0.2), 0.40)
-	glow.points = points
-	glow.material = additive()
-	_fx.add_child(glow)
-	var core := Line2D.new()
-	core.width = 4.0 * power
-	core.default_color = Color(1, 1, 1, 0.95)
-	core.points = points
-	core.material = additive()
-	_fx.add_child(core)
-	for line in [glow, core]:
-		var t: Tween = line.create_tween()
-		t.set_parallel(true)
-		t.tween_property(line, "modulate:a", 0.0, _s(life)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		t.tween_property(line, "width", line.width * 0.3, _s(life))
-		t.chain().tween_callback(line.queue_free)
 
 
 # 총구에서 튀는 잔 불꽃. 방향은 발사 방향(왼쪽) 쪽으로 치우친다.
@@ -681,14 +625,12 @@ func _prepare_full() -> void:
 	_strip.visible = false
 	_anim_struck = false
 	_clear_fx()
-	for node in [_crop, _aim_line, _reticle, _type_root]:
+	for node in [_crop, _reticle, _type_root]:
 		node.visible = true
 		node.modulate = Color.WHITE
 	_deep.visible = true
 	_deep.modulate = Color(1, 1, 1, 0)
 	_crop.modulate.a = 0.0
-	_aim_line.modulate.a = 0.0
-	_aim_line.scale = Vector2(0.0, 1.0)
 	_reticle.modulate.a = 0.0
 	_reticle.radius = size.y * RETICLE_START
 	_name_row.modulate.a = 0.0
@@ -703,7 +645,7 @@ func _prepare_full() -> void:
 
 
 func _hide_full() -> void:
-	for node in [_crop, _aim_line, _reticle, _type_root, _deep]:
+	for node in [_crop, _reticle, _type_root, _deep]:
 		node.visible = false
 
 

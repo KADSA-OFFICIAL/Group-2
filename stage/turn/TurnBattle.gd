@@ -161,8 +161,6 @@ const FX_SPEC := {
 ## **아트를 다시 뽑을 필요가 없다.**
 const ALLY_BODY := Vector2(101.0, 151.0)
 const ENEMY_BODY := Vector2(112.0, 140.0)
-## 중앙 충돌선의 아래에서 잰 시작 높이.
-const DIVIDER_FROM_BOTTOM: float = 540.0
 
 # ===== 근접 타격 (#531) =====
 #
@@ -236,7 +234,6 @@ var _backdrop: TextureRect = null
 ## 이펙트 시트 캐시. 같은 연출이 한 턴에 여러 번 터지므로 매번 load 하지 않는다.
 static var _fx_cache: Dictionary = {}
 var _ground: ColorRect = null
-var _divider: ColorRect = null
 
 ## 카메라 흔들림 상태.
 var _shake_amount: float = 0.0
@@ -411,15 +408,7 @@ func _build_scene() -> void:
 	_ground.z_index = -99
 	_ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_ground)
-
-	# 중앙 충돌선 — 아군과 적을 가르는 기준선. 캔버스 가로 중심에 선다.
-	var divider := ColorRect.new()
-	divider.color = Color(1, 1, 1, 0.05)
-	divider.size = Vector2(2, 380)
-	_divider = divider
-	divider.z_index = -98
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(divider)
+	# 예전의 중앙 충돌선(전장 한가운데 반투명 세로줄)은 배경 그림을 가르는 잡음이라 없앴다(#576).
 
 	_camera = Camera2D.new()
 	add_child(_camera)
@@ -471,13 +460,13 @@ func _build_scene() -> void:
 
 	_build_cutin()
 
-	# 캔버스 크기에 맞춘다. 창 비율이 바뀌면 다시 맞춘다 — 배경·지면·중앙선·카메라와
+	# 캔버스 크기에 맞춘다. 창 비율이 바뀌면 다시 맞춘다 — 배경·지면·카메라와
 	# 유닛 도형이 모두 캔버스 크기에서 나온 좌표를 쓴다.
 	get_viewport().size_changed.connect(_on_canvas_resized)
 	_fit_backdrop()
 
 
-# 배경·지면·중앙선·카메라를 현재 캔버스에 맞춘다.
+# 배경·지면·카메라를 현재 캔버스에 맞춘다.
 #
 # 지면선은 **아래에서 420** 이고, 이 값이 `TurnBattleHUD` 의 줄 높이
 # (`ENEMY_ROW_FROM_BOTTOM` / `ALLY_ROW_FROM_BOTTOM`)와 같은 기준을 쓴다.
@@ -519,8 +508,6 @@ func _fit_backdrop() -> void:
 	if _ground != null:
 		_ground.position = Vector2(0.0, canvas.y - GROUND_H)
 		_ground.size = Vector2(canvas.x, GROUND_H)
-	if _divider != null:
-		_divider.position = Vector2(canvas.x * 0.5 - 1.0, canvas.y - DIVIDER_FROM_BOTTOM)
 	if _camera != null:
 		_camera.position = canvas * 0.5
 		_camera_home = _camera.position
