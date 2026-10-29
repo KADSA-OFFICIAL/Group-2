@@ -56,7 +56,8 @@ const HITSTOP_SCALE: float = 0.0001
 const ULT_BOLT_FROM_HEIGHT: float = 90.0
 const ULT_BOLT_TO_HEIGHT: float = 70.0
 const ULT_BOLT_LIFE: float = 0.22
-const ULT_FIELD_TIME: float = 0.45
+## 번개가 닿은 뒤 다음 사건(피격 숫자)까지의 간격 — 짧게 둬 숫자가 맞는 순간에 붙는다.
+const ULT_FIELD_TIME: float = 0.14
 const ULT_HIT_SHAKE: float = 3.0
 const ULT_HIT_SHAKE_TIME: float = 0.12
 const ULT_HUD_RESTORE: float = 0.35
@@ -83,8 +84,37 @@ const TEXT_VICTORY := "승리"
 const TEXT_DEFEAT := "패배"
 #   흡수        — 보호막이 피해를 전부 받아 HP 가 줄지 않음 -> 피해 숫자 위 "흡수" 캡션
 const TEXT_ABSORBED := "흡수"
-## 피해 숫자 위 캡션(치명타·흡수) 글자 크기.
-const NUMBER_CAPTION_SIZE: int = 16
+
+# ===== 피해·회복 숫자 (#576) =====
+# 글자 모양은 `HUDKit.style_number_label`(정자체 + 얇은 남색 윤곽선), 색·배율은 `PresentationQueue.NUMBER_STYLE`.
+## 배율 1.0 일 때 글자 크기.
+const NUMBER_BASE_SIZE: int = 26
+## 발밑에서 첫 숫자 아래 가장자리까지의 높이 — 얼굴이 아니라 가슴께에 뜬다.
+const NUMBER_HEIGHT: float = 78.0
+## 등장(투명 -> 불투명) / 제 크기로 정착 / 머무름 / 퇴장 (초, 배속 적용 전).
+const NUMBER_IN: float = 0.07
+const NUMBER_SETTLE: float = 0.12
+const NUMBER_HOLD: float = 0.42
+const NUMBER_OUT: float = 0.18
+## 등장 때 시작 배율. 치명타·격파는 조금 더 크게 들어온다(바운스 없이 곧 제 크기).
+const NUMBER_POP: float = 1.10
+const NUMBER_POP_STRONG: float = 1.20
+## 등장 때 아래에서 올라오는 거리, 머무는 동안 떠오르는 거리, 퇴장 때 더 올라가는 거리(px).
+const NUMBER_ENTER_DROP: float = 6.0
+const NUMBER_DRIFT: float = 8.0
+const NUMBER_RISE_OUT: float = 12.0
+## 같은 대상 숫자 쌓기: 줄 수, 줄 사이 여백, 줄마다 좌우로 비키는 거리(px).
+const NUMBER_STACK_MAX: int = 4
+const NUMBER_STACK_GAP: float = 2.0
+const NUMBER_STACK_SHIFT: float = 14.0
+## 원소색 숫자를 아이보리 쪽으로 섞는 비율(채도가 강한 색만).
+const NUMBER_TINT: float = 0.22
+const NUMBER_IVORY := Color("F7F2E6")
+## 숫자 위 캡션(치명타·흡수) 글자 크기와 흡수 캡션 색(보호막의 차분한 하늘색).
+const NUMBER_CAPTION_SIZE: int = 15
+const COLOR_ABSORBED_CAPTION := Color("BCD4EE")
+## 컷인이 비우는 떠 있는 글자들(피해 숫자·자물쇠 문양·상태 배지).
+const TRANSIENT_TEXT_GROUP := &"battle_transient_text"
 
 # 알림이 막는 시간(초, 배속 적용 전). 연출 큐가 이 시간만큼 다음 사건을 미룬다 — 칩이 읽히기 전에
 # 다음 사건이 덮이지 않게 하는 최소 간격이다.
@@ -192,6 +222,9 @@ var _shapes: Dictionary = {}
 var _anim_token: Dictionary = {}
 ## 대상 앞에 나가 있는 공격자 (#531). 그 행동의 피격 연출이 끝나면 제자리로 돌린다.
 var _striker: TurnUnit = null
+## 풀 컷인을 쓴 캐스터(#576). 컷인에서 쏜 번개가 이미 대상에게 닿았으므로, 뒤따르는 시전은
+## 대상 앞으로 달려가지 않고 제자리에서 공격 자세만 취한다 — 쏜 방향과 맞는 방향이 이어진다.
+var _ult_cast_in_place: TurnUnit = null
 ## 화면 전체를 덮는 플래시·암전 레이어.
 var _flash: ColorRect = null
 var _flash_layer: CanvasLayer = null
@@ -352,6 +385,8 @@ func _restart() -> void:
 	_play_gen += 1
 	_playing = false
 	_striker = null
+	_ult_cast_in_place = null
+	BattleNotice.clear_all(_flash_layer)
 	# 옛 연출이 남긴 화면 상태를 되돌린다 — 히트스톱·슬로모션, 컷인, 숨긴 HUD, 배너.
 	_restore_time_scale()
 	if _cutin != null:
@@ -996,6 +1031,12 @@ func _play_cast(data: Dictionary) -> void:
 	if shape == null:
 		return
 
+	# 풀 컷인 뒤의 시전: 번개가 이미 닿았다 — 제자리에서 공격 자세만 취하고 곧장 피격으로 넘긴다(#576).
+	if unit == _ult_cast_in_place:
+		_ult_cast_in_place = null
+		_play_unit_anim(unit, BattleAnimation.ATTACK)
+		return
+
 	var direction := 1.0 if unit.is_ally() else -1.0
 	var victim := _strike_target(unit, data.get("skill"), data.get("target"))
 
@@ -1156,24 +1197,8 @@ func _play_heal(data: Dictionary) -> void:
 # 회복처럼 피해 파이프라인을 타지 않는 값에 필요하다.
 func _spawn_text_number(unit: TurnUnit, text: String, color: Color,
 		scale: float = 1.0) -> void:
-	if _numbers == null or unit == null:
-		return
-
-	var label := Label.new()
-	label.text = text
-	var number_size := int(20.0 * scale * 1.3)
-	HUDKit.style_display_label(label, number_size, color, maxi(6, int(number_size * 0.22)))
-	label.position = hud.unit_position(unit) + Vector2(
-		randf_range(-18.0, 18.0), -96.0)
-	label.z_index = 60
-	_numbers.add_child(label)
-
-	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(label, "position",
-		label.position + Vector2(0, -48), _scaled(0.6))
-	tween.tween_property(label, "modulate:a", 0.0, _scaled(0.6))
-	tween.chain().tween_callback(label.queue_free)
+	# 피해 숫자와 같은 모양·움직임 규칙을 쓴다(#576) — 색만 회복색.
+	_float_number(unit, text, color, scale)
 
 
 func _play_lock(data: Dictionary) -> void:
@@ -1202,9 +1227,10 @@ func _play_lock(data: Dictionary) -> void:
 	label.add_theme_font_size_override("font_size", 30)
 	label.position = hud.unit_position(unit) + Vector2(-8, -120)
 	label.z_index = 60
+	label.add_to_group(TRANSIENT_TEXT_GROUP)
 	_numbers.add_child(label)
 
-	var tween := create_tween()
+	var tween := label.create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(label, "position",
 		label.position + Vector2(0, -40), _scaled(0.5))
@@ -1218,8 +1244,8 @@ func _play_nullified(data: Dictionary) -> void:
 	var unit: TurnUnit = data.get("unit")
 	if unit == null:
 		return
-	# 적 행동이 무산됐다 — 자물쇠를 전부 열었다. 그 적의 카드 위에 알린다(#576).
-	_post_unit_notice(unit, TEXT_NULLIFIED, TurnCombat.COLOR_ULT_READY)
+	# 적 행동이 무산됐다 — 자물쇠를 전부 열었다. 그 적의 카드 위에 작은 보조 알림으로 알린다(#576).
+	_post_unit_notice(unit, TEXT_NULLIFIED, BattleNotice.Tier.MINOR)
 	await _wait(NOTICE_HOLD_NULLIFIED)
 
 
@@ -1252,7 +1278,7 @@ func _play_break(data: Dictionary) -> void:
 				_play_se("break")
 				_shake(BREAK_SHAKE, BREAK_SHAKE_TIME)
 				_spawn_shards(unit, color)
-				_post_unit_notice(unit, TEXT_BREAK, color, true,
+				_post_unit_notice(unit, TEXT_BREAK, BattleNotice.Tier.STRONG, color,
 					TurnCombat.element_icon(int(data.get("element", 0))))
 				await _wait(duration)
 
@@ -1317,13 +1343,22 @@ func _play_cutin(data: Dictionary) -> void:
 
 	# 컷인은 화면을 통째로 쓰는 순간이다. HUD 를 남겨 두면 초상 카드와 스킬 목록이
 	# 그림 위에 겹쳐 "그림이 뜬 전투 화면"으로 보인다.
+	# 앞 공격의 피해 숫자·상태 알림도 지운다(#576) — 화면에서만 지우고 전투 계산·연출 큐는 그대로다.
+	var gen := _play_gen
 	_fade_hud(0.0, 0.12)
+	_clear_transient_text()
 	if mode == SettingsSystem.CutinMode.SHORT:
 		await _cutin.play_short()
+		if gen != _play_gen:
+			return
 		await _play_ult_field(unit, color, false, skill, data.get("target"))
 	else:
 		# 암전은 컷인 판의 남색 막이 한다 — 검은 전면 플래시를 따로 넣지 않는다(#576).
 		await _cutin.play_full()
+		# 그 사이 재시작됐으면 새 전투에 옛 연출을 얹지 않는다(HUD·카메라·시간 배율은 `_restart` 가 되돌렸다).
+		if gen != _play_gen:
+			return
+		_ult_cast_in_place = unit
 		await _play_ult_field(unit, color, true, skill, data.get("target"))
 	# UI 복구: 필드 연출이 끝난 뒤 잔광이 가라앉는 동안 전투 UI 가 돌아온다.
 	_fade_hud(1.0, ULT_HUD_RESTORE)
@@ -1334,7 +1369,8 @@ func _play_cutin(data: Dictionary) -> void:
 #   짧게 — 캐스터 자리에서 원소 폭발만 터뜨린다.
 #   풀   — 컷인에서 쏜 한 발이 **실제 대상**에게 이어진다(#576): 캐스터에서 대상까지 번개 한 줄이 가고,
 #          맞은 자리에서 원소 폭발과 짧은 흔들림이 난다. 피해 숫자는 여기서 띄우지 않는다 —
-#          뒤따르는 `SKILL_CAST`/`HIT` 가 계산 결과대로 띄운다(중복 표시 없음).
+#          뒤따르는 `SKILL_CAST`(제자리)/`HIT` 가 계산 결과대로 곧바로 띄운다(중복 표시 없음).
+#          컷인 그림은 좌우로 뒤집혀 전장과 같은 방향(오른쪽)으로 쏜다.
 #   카메라 줌·기울임과 전면 플래시는 쓰지 않는다.
 func _play_ult_field(unit: TurnUnit, color: Color, full: bool, skill: SkillData = null,
 		target: TurnUnit = null) -> void:
@@ -1747,22 +1783,23 @@ func _style_banner(font_size: int, fill: Color) -> void:
 
 
 # 대상 유닛(적) 카드 바로 위에 알림 칩을 띄운다. 같은 대상의 알림은 한 줄로 합치고 위로 쌓는다.
-func _post_unit_notice(unit: TurnUnit, text: String, color: Color, strong: bool = false,
-		icon_name: String = "") -> void:
+# tier 는 `BattleNotice.Tier` — 격파는 STRONG(속성 아이콘), 행동 무효는 MINOR.
+func _post_unit_notice(unit: TurnUnit, text: String, tier: int,
+		color: Color = Color.WHITE, icon_name: String = "") -> void:
 	if unit == null or hud == null or _flash_layer == null:
 		return
 	var anchor := hud.cluster_origin(unit) + Vector2(hud.CLUSTER_W * 0.5, -2.0) \
 		if unit.is_enemy() else hud.unit_position(unit) + Vector2(0.0, -hud.ENEMY_BODY_H - 6.0)
-	BattleNotice.post(_flash_layer, anchor, "unit_%s" % str(unit.unit_id), text, color, strong,
+	BattleNotice.post(_flash_layer, anchor, "unit_%s" % str(unit.unit_id), text, tier, color,
 		_notice_icon(icon_name), 0.5, _scaled(1.0))
 
 
-# 라운드·웨이브처럼 전투 진행을 알리는 칩. 상단 웨이브 알약 바로 옆에 선다.
+# 라운드·웨이브처럼 전투 진행을 알리는 칩. 상단 웨이브 알약 바로 옆에, 알약과 같은 판으로 선다.
 func _post_progress_notice(text: String) -> void:
 	if hud == null or _flash_layer == null:
 		return
 	BattleNotice.post(_flash_layer, hud.progress_notice_anchor(), "progress", text,
-		TurnCombat.COLOR_TOUGHNESS, false, null, 0.0, _scaled(1.0))
+		BattleNotice.Tier.PROGRESS, Color.WHITE, null, 0.0, _scaled(1.0))
 
 
 func _notice_icon(icon_name: String) -> Texture2D:
@@ -1772,64 +1809,120 @@ func _notice_icon(icon_name: String) -> Texture2D:
 	return load(path) as Texture2D if not path.is_empty() else null
 
 
-# 데미지 숫자. 규격표(§4.10.6)의 색·크기·애니메이션을 쓴다.
+# 데미지 숫자. 규격표(§4.10.6)의 색·크기를 쓴다. 모양·움직임은 `_float_number` 가 정한다.
 func _spawn_number(ctx: DamageContext, style: Dictionary) -> void:
 	if _numbers == null or ctx.target == null:
 		return
-
-	var label := Label.new()
-	label.text = str(ctx.final_damage())
-	# 색은 글자 채움으로, 진한 윤곽선을 둘러 이펙트 위에서도 읽히게 한다(#559).
-	# 디스플레이 폰트(Barlow Condensed)는 좁은 글꼴이라 같은 자리를 채우도록 1.3배로 키운다.
-	var number_size := int(20.0 * float(style.get("scale", 1.0)) * 1.3)
-	HUDKit.style_display_label(label, number_size, style.get("color", Color.WHITE),
-		maxi(6, int(number_size * 0.22)))
 	# 숫자 위 한글 캡션(#576). 보호막이 피해를 전부 받아 냈으면 HP 가 그대로이므로 "흡수"를 단다 —
 	# 행동 무효(자물쇠)와는 다른 사건이다.
+	var color: Color = style.get("color", HUDKit.NUMBER_OUTLINE)
 	var caption := String(style.get("label", ""))
+	var caption_color := color
 	if ctx.shield_absorbed > 0 and ctx.hp_damage <= 0:
 		caption = TEXT_ABSORBED
-	if not caption.is_empty():
-		_add_number_caption(label, caption, number_size)
-	label.position = hud.unit_position(ctx.target) + Vector2(
-		randf_range(-18.0, 18.0), -96.0)
-	label.z_index = 60
-	_numbers.add_child(label)
+		caption_color = COLOR_ABSORBED_CAPTION
+	var strong := ctx.is_crit or ctx.is_break_damage or ctx.is_overbreak
+	_float_number(ctx.target, str(ctx.final_damage()), color, float(style.get("scale", 1.0)),
+		caption, caption_color, strong)
 
-	var tween := create_tween()
-	# 치명타는 스케일 팝(0 -> 1.3 -> 1.0).
-	if ctx.is_crit or ctx.is_break_damage:
-		label.scale = Vector2.ZERO
-		tween.tween_property(label, "scale", Vector2(1.3, 1.3), _scaled(0.09))
-		tween.tween_property(label, "scale", Vector2.ONE, _scaled(0.07))
+
+# 유닛 머리 위로 떠오르는 숫자 하나(피해·회복 공용).
+#
+# 정자체 숫자 폰트 + 얇은 남색 윤곽선(`HUDKit.style_number_label`). 짧게 들어와(작은 확대 -> 제 크기)
+# 잠깐 머물며 조금 떠오르고, 끝에 올라가며 사라진다. 바운스·회전 없음.
+# 같은 대상에 여러 타가 겹치면 빈 줄을 찾아 **아래로** 쌓는다 — 타마다 숫자가 따로 읽히고,
+# 위로 쌓으면 뒷줄 적의 숫자가 체력 카드에 닿는다.
+# 숫자는 머리 위 가운데에 맞춘다(자릿수가 늘어도 한쪽으로 밀리지 않는다).
+func _float_number(unit: TurnUnit, text: String, color: Color, scale: float,
+		caption: String = "", caption_color: Color = Color.WHITE, strong: bool = false) -> void:
+	if _numbers == null or unit == null:
+		return
+	var font_size := int(round(float(NUMBER_BASE_SIZE) * scale))
+	# 원소색처럼 채도가 강한 색은 아이보리 쪽으로 조금 섞는다 — 숫자가 배경·캐릭터보다 튀지 않게.
+	var fill := color.lerp(NUMBER_IVORY, NUMBER_TINT) if color.s > 0.6 else color
+
+	var label := Label.new()
+	label.text = text
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	HUDKit.style_number_label(label, font_size, fill)
+	label.z_index = 60
+	var slot := _free_number_slot(unit)
+	label.set_meta(&"number_target", unit.unit_id)
+	label.set_meta(&"number_slot", slot)
+	label.add_to_group(TRANSIENT_TEXT_GROUP)
+	_numbers.add_child(label)
+	label.size = label.get_combined_minimum_size()
+	label.pivot_offset = label.size * 0.5
+
+	var step := float(font_size) + NUMBER_STACK_GAP
+	if not caption.is_empty():
+		_add_number_caption(label, caption, caption_color)
+		step += float(NUMBER_CAPTION_SIZE)
+	var dx := 0.0 if slot == 0 else (NUMBER_STACK_SHIFT if slot % 2 == 1 else -NUMBER_STACK_SHIFT)
+	var rest := hud.unit_position(unit) + Vector2(-label.size.x * 0.5 + dx,
+		-NUMBER_HEIGHT - label.size.y + float(slot) * step)
+	var canvas := get_viewport_rect().size
+	rest.x = clampf(rest.x, 4.0, maxf(canvas.x - label.size.x - 4.0, 4.0))
+	rest.y = maxf(rest.y, 4.0)
+
+	label.modulate.a = 0.0
+	label.scale = Vector2.ONE * (NUMBER_POP_STRONG if strong else NUMBER_POP)
+	label.position = rest + Vector2(0.0, NUMBER_ENTER_DROP)
+	# 숫자 노드에 붙인 트윈이다 — 컷인이 숫자를 치울 때(`_clear_transient_text`) 같이 멈춘다.
+	var tween := label.create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(label, "position", label.position + Vector2(0, -46),
-		_scaled(0.7))
-	tween.tween_property(label, "modulate:a", 0.0, _scaled(0.7))
+	tween.tween_property(label, "modulate:a", 1.0, _scaled(NUMBER_IN))
+	tween.tween_property(label, "position", rest, _scaled(NUMBER_IN)) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "scale", Vector2.ONE, _scaled(NUMBER_SETTLE)) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(label, "position", rest + Vector2(0.0, -NUMBER_DRIFT),
+		_scaled(NUMBER_HOLD)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(label, "modulate:a", 0.0, _scaled(NUMBER_OUT))
+	tween.tween_property(label, "position", rest + Vector2(0.0, -NUMBER_DRIFT - NUMBER_RISE_OUT),
+		_scaled(NUMBER_OUT)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tween.chain().tween_callback(label.queue_free)
 
 
-# 숫자 바로 위의 작은 한글 캡션. 숫자와 함께 움직이고 사라지도록 숫자 라벨의 자식으로 둔다.
-# 디스플레이 폰트(기울인 영문 + 한글 대체)가 아니라 알림 폰트로, 외곽선 없이 얇은 그림자만 둔다.
-func _add_number_caption(number: Label, text: String, number_size: int) -> void:
+# 이 대상 위에 떠 있는 숫자들이 쓰지 않는 가장 낮은 줄. 다 차 있으면 맨 아래 줄부터 다시 쓴다.
+func _free_number_slot(unit: TurnUnit) -> int:
+	var used: Array[int] = []
+	for child in _numbers.get_children():
+		if child.is_queued_for_deletion() or not child.has_meta(&"number_slot"):
+			continue
+		if child.get_meta(&"number_target") == unit.unit_id:
+			used.append(int(child.get_meta(&"number_slot")))
+	for slot in NUMBER_STACK_MAX:
+		if not used.has(slot):
+			return slot
+	return used.size() % NUMBER_STACK_MAX
+
+
+# 숫자 바로 위의 작은 한글 캡션(치명타·흡수). 숫자와 함께 움직이고 사라지도록 숫자 라벨의 자식으로 둔다.
+# 바탕 상자 없이 숫자와 같은 얇은 남색 윤곽선만 둔다 — 한글은 알림 폰트 그대로.
+func _add_number_caption(number: Label, text: String, color: Color) -> void:
 	var caption := Label.new()
 	caption.text = text
 	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	caption.add_theme_font_override("font", HUDKit.notice_font())
 	caption.add_theme_font_size_override("font_size", NUMBER_CAPTION_SIZE)
-	caption.add_theme_color_override("font_color", BattleNotice.TEXT_COLOR)
-	caption.add_theme_color_override("font_shadow_color", BattleNotice.SHADOW)
-	caption.add_theme_constant_override("shadow_offset_x", 0)
-	caption.add_theme_constant_override("shadow_offset_y", 1)
-	# 밝은 하늘·몸 위에서도 읽히도록 알림 칩과 같은 작은 어두운 바탕을 깐다.
-	var backing := StyleBoxFlat.new()
-	backing.bg_color = BattleNotice.BACKDROP
-	backing.set_corner_radius_all(4)
-	backing.content_margin_left = 6.0
-	backing.content_margin_right = 6.0
-	caption.add_theme_stylebox_override("normal", backing)
-	caption.position = Vector2(0.0, -float(NUMBER_CAPTION_SIZE) * 1.4)
+	caption.add_theme_color_override("font_color", color)
+	caption.add_theme_constant_override("outline_size", 4)
+	caption.add_theme_color_override("font_outline_color", HUDKit.NUMBER_OUTLINE)
 	number.add_child(caption)
+	var caption_size := caption.get_combined_minimum_size()
+	caption.position = Vector2((number.size.x - caption_size.x) * 0.5, -caption_size.y + 4.0)
+
+
+# 컷인처럼 화면을 비워야 하는 순간, 떠 있던 숫자·자물쇠 글자·상태 배지와 상태 알림 칩을 바로 치운다(#576).
+# **화면에서만** 치운다 — 피해 계산과 연출 큐는 건드리지 않으므로 사건이 빠지거나 두 번 뜨지 않는다.
+# 치운 것은 컷인이 끝나도 다시 나타나지 않는다(숨기지 않고 지운다).
+func _clear_transient_text() -> void:
+	for node in get_tree().get_nodes_in_group(TRANSIENT_TEXT_GROUP):
+		if is_instance_valid(node) and not node.is_queued_for_deletion():
+			node.queue_free()
+	if _flash_layer != null:
+		BattleNotice.clear_all(_flash_layer)
 
 
 # 인성치 바 파열의 유리 파편.
@@ -1893,9 +1986,10 @@ func _spawn_status_badge(unit: TurnUnit, status: int, color: Color) -> void:
 	label.position = hud.unit_position(unit) + Vector2(-30, -140)
 	label.scale = Vector2(2.2, 2.2)
 	label.z_index = 60
+	label.add_to_group(TRANSIENT_TEXT_GROUP)
 	_numbers.add_child(label)
 
-	var tween := create_tween()
+	var tween := label.create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(label, "scale", Vector2.ONE, _scaled(0.25)) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)

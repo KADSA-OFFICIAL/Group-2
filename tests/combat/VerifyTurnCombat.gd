@@ -1305,11 +1305,11 @@ func _test_presentation_specs() -> void:
 		and int(ultimate["hitstop_frames"]) < int(break_fb["hitstop_frames"]),
 		"히트스톱은 일반공격 < 스킬 < 오의 < 격파 순이어야 한다")
 
-	# 데미지 숫자 규격 (설계서 §4.10.6).
-	_expect_near(float(PresentationQueue.NUMBER_STYLE["crit"]["scale"]), 1.6, 0.001,
-		"치명타 숫자는 1.6배")
-	_expect_near(float(PresentationQueue.NUMBER_STYLE["break"]["scale"]), 2.0, 0.001,
-		"격파 숫자는 2.0배")
+	# 데미지 숫자 규격 (설계서 §4.10.6, #576 재조정): 치명타는 일반보다 15~25% 크게, 격파가 가장 크게.
+	var crit_scale := float(PresentationQueue.NUMBER_STYLE["crit"]["scale"])
+	_expect(crit_scale >= 1.15 and crit_scale <= 1.25, "치명타 숫자는 일반의 1.15~1.25배")
+	_expect(float(PresentationQueue.NUMBER_STYLE["break"]["scale"]) > crit_scale,
+		"격파 숫자는 치명타보다 커야 한다")
 	_expect(String(PresentationQueue.NUMBER_STYLE["crit"]["label"]) == "치명타",
 		"치명타에 한글 '치명타' 캡션이 있어야 한다 (#576)")
 
