@@ -75,20 +75,30 @@ func _ready() -> void:
 			await get_tree().create_timer(1.8).timeout
 			field._cutin.reset()
 
-	# 2) 길이: 1배속 기준 풀 ≈ 2초대, 짧게 ≈ 1초 안팎 (presentation_speed 0.7 반영).
+	# 2) 길이: 풀 = 암전·클로즈업·조준·정적·발사·퇴장(#576, 1배속 1.45초) — 배속 반영. 짧게 ≈ 1초 안팎.
 	var unit2 := TurnUnit.new()
 	unit2.character = CharacterDatabase.get_character(&"seola")
 	unit2.display_name = unit2.character.display_name
 	field._setup_cutin(unit2, unit2.character.get_turn_ultimate(), Color(0.6, 0.8, 1.0))
+	var cues: Array[StringName] = []
+	var on_cue := func(sound: StringName) -> void: cues.append(sound)
+	field._cutin.cue.connect(on_cue)
 	var t0 := Time.get_ticks_msec()
 	await field._cutin.play_full()
 	var full_s := (Time.get_ticks_msec() - t0) / 1000.0
-	# 애니메이션판: 등장(약 0.36초) + 원화 3초(배속 1) + 퇴장. 정지판은 2~3초.
-	check(full_s > 2.8 and full_s < 4.6, "풀 연출(애니메이션) 길이가 맞지 않다: %.2fs" % full_s)
-	check(field._cutin._anim_struck, "공격 정점 장에서 기술명이 박혀야 한다")
-	check(field._cutin._anim_frame == field._cutin._anim.get_frame_count(UltimateCutin.ANIM_NAME) - 1,
-		"마지막 장(결정 포즈)까지 재생해야 한다: %d" % field._cutin._anim_frame)
-	check(not field._cutin._slash.visible and not field._cutin._art_root.visible, "풀 연출이 끝나면 판이 사라져야 한다")
+	field._cutin.cue.disconnect(on_cue)
+	var full_expected: float = field._scaled(UltimateCutin.T_DIM + UltimateCutin.T_CLOSEUP + UltimateCutin.T_AIM
+		+ UltimateCutin.T_FREEZE + UltimateCutin.T_FIRE + UltimateCutin.T_EXIT)
+	check(absf(full_s - full_expected) < 0.3, "풀 연출 길이가 맞지 않다: %.2fs (기대 %.2fs)" % [full_s, full_expected])
+	check(field._cutin._anim_struck, "발사 순간 공격 정점 장으로 바뀌어야 한다")
+	var last_frame: int = field._cutin._anim.get_frame_count(UltimateCutin.ANIM_NAME) - 1
+	check(field._cutin._anim_frame == mini(field._cutin._anim_strike + UltimateCutin.RECOIL_FRAMES, last_frame),
+		"발사 뒤 반동 장까지 넘겨야 한다: %d" % field._cutin._anim_frame)
+	check(cues == [&"ult_charge", &"ult_fire"], "장전·발사 효과음 자리가 순서대로 불려야 한다: %s" % [cues])
+	# 남색 막은 필드 연출 아래에서 걷히고, 다 걷히면 판이 접힌다.
+	await get_tree().create_timer(field._scaled(UltimateCutin.T_FADE_TAIL) + 0.15).timeout
+	check(not field._cutin.visible and not field._cutin._crop.visible and not field._cutin._deep.visible,
+		"풀 연출이 끝나면 판이 사라져야 한다")
 	t0 = Time.get_ticks_msec()
 	await field._cutin.play_short()
 	var short_s := (Time.get_ticks_msec() - t0) / 1000.0

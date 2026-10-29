@@ -133,6 +133,59 @@ static func _korean_display_font() -> Font:
 	return v
 
 
+# 전투 상태 알림·결과 글자용 한글 폰트(#576) — 도현(Do Hyeon) 한 계열.
+#
+# 디스플레이 폰트(`display_font`)는 Barlow 의 영문에 도현을 한글 대체로 붙이고 기울인 것이라
+# 한글만 억지로 눕고 굵게 부풀어 임시 UI 처럼 보였다. 상태 알림은 **한글만** 쓰므로 도현을
+# 그대로(기울임·부풀림 없이) 쓰고, 위계는 크기로만 만든다. 라이선스: assets/fonts/OFL-DoHyeon.txt.
+# 파일이 없으면 기본 폰트를 굵게 한 대체로 떨어진다(글자가 사라지지는 않는다).
+static var _notice_font: Font = null
+
+static func notice_font() -> Font:
+	if _notice_font != null:
+		return _notice_font
+	var file: FontFile = null
+	if ResourceLoader.exists(KOREAN_DISPLAY_FONT_PATH):
+		file = load(KOREAN_DISPLAY_FONT_PATH) as FontFile
+	if file == null:
+		_notice_font = weight_font(0.6)
+	else:
+		_notice_font = file
+	return _notice_font
+
+
+# 피해·회복 숫자 폰트(#576) — 기본 폰트(Open Sans SemiBold, 엔진 내장)를 조금 굵게.
+#
+# 예전에는 디스플레이 폰트(Barlow Condensed Black Italic)를 썼다. 좁고 두껍고 기울어
+# 진한 검정 윤곽선과 겹치면 애니메이션풍 캐릭터 옆에서 아케이드처럼 거칠어 보였다.
+# Open Sans 숫자는 정자체이고 속공간이 넓어 작은 크기에서도 0·3·6·8·9 가 갈린다.
+# 엔진에 들어 있는 폰트라 새 파일·라이선스가 늘지 않는다. 가로 폭은 건드리지 않는다.
+const NUMBER_EMBOLDEN := 0.45
+## 숫자 윤곽선: 순수 검정 대신 짙은 남색, 밝은 하늘·풀 위에서 읽힐 만큼만.
+const NUMBER_OUTLINE := Color(0.10, 0.12, 0.22, 0.92)
+## 윤곽선 두께 = 글자 크기 × 이 비(최소 3px). 그림자는 겹치지 않는다.
+const NUMBER_OUTLINE_RATIO := 0.17
+static var _number_font: Font = null
+
+static func number_font() -> Font:
+	if _number_font == null:
+		var f := FontVariation.new()
+		f.base_font = ThemeDB.fallback_font
+		f.variation_embolden = NUMBER_EMBOLDEN
+		_number_font = f
+	return _number_font
+
+
+# 피해·회복 숫자 글자 모양: 채움 색 + 얇은 남색 윤곽선. 그림자·기울임·발광 없음.
+static func style_number_label(l: Label, font_size: int, fill: Color) -> void:
+	l.add_theme_font_override("font", number_font())
+	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_color_override("font_color", fill)
+	l.add_theme_constant_override("outline_size", maxi(3, int(round(font_size * NUMBER_OUTLINE_RATIO))))
+	l.add_theme_color_override("font_outline_color", NUMBER_OUTLINE)
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0))
+
+
 # 디스플레이 폰트 글자의 공통 모양: 채움 색 + 진한 윤곽선 + 그림자.
 # 색을 modulate 로 입히지 않는다 — modulate 는 윤곽선까지 물들여 글자가 배경에 묻힌다.
 # modulate 는 알파 페이드에만 쓴다.

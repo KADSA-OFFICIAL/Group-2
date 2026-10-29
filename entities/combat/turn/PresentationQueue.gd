@@ -74,14 +74,20 @@ const FEEDBACK := {
 	},
 }
 
-# ===== 데미지 숫자 규격표 (설계서 §4.10.6) =====
+# ===== 데미지 숫자 규격표 (설계서 §4.10.6, #576 에서 재조정) =====
+# label 은 숫자 위 작은 한글 캡션이다(#576). 격파는 같은 순간 적 카드 위에 "약점 격파" 알림이 뜨므로
+# 숫자에는 캡션을 다시 달지 않는다.
+#
+# 위계는 **같은 숫자 폰트 안에서 크기와 색으로만** 만든다(#576). 예전 배율(치명타 1.6 · 격파 2.0)은
+# 압축 기울임체 기준이라 정자체로 바꾸면 화면을 너무 덮었다 — 치명타는 일반보다 20% 크게,
+# 형광 노랑 대신 절제된 따뜻한 금색. 일반은 순백 대신 밝은 아이보리.
 const NUMBER_STYLE := {
-	"normal": {"color": Color("FFFFFF"), "scale": 1.0, "label": ""},
-	"crit": {"color": Color("FFD54F"), "scale": 1.6, "label": "CRITICAL"},
-	"weakness": {"color": Color("FFFFFF"), "scale": 1.2, "label": ""},   # 색은 원소색으로 덮는다
-	"break": {"color": Color("FF4757"), "scale": 2.0, "label": "BREAK"},
-	"dot": {"color": Color("FFFFFF"), "scale": 0.8, "label": ""},        # 색은 상태이상색
-	"heal": {"color": Color("66D9A6"), "scale": 1.0, "label": ""},
+	"normal": {"color": Color("F7F2E6"), "scale": 1.0, "label": ""},
+	"crit": {"color": Color("EDC46A"), "scale": 1.2, "label": "치명타"},
+	"weakness": {"color": Color("F7F2E6"), "scale": 1.1, "label": ""},   # 색은 원소색으로 덮는다
+	"break": {"color": Color("FF4757"), "scale": 1.3, "label": ""},
+	"dot": {"color": Color("F7F2E6"), "scale": 0.85, "label": ""},       # 색은 상태이상색
+	"heal": {"color": Color("7FD9AC"), "scale": 1.0, "label": ""},
 }
 
 ## 쌓인 이벤트. `[{"event": Event, "data": Dictionary}, ...]`

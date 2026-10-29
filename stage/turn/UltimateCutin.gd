@@ -1,63 +1,115 @@
 extends Control
 class_name UltimateCutin
 
-# 오의 컷인 판 (#544). 전투 화면(`TurnBattle`)이 한 번 만들어 두고, 오의마다 그림과 글자만
-# 갈아 끼워 재생한다.
+# 오의 컷인 판 (#544, 풀 연출은 #576 에서 재설계). 전투 화면(`TurnBattle`)이 한 번 만들어 두고,
+# 오의마다 그림과 글자만 갈아 끼워 재생한다.
 #
-# ## 풀 연출 (약 2초 + 필드 연출) — 스타레일식
+# ## 풀 연출 — "정확히 조준하고, 짧은 정적 뒤 한 발로 타격한다" (기본 약 2.2초)
 #
-#   0.00  정지·암전         필드가 어두워진다
-#   0.10  스피드라인        원소색 사선이 화면을 쓸고, 원소색 사선 판이 오른쪽에서 갈라져 들어온다
-#   0.25  캐릭터 등장       잔상 둘을 끌며 오른쪽에서 들어온다. 실루엣 → 흰 번쩍 → 컬러
-#   0.45  이름·ULTIMATE     캐릭터 이름과 "ULTIMATE", 원소 문양이 왼쪽에서 들어온다
-#   0.55  기술명 타이포     기술명이 한 글자씩 크게 튀어 들어와 박힌다(키네틱 타이포그래피)
-#   ~1.60 홀드              그림이 천천히 밀려 들어오고, 판 위 큰 기술명 외곽선이 흐른다
-#   1.60  흰 번쩍           판이 사라지고 필드로 돌아온다
-#   (이후 `TurnBattle` 이 캐스터 줌인 · 더치 앵글 · 원소 폭발을 이어 재생한다)
+# 캐릭터 소개 배너가 아니라 **행동**을 보여 준다. 전신 대신 얼굴·상체·무기를 크롭하고,
+# 사선 판·속도선·거대한 글자를 없앴다. 시간은 컷인(이 파일)과 필드(`TurnBattle._play_ult_field`)가 나눠 갖는다.
+# 단계마다 구도가 달라야 읽힌다 — 클로즈업(머리~허벅지) → 조준(얼굴·손·석궁으로 밀려 듦) → 정적(멈춤)
+# → 발사(반동·섬광) → 그림을 빨리 걷고 전장의 실제 대상이 맞는다.
 #
-#   LD 공격 애니메이션이 있으면 0.25 부터 원화 24장(1배속 3초)이 넘어가고, 기술명은 공격 정점 장에서
-#   박힌다(`_play_full_anim`). 전체 약 3.4초.
+#   0.00~0.15  암전          필드가 짙은 남색으로 가라앉는다 (전투 UI·떠 있던 숫자는 `TurnBattle` 이 치운다)
+#   0.15~0.55  클로즈업      머리~허벅지 구도로 발사 반대쪽에서 들어온다. 반투명은 처음 0.08초뿐
+#   0.55~0.95  조준          총구를 축으로 얼굴·손·석궁까지 밀려 든다. 조준 고리가 발사 방향의 조준점으로 모이고
+#                            작은 전기가 총구로 빨려 든다. 이름·기술명이 한 묶음으로 뜬다
+#   0.95~1.10  정적          모든 움직임이 멈춘다 — 발사 직전의 긴장. 글자는 여기서 읽힌다
+#   1.10~1.28  발사          공격 정점 장 + 발사 반대쪽으로 짧은 반동 + 발사 방향으로 짧은 섬광. 고리는 바로 꺼진다
+#   1.28~1.40  걷기          그림·글자를 걷고 남색 막이 빠르게 걷힌다 (여기까지가 이 파일 `play_full`)
+#   이후       피격          필드에서 번개가 캐스터에서 실제 대상으로 이어진다. 피해 숫자는 그 피격 순간에 뜬다 (`TurnBattle`)
+#   마지막     UI 복구       전투 UI 가 돌아온다 (`TurnBattle`)
+#
+# **발사 방향**: 원화는 왼쪽을 겨눈다. 전장에서 아군은 오른쪽(적)을 쏘므로 그림을 좌우로 뒤집어
+# 컷인에서 쏜 방향과 전장에서 맞는 방향을 잇는다(`MIRROR_TO_FIELD`). 글자는 발사 쪽 여백에 선다.
+#
+# 밝은 전면 플래시와 지속 흔들림은 쓰지 않는다. 빛은 조준점·총구 섬광·잔 전기에만 모은다.
+# 시간·크기·색은 아래 상수로 조정한다. 모든 길이는 `scaled` 콜백(배속 반영)을 거친다.
 #
 # ## 짧게 (약 0.9초)
 #   화면 가운데 사선 띠에 캐릭터 상반신과 기술명만 지나간다.
 #
 # ## 그림
 #   `setup()` 이 받는 그림은 셋 중 하나다(고르는 것은 `TurnBattle`):
-#     - LD 공격 애니메이션(#549) — 독립 원화 24장 `SpriteFrames`. 풀 연출은 이것을 재생하고,
-#       짧게 모드는 마지막 장(결정 포즈)을 쓴다. 만드는 법: tools/build_ultimate_frames.py
+#     - LD 공격 애니메이션(#549) — 독립 원화 24장 `SpriteFrames`. 풀 연출은 조준 장(정점 3장 앞)과
+#       정점 장·반동 장만 쓴다. 짧게 모드는 마지막 장(결정 포즈)을 쓴다. 만드는 법: tools/build_ultimate_frames.py
 #     - 오의 전용 정지 일러스트(`UITheme.ultimate_cutin_path()`) — 사양: docs/ultimate-cutin-art-spec.md
-#     - 없으면 전투 스프라이트의 공격 프레임 — 게임 그림체와 같다. 크게 키우면 조금 무르므로
-#       원소색 테두리(잔상)로 감싼다.
+#     - 없으면 전투 스프라이트의 공격 프레임 — 크게 키우면 무르므로 크롭을 덜 하고 작게 쓴다.
 #
-# **조명을 그림에 굽지 않는다.** 원소색은 여기서 잔상·판·글자에 입힌다 — 속성이 바뀌어도
-# 다시 그릴 필요가 없다(캐릭터 아트 가이드 §4.2).
+# 총구 위치는 SpriteFrames 의 `metadata/muzzle`(원화 픽셀 좌표)이다. 없으면 원화 크기에서 추정한다.
+# **조명을 그림에 굽지 않는다.** 원소색은 여기서 조준선·번개·밑줄에만 입힌다.
 #
 # ## 시간
-#   모든 길이는 `scaled` 콜백(배속 반영)을 거친다. 재시작 등으로 `reset()` 이 불리면
-#   토큰이 바뀌고, 재생 중이던 코루틴은 다음 대기에서 깨어나 조용히 빠진다.
+#   재시작 등으로 `reset()` 이 불리면 토큰이 바뀌고, 재생 중이던 코루틴은 다음 대기에서 깨어나 조용히 빠진다.
+
+## 효과음 자리. 조준이 시작될 때 `ult_charge`, 발사 순간 `ult_fire` 를 보낸다(재생은 `TurnBattle`).
+signal cue(sound: StringName)
 
 ## 길이(초) -> 배속이 반영된 길이. `TurnBattle._scaled` 를 넣는다.
 var scaled: Callable = Callable()
 
-# ===== LD 공격 애니메이션 (#549) =====
-# 원화 24장을 장마다 정해진 길이(SpriteFrames 의 duration, 1/24초 단위)로 넘긴다.
-# 공격이 정점에 닿는 장(metadata/strike_frame)에서 기술명 타이포가 박힌다 — 캐릭터마다 다르다.
-# 예전 영상판(#546)은 정점이 6명 공통 상수(1.15초)였고, 첫 재생 때 디코딩이 늦게 시작했다.
+# ===== 연출 상수 (#576) — 타이밍은 위 표와 같다. 값을 바꾸면 이 파일의 호출부 기준이 같이 움직인다. =====
 const ANIM_NAME := &"ult"
-## 애니메이션이 끝나기 이만큼(초, 원화 시간) 전에 흰 번쩍으로 빠진다.
-const ANIM_EXIT_LEAD: float = 0.1
-## 애니메이션 인물 높이(화면 높이 비). 24장 합집합으로 자른 그림이라 무기를 머리 위로 든 장까지
-## 들어 있다 — 화면보다 조금 크게 세워 정강이 아래를 잘라야 인물이 화면을 채운다(전신을 다 넣으면
-## 화면 높이의 약 70% 로 작게 보였다).
-const ANIM_HEIGHT: float = 1.18
-## 정점 장에서 판이 번쩍이는 세기(흰색 알파).
-const STRIKE_FLASH: float = 0.35
-## 기술명 글자 크기 범위(px)와, 기술명이 쓸 수 있는 폭(화면 폭 비). 예전엔 76px 고정이라 왼쪽 판이 비어 보였다(#574).
-## 글자 하나가 차지하는 폭 / 글자 크기 — 굵은 기울임 폰트의 실측값(약 0.8). 이 폭으로 판 안에 들어갈 크기를 정한다.
-const SKILL_SIZE_MIN: int = 56
-const SKILL_SIZE_MAX: int = 130
-const SKILL_ROW_WIDTH: float = 0.34
-const SKILL_ADVANCE: float = 0.8
+## 시점(초, 배속 적용 전).
+const T_DIM: float = 0.15
+const T_CLOSEUP: float = 0.40       # 0.15 -> 0.55
+const T_AIM: float = 0.40           # 0.55 -> 0.95
+const T_FREEZE: float = 0.15        # 0.95 -> 1.10
+const T_FIRE: float = 0.18          # 1.10 -> 1.28
+const T_EXIT: float = 0.12          # 1.28 -> 1.40  그림·글자를 걷는다
+const T_FADE_TAIL: float = 0.22     # 남색 막이 걷히는 시간(필드 피격과 겹친다)
+## 그림이 반투명한 시간. 짧게 둬 조준 전에 완전히 불투명해진다.
+const T_ART_FADE_IN: float = 0.08
+
+## 그림을 위에서부터 이만큼(원화 높이 비)만 보인다 — 얼굴·상체·무기. 전투 스프라이트(저해상도)는 덜 자른다.
+const CROP_FRAC: float = 0.56
+const CROP_FRAC_SPRITE: float = 0.80
+## 크롭 상자가 화면 폭에서 차지할 수 있는 최대 비.
+const CROP_MAX_WIDTH: float = 0.66
+## 구도: 클로즈업은 머리~허벅지(ZOOM_START), 조준 동안 총구를 축으로 얼굴·손·석궁까지 밀려 든다(ZOOM_TIGHT).
+## 원화(716×1152)를 화면 높이에 맞추면 약 1.1배라, 1.35 배로 밀어도 원화의 1.5배 남짓이다 — 더 키우면 무르다.
+const ZOOM_START: float = 1.0
+const ZOOM_TIGHT: float = 1.35
+## 들어올 때·걷을 때 발사 반대쪽으로 움직이는 거리(px).
+const ENTER_SLIDE: float = 60.0
+const EXIT_SLIDE: float = 48.0
+## 발사 반동: 발사 반대쪽으로 RECOIL, 아래로 RECOIL_DROP 만큼 밀렸다 돌아온다(px).
+const RECOIL: float = 16.0
+const RECOIL_DROP: float = 4.0
+## 반동 장을 넘기는 간격(초, 배속 적용 전). 정점 장 뒤로 몇 장 더 보여 준다.
+const RECOIL_FRAME_STEP: float = 0.05
+const RECOIL_FRAMES: int = 4
+
+## 원화를 좌우로 뒤집어 전장의 발사 방향(오른쪽)과 맞춘다. false 면 원화 그대로(왼쪽으로 쏜다).
+const MIRROR_TO_FIELD: bool = true
+
+## 막 색: 원소색 색조를 지키되 아주 어둡게 — 남보라 계열의 깊이. (안쪽, 바깥)
+const DEEP_VALUE_INNER: float = 0.30
+const DEEP_VALUE_OUTER: float = 0.07
+const DEEP_ALPHA_INNER: float = 0.62
+const DEEP_ALPHA_OUTER: float = 0.93
+
+## 조준점: 총구에서 발사 방향으로 이만큼(화면 폭 비). 고리는 시작 반지름(화면 높이 비)에서 RETICLE_END(px)로 모인다.
+const AIM_DISTANCE: float = 0.22
+const RETICLE_START: float = 0.16
+const RETICLE_END: float = 12.0
+## 발사 섬광: 총구에서 발사 방향으로 짧게(화면 폭 비) 뻗었다가 곧 사라진다. 화면을 가로지르지 않는다.
+const FLASH_LENGTH: float = 0.12
+const FLASH_TIME: float = 0.10
+## 총구 위치를 모를 때 원화 크기에 곱하는 기본값.
+const MUZZLE_DEFAULT := Vector2(0.085, 0.205)
+## 이름·기술명 글자 크기(화면 높이 비). 기술명은 #576 1차(0.066)의 약 1.6배.
+const NAME_SIZE: float = 0.036
+const SKILL_SIZE: float = 0.105
+const SKILL_SIZE_MIN: int = 36
+## 글자 묶음: 발사 쪽 여백, 화면 중앙보다 조금 아래(위쪽 가장자리, 화면 높이 비). 들여쓰기(화면 폭 비).
+const TYPE_TOP: float = 0.58
+const TYPE_INSET: float = 0.05
+## 기술명은 따뜻한 아이보리, 이름은 차분한 연회색. 원소색은 기호와 짧은 포인트 선에만.
+const SKILL_COLOR := Color("F4EEDC")
+const NAME_COLOR := Color(0.86, 0.85, 0.92)
+const ACCENT_WIDTH: float = 44.0
 
 var _token: int = 0
 var _color: Color = Color.WHITE
@@ -65,28 +117,37 @@ var _dedicated: bool = false
 
 # 풀 연출
 var _dim: ColorRect
-var _speed: ColorRect
-var _slash: Slash
-var _watermark: Label
-var _art_root: Control
-var _ghosts: Array[TextureRect] = []
+var _deep: TextureRect
+var _crop: Control
 var _art: TextureRect
+var _reticle: Reticle
+var _fx: Control
+var _type_root: Control
+var _name_row: Control
+var _glyph: TextureRect
+var _name: Label
+var _skill: Label
+var _underline: ColorRect
+var _white: ColorRect
+
 var _anim: SpriteFrames = null
 var _anim_speed: float = 1.0
-var _anim_tween: Tween = null
 var _anim_starts: PackedFloat32Array = PackedFloat32Array()   # 장마다 시작 시각(초, 원화 시간)
 var _anim_length: float = 0.0
 var _anim_strike: int = -1
 var _anim_frame: int = -1
 var _anim_struck: bool = false
-var _emblem: TextureRect
-var _type_root: Control
-var _caption: Label
-var _glyph: TextureRect
-var _name: Label
-var _skill_row: HBoxContainer
-var _underline: ColorRect
-var _white: ColorRect
+var _muzzle: Vector2 = Vector2.ZERO      # 원화 픽셀 좌표
+var _frame_size: Vector2 = Vector2(716.0, 1152.0)
+## 화면에서 총구가 놓이는 점. `_layout()` 이 정한다(정적 때의 확대 배율 기준).
+var _muzzle_screen: Vector2 = Vector2.ZERO
+## 조준 고리가 모이는 점(발사 방향 여백 위).
+var _aim_point: Vector2 = Vector2.ZERO
+var _home_art: Vector2 = Vector2.ZERO
+## 그림을 뒤집었는가, 발사 방향, 글자 묶음이 쓸 수 있는 폭. `_layout()` 이 정한다.
+var _mirror: bool = false
+var _fire_dir: Vector2 = Vector2.LEFT
+var _type_width: float = 0.0
 
 # 짧게
 var _strip: Control
@@ -99,7 +160,7 @@ var _strip_lines: Array[ColorRect] = []
 var _skill_text: String = ""
 
 
-# 사선 판. reveal(0..1)만큼 오른쪽에서 밀려 들어온다.
+# 사선 판. reveal(0..1)만큼 오른쪽에서 밀려 들어온다. (짧게 모드의 띠)
 class Slash:
 	extends Control
 
@@ -135,6 +196,25 @@ class Slash:
 			draw_line(Vector2(x0 + slant - 22, 0), Vector2(x0 - 22, h), Color(edge, edge.a * 0.45), 2.0, true)
 
 
+# 조준선: 고리 하나와 십자 눈금 넷. 고리가 한 점으로 오므라든다. `radius` 와 알파는 트윈이 움직인다.
+class Reticle:
+	extends Control
+
+	var color: Color = Color.WHITE
+	var radius: float = 200.0:
+		set(value):
+			radius = value
+			queue_redraw()
+
+	func _draw() -> void:
+		var center := size * 0.5
+		draw_arc(center, radius, 0.0, TAU, 48, color, 2.0, true)
+		var tick := 16.0
+		for dir in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
+			draw_line(center + dir * (radius - tick), center + dir * (radius + tick * 0.5), color, 2.0, true)
+		draw_circle(center, 2.5, color)
+
+
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -149,92 +229,48 @@ func _build() -> void:
 	_dim = _rect(Color(0, 0, 0, 0))
 	add_child(_dim)
 
-	_speed = _rect(Color(1, 1, 1, 1))
-	var shader := Shader.new()
-	shader.code = """
-shader_type canvas_item;
-uniform vec4 tint : source_color = vec4(1.0);
-uniform float flow = 1.0;
-float hash(float n) { return fract(sin(n) * 43758.5453); }
-void fragment() {
-	// 기울인 좌표에서 촘촘한 줄마다 길이·속도가 다른 선분이 오른쪽에서 왼쪽으로 흐른다.
-	vec2 p = FRAGCOORD.xy;
-	float row = floor((p.y - p.x * 0.42) / 7.0);
-	float speed = 1500.0 + hash(row) * 2600.0;
-	float len = 60.0 + hash(row + 7.0) * 420.0;
-	float x = mod(p.x + TIME * speed * flow + hash(row + 3.0) * 3000.0, 1800.0);
-	float on = step(x, len) * step(0.62, hash(row + 11.0));
-	float fade = 1.0 - x / max(len, 1.0);
-	COLOR = vec4(tint.rgb, tint.a * on * fade);
-}
-"""
-	var mat := ShaderMaterial.new()
-	mat.shader = shader
-	_speed.material = mat
-	_speed.modulate.a = 0.0
-	add_child(_speed)
+	# 짙은 남보라 막. 가운데가 조금 밝고 바깥이 어둡다 — 깊이는 여기서 만든다.
+	_deep = TextureRect.new()
+	_deep.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_deep.stretch_mode = TextureRect.STRETCH_SCALE
+	_deep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_deep.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_deep.modulate.a = 0.0
+	add_child(_deep)
 
-	_slash = Slash.new()
-	_slash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_slash.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_slash)
-
-	# 판 위의 커다란 외곽선 글자(기술명). 홀드 동안 천천히 흐른다.
-	_watermark = _label(230, 1.4)
-	_watermark.add_theme_color_override("font_color", Color(0, 0, 0, 0))
-	_watermark.add_theme_constant_override("outline_size", 8)
-	_watermark.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0))
-	_watermark.rotation = deg_to_rad(-8.0)
-	add_child(_watermark)
-
-	_emblem = TextureRect.new()
-	_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_emblem)
-
-	_art_root = Control.new()
-	_art_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_art_root)
-	for i in 2:
-		var ghost := _texture_rect()
-		_art_root.add_child(ghost)
-		_ghosts.append(ghost)
+	# 크롭: 얼굴·상체·무기만 보이게 자른 창. 그림은 이 안에서 움직인다.
+	_crop = Control.new()
+	_crop.clip_contents = true
+	_crop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_crop)
 	_art = _texture_rect()
-	_art_root.add_child(_art)
+	_art.stretch_mode = TextureRect.STRETCH_SCALE
+	_crop.add_child(_art)
 
+	_reticle = Reticle.new()
+	_reticle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_reticle)
 
+	_fx = Control.new()
+	_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_fx)
+
+	# 글자: 수평 조판, 한 계열(HUDKit.notice_font). 이름은 작게, 기술명은 그보다 크게.
 	_type_root = Control.new()
 	_type_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_type_root.rotation = deg_to_rad(-8.0)
 	add_child(_type_root)
 
+	_name_row = Control.new()
+	_name_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_type_root.add_child(_name_row)
 	_glyph = _texture_rect()
-	_glyph.size = Vector2(34, 34)
-	_glyph.position = Vector2(0, -6)
-	_type_root.add_child(_glyph)
-
-	_caption = _label(18, 0.7)
-	# 영문 캡션("U L T I M A T E")만 BREAK! 와 같은 디스플레이 폰트를 쓴다(#559).
-	# 이름·기술명은 한글이라 지금의 기울인 굵은 글꼴을 그대로 둔다.
-	_caption.add_theme_font_override("font", HUDKit.display_font())
-	_caption.add_theme_font_size_override("font_size", 22)
-	_caption.position = Vector2(44, 0)
-	_type_root.add_child(_caption)
-
-	_name = _label(40, 0.9)
-	_name.position = Vector2(0, 34)
-	_type_root.add_child(_name)
-
-	_skill_row = HBoxContainer.new()
-	_skill_row.add_theme_constant_override("separation", 0)
-	_skill_row.position = Vector2(-6, 88)
-	_skill_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_type_root.add_child(_skill_row)
-
+	_name_row.add_child(_glyph)
+	_name = _plain_label()
+	_name_row.add_child(_name)
+	_skill = _plain_label()
+	_type_root.add_child(_skill)
 	_underline = ColorRect.new()
-	_underline.position = Vector2(0, 182)
-	_underline.size = Vector2(0, 6)
 	_underline.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_type_root.add_child(_underline)
 
@@ -256,9 +292,11 @@ void fragment() {
 		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_strip.add_child(line)
 		_strip_lines.append(line)
-	_strip_name = _label(20, 0.7)
+	_strip_name = _plain_label()
+	_strip_name.add_theme_font_size_override("font_size", 22)
 	_strip.add_child(_strip_name)
-	_strip_skill = _label(52, 1.2)
+	_strip_skill = _plain_label()
+	_strip_skill.add_theme_font_size_override("font_size", 52)
 	_strip.add_child(_strip_skill)
 
 	_white = _rect(Color(1, 1, 1, 0))
@@ -269,50 +307,65 @@ func _layout() -> void:
 	var c := size
 	if c.x <= 0.0 or c.y <= 0.0:
 		return
-	# 그림: 오른쪽 55~65%. 전용 일러스트는 화면보다 조금 크게(잘려 나가도 된다),
-	# 전투 스프라이트는 너무 키우면 무르므로 화면 높이의 90% 정도로 둔다.
+
+	# 크롭 상자: 화면 높이를 꽉 채우고 발사 반대쪽 가장자리에 붙인다. 반대편은 발사 방향의 여백이다.
 	var tex := _art.texture
 	if _anim != null:
 		tex = _anim.get_frame_texture(ANIM_NAME, 0)
-	var aspect := 0.66
-	if tex != null and tex.get_height() > 0:
-		aspect = float(tex.get_width()) / float(tex.get_height())
-	var h := c.y * (ANIM_HEIGHT if _anim != null else (1.10 if _dedicated else 1.02))
-	var w := h * aspect
-	var center_x := c.x * (0.66 if _dedicated else 0.70)
-	_art_root.size = Vector2(w, h)
-	if _anim != null:
-		# 합집합 상자의 위쪽(머리 위로 든 무기)을 화면 위에 붙이고, 아래(정강이·발)를 잘라 낸다.
-		_art_root.position = Vector2(center_x - w * 0.5, c.y * 0.01)
-	else:
-		_art_root.position = Vector2(center_x - w * 0.5, c.y - h * (0.96 if _dedicated else 0.95))
-	_art_root.pivot_offset = Vector2(w * 0.5, h * 0.6)
-	for node in [_art] + _ghosts:
-		node.position = Vector2.ZERO
-		node.size = Vector2(w, h)
-		node.pivot_offset = Vector2(w * 0.5, h * 0.6)
+	_frame_size = tex.get_size() if tex != null else Vector2(716.0, 1152.0)
+	var crop_frac := CROP_FRAC if _dedicated else CROP_FRAC_SPRITE
+	var crop_aspect := _frame_size.x / maxf(_frame_size.y * crop_frac, 1.0)
+	var box_h := c.y
+	var box_w := box_h * crop_aspect
+	if box_w > c.x * CROP_MAX_WIDTH:
+		box_w = c.x * CROP_MAX_WIDTH
+		box_h = box_w / crop_aspect
+	_fire_dir = Vector2.RIGHT if _mirror else Vector2.LEFT
+	_crop.size = Vector2(box_w, box_h)
+	_crop.position = Vector2(0.0 if _mirror else c.x - box_w, 0.0)
 
-	_watermark.position = Vector2(c.x * 0.40, c.y * 0.20)
+	# 그림은 상자 폭에 맞추고 위쪽에 붙인다. 아래(하체)는 창 밖으로 잘린다.
+	var art_scale := box_w / _frame_size.x
+	_art.size = _frame_size * art_scale
+	_art.position = Vector2.ZERO
+	_home_art = _art.position
 
-	_emblem.size = Vector2(c.y * 0.62, c.y * 0.62)
-	_emblem.position = Vector2(c.x * 0.06, c.y * 0.18)
+	# 총구의 화면 좌표. 확대는 **총구를 축으로** 한다 — 밀려 들어도 총구·조준점·전기가 제자리에 있다.
+	var muzzle_px := _muzzle if _muzzle != Vector2.ZERO else _frame_size * MUZZLE_DEFAULT
+	if _mirror:
+		muzzle_px.x = _frame_size.x - muzzle_px.x
+	var m := muzzle_px * art_scale
+	_art.pivot_offset = m
+	_muzzle_screen = _crop.position + m
 
-	_type_root.position = Vector2(c.x * 0.075, c.y * 0.36)
+	# 조준점: 총구 높이에서 발사 방향 여백 위. 고리는 여기서 한 점으로 모인다.
+	_aim_point = _muzzle_screen + _fire_dir * (c.x * AIM_DISTANCE)
+	_aim_point.x = clampf(_aim_point.x, c.x * 0.08, c.x * 0.92)
+	var reticle_box := c.y * RETICLE_START * 2.0 + 40.0
+	_reticle.size = Vector2(reticle_box, reticle_box)
+	_reticle.position = _aim_point - _reticle.size * 0.5
+
+	# 글자 묶음: 발사 쪽 여백, 화면 중앙보다 조금 아래. 조준 고리(위)와 그림(옆)을 피한다.
+	var margin_from := box_w if _mirror else 0.0
+	var margin_to := c.x if _mirror else c.x - box_w
+	_type_width = margin_to - margin_from - c.x * TYPE_INSET * 2.0
+	_type_root.position = Vector2(margin_from + c.x * TYPE_INSET,
+		maxf(c.y * TYPE_TOP, _aim_point.y + c.y * RETICLE_START + 12.0))
+	_fit_text()
 
 	var strip_h := minf(210.0, c.y * 0.3)
 	_strip.position = Vector2(0, c.y * 0.5 - strip_h * 0.5)
 	_strip.size = Vector2(c.x, strip_h)
 	# 띠 안의 그림은 상반신만: 그림 높이를 띠의 2.4배로 두고 머리가 띠 위쪽에 오게 한다.
 	var sh := strip_h * 2.4
-	var still_aspect := aspect
+	var still_aspect := _frame_size.x / maxf(_frame_size.y, 1.0)
 	var still_tex := _strip_art.texture
 	if still_tex != null and still_tex.get_height() > 0:
 		still_aspect = float(still_tex.get_width()) / float(still_tex.get_height())
 	var sw := sh * still_aspect
 	_strip_art.size = Vector2(sw, sh)
 	# 전투 프레임은 칸 위쪽에 여백이 있어 머리가 30% 아래에 온다 — 얼굴이 띠 위쪽에 오게 올린다.
-	# LD 정지 그림(전용)은 여백 없이 잘려 있어 머리가 맨 위에 온다. SD 전투 프레임은 칸 위쪽에
-	# 여백이 있어 머리가 30% 아래에 온다 — 둘 다 얼굴이 띠 위쪽에 오게 맞춘다.
+	# LD 정지 그림(전용)은 여백 없이 잘려 있어 머리가 맨 위에 온다.
 	_strip_art.position = Vector2(c.x * 0.70 - sw * 0.5, -strip_h * (0.08 if _dedicated else 0.6))
 	_strip_lines[0].position = Vector2(0, 0)
 	_strip_lines[0].size = Vector2(c.x, 5)
@@ -322,68 +375,69 @@ func _layout() -> void:
 	_strip_skill.position = Vector2(c.x * 0.11, strip_h * 0.34)
 
 
+# 이름·기술명 글자 크기를 화면 높이에 맞추고, 기술명이 여백 폭을 넘으면 줄인다.
+func _fit_text() -> void:
+	var c := size
+	var font := HUDKit.notice_font()
+	var name_px := maxi(int(c.y * NAME_SIZE), 14)
+	var skill_px := maxi(int(c.y * SKILL_SIZE), SKILL_SIZE_MIN)
+	var avail := maxf(_type_width, 120.0)
+	while skill_px > SKILL_SIZE_MIN \
+			and font.get_string_size(_skill.text, HORIZONTAL_ALIGNMENT_LEFT, -1, skill_px).x > avail:
+		skill_px -= 2
+	_name.add_theme_font_size_override("font_size", name_px)
+	_skill.add_theme_font_size_override("font_size", skill_px)
+
+	var glyph_px := float(name_px) * 1.1
+	_glyph.size = Vector2(glyph_px, glyph_px)
+	_glyph.position = Vector2(0.0, 0.0)
+	_name.position = Vector2(glyph_px + 8.0 if _glyph.texture != null else 0.0, -2.0)
+	_name_row.size = Vector2(avail, glyph_px)
+	_skill.position = Vector2(0.0, glyph_px + 2.0)
+	# 기술명 아래 짧은 원소색 포인트 선(긴 밑줄이 아니다).
+	_underline.position = Vector2(2.0, glyph_px + 2.0 + float(skill_px) * 1.18)
+	_underline.size = Vector2(ACCENT_WIDTH, 2.0)
+
+
 # ===== 준비 =====
 
 # art: 정지 그림(짧게 모드·애니메이션이 없을 때). anim: LD 공격 애니메이션(없으면 null).
-# anim_speed: 배속 배수 — 애니메이션은 이 배수로 넘긴다.
+# anim_speed: 배속 배수. emblem 은 예전 사선 판 연출의 장식이라 더는 쓰지 않는다(호출부 호환을 위해 둔다).
 func setup(art: Texture2D, dedicated: bool, char_name: String, skill_name: String, color: Color,
-		emblem: Texture2D = null, glyph: Texture2D = null, anim: SpriteFrames = null,
+		_emblem: Texture2D = null, glyph: Texture2D = null, anim: SpriteFrames = null,
 		anim_speed: float = 1.0) -> void:
 	_color = color
 	_dedicated = dedicated
 	_skill_text = skill_name
-	_stop_anim()
 	_anim = anim if anim != null and anim.has_animation(ANIM_NAME) \
 		and anim.get_frame_count(ANIM_NAME) > 0 else null
 	_anim_speed = maxf(anim_speed, 0.1)
 	_index_anim()
+	_muzzle = Vector2.ZERO
+	# get_meta 의 기본값이 null 이면 "기본값 없음"으로 취급돼 에러가 난다 — has_meta 로 먼저 본다.
+	if _anim != null and _anim.has_meta(&"muzzle"):
+		var muzzle_meta: Variant = _anim.get_meta(&"muzzle")
+		if muzzle_meta is Vector2:
+			_muzzle = muzzle_meta
 
-	# 애니메이션이면 첫 장으로 등장한다(잔상도 첫 장). 정지 그림은 짧게 띠에만 쓴다.
-	var entry := _anim.get_frame_texture(ANIM_NAME, 0) if _anim != null else art
+	# 풀 연출은 조준 장에서 시작한다(정점 3장 앞). 애니메이션이 없으면 정지 그림 한 장이다.
+	var entry := _anim.get_frame_texture(ANIM_NAME, _aim_frame()) if _anim != null else art
 	_art.texture = entry
 	_strip_art.texture = art
-	for ghost in _ghosts:
-		ghost.texture = entry
-		ghost.modulate = Color(color.r, color.g, color.b, 0.0)
 
-	_emblem.texture = emblem
-	_emblem.modulate = Color(color.r, color.g, color.b, 0.16)
 	_glyph.texture = glyph
-	_glyph.modulate = color.lightened(0.2)
-
-	_caption.text = "U L T I M A T E"
-	_caption.add_theme_color_override("font_color", color.lightened(0.25))
+	_glyph.modulate = color.lightened(0.35)
 	_name.text = char_name
-	_name.add_theme_color_override("font_color", UITheme.CREAM)
+	_name.add_theme_color_override("font_color", NAME_COLOR)
+	_skill.text = skill_name
+	_skill.add_theme_color_override("font_color", SKILL_COLOR)
+	_underline.color = color.lerp(Color.WHITE, 0.45)
+	_mirror = MIRROR_TO_FIELD
+	_art.flip_h = _mirror
 
-	for child in _skill_row.get_children():
-		_skill_row.remove_child(child)
-		child.queue_free()
-	# 기술명은 왼쪽 판을 채울 만큼 크게(#574). 글자 수가 많으면 판 폭(화면의 SKILL_ROW_WIDTH)에 맞춰 줄인다.
-	var avail := (size.x if size.x > 0.0 else 1920.0) * SKILL_ROW_WIDTH
-	var skill_px := clampi(int(avail / float(maxi(skill_name.length(), 1)) / SKILL_ADVANCE), SKILL_SIZE_MIN, SKILL_SIZE_MAX)
-	_underline.position.y = 88.0 + float(skill_px) * 1.22
-	for ch in skill_name:
-		var l := _label(skill_px, 1.3)
-		l.text = ch
-		l.add_theme_color_override("font_color", UITheme.CREAM)
-		l.add_theme_color_override("font_outline_color", color.darkened(0.55))
-		l.add_theme_constant_override("outline_size", 10)
-		l.modulate.a = 0.0
-		_skill_row.add_child(l)
-
-	_underline.color = color
-	_watermark.text = skill_name
-	# 판 위의 큰 외곽선 글자: 예전 알파 0.16 은 배경에 묻혀 장식 구실을 못 했다(#574).
-	_watermark.add_theme_color_override("font_color", Color(color.lightened(0.5), 0.04))
-	_watermark.add_theme_color_override("font_outline_color", Color(color.lightened(0.55), 0.22))
-	for line in _strip_lines:
-		line.color = color
-
-	# 원소 색을 어둡게만 누르면 노랑이 탁한 올리브가 된다. 명도를 낮추되 채도는 지켜 색이 그대로 읽히게 한다(#574).
-	_slash.fill = Color.from_hsv(color.h, clampf(color.s * 1.05 + 0.05, 0.55, 1.0), clampf(color.v * 0.82, 0.55, 0.88), 0.94)
-	_slash.edge = color.lightened(0.35)
-	_speed.material.set_shader_parameter("tint", Color(color.lightened(0.5), 0.55))
+	# 막: 원소색 색조를 지키며 아주 어둡게. 노랑이 올리브로 탁해지지 않게 채도는 남긴다.
+	_deep.texture = _make_deep_texture(color)
+	_reticle.color = color.lightened(0.5)
 
 	_strip_bg.fill = Color(0.09, 0.08, 0.07, 0.95)
 	_strip_bg.edge = color
@@ -391,199 +445,281 @@ func setup(art: Texture2D, dedicated: bool, char_name: String, skill_name: Strin
 	_strip_name.add_theme_color_override("font_color", color.lightened(0.3))
 	_strip_skill.text = skill_name
 	_strip_skill.add_theme_color_override("font_color", UITheme.CREAM)
-	_strip_skill.add_theme_color_override("font_outline_color", color.darkened(0.5))
-	_strip_skill.add_theme_constant_override("outline_size", 8)
+	for line in _strip_lines:
+		line.color = color
 	_layout()
 
 
 # 재생 중이던 연출을 끊고 처음 상태로 되돌린다(전투 재시작 등).
 func reset() -> void:
 	_token += 1
-	_stop_anim()
 	visible = false
 	modulate = Color.WHITE
 	_dim.color.a = 0.0
 	_white.color.a = 0.0
-	_speed.modulate.a = 0.0
 	_strip.visible = false
+	_clear_fx()
+	_hide_full()
+
+
+# 조준 장: 정점 3장 앞(조준을 마친 자세). 범위를 넘지 않게 자른다.
+func _aim_frame() -> int:
+	if _anim == null:
+		return 0
+	return maxi(_anim_strike - 3, 0)
+
+
+func _make_deep_texture(color: Color) -> GradientTexture2D:
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color.from_hsv(color.h, 0.55, DEEP_VALUE_INNER, DEEP_ALPHA_INNER))
+	gradient.set_color(1, Color.from_hsv(color.h, 0.60, DEEP_VALUE_OUTER, DEEP_ALPHA_OUTER))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.62, 0.38)
+	texture.fill_to = Vector2(1.25, 0.38)
+	texture.width = 256
+	texture.height = 256
+	return texture
 
 
 # ===== 풀 연출 =====
 
+# 컷인 부분(약 1.4초)을 재생한다. 끝나면 **남색 막이 필드 위에서 걷히는 중**이므로
+# 호출부(`TurnBattle`)는 곧바로 필드 피격을 이어 붙인다.
 func play_full() -> void:
 	_token += 1
 	var token := _token
 	_prepare_full()
-	var c := size
 
-	# 0.00 정지·암전
+	# 0.00~0.15 암전
 	var t := _tween()
-	t.tween_property(_dim, "color:a", 0.78, _s(0.12))
-	if not await _hold(0.10, token):
+	t.tween_property(_deep, "modulate:a", 1.0, _s(T_DIM))
+	if not await _hold(T_DIM, token):
 		return
 
-	# 0.10 스피드라인 + 사선 판
+	# 0.15~0.55 클로즈업 — 머리~허벅지 구도로 발사 반대쪽에서 들어온다. 반투명은 아주 짧다.
+	_art.position = _home_art - _fire_dir * ENTER_SLIDE
+	_art.scale = Vector2.ONE * ZOOM_START
 	t = _tween()
 	t.set_parallel(true)
-	t.tween_property(_speed, "modulate:a", 1.0, _s(0.15))
-	t.tween_property(_slash, "reveal", 1.0, _s(0.24)).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	t.tween_property(_watermark, "modulate:a", 1.0, _s(0.3)).set_delay(_s(0.1))
-	if not await _hold(0.15, token):
+	t.tween_property(_crop, "modulate:a", 1.0, _s(T_ART_FADE_IN))
+	t.tween_property(_art, "position", _home_art, _s(T_CLOSEUP * 0.8)) \
+		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	if not await _hold(T_CLOSEUP, token):
 		return
 
-	if _anim != null:
-		await _play_full_anim(token)
-		return
-
-	# 0.25 캐릭터 등장 — 잔상을 끌며 들어온다. 실루엣 → 흰 번쩍 → 컬러.
-	var home := _art_root.position
-	_art_root.position = home + Vector2(c.x * 0.22, 0)
-	_art_root.modulate.a = 1.0
-	_art.modulate = Color(0, 0, 0, 1)
-	t = _tween()
-	t.set_parallel(true)
-	t.tween_property(_art_root, "position", home, _s(0.30)).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	for i in _ghosts.size():
-		var ghost := _ghosts[i]
-		var lag := 0.05 * float(i + 1)
-		ghost.position = Vector2(c.x * 0.06 * float(i + 1), 0)
-		ghost.modulate.a = 0.5 - 0.15 * float(i)
-		t.tween_property(ghost, "position", Vector2(18.0 * float(i + 1), -6.0 * float(i + 1)), _s(0.30 + lag)) \
-			.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-		t.tween_property(ghost, "modulate:a", 0.22 - 0.07 * float(i), _s(0.5)).set_delay(_s(0.25))
-	t.tween_property(_art, "modulate", Color(4, 4, 4, 1), _s(0.12)).set_delay(_s(0.10))
-	t.chain().tween_property(_art, "modulate", Color.WHITE, _s(0.22))
-	if not await _hold(0.20, token):
-		return
-
-	# 0.45 이름 · ULTIMATE · 원소 문양
+	# 0.55~0.95 조준 — 총구를 축으로 얼굴·손·석궁까지 밀려 든다. 고리가 조준점으로 모이고 전기가 총구로 빨려 든다.
+	# 이름·기술명은 한 묶음으로 여기서 뜬다 — 정적 구간까지 읽히고, 피격으로 넘어갈 때 걷힌다.
 	var type_home := _type_root.position
-	_type_root.position = type_home + Vector2(-80, 0)
+	_type_root.position = type_home + Vector2(0.0, 10.0)
 	t = _tween()
 	t.set_parallel(true)
-	t.tween_property(_type_root, "position", type_home, _s(0.25)).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	t.tween_property(_caption, "modulate:a", 1.0, _s(0.18))
-	t.tween_property(_glyph, "modulate:a", 1.0, _s(0.18))
-	t.tween_property(_name, "modulate:a", 1.0, _s(0.18)).set_delay(_s(0.05))
-	t.tween_property(_emblem, "modulate:a", 0.16, _s(0.3))
-	if not await _hold(0.10, token):
-		return
-
-	# 0.55 기술명 — 한 글자씩 크게 튀어 들어와 박힌다.
-	_pop_skill_letters()
-
-	# 홀드 — 그림이 천천히 밀려 들어오고, 판 위 큰 글자가 흐른다.
-	var push := _tween()
-	push.set_parallel(true)
-	push.tween_property(_art_root, "scale", Vector2(1.06, 1.06), _s(1.05))
-	push.tween_property(_watermark, "position:x", _watermark.position.x - 70.0, _s(1.05))
-	if not await _hold(1.05, token):
-		return
-
-	# 1.60 흰 번쩍 → 판을 걷는다.
-	t = _tween()
-	t.tween_property(_white, "color:a", 0.95, _s(0.06))
-	if not await _hold(0.06, token):
-		return
-	_hide_full()
-	t = _tween()
-	t.tween_property(_white, "color:a", 0.0, _s(0.25))
-	if not await _hold(0.10, token):
-		return
-
-
-# 애니메이션판 (#549): 0.25 에서 LD 캐릭터가 잔상을 끌고 들어오며 원화 24장이 넘어가기 시작하고,
-# 기술명 타이포는 공격이 정점에 닿는 장에서 박힌다. 결정 포즈가 유지되는 동안 홀드하고,
-# 마지막 장 끝에서 흰 번쩍으로 빠진다.
-# 원화 시간은 배속 배수(`_anim_speed`)로 나눈다 — 기준 속도 0.7 로 늦추지 않는다.
-func _play_full_anim(token: int) -> void:
-	var c := size
-	var home := _art_root.position
-	_art_root.position = home + Vector2(c.x * 0.18, 0)
-	_art_root.modulate.a = 1.0
-	_art.modulate = Color(0, 0, 0, 1)
-	_show_anim_frame(0)
-	_anim_struck = false
-
-	var t := _tween()
-	t.set_parallel(true)
-	t.tween_property(_art_root, "position", home, _s(0.28)).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	# 잔상 — 첫 장의 원소색 실루엣 둘이 뒤따라 들어와 흩어진다(영상판에서는 빠져 있었다).
-	for i in _ghosts.size():
-		var ghost := _ghosts[i]
-		ghost.position = Vector2(c.x * 0.06 * float(i + 1), 0)
-		ghost.modulate.a = 0.5 - 0.15 * float(i)
-		t.tween_property(ghost, "position", Vector2(18.0 * float(i + 1), -6.0 * float(i + 1)),
-			_s(0.28 + 0.05 * float(i + 1))).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-		t.tween_property(ghost, "modulate:a", 0.0, _s(0.35)).set_delay(_s(0.2))
-	# 실루엣 → 흰 번쩍 → 컬러를 짧게 — 길면 첫 동작(무기를 드는 순간)을 가린다.
-	var flash := _tween()
-	flash.tween_property(_art, "modulate", Color(4, 4, 4, 1), _s(0.07)).set_delay(_s(0.04))
-	flash.tween_property(_art, "modulate", Color.WHITE, _s(0.14))
-
-	# 이름 · ULTIMATE · 원소 문양
-	var type_home := _type_root.position
-	_type_root.position = type_home + Vector2(-80, 0)
-	t = _tween()
-	t.set_parallel(true)
-	t.tween_property(_type_root, "position", type_home, _s(0.25)).set_delay(_s(0.2)) \
+	t.tween_property(_art, "scale", Vector2.ONE * ZOOM_TIGHT, _s(T_AIM * 0.85)) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	t.tween_property(_caption, "modulate:a", 1.0, _s(0.18)).set_delay(_s(0.2))
-	t.tween_property(_glyph, "modulate:a", 1.0, _s(0.18)).set_delay(_s(0.2))
-	t.tween_property(_name, "modulate:a", 1.0, _s(0.18)).set_delay(_s(0.25))
-	t.tween_property(_emblem, "modulate:a", 0.16, _s(0.3)).set_delay(_s(0.2))
-
-	# 원화를 넘긴다. 정점 장에 닿으면 `_seek_anim` 이 기술명을 박는다.
-	var real_length := _anim_length / _anim_speed
-	_anim_tween = create_tween()
-	_anim_tween.tween_method(_seek_anim, 0.0, _anim_length, real_length)
-	var push := _tween()
-	push.set_parallel(true)
-	push.tween_property(_art_root, "scale", Vector2(1.04, 1.04), real_length)
-	push.tween_property(_watermark, "position:x", _watermark.position.x - 70.0, real_length)
-
-	# 결정 포즈 홀드 — 마지막 장이 끝나기 직전까지.
-	if not await _hold_real(real_length - ANIM_EXIT_LEAD / _anim_speed, token):
+	t.tween_property(_reticle, "modulate:a", 1.0, _s(0.10))
+	t.tween_property(_reticle, "radius", RETICLE_END, _s(T_AIM * 0.85)) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	t.tween_property(_type_root, "modulate:a", 1.0, _s(0.14))
+	t.tween_property(_type_root, "position", type_home, _s(0.22)) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_spawn_converging_arcs(token)
+	cue.emit(&"ult_charge")
+	if not await _hold(T_AIM, token):
 		return
 
+	# 0.95~1.10 정적 — 아무것도 움직이지 않는다. 확대·고리·전기는 조준 구간 안에서 이미 끝났다.
+	_art.scale = Vector2.ONE * ZOOM_TIGHT
+	_reticle.radius = RETICLE_END
+	if not await _hold(T_FREEZE, token):
+		return
+
+	# 1.10~1.28 발사
+	_fire()
+	if not await _hold(T_FIRE, token):
+		return
+
+	# 1.28~1.40 걷기 — 큰 그림과 글자를 빨리 치워 전장의 실제 피격 대상이 가려지지 않게 한다.
 	t = _tween()
-	t.tween_property(_white, "color:a", 0.95, _s(0.06))
-	if not await _hold(0.06, token):
+	t.set_parallel(true)
+	t.tween_property(_crop, "modulate:a", 0.0, _s(T_EXIT))
+	t.tween_property(_art, "position", _home_art - _fire_dir * EXIT_SLIDE, _s(T_EXIT)) \
+		.set_ease(Tween.EASE_IN)
+	t.tween_property(_type_root, "modulate:a", 0.0, _s(T_EXIT))
+	var tail := _tween()
+	tail.tween_property(_deep, "modulate:a", 0.0, _s(T_FADE_TAIL))
+	tail.tween_callback(_finish.bind(token))
+	if not await _hold(T_EXIT, token):
 		return
-	_stop_anim()
+
+
+# 발사: 정점 장으로 바꾸고, 발사 반대쪽으로 짧게 반동하며, 총구에서 발사 방향으로 짧은 섬광이 난다.
+func _fire() -> void:
+	_anim_struck = true
+	_show_anim_frame(_anim_strike if _anim != null else 0)
+	cue.emit(&"ult_fire")
+
+	# 반동: 발사 반대쪽·아래로 밀렸다 돌아온다.
+	var back := -_fire_dir * RECOIL + Vector2(0.0, RECOIL_DROP)
+	var kick := _tween()
+	kick.tween_property(_art, "position", _home_art + back, _s(0.04)).set_ease(Tween.EASE_OUT)
+	kick.tween_property(_art, "position", _home_art, _s(0.14)) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+	# 반동 장: 정점 뒤 몇 장을 짧은 간격으로 넘긴다(애니메이션이 있을 때).
+	if _anim != null:
+		var last := _anim.get_frame_count(ANIM_NAME) - 1
+		var frames := _tween()
+		for i in range(1, RECOIL_FRAMES + 1):
+			var idx := mini(_anim_strike + i, last)
+			frames.tween_interval(_s(RECOIL_FRAME_STEP))
+			frames.tween_callback(_show_anim_frame.bind(idx))
+
+	# 조준 고리는 그 자리에서 바로 꺼진다 — 발사 뒤에 고리가 다시 커지거나 강조되지 않는다.
+	var ring := _tween()
+	ring.tween_property(_reticle, "modulate:a", 0.0, _s(0.06))
+	_spawn_muzzle_flash()
+	_spawn_sparks(_muzzle_screen, 8)
+
+
+# 발사 섬광: 총구에서 발사 방향으로 짧게 뻗어 끝으로 가늘어지는 빛(흰 심지 + 원소색 후광). 곧 사라진다.
+func _spawn_muzzle_flash() -> void:
+	var end := _muzzle_screen + _fire_dir * (size.x * FLASH_LENGTH)
+	var taper := Curve.new()
+	taper.add_point(Vector2(0.0, 1.0))
+	taper.add_point(Vector2(1.0, 0.0))
+	for spec in [[18.0, Color(_color.lightened(0.3), 0.55)], [6.0, Color(1, 1, 1, 0.95)]]:
+		var line := Line2D.new()
+		line.points = PackedVector2Array([_muzzle_screen, end])
+		line.width = float(spec[0])
+		line.width_curve = taper
+		line.default_color = spec[1]
+		line.material = additive()
+		_fx.add_child(line)
+		var t := line.create_tween()
+		t.tween_property(line, "modulate:a", 0.0, _s(FLASH_TIME)).set_ease(Tween.EASE_IN)
+		t.tween_callback(line.queue_free)
+
+
+# 총구로 빨려 드는 작은 전기: 둘레에서 짧은 꺾은선이 한 점을 향해 모이며 사라진다.
+# 조준 구간 안에서 끝난다 — 정적 구간에는 움직이는 것이 없어야 한다.
+func _spawn_converging_arcs(token: int) -> void:
+	var count := 9
+	for i in count:
+		var angle := TAU * float(i) / float(count) + randf_range(-0.3, 0.3)
+		var dist := randf_range(0.14, 0.24) * size.y
+		var arc := Line2D.new()
+		arc.width = 2.0
+		arc.default_color = _color.lightened(0.6)
+		arc.material = additive()
+		arc.points = jagged(Vector2.ZERO, Vector2.RIGHT.rotated(angle + PI) * randf_range(26.0, 42.0), 5.0, 12.0)
+		arc.position = _muzzle_screen + Vector2.RIGHT.rotated(angle) * dist
+		arc.modulate.a = 0.0
+		_fx.add_child(arc)
+		var delay := T_AIM * 0.45 * float(i) / float(count)
+		var life := T_AIM * 0.40
+		var t := arc.create_tween()
+		t.set_parallel(true)
+		t.tween_property(arc, "modulate:a", 0.9, _s(0.06)).set_delay(_s(delay))
+		t.tween_property(arc, "position", _muzzle_screen, _s(life)).set_delay(_s(delay)) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		t.chain().tween_property(arc, "modulate:a", 0.0, _s(0.05))
+		t.chain().tween_callback(arc.queue_free)
+
+
+# 총구에서 튀는 잔 불꽃. 방향은 발사 방향 쪽으로 치우친다.
+func _spawn_sparks(at: Vector2, count: int) -> void:
+	for i in count:
+		var spark := Line2D.new()
+		spark.width = 2.0
+		spark.default_color = _color.lightened(0.6)
+		spark.material = additive()
+		var dir := _fire_dir.rotated(randf_range(-0.9, 0.9))
+		spark.points = PackedVector2Array([Vector2.ZERO, dir * randf_range(8.0, 18.0)])
+		spark.position = at
+		_fx.add_child(spark)
+		var t := spark.create_tween()
+		t.set_parallel(true)
+		t.tween_property(spark, "position", at + dir * randf_range(50.0, 130.0), _s(0.24)) \
+			.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+		t.tween_property(spark, "modulate:a", 0.0, _s(0.24))
+		t.chain().tween_callback(spark.queue_free)
+
+
+# 꺾은선: from 에서 to 로 가며 수직으로 흔들린다. 양 끝은 고정한다.
+static func jagged(from: Vector2, to: Vector2, amp: float, step: float) -> PackedVector2Array:
+	var points := PackedVector2Array([from])
+	var length := from.distance_to(to)
+	var count := maxi(int(length / step), 1)
+	var dir := (to - from).normalized()
+	var normal := Vector2(-dir.y, dir.x)
+	for i in range(1, count):
+		var along := from.lerp(to, float(i) / float(count))
+		points.append(along + normal * randf_range(-amp, amp))
+	points.append(to)
+	return points
+
+
+static func additive() -> CanvasItemMaterial:
+	var m := CanvasItemMaterial.new()
+	m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	return m
+
+
+func _prepare_full() -> void:
+	visible = true
+	modulate = Color.WHITE
+	_strip.visible = false
+	_anim_struck = false
+	_clear_fx()
+	for node in [_crop, _reticle, _type_root]:
+		node.visible = true
+		node.modulate = Color.WHITE
+	_deep.visible = true
+	_deep.modulate = Color(1, 1, 1, 0)
+	_crop.modulate.a = 0.0
+	_reticle.modulate.a = 0.0
+	_reticle.radius = size.y * RETICLE_START
+	_type_root.modulate.a = 0.0
+	_name_row.modulate.a = 1.0
+	_skill.modulate.a = 1.0
+	_art.flip_h = _mirror
+	_art.scale = Vector2.ONE
+	_anim_frame = -1
+	_show_anim_frame(_aim_frame())
+	_dim.color.a = 0.0
+	_white.color.a = 0.0
+	_layout()
+
+
+func _hide_full() -> void:
+	for node in [_crop, _reticle, _type_root, _deep]:
+		node.visible = false
+
+
+# 막이 다 걷히면 판을 접는다. 그 사이 새 재생이 시작됐으면(토큰이 바뀌었으면) 건드리지 않는다.
+func _finish(token: int) -> void:
+	if token != _token:
+		return
 	_hide_full()
-	t = _tween()
-	t.tween_property(_white, "color:a", 0.0, _s(0.25))
-	await _hold(0.10, token)
+	_clear_fx()
+	visible = false
 
 
-# 원화 시간 seconds 에 해당하는 장을 보인다. 정점 장을 처음 넘을 때 기술명을 박는다.
-func _seek_anim(seconds: float) -> void:
-	var idx := 0
-	while idx + 1 < _anim_starts.size() and _anim_starts[idx + 1] <= seconds:
-		idx += 1
-	_show_anim_frame(idx)
-	if not _anim_struck and idx >= _anim_strike:
-		_anim_struck = true
-		_on_strike()
+func _clear_fx() -> void:
+	for child in _fx.get_children():
+		_fx.remove_child(child)
+		child.queue_free()
 
 
+# ===== 원화 =====
+
+# 원화 한 장을 보인다. 같은 장이면 건너뛴다.
 func _show_anim_frame(idx: int) -> void:
 	if _anim == null or idx == _anim_frame:
 		return
 	_anim_frame = idx
 	_art.texture = _anim.get_frame_texture(ANIM_NAME, idx)
-
-
-# 공격 정점: 기술명이 박히고, 판이 한 번 번쩍이며 그림이 살짝 튄다.
-func _on_strike() -> void:
-	_pop_skill_letters()
-	var t := _tween()
-	t.tween_property(_white, "color:a", STRIKE_FLASH, _s(0.03))
-	t.tween_property(_white, "color:a", 0.0, _s(0.16))
-	var kick := _tween()
-	kick.tween_property(_art, "scale", Vector2(1.03, 1.03), _s(0.04))
-	kick.tween_property(_art, "scale", Vector2.ONE, _s(0.12))
 
 
 # 장마다 시작 시각을 미리 세어 둔다. 길이 = SpriteFrames 의 duration(장 단위) / speed(fps).
@@ -600,12 +736,6 @@ func _index_anim() -> void:
 		_anim_starts.append(_anim_length)
 		_anim_length += _anim.get_frame_duration(ANIM_NAME, i) / fps
 	_anim_strike = clampi(int(_anim.get_meta(&"strike_frame", count / 2)), 0, count - 1)
-
-
-func _stop_anim() -> void:
-	if _anim_tween != null and _anim_tween.is_valid():
-		_anim_tween.kill()
-	_anim_tween = null
 
 
 # 애니메이션의 마지막 장(결정 포즈)을 인물 상자만큼 잘라 정지 그림으로 쓴다(짧게 모드).
@@ -627,60 +757,6 @@ static func final_pose_of(frames: SpriteFrames) -> Texture2D:
 	return atlas
 
 
-# 기술명: 한 글자씩 크게 튀어 들어와 박히고, 밑줄이 따라 그어진다.
-func _pop_skill_letters() -> void:
-	var letters := _skill_row.get_children()
-	var t := _tween()
-	t.set_parallel(true)
-	for i in letters.size():
-		var l := letters[i] as Label
-		l.pivot_offset = Vector2(l.size.x * 0.5, l.size.y * 0.6)
-		l.scale = Vector2(2.4, 2.4)
-		l.rotation = deg_to_rad(-14.0 if i % 2 == 0 else 10.0)
-		var delay := _s(0.035 * float(i))
-		t.tween_property(l, "modulate:a", 1.0, _s(0.06)).set_delay(delay)
-		t.tween_property(l, "scale", Vector2.ONE, _s(0.16)).set_delay(delay) \
-			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		t.tween_property(l, "rotation", 0.0, _s(0.16)).set_delay(delay)
-	var row_w: float = maxf(_skill_row.get_combined_minimum_size().x, 200.0)
-	t.tween_property(_underline, "size:x", row_w, _s(0.3)).set_delay(_s(0.035 * float(letters.size()))) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-
-
-func _prepare_full() -> void:
-	visible = true
-	modulate = Color.WHITE
-	_strip.visible = false
-	for node in [_slash, _art_root, _emblem, _type_root, _watermark]:
-		node.visible = true
-	_slash.reveal = 0.0
-	_art.visible = true
-	for ghost in _ghosts:
-		ghost.visible = true
-	_watermark.modulate.a = 0.0
-	_art_root.scale = Vector2.ONE
-	_art.scale = Vector2.ONE   # 정점 장의 튀김(`_on_strike`) 도중 끊겼을 수 있다
-	_art_root.modulate.a = 0.0
-	_emblem.modulate.a = 0.0
-	_caption.modulate.a = 0.0
-	_glyph.modulate.a = 0.0
-	_name.modulate.a = 0.0
-	_underline.size.x = 0.0
-	for l in _skill_row.get_children():
-		(l as Label).modulate.a = 0.0
-	_dim.color.a = 0.0
-	_white.color.a = 0.0
-	_speed.modulate.a = 0.0
-	_layout()
-
-
-func _hide_full() -> void:
-	for node in [_slash, _art_root, _emblem, _type_root, _watermark]:
-		node.visible = false
-	_dim.color.a = 0.0
-	_speed.modulate.a = 0.0
-
-
 # ===== 짧게 =====
 
 func play_short() -> void:
@@ -688,8 +764,7 @@ func play_short() -> void:
 	var token := _token
 	visible = true
 	modulate = Color.WHITE
-	for node in [_slash, _art_root, _emblem, _type_root, _watermark]:
-		node.visible = false
+	_hide_full()
 	_layout()
 	var c := size
 	_strip.visible = true
@@ -769,16 +844,12 @@ func _texture_rect() -> TextureRect:
 	return r
 
 
-func _label(size_px: int, embolden: float) -> Label:
-	var f := FontVariation.new()
-	f.base_font = ThemeDB.fallback_font
-	f.variation_embolden = embolden
-	f.variation_transform = Transform2D(Vector2(1, 0), Vector2(0.2, 1), Vector2.ZERO)
+# 풀 연출 글자: 기울이지 않고 얇은 그림자만 둔다. 한글 알림 폰트 한 계열.
+func _plain_label() -> Label:
 	var l := Label.new()
-	l.add_theme_font_override("font", f)
-	l.add_theme_font_size_override("font_size", size_px)
-	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
-	l.add_theme_constant_override("shadow_offset_x", 3)
-	l.add_theme_constant_override("shadow_offset_y", 3)
+	l.add_theme_font_override("font", HUDKit.notice_font())
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
+	l.add_theme_constant_override("shadow_offset_x", 0)
+	l.add_theme_constant_override("shadow_offset_y", 1)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l

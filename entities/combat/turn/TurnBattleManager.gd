@@ -606,6 +606,8 @@ func _run(unit: TurnUnit, skill: SkillData, target: TurnUnit) -> Dictionary:
 		presentation.push(PresentationQueue.Event.ULTIMATE_CUTIN, {
 			"unit": unit,
 			"skill": skill,
+			# 컷인 뒤 필드 연출이 번개를 이을 대상(#576). 전체·튕김 오의는 null 이고 연출이 살아 있는 적 전체를 쓴다.
+			"target": target,
 			"steps": PresentationQueue.ultimate_cutin_steps(unit, skill),
 		})
 
