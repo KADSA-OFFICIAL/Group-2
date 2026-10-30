@@ -28,7 +28,7 @@ var elapsed_av: float = 0.0
 ## 추가 턴 대기열. AV를 소모하지 않고 즉시 한 번 더 행동하는 유닛들이다.
 var _extra_queue: Array[StringName] = []
 
-## 이번 턴에 행동 중인 유닛. 오의 상한(턴당 2개)과 추가 턴 캡의 기준이다.
+## 이번 턴에 행동 중인 유닛. 궁극기 상한(턴당 2개)과 추가 턴 캡의 기준이다.
 var current_actor_id: StringName = &""
 
 ## **이번 턴이 추가 턴인가.** `advance_to_next()` 가 정한다.
@@ -286,7 +286,7 @@ func preview(count: int = -1) -> Array[TurnUnit]:
 # `av_changes`: `unit_id` -> 앞당김/지연 비율. 양수 = 지연, 음수 = 앞당김.
 #               스킬이 걸 행동 조작을 미리 반영하기 위한 것이다.
 # `grants_extra`: 이 행동이 시전자에게 추가 턴을 주는가.
-# `consumes_turn`: 턴을 소모하는가. 오의는 false다 — 오의를 써도 순서가 바뀌지 않는 것이
+# `consumes_turn`: 턴을 소모하는가. 궁극기는 false다 — 궁극기를 써도 순서가 바뀌지 않는 것이
 #                  "턴 밖 발동"의 의미이고, 프리뷰가 그것을 그대로 보여 줘야 한다.
 func preview_if_acted(actor: TurnUnit, av_changes: Dictionary = {},
 		grants_extra: bool = false, consumes_turn: bool = true,

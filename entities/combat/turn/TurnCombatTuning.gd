@@ -44,8 +44,8 @@ class_name TurnCombatTuning
 ## 일반공격이 버는 양.
 @export var resonance_gain_basic: int = 1
 
-# ===== 오의 게이지 (Ultimate energy) =====
-@export_group("오의")
+# ===== 궁극기 게이지 (Ultimate energy) =====
+@export_group("궁극기")
 @export var energy_basic: int = 20
 @export var energy_skill: int = 30
 @export var energy_on_hit_taken: int = 10
@@ -53,7 +53,7 @@ class_name TurnCombatTuning
 @export var energy_on_break: int = 15
 @export var energy_after_ultimate: int = 5
 @export var energy_trait: int = 10
-## **한 유닛의 턴 사이에** 발동할 수 있는 오의 개수. 연쇄 오의 폭주 방지 (설계서 §4.3.2).
+## **한 유닛의 턴 사이에** 발동할 수 있는 궁극기 개수. 연쇄 궁극기 폭주 방지 (설계서 §4.3.2).
 @export var ultimate_per_turn_cap: int = 2
 
 # ===== 열기 (Heat) =====

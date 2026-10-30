@@ -13,7 +13,7 @@ class_name TurnBattleManager
 # │ 1. 타임라인 최전방 유닛 결정                   │
 # │ 2. 턴 시작 트리거 (DoT · 지속시간 감소 · 격파)  │
 # │ 3. 행동 선택 (일반공격 / 전투 스킬)             │
-# │    ※ 오의는 이 루프와 무관하게 아무 때나        │
+# │    ※ 궁극기는 이 루프와 무관하게 아무 때나        │
 # │ 4. 데미지·효과 처리 → 자물쇠·격파 판정          │
 # │ 5. 턴 종료 트리거                             │
 # │ 6. AV 재산정, 타임라인 갱신                    │
@@ -110,7 +110,7 @@ var _turn_counts: Dictionary = {}
 # ===== 웨이브 (Waves) =====
 #
 # 전투는 "적 여러 무리"일 수 있다. 한 무리를 전멸시키면 다음 무리가 등장하고,
-# **아군의 HP·오의 게이지·상태이상은 그대로 이어진다** — 웨이브 구조의 의미가 그것이다
+# **아군의 HP·궁극기 게이지·상태이상은 그대로 이어진다** — 웨이브 구조의 의미가 그것이다
 # (무리마다 회복시켜 주면 웨이브가 그냥 별개 전투 여러 개가 된다).
 #
 # 웨이브를 전투가 소유하는 이유: `_check_end()` 가 "적이 없으면 승리"를 판정하는데,
@@ -298,7 +298,7 @@ func start(party: Array[CharacterData], enemies: Array[EnemyData],
 
 # 준비 포인트를 소모해 전투 시작 전 이득을 얻는다 (HSR 비술 대응).
 #
-# `kind`: "energy"(오의 게이지 50%) / "toughness"(적 1체 인성치 -50%) /
+# `kind`: "energy"(궁극기 게이지 50%) / "toughness"(적 1체 인성치 -50%) /
 #         "shield"(아군 전체 보호막) / "advance"(아군 전체 선제)
 func use_prep(kind: String, target_index: int = 0) -> bool:
 	if phase != Phase.PREP or prep_points <= 0:
@@ -311,7 +311,7 @@ func use_prep(kind: String, target_index: int = 0) -> bool:
 		"energy":
 			for unit in allies:
 				resources.gain_energy(unit, int(round(float(unit.get_energy_max()) * 0.5)))
-			_note("준비: 아군 전체 오의 게이지 50%")
+			_note("준비: 아군 전체 궁극기 게이지 50%")
 
 		"toughness":
 			if enemies.is_empty():
@@ -495,7 +495,7 @@ func act(skill: SkillData, target: TurnUnit = null) -> Dictionary:
 		if not step_by_turn:
 			advance()
 	else:
-		# 턴을 소모하지 않는 행동(오의)이면 같은 유닛의 입력 대기로 돌아온다.
+		# 턴을 소모하지 않는 행동(궁극기)이면 같은 유닛의 입력 대기로 돌아온다.
 		phase = Phase.AWAITING_INPUT
 
 	return result
@@ -513,7 +513,7 @@ func auto_act() -> void:
 		advance()
 
 
-# **오의를 발동한다. 턴 순서와 무관하게 언제든 부를 수 있다.**
+# **궁극기를 발동한다. 턴 순서와 무관하게 언제든 부를 수 있다.**
 #
 # 이 하나로 턴제 게임이 "순서 기다리기"에서 "타이밍 게임"으로 승격된다.
 # 적 큰 공격 직전에 보호막을 깔거나, 아군 턴 중간에 버프를 넣어 그 공격에 태우거나,
@@ -523,11 +523,11 @@ func use_ultimate(unit: TurnUnit) -> Dictionary:
 	if phase == Phase.VICTORY or phase == Phase.DEFEAT or phase == Phase.IDLE:
 		return {"ok": false, "reason": "전투가 진행 중이 아닙니다"}
 	if unit == null or unit.character == null:
-		return {"ok": false, "reason": "오의를 쓸 수 없는 유닛입니다"}
+		return {"ok": false, "reason": "궁극기를 쓸 수 없는 유닛입니다"}
 
 	var ultimate := unit.character.get_turn_ultimate()
 	if ultimate == null:
-		return {"ok": false, "reason": "오의가 없습니다"}
+		return {"ok": false, "reason": "궁극기가 없습니다"}
 	if not resources.can_use_ultimate(unit, ultimate):
 		return {"ok": false, "reason": resources.ultimate_blocked_reason(unit, ultimate)}
 
@@ -577,7 +577,7 @@ func _push_enemy_cast(unit: TurnUnit, result: Dictionary) -> void:
 func _auto_ally_turn() -> void:
 	phase = Phase.RESOLVING
 
-	# 자동 전투도 오의를 먼저 판단한다 — 게이지가 넘쳐 낭비되지 않게.
+	# 자동 전투도 궁극기를 먼저 판단한다 — 게이지가 넘쳐 낭비되지 않게.
 	# 대상은 수동 발동(`use_ultimate()`)과 같은 규칙으로 고른다.
 	if ai.should_use_ultimate(active_unit):
 		var ultimate := active_unit.character.get_turn_ultimate()
@@ -597,16 +597,16 @@ func _auto_ally_turn() -> void:
 # ===== 공통 실행 (Run) =====
 
 func _run(unit: TurnUnit, skill: SkillData, target: TurnUnit) -> Dictionary:
-	# **오의 컷인은 여기서 한 번만 붙인다 (#542).**
+	# **궁극기 컷인은 여기서 한 번만 붙인다 (#542).**
 	#
 	# 예전에는 초상 배지(`use_ultimate()`)만 컷인을 큐에 넣었다. 자동 전투와 스킬 목록에서 쓴
-	# 오의는 이 함수로 바로 들어와 일반 공격처럼 재생됐다 — 오의가 "안 나오는" 것처럼 보였다.
-	# 낼 수 없는 오의(게이지 부족)에는 컷인을 붙이지 않는다. 실행이 거절되면 연출만 남는다.
+	# 궁극기는 이 함수로 바로 들어와 일반 공격처럼 재생됐다 — 궁극기가 "안 나오는" 것처럼 보였다.
+	# 낼 수 없는 궁극기(게이지 부족)에는 컷인을 붙이지 않는다. 실행이 거절되면 연출만 남는다.
 	if skill != null and unit != null and unit.is_ally() and skill.is_turn_ultimate() 			and resources.can_use_ultimate(unit, skill):
 		presentation.push(PresentationQueue.Event.ULTIMATE_CUTIN, {
 			"unit": unit,
 			"skill": skill,
-			# 컷인 뒤 필드 연출이 번개를 이을 대상(#576). 전체·튕김 오의는 null 이고 연출이 살아 있는 적 전체를 쓴다.
+			# 컷인 뒤 필드 연출이 번개를 이을 대상(#576). 전체·튕김 궁극기는 null 이고 연출이 살아 있는 적 전체를 쓴다.
 			"target": target,
 			"steps": PresentationQueue.ultimate_cutin_steps(unit, skill),
 		})
@@ -622,8 +622,8 @@ func _run(unit: TurnUnit, skill: SkillData, target: TurnUnit) -> Dictionary:
 	return result
 
 
-# 오의 대상. 오의는 턴 밖 발동이라 조준 UI 를 띄우면 시간이 멈춘 것처럼 보이고,
-# 대부분의 오의가 전체/아군전체다. 단일 오의는 어그로 규칙(유효 대상의 첫째)으로 고른다.
+# 궁극기 대상. 궁극기는 턴 밖 발동이라 조준 UI 를 띄우면 시간이 멈춘 것처럼 보이고,
+# 대부분의 궁극기가 전체/아군전체다. 단일 궁극기는 어그로 규칙(유효 대상의 첫째)으로 고른다.
 func _ultimate_target(unit: TurnUnit, ultimate: SkillData) -> TurnUnit:
 	if ultimate == null or not ultimate.needs_target_pick():
 		return null

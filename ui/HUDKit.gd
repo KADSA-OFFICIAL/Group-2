@@ -115,7 +115,7 @@ static func display_font() -> Font:
 
 # 디스플레이 폰트의 한글 담당(#561) — 도현(Do Hyeon). 세로로 길고 어깨가 좁은 굵은 고딕이라
 # 좁은 Barlow Condensed 와 비율이 맞는다. 도현은 똑바른 글꼴이라 Barlow Black **Italic** 과
-# 나란히 서면 한글만 서 있어 보인다 — 같은 방향으로 기울인다(오의 컷인 글자와 같은 기울기 0.2).
+# 나란히 서면 한글만 서 있어 보인다 — 같은 방향으로 기울인다(궁극기 컷인 글자와 같은 기울기 0.2).
 # 굵기도 Barlow Black 에 맞춰 조금 더한다. 파일이 없으면 null(호출부가 기본 폰트로 떨어진다).
 const KOREAN_DISPLAY_FONT_PATH := "res://assets/fonts/DoHyeon-Regular.ttf"
 const DISPLAY_ITALIC_SKEW := 0.2

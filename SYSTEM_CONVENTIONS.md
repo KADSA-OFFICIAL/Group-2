@@ -38,7 +38,7 @@
 | TurnBattleManager | `entities/combat/turn/TurnBattleManager.gd` | 턴제 전투 흐름 상태 기계 | 진행 중인 턴제 전투 |
 | TimelineSystem | `entities/combat/turn/TimelineSystem.gd` | 행동값(AV) · 행동 순서 · 프리뷰 | 행동 순서 |
 | RankSystem | `entities/combat/turn/RankSystem.gd` | 랭크 배치 · 위치 조작 · 어그로 | 유닛 위치 |
-| TurnResourceSystem | `entities/combat/turn/TurnResourceSystem.gd` | 공명 포인트 · 오의 게이지 · 열기 | 턴제 자원 |
+| TurnResourceSystem | `entities/combat/turn/TurnResourceSystem.gd` | 공명 포인트 · 궁극기 게이지 · 열기 | 턴제 자원 |
 | DamagePipeline | `entities/combat/turn/DamagePipeline.gd` | 턴제 피해 계산 (버킷 A~G) | 턴제 피해 공식 |
 | ToughnessSystem | `entities/combat/turn/ToughnessSystem.gd` | 인성치 · 자물쇠 · 격파 · 초격파 | 격파 판정 |
 | TurnStatusSystem | `entities/combat/turn/TurnStatusSystem.gd` | 턴 단위 버프/디버프/DoT · 격파 상태이상 7종 | 턴제 상태 효과 |

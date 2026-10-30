@@ -450,7 +450,7 @@ func validate() -> Array[String]:
 
 ## 이 캐릭터의 턴제 스킬. `skills`(실시간 Q/E/패시브)와 **별도 배열**이다.
 ##
-## 왜 나눴는가: 같은 배열에 섞으면 실시간 HUD가 오의를 Q 슬롯으로 집어 오고, 턴제
+## 왜 나눴는가: 같은 배열에 섞으면 실시간 HUD가 궁극기를 Q 슬롯으로 집어 오고, 턴제
 ## 액션 바가 투사체 패시브를 스킬 버튼으로 띄운다. 둘 다 `SkillData`이므로 **정의 출처는
 ## 하나**이고, 나뉜 것은 "어느 전투가 이 스킬을 쓰는가"라는 소속뿐이다.
 @export var turn_skills: Array[SkillData] = []
@@ -460,7 +460,7 @@ func validate() -> Array[String]:
 
 # 지정한 행동 종류의 스킬을 반환한다. 없으면 null.
 #
-# 오의·평타는 캐릭터당 하나라는 전제다(설계서 §4.3.2 — 오의 버튼은 하나뿐이다).
+# 궁극기·평타는 캐릭터당 하나라는 전제다(설계서 §4.3.2 — 궁극기 버튼은 하나뿐이다).
 func get_turn_skill(kind: TurnCombat.ActionKind) -> SkillData:
 	for skill in turn_skills:
 		if skill != null and skill.turn_action == kind:
@@ -525,14 +525,14 @@ func validate_turn() -> Array[String]:
 	if not turn_skills.is_empty() and get_turn_basic() == null:
 		problems.append("turn_skills에 일반공격(ActionKind.BASIC)이 없습니다.")
 
-	# 오의를 저작했는데 게이지 최대치가 0이면 영원히 발동되지 않는다.
+	# 궁극기를 저작했는데 게이지 최대치가 0이면 영원히 발동되지 않는다.
 	if get_turn_ultimate() != null and get_stats().get_energy_max() <= 0:
-		problems.append("오의가 있는데 stats.energy_max가 0입니다(영원히 발동되지 않습니다).")
+		problems.append("궁극기가 있는데 stats.energy_max가 0입니다(영원히 발동되지 않습니다).")
 
 	# 같은 행동 종류가 둘 이상이면 액션 버튼이 어느 쪽을 띄울지 코드 분기 순서에 숨는다.
 	if get_turn_skills(TurnCombat.ActionKind.BASIC).size() > 1:
 		problems.append("일반공격이 둘 이상입니다(하나여야 합니다).")
 	if get_turn_skills(TurnCombat.ActionKind.ULTIMATE).size() > 1:
-		problems.append("오의가 둘 이상입니다(하나여야 합니다).")
+		problems.append("궁극기가 둘 이상입니다(하나여야 합니다).")
 
 	return problems

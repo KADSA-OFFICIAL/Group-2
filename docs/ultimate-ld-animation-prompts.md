@@ -1,6 +1,6 @@
-# 오의 LD 공격 애니메이션 — 24장 원화 제작 프롬프트 (#549)
+# 궁극기 LD 공격 애니메이션 — 24장 원화 제작 프롬프트 (#549)
 
-오의 풀 연출(#544)의 캐릭터 애니메이션을 **독립 원화 24장**으로 만든다.
+궁극기 풀 연출(#544)의 캐릭터 애니메이션을 **독립 원화 24장**으로 만든다.
 #546 의 클립은 원화 6장 사이를 로컬 합성으로 이은 것이라 동작이 6단계로 끊기고(원화가 바뀌는 장에서
 화면이 통째로 바뀐다), 마지막 0.9초가 완전히 멈춰 있었다. 24장이면 장마다 실제로 그린 동작이 이어진다.
 
@@ -289,7 +289,7 @@ floor shadow, text, logo, watermark, blur, motion smear covering the face, flick
 `{KEY}` 는 위 표의 배경색으로 바꿔 넣는다(`pure green #00FF00` / `pure magenta #FF00FF`).
 
 #### 설아 (seola) — 한기 · 「절대 영도 관측」 · 배경 초록
-적 전체를 얼려 약하게 만드는 오의. **차분하고 우아한 한 번의 찌르기.**
+적 전체를 얼려 약하게 만드는 궁극기. **차분하고 우아한 한 번의 찌르기.**
 
 ```
 Seola, a calm and elegant mermaid girl from the reference image: very long straight pale
@@ -304,7 +304,7 @@ eyes and a faint confident smile, hair and tail settling.
 + 공통 꼬리말 (`{KEY}` = pure green #00FF00)
 
 #### 미나 (mina) — 화염 · 「종언의 화로」 · 배경 초록
-적 전체를 불길로 밀어내는 탱커의 오의. **방패를 앞세운 힘찬 돌진.**
+적 전체를 불길로 밀어내는 탱커의 궁극기. **방패를 앞세운 힘찬 돌진.**
 
 ```
 Mina, an energetic cheerful girl from the reference image: long wavy blonde hair, purple eyes,
@@ -319,7 +319,7 @@ raised high, big determined grin with one fang showing, wings flared.
 + 공통 꼬리말 (`{KEY}` = pure green #00FF00)
 
 #### 태희 (taehee) — 침식 · 「완성된 초상」 · 배경 초록
-쌓아 둔 속박을 터뜨리는 오의. **낮게 웅크렸다 튀어 나가는 교차 베기.**
+쌓아 둔 속박을 터뜨리는 궁극기. **낮게 웅크렸다 튀어 나가는 교차 베기.**
 
 ```
 Taehee, a quiet and menacing shark girl from the reference image: long white hair in two low
@@ -333,7 +333,7 @@ blade edges only. Final pose: low lunge, blades crossed in front of her chest, n
 + 공통 꼬리말 (`{KEY}` = pure green #00FF00)
 
 #### 하랑 (harang) — 충격 · 「해일의 일격」 · 배경 자홍
-적 전체를 한 번에 내려치는 탱커의 오의. **대검을 크게 돌려 내려치기.**
+적 전체를 한 번에 내려치는 탱커의 궁극기. **대검을 크게 돌려 내려치기.**
 
 ```
 Harang, a cheerful dinosaur girl from the reference image: mint-green hair in two small buns,
@@ -348,7 +348,7 @@ wide, mouth open in a shout, eyes wide.
 + 공통 꼬리말 (`{KEY}` = pure magenta #FF00FF)
 
 #### 아린 (arin) — 전격 · 「낙뢰 처형」 · 배경 초록
-한 적에게 벼락을 떨어뜨려 처형하는 오의. **침착하게 조준해 쏘는 한 발.**
+한 적에게 벼락을 떨어뜨려 처형하는 궁극기. **침착하게 조준해 쏘는 한 발.**
 
 ```
 Arin, a composed girl from the reference image: short blonde bob with a hair clip, golden eyes,
@@ -363,7 +363,7 @@ steady and focused.
 + 공통 꼬리말 (`{KEY}` = pure green #00FF00)
 
 #### 강지 (gangji) — 광휘 · 「여명의 각인」 · 배경 자홍
-아군 전체를 회복하고 북돋는 오의. **지팡이를 높이 들어 빛을 내리는 기도.**
+아군 전체를 회복하고 북돋는 궁극기. **지팡이를 높이 들어 빛을 내리는 기도.**
 
 ```
 Gangji, a gentle warm girl from the reference image: light brown short hair with a small green

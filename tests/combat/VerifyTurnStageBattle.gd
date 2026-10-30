@@ -189,7 +189,7 @@ func _test_wave_sequencing() -> void:
 
 
 func _test_wave_preserves_party_state() -> void:
-	# 웨이브 사이에 아군 HP·오의 게이지가 **이어져야** 한다. 회복시켜 주면 웨이브가
+	# 웨이브 사이에 아군 HP·궁극기 게이지가 **이어져야** 한다. 회복시켜 주면 웨이브가
 	# 그냥 별개 전투 여러 개가 되고, 웨이브 구조의 의미가 사라진다.
 	#
 	# 스냅샷을 루프에서 폴링하지 않고 `on_wave_started` 콜백에서 뜨는 이유:
@@ -222,14 +222,14 @@ func _test_wave_preserves_party_state() -> void:
 		return
 
 	# 두 번째 웨이브가 시작될 때 아군이 **1웨이브의 흔적을 갖고 있어야** 한다.
-	# HP 가 전원 만피이고 오의가 전원 0이면 초기화된 것이다.
+	# HP 가 전원 만피이고 궁극기가 전원 0이면 초기화된 것이다.
 	var carried := false
 	for id in snapshot:
 		var before: Array = snapshot[id]
 		if int(before[0]) < int(before[2]) or int(before[1]) > 0:
 			carried = true
 	_expect(carried,
-		"웨이브가 넘어갈 때 아군의 HP·오의가 이어져야 한다 — 초기화되면 웨이브가 별개 전투가 된다")
+		"웨이브가 넘어갈 때 아군의 HP·궁극기가 이어져야 한다 — 초기화되면 웨이브가 별개 전투가 된다")
 
 	# 적은 새 유닛으로 교체되어야 한다. id 가 겹치면 타임라인이 앞 웨이브의 AV 를 쓴다.
 	_expect(not enemy_ids_at_wave2.is_empty(), "두 번째 웨이브에 적이 놓여야 한다")

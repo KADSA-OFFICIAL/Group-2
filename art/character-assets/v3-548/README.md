@@ -32,7 +32,7 @@ godot --headless --path . --script tools/build_battle_frames.gd
 ## 남은 것
 
 - 4방향 워크 시트(`assets/sprites/characters/gangji_walk_frames.tres`)는 예전 그림체 그대로다.
-- 오의 LD 클립(#546/#549)은 예전 초상 기준이라 #549 에서 새 초상으로 다시 만든다.
+- 궁극기 LD 클립(#546/#549)은 예전 초상 기준이라 #549 에서 새 초상으로 다시 만든다.
 
 ---
 
@@ -41,7 +41,7 @@ godot --headless --path . --script tools/build_battle_frames.gd
 | 파일 | 내용 |
 |---|---|
 | `arin_portrait_source.png` | 새 초상 원본(1024×1536, **자홍 배경** — 투명 재생성이 실패해 자홍으로 받음) |
-| `arin_generation_prompts.json` | 초상·오의 24장 생성 프롬프트와 참조 관계 |
+| `arin_generation_prompts.json` | 초상·궁극기 24장 생성 프롬프트와 참조 관계 |
 | `arin_validation.csv` | 제작 쪽 검증값(해상도·모서리 색·SHA-256) |
 
 게임용 `assets/sprites/characters/portraits/arin.png`:

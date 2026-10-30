@@ -59,7 +59,7 @@ static func backdrop_path(backdrop_name: String) -> String:
 	return candidate if ResourceLoader.exists(candidate) else ""
 
 
-# 오의 전용 컷인 일러스트 (#544). **파일을 이 경로에 넣으면 전투가 바로 쓴다** — 코드·데이터를
+# 궁극기 전용 컷인 일러스트 (#544). **파일을 이 경로에 넣으면 전투가 바로 쓴다** — 코드·데이터를
 # 고칠 필요가 없다. 없으면 빈 문자열이고, 전투는 전투 스프라이트의 공격 프레임으로 연출한다.
 # 규격: docs/ultimate-cutin-art-spec.md
 const ULTIMATE_CUTIN_DIR := "res://assets/sprites/characters/cutins/ult"
@@ -71,7 +71,7 @@ static func ultimate_cutin_path(character_id: StringName) -> String:
 	return candidate if ResourceLoader.exists(candidate) else ""
 
 
-# 오의 LD 공격 애니메이션 (#549). 독립 원화 24장의 SpriteFrames — tools/build_ultimate_frames.py 가 만든다.
+# 궁극기 LD 공격 애니메이션 (#549). 독립 원화 24장의 SpriteFrames — tools/build_ultimate_frames.py 가 만든다.
 # 있으면 풀 연출이 이것을 재생하고, 짧게 모드는 마지막 장(결정 포즈)을 쓴다.
 static func ultimate_frames_path(character_id: StringName) -> String:
 	if String(character_id).is_empty():
@@ -103,19 +103,19 @@ static func role_icon_name(role: int) -> String:
 			return ""
 
 
-# ===== 오의 엠블럼 (Ultimate emblem) =====
+# ===== 궁극기 엠블럼 (Ultimate emblem) =====
 
-# 엠블럼 벡터가 있는 곳. **래스터가 아니라 SVG 여야 한다** — 오의 컷인에서 128px,
+# 엠블럼 벡터가 있는 곳. **래스터가 아니라 SVG 여야 한다** — 궁극기 컷인에서 128px,
 # 전투 HUD 에서 40px 로 쓰므로 크기 대응이 되어야 한다
 # (캐릭터 아트 가이드 §1 5번: "벡터, 단색 실루엣. 래스터로 만들면 크기 대응 불가").
 const EMBLEM_DIR := "res://assets/sprites/placeholder"
 
-# 역할별 오의 엠블럼 경로. 없으면 빈 문자열.
+# 역할별 궁극기 엠블럼 경로. 없으면 빈 문자열.
 #
-# **아직 오의 전용 엠블럼 아트가 없다.** 지금 저장소에 있는 벡터는 역할 도형
+# **아직 궁극기 전용 엠블럼 아트가 없다.** 지금 저장소에 있는 벡터는 역할 도형
 # (`shape_tank` 사각형 / `shape_ranged` 삼각형 / `shape_buffer` 마름모)뿐이고,
 # 이것이 "벡터 · 단색 실루엣 · 흰색(색은 호출부가 modulate 로 입힌다)"이라는 엠블럼
-# 요구를 그대로 만족한다. 그래서 오의 엠블럼이 그려질 때까지 이 도형을 쓴다.
+# 요구를 그대로 만족한다. 그래서 궁극기 엠블럼이 그려질 때까지 이 도형을 쓴다.
 # 전용 아트가 들어오면 이 대응표 한 곳만 바꾼다.
 static func role_emblem_path(role: int) -> String:
 	var file := ""

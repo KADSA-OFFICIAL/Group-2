@@ -10,7 +10,7 @@ class_name TurnBattleHUD
 #   2. 가장자리 흡착 — 모든 UI가 화면 4변에 붙는다. 여백은 메타 화면과 같은 14px
 #   3. 부품은 `UITheme.overlay_*` — 둥근 반투명 판(BG 34% + 테두리 1px). 일러스트가 비친다
 #   4. 색은 `UITheme` 팔레트에서만 — 아군 SAGE, 적 HOSTILE, 강조 AMBER, 글자 CREAM
-#   5. 요소 종류 상한 6종 — ①행동 순서 카드 ②적 분절바+HP바 ③아군 초상+오의
+#   5. 요소 종류 상한 6종 — ①행동 순서 카드 ②적 분절바+HP바 ③아군 초상+궁극기
 #      ④아군 HP바+상태 점 ⑤공명 핍 ⑥액션 버튼. 넘으면 통합한다
 #   6. 앰버 알약은 **하나뿐** — 메인 화면의 "출격만 알약 배경을 가진다"와 같은 규칙.
 #      전투에서는 행동 확정 버튼이 그 자리다
@@ -35,8 +35,8 @@ class_name TurnBattleHUD
 #
 # - **분절 인성치 바 하나**가 [인성치 + 약점 + 자물쇠] 3가지를 동시에 표현한다.
 #   칸 개수 = 남은 자물쇠, 칸 색 = 요구 속성, 칸이 어두워짐 = 해제 완료.
-# - **오의 게이지는 초상 카드 아래의 가는 게이지**이고, 만충이면 그 자리가 앰버 배지로
-#   바뀐다. 별도 오의 버튼이 없다.
+# - **궁극기 게이지는 초상 카드 아래의 가는 게이지**이고, 만충이면 그 자리가 앰버 배지로
+#   바뀐다. 별도 궁극기 버튼이 없다.
 # - **상태이상은 아이콘이 아니라 색 점**이고, 아군·적이 같은 형태다.
 # - 배속·자동·일시정지는 우상단 원형 버튼이다 — 메인 화면 상단 바와 같은 부품(⑥에 흡수).
 #
@@ -66,7 +66,7 @@ class_name TurnBattleHUD
 
 ## 플레이어가 행동을 골랐다.
 signal action_chosen(skill: SkillData, target: TurnUnit)
-## 플레이어가 오의를 눌렀다. 턴 순서와 무관하게 언제든 나온다.
+## 플레이어가 궁극기를 눌렀다. 턴 순서와 무관하게 언제든 나온다.
 signal ultimate_requested(unit: TurnUnit)
 ## 배속이 바뀌었다 (1 / 2 / 3).
 signal speed_changed(speed: float)
@@ -79,7 +79,7 @@ signal pause_toggled(enabled: bool)
 
 const MAX_SPEED := 3.0
 
-## 터치 히트박스 최소 변. **시각 크기와 분리한다** — 오의 배지는 68×18 이지만
+## 터치 히트박스 최소 변. **시각 크기와 분리한다** — 궁극기 배지는 68×18 이지만
 ## 판정은 56×56 이다.
 const HIT_MIN := 56.0
 
@@ -241,7 +241,7 @@ var auto: bool = false
 ## 멈춘 척만 하고 클릭이 통하면 그것은 일시정지가 아니다.
 var paused: bool = false
 
-## 오의 준비 배지의 발광 위상. 형태는 그대로 두고 밝기만 흔든다.
+## 궁극기 준비 배지의 발광 위상. 형태는 그대로 두고 밝기만 흔든다.
 var _glow_phase: float = 0.0
 
 var _font: Font = null
@@ -700,7 +700,7 @@ func _draw_party_band() -> void:
 		_element_badge(origin + Vector2(CARD_SIZE.x - ALLY_BADGE + 4.0, 4.0),
 			ALLY_BADGE, unit.element, 1.0 if alive else 0.45)
 
-		# --- 오의 (요소 ③) — 카드 아래쪽. 만충이면 게이지가 앰버 배지로 바뀐다 ---
+		# --- 궁극기 (요소 ③) — 카드 아래쪽. 만충이면 게이지가 앰버 배지로 바뀐다 ---
 		var ratio := unit.get_energy_ratio()
 		var ready := ratio >= 1.0 and alive
 		if ready:
@@ -711,7 +711,7 @@ func _draw_party_band() -> void:
 				Color(UITheme.ACCENT, 0.92) * Color(pulse, pulse, pulse, 1.0),
 				Color(UITheme.LINE, 0.45))
 			_text_centered(badge_pos + Vector2(CARD_SIZE.x * 0.5, ULT_BADGE_H - 5.0),
-				"오의", UITheme.INK, 10)
+				"궁극기", UITheme.INK, 10)
 			if not paused:
 				_register_hit(Rect2(badge_pos, Vector2(CARD_SIZE.x, ULT_BADGE_H)),
 					"ultimate", {"unit": unit})

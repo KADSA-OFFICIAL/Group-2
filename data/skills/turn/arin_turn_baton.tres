@@ -17,7 +17,7 @@ amount = 20
 script = ExtResource("1_85ugi")
 skill_id = &"arin_turn_baton"
 display_name = "표적 인계"
-summary = "아군 1명에게 배턴을 넘긴다. 그 아군은 즉시 추가 턴을 얻고 배턴 중첩당 피해가 20% 증가한다 (최대 3중첩 = +60%). 오의 게이지 +20."
+summary = "아군 1명에게 배턴을 넘긴다. 그 아군은 즉시 추가 턴을 얻고 배턴 중첩당 피해가 20% 증가한다 (최대 3중첩 = +60%). 궁극기 게이지 +20."
 turn_action = 1
 rp_cost = 1
 turn_targeting = 6

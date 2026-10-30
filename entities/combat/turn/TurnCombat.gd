@@ -74,10 +74,10 @@ enum Bucket {
 
 # ===== 행동 종류 (Action kind) =====
 enum ActionKind {
-	BASIC,      # 일반공격 — 턴 소모, RP +1, 오의 +20
-	SKILL,      # 전투 스킬 — 턴 소모, RP -1, 오의 +30
-	ULTIMATE,   # 오의 — **턴 미소모**, 에너지 소모, 오의 +5
-	TRAIT,      # 특성(추가공격) — 조건부 자동 발동, 오의 +10
+	BASIC,      # 일반공격 — 턴 소모, RP +1, 궁극기 +20
+	SKILL,      # 전투 스킬 — 턴 소모, RP -1, 궁극기 +30
+	ULTIMATE,   # 궁극기 — **턴 미소모**, 에너지 소모, 궁극기 +5
+	TRAIT,      # 특성(추가공격) — 조건부 자동 발동, 궁극기 +10
 	PREP,       # 준비(비술) — 전투 진입 전 사용
 }
 
@@ -254,7 +254,7 @@ const COLOR_HEAL := UITheme.POSITIVE
 const COLOR_ALLY_HP := UITheme.SAGE        # 아군 HP
 const COLOR_ENEMY_HP := UITheme.HOSTILE    # 적 HP — 아군과 구분하는 빨강
 const COLOR_TOUGHNESS := UITheme.CREAM     # 인성치 — 밝은 면
-const COLOR_ULT_READY := UITheme.ACCENT    # 오의 준비 — 주 강조(앰버)
+const COLOR_ULT_READY := UITheme.ACCENT    # 궁극기 준비 — 주 강조(앰버)
 const COLOR_AIM := UITheme.ACCENT          # 조준 — 앰버가 "지금 고른 것"을 뜻한다
 
 # 무채색 크롬 (문서 §4.9.3). **색은 의미에만 쓴다**는 규율의 나머지 절반이다.
@@ -332,7 +332,7 @@ const BREAK_STATUS_NAME := {
 const ACTION_KIND_NAME := {
 	ActionKind.BASIC: "일반공격",
 	ActionKind.SKILL: "전투 스킬",
-	ActionKind.ULTIMATE: "오의",
+	ActionKind.ULTIMATE: "궁극기",
 	ActionKind.TRAIT: "특성",
 	ActionKind.PREP: "준비",
 }

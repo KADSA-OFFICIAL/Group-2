@@ -168,7 +168,7 @@ func _resolution_button(size: Vector2i, locked: bool) -> Button:
 	return button
 
 
-# 오의 연출 (#544): 풀 / 짧게 / 끄기. 해상도 행과 같은 버튼 묶음이다.
+# 궁극기 연출 (#544): 풀 / 짧게 / 끄기. 해상도 행과 같은 버튼 묶음이다.
 func _build_cutin_row() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
@@ -179,7 +179,7 @@ func _build_cutin_row() -> Control:
 	box.custom_minimum_size = Vector2(130, 0)
 	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(box)
-	box.add_child(HUDKit.label("오의 연출", 15, HUDKit.text_1(), 600))
+	box.add_child(HUDKit.label("궁극기 연출", 15, HUDKit.text_1(), 600))
 	box.add_child(HUDKit.caption("ultimate cut-in"))
 
 	var buttons := HBoxContainer.new()
