@@ -13,6 +13,7 @@ class_name UltimateCutin
 #
 #   0.00~0.15  암전          필드가 짙은 남색으로 가라앉는다 (전투 UI·떠 있던 숫자는 `TurnBattle` 이 치운다)
 #   0.15~0.55  클로즈업      머리~허벅지 구도로 발사 반대쪽에서 들어온다. 반투명은 처음 0.08초뿐
+#                            들어오면서부터 조준 끝까지 원화를 넘겨 인물이 공격 자세를 잡는다(LEAD_FRAMES)
 #   0.55~0.95  조준          총구를 축으로 얼굴·손·석궁까지 밀려 든다. 조준 고리가 발사 방향의 조준점으로 모이고
 #                            작은 전기가 총구로 빨려 든다. 이름·기술명이 한 묶음으로 뜬다
 #   0.95~1.10  정적          모든 움직임이 멈춘다 — 발사 직전의 긴장. 글자는 여기서 읽힌다
@@ -62,15 +63,18 @@ const T_FADE_TAIL: float = 0.22     # 남색 막이 걷히는 시간(필드 피�
 ## 그림이 반투명한 시간. 짧게 둬 조준 전에 완전히 불투명해진다.
 const T_ART_FADE_IN: float = 0.08
 
-## 그림을 위에서부터 이만큼(원화 높이 비)만 보인다 — 얼굴·상체·무기. 전투 스프라이트(저해상도)는 덜 자른다.
-const CROP_FRAC: float = 0.56
-const CROP_FRAC_SPRITE: float = 0.80
-## 크롭 상자가 화면 폭에서 차지할 수 있는 최대 비.
-const CROP_MAX_WIDTH: float = 0.66
+## 인물의 머리부터 이만큼(인물 높이 비)이 화면 높이를 채운다 — 얼굴·상체·무기. 나머지는 화면 아래로 나간다.
+## 인물 높이는 원화 칸이 아니라 실제로 그려진 영역(`_figure_rect`)이다. 전투 스프라이트(저해상도)는 덜 자른다.
+const CROP_FRAC: float = 0.85
+const CROP_FRAC_SPRITE: float = 0.9
+## 인물이 화면 폭에서 차지할 수 있는 최대 비. 넘으면 그림을 줄인다.
+const CROP_MAX_WIDTH: float = 0.6
+## 가장 밀려 든(ZOOM_TIGHT) 순간에도 머리 위에 남기는 여백(화면 높이 비).
+const HEAD_ROOM: float = 0.03
 ## 구도: 클로즈업은 머리~허벅지(ZOOM_START), 조준 동안 총구를 축으로 얼굴·손·석궁까지 밀려 든다(ZOOM_TIGHT).
-## 원화(716×1152)를 화면 높이에 맞추면 약 1.1배라, 1.35 배로 밀어도 원화의 1.5배 남짓이다 — 더 키우면 무르다.
+## 인물이 화면 안에 잘리지 않고 들어오도록 밀려 드는 폭을 작게 둔다(1.15배).
 const ZOOM_START: float = 1.0
-const ZOOM_TIGHT: float = 1.35
+const ZOOM_TIGHT: float = 1.15
 ## 들어올 때·걷을 때 발사 반대쪽으로 움직이는 거리(px).
 const ENTER_SLIDE: float = 60.0
 const EXIT_SLIDE: float = 48.0
@@ -80,6 +84,10 @@ const RECOIL_DROP: float = 4.0
 ## 반동 장을 넘기는 간격(초, 배속 적용 전). 정점 장 뒤로 몇 장 더 보여 준다.
 const RECOIL_FRAME_STEP: float = 0.05
 const RECOIL_FRAMES: int = 4
+## 클로즈업·조준 동안 원화를 넘긴다: 조준 장보다 이만큼 앞 장에서 시작해 정점 바로 앞 장까지.
+## 카메라가 밀려 드는 동안 인물도 공격 자세를 잡는다. 너무 앞(서 있는 장)에서 시작하면 머리가 높아
+## 조준 자세 기준 구도에서 화면 위로 나간다.
+const LEAD_FRAMES: int = 5
 
 ## 원화를 좌우로 뒤집어 전장의 발사 방향(오른쪽)과 맞춘다. false 면 원화 그대로(왼쪽으로 쏜다).
 const MIRROR_TO_FIELD: bool = true
@@ -97,14 +105,16 @@ const RETICLE_END: float = 12.0
 ## 발사 섬광: 총구에서 발사 방향으로 짧게(화면 폭 비) 뻗었다가 곧 사라진다. 화면을 가로지르지 않는다.
 const FLASH_LENGTH: float = 0.12
 const FLASH_TIME: float = 0.10
-## 총구 위치를 모를 때 원화 크기에 곱하는 기본값.
-const MUZZLE_DEFAULT := Vector2(0.085, 0.205)
+## 총구 위치를 모를 때: 인물의 발사 쪽 가장자리, 인물 머리에서 이만큼(인물 높이 비) 아래.
+const MUZZLE_DEFAULT_HEIGHT: float = 0.22
 ## 이름·기술명 글자 크기(화면 높이 비). 기술명은 #576 1차(0.066)의 약 1.6배.
 const NAME_SIZE: float = 0.036
 const SKILL_SIZE: float = 0.105
 const SKILL_SIZE_MIN: int = 36
 ## 글자 묶음: 발사 쪽 여백, 화면 중앙보다 조금 아래(위쪽 가장자리, 화면 높이 비). 들여쓰기(화면 폭 비).
 const TYPE_TOP: float = 0.58
+## 대상이 화면 아래쪽이어도 글자 묶음이 이보다 내려가지 않는다(화면 높이 비).
+const TYPE_BOTTOM: float = 0.70
 const TYPE_INSET: float = 0.05
 ## 기술명은 따뜻한 아이보리, 이름은 차분한 연회색. 원소색은 기호와 짧은 포인트 선에만.
 const SKILL_COLOR := Color("F4EEDC")
@@ -139,10 +149,14 @@ var _anim_frame: int = -1
 var _anim_struck: bool = false
 var _muzzle: Vector2 = Vector2.ZERO      # 원화 픽셀 좌표
 var _frame_size: Vector2 = Vector2(716.0, 1152.0)
+## 그림(SpriteFrames 또는 정지 그림)마다 인물이 그려진 영역(원화 픽셀, 뒤집기 전). `_figure_rect` 가 채운다.
+var _figure_cache: Dictionary = {}
 ## 화면에서 총구가 놓이는 점. `_layout()` 이 정한다(정적 때의 확대 배율 기준).
 var _muzzle_screen: Vector2 = Vector2.ZERO
-## 조준 고리가 모이는 점(발사 방향 여백 위).
+## 조준 고리가 모이는 점. 대상이 있으면 그 대상, 없으면 발사 방향 여백 위.
 var _aim_point: Vector2 = Vector2.ZERO
+## 실제로 맞을 대상의 화면 좌표(이 판 기준). 없으면 Vector2.INF. `set_aim_target()` 이 정한다.
+var _aim_target: Vector2 = Vector2.INF
 var _home_art: Vector2 = Vector2.ZERO
 ## 그림을 뒤집었는가, 발사 방향, 글자 묶음이 쓸 수 있는 폭. `_layout()` 이 정한다.
 var _mirror: bool = false
@@ -238,9 +252,10 @@ func _build() -> void:
 	_deep.modulate.a = 0.0
 	add_child(_deep)
 
-	# 크롭: 얼굴·상체·무기만 보이게 자른 창. 그림은 이 안에서 움직인다.
+	# 그림 판: 화면 전체. 자르지 않는다 — 상자 가장자리가 그림을 끊으면 인물이 잘려 보인다.
+	# 하체는 크기·위치로 화면 아래 밖에 둔다(`_layout`).
 	_crop = Control.new()
-	_crop.clip_contents = true
+	_crop.clip_contents = false
 	_crop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_crop)
 	_art = _texture_rect()
@@ -308,49 +323,68 @@ func _layout() -> void:
 	if c.x <= 0.0 or c.y <= 0.0:
 		return
 
-	# 크롭 상자: 화면 높이를 꽉 채우고 발사 반대쪽 가장자리에 붙인다. 반대편은 발사 방향의 여백이다.
+	# 인물(원화에서 실제로 그려진 영역)의 머리~허벅지가 화면 높이를 채우고, 발사 반대쪽 화면 가장자리에 붙는다.
+	# 반대편은 발사 방향의 여백이다. 원화 칸의 빈 여백은 캐릭터마다 달라 칸 기준으로 자르면 인물이 밀려난다.
 	var tex := _art.texture
 	if _anim != null:
 		tex = _anim.get_frame_texture(ANIM_NAME, 0)
 	_frame_size = tex.get_size() if tex != null else Vector2(716.0, 1152.0)
-	var crop_frac := CROP_FRAC if _dedicated else CROP_FRAC_SPRITE
-	var crop_aspect := _frame_size.x / maxf(_frame_size.y * crop_frac, 1.0)
-	var box_h := c.y
-	var box_w := box_h * crop_aspect
-	if box_w > c.x * CROP_MAX_WIDTH:
-		box_w = c.x * CROP_MAX_WIDTH
-		box_h = box_w / crop_aspect
 	_fire_dir = Vector2.RIGHT if _mirror else Vector2.LEFT
-	_crop.size = Vector2(box_w, box_h)
-	_crop.position = Vector2(0.0 if _mirror else c.x - box_w, 0.0)
+	_crop.position = Vector2.ZERO
+	_crop.size = c
 
-	# 그림은 상자 폭에 맞추고 위쪽에 붙인다. 아래(하체)는 창 밖으로 잘린다.
-	var art_scale := box_w / _frame_size.x
-	_art.size = _frame_size * art_scale
-	_art.position = Vector2.ZERO
-	_home_art = _art.position
+	var figure := _figure_rect()
+	var crop_frac := CROP_FRAC if _dedicated else CROP_FRAC_SPRITE
 
-	# 총구의 화면 좌표. 확대는 **총구를 축으로** 한다 — 밀려 들어도 총구·조준점·전기가 제자리에 있다.
-	var muzzle_px := _muzzle if _muzzle != Vector2.ZERO else _frame_size * MUZZLE_DEFAULT
+	# 총구(원화 좌표, 뒤집기 전). 모르면 인물의 발사 쪽(원화는 왼쪽을 겨눈다) 가장자리, 상체 높이.
+	var muzzle_px := _muzzle if _muzzle != Vector2.ZERO \
+		else Vector2(figure.position.x, figure.position.y + figure.size.y * MUZZLE_DEFAULT_HEIGHT)
+
+	# 확대는 **총구를 축으로** 한다 — 밀려 들어도 총구·조준점·전기가 제자리에 있다. 머리는 축보다 위라
+	# 밀려 들수록 올라가므로, 가장 밀려 든 순간에 머리 위 여백이 HEAD_ROOM 이 되게 처음부터 그만큼 내려 둔다.
+	# 배율은 그 여백까지 더해 인물의 crop_frac 이 화면 바닥에 딱 닿게 정한다.
+	var above_px := maxf(muzzle_px.y - figure.position.y, 0.0)
+	var art_scale := c.y * (1.0 - HEAD_ROOM) \
+		/ maxf(figure.size.y * crop_frac + above_px * (ZOOM_TIGHT - 1.0), 1.0)
+	if figure.size.x * art_scale > c.x * CROP_MAX_WIDTH:
+		art_scale = c.x * CROP_MAX_WIDTH / figure.size.x
+
 	if _mirror:
 		muzzle_px.x = _frame_size.x - muzzle_px.x
+		figure.position.x = _frame_size.x - figure.end.x
+	var above := above_px * art_scale
+	var figure_top := c.y * HEAD_ROOM + above * (ZOOM_TIGHT - 1.0)
+	var figure_x := 0.0 if _mirror else c.x - figure.size.x * art_scale
+	_art.size = _frame_size * art_scale
+	_art.position = Vector2(figure_x - figure.position.x * art_scale, figure_top - figure.position.y * art_scale)
+	_home_art = _art.position
+
 	var m := muzzle_px * art_scale
 	_art.pivot_offset = m
-	_muzzle_screen = _crop.position + m
+	_muzzle_screen = _art.position + m
 
-	# 조준점: 총구 높이에서 발사 방향 여백 위. 고리는 여기서 한 점으로 모인다.
-	_aim_point = _muzzle_screen + _fire_dir * (c.x * AIM_DISTANCE)
-	_aim_point.x = clampf(_aim_point.x, c.x * 0.08, c.x * 0.92)
+	# 인물의 발사 쪽 가장자리(화면 x). 밀려 든 뒤에도 글자 여백을 넘지 않게 두 배율 중 바깥쪽을 쓴다.
+	var inner := _art.position.x + (figure.end.x if _mirror else figure.position.x) * art_scale
+	var inner_tight := _muzzle_screen.x + (inner - _muzzle_screen.x) * ZOOM_TIGHT
+	inner = maxf(inner, inner_tight) if _mirror else minf(inner, inner_tight)
+
+	# 조준점: 전장에서 실제로 맞을 대상. 고리는 여기서 한 점으로 모이고, 필드 번개가 같은 자리에 꽂힌다.
+	# 대상을 모르면(검증 장면 등) 총구 높이에서 발사 방향 여백 위.
+	if _aim_target.is_finite():
+		_aim_point = _aim_target
+	else:
+		_aim_point = _muzzle_screen + _fire_dir * (c.x * AIM_DISTANCE)
+		_aim_point.x = clampf(_aim_point.x, c.x * 0.08, c.x * 0.92)
 	var reticle_box := c.y * RETICLE_START * 2.0 + 40.0
 	_reticle.size = Vector2(reticle_box, reticle_box)
 	_reticle.position = _aim_point - _reticle.size * 0.5
 
 	# 글자 묶음: 발사 쪽 여백, 화면 중앙보다 조금 아래. 조준 고리(위)와 그림(옆)을 피한다.
-	var margin_from := box_w if _mirror else 0.0
-	var margin_to := c.x if _mirror else c.x - box_w
+	var margin_from := clampf(inner, 0.0, c.x) if _mirror else 0.0
+	var margin_to := c.x if _mirror else clampf(inner, 0.0, c.x)
 	_type_width = margin_to - margin_from - c.x * TYPE_INSET * 2.0
 	_type_root.position = Vector2(margin_from + c.x * TYPE_INSET,
-		maxf(c.y * TYPE_TOP, _aim_point.y + c.y * RETICLE_START + 12.0))
+		clampf(_aim_point.y + c.y * RETICLE_START + 12.0, c.y * TYPE_TOP, c.y * TYPE_BOTTOM))
 	_fit_text()
 
 	var strip_h := minf(210.0, c.y * 0.3)
@@ -434,6 +468,7 @@ func setup(art: Texture2D, dedicated: bool, char_name: String, skill_name: Strin
 	_underline.color = color.lerp(Color.WHITE, 0.45)
 	_mirror = MIRROR_TO_FIELD
 	_art.flip_h = _mirror
+	_aim_target = Vector2.INF
 
 	# 막: 원소색 색조를 지키며 아주 어둡게. 노랑이 올리브로 탁해지지 않게 채도는 남긴다.
 	_deep.texture = _make_deep_texture(color)
@@ -447,6 +482,12 @@ func setup(art: Texture2D, dedicated: bool, char_name: String, skill_name: Strin
 	_strip_skill.add_theme_color_override("font_color", UITheme.CREAM)
 	for line in _strip_lines:
 		line.color = color
+	_layout()
+
+
+# 조준 고리가 모일 대상의 화면 좌표(이 판 기준). `setup()` 뒤에 부른다 — `setup()` 은 대상을 지운다.
+func set_aim_target(point: Vector2) -> void:
+	_aim_target = point
 	_layout()
 
 
@@ -467,6 +508,11 @@ func _aim_frame() -> int:
 	if _anim == null:
 		return 0
 	return maxi(_anim_strike - 3, 0)
+
+
+# 클로즈업이 시작하는 장: 조준 장보다 LEAD_FRAMES 앞.
+func _lead_frame() -> int:
+	return maxi(_aim_frame() - LEAD_FRAMES, 0)
 
 
 func _make_deep_texture(color: Color) -> GradientTexture2D:
@@ -499,8 +545,17 @@ func play_full() -> void:
 		return
 
 	# 0.15~0.55 클로즈업 — 머리~허벅지 구도로 발사 반대쪽에서 들어온다. 반투명은 아주 짧다.
+	# 들어오는 순간부터 조준이 끝날 때까지 원화를 넘겨, 밀려 드는 카메라와 함께 인물이 공격 자세를 잡는다.
 	_art.position = _home_art - _fire_dir * ENTER_SLIDE
 	_art.scale = Vector2.ONE * ZOOM_START
+	if _anim != null:
+		# 재시작(`reset()`)으로 토큰이 바뀌면 넘기지 않는다 — 트윈은 판이 접혀도 남아 돈다.
+		var step := func(v: float) -> void:
+			if token == _token:
+				_show_anim_frame(int(v))
+		var lead := _tween()
+		lead.tween_method(step, float(_lead_frame()), float(maxi(_anim_strike - 1, _lead_frame())),
+			_s(T_CLOSEUP + T_AIM * 0.85))
 	t = _tween()
 	t.set_parallel(true)
 	t.tween_property(_crop, "modulate:a", 1.0, _s(T_ART_FADE_IN))
@@ -582,9 +637,15 @@ func _fire() -> void:
 	_spawn_sparks(_muzzle_screen, 8)
 
 
-# 발사 섬광: 총구에서 발사 방향으로 짧게 뻗어 끝으로 가늘어지는 빛(흰 심지 + 원소색 후광). 곧 사라진다.
+# 총구에서 조준점으로 향하는 방향. 조준점이 총구와 겹치면 발사 방향.
+func _shot_dir() -> Vector2:
+	var to_aim := _aim_point - _muzzle_screen
+	return to_aim.normalized() if to_aim.length() > 1.0 else _fire_dir
+
+
+# 발사 섬광: 총구에서 조준점 쪽으로 짧게 뻗어 끝으로 가늘어지는 빛(흰 심지 + 원소색 후광). 곧 사라진다.
 func _spawn_muzzle_flash() -> void:
-	var end := _muzzle_screen + _fire_dir * (size.x * FLASH_LENGTH)
+	var end := _muzzle_screen + _shot_dir() * (size.x * FLASH_LENGTH)
 	var taper := Curve.new()
 	taper.add_point(Vector2(0.0, 1.0))
 	taper.add_point(Vector2(1.0, 0.0))
@@ -634,7 +695,7 @@ func _spawn_sparks(at: Vector2, count: int) -> void:
 		spark.width = 2.0
 		spark.default_color = _color.lightened(0.6)
 		spark.material = additive()
-		var dir := _fire_dir.rotated(randf_range(-0.9, 0.9))
+		var dir := _shot_dir().rotated(randf_range(-0.9, 0.9))
 		spark.points = PackedVector2Array([Vector2.ZERO, dir * randf_range(8.0, 18.0)])
 		spark.position = at
 		_fx.add_child(spark)
@@ -686,7 +747,7 @@ func _prepare_full() -> void:
 	_art.flip_h = _mirror
 	_art.scale = Vector2.ONE
 	_anim_frame = -1
-	_show_anim_frame(_aim_frame())
+	_show_anim_frame(_lead_frame())
 	_dim.color.a = 0.0
 	_white.color.a = 0.0
 	_layout()
@@ -720,6 +781,50 @@ func _show_anim_frame(idx: int) -> void:
 		return
 	_anim_frame = idx
 	_art.texture = _anim.get_frame_texture(ANIM_NAME, idx)
+
+
+# 인물이 실제로 그려진 영역(원화 픽셀, 뒤집기 전). 그림마다 한 번만 센다. 셀 수 없으면 원화 칸 전체.
+# 위아래는 카메라가 밀려 드는 동안 보이는 장(시작 장 ~ 조준 장)의 불투명 영역이다 — 발사 장에서 무기를
+# 높이 치켜드는 캐릭터(태희)까지 합치면 머리 위가 텅 비어 얼굴이 화면 아래로 밀린다. 좌우는 풀 연출이
+# 보여 주는 장(시작 장 ~ 마지막 반동 장)을 모두 합쳐, 인물이 글자 여백으로 넘어가지 않게 한다.
+func _figure_rect() -> Rect2:
+	var key: Resource = _anim if _anim != null else _art.texture
+	if key == null:
+		return Rect2(Vector2.ZERO, _frame_size)
+	if _figure_cache.has(key):
+		return _figure_cache[key]
+	var textures: Array[Texture2D] = []
+	var lead_count := 1
+	if _anim != null:
+		var last := _anim.get_frame_count(ANIM_NAME) - 1
+		for i in range(_lead_frame(), mini(_anim_strike + RECOIL_FRAMES, last) + 1):
+			textures.append(_anim.get_frame_texture(ANIM_NAME, i))
+		lead_count = _aim_frame() - _lead_frame() + 1
+	else:
+		textures.append(_art.texture)
+	var entry := Rect2()
+	var across := Rect2()
+	for i in textures.size():
+		var used := _used_rect(textures[i])
+		if not used.has_area():
+			continue
+		if i < lead_count:
+			entry = used if not entry.has_area() else entry.merge(used)
+		across = used if not across.has_area() else across.merge(used)
+	var rect := Rect2(Vector2.ZERO, _frame_size)
+	if entry.has_area():
+		rect = Rect2(across.position.x, entry.position.y, across.size.x, entry.size.y)
+	_figure_cache[key] = rect
+	return rect
+
+
+static func _used_rect(texture: Texture2D) -> Rect2:
+	var image := texture.get_image() if texture != null else null
+	if image == null:
+		return Rect2()
+	if image.is_compressed():
+		image.decompress()
+	return Rect2(image.get_used_rect())
 
 
 # 장마다 시작 시각을 미리 세어 둔다. 길이 = SpriteFrames 의 duration(장 단위) / speed(fps).

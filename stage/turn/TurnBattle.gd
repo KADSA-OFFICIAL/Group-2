@@ -1353,6 +1353,10 @@ func _play_cutin(data: Dictionary) -> void:
 			return
 		await _play_ult_field(unit, color, false, skill, data.get("target"))
 	else:
+		# 조준 고리는 필드 번개가 꽂힐 실제 대상 위에 모인다.
+		var aim := _cutin_aim_point(unit, skill, data.get("target"))
+		if aim.is_finite():
+			_cutin.set_aim_target(aim)
 		# 암전은 컷인 판의 남색 막이 한다 — 검은 전면 플래시를 따로 넣지 않는다(#576).
 		await _cutin.play_full()
 		# 그 사이 재시작됐으면 새 전투에 옛 연출을 얹지 않는다(HUD·카메라·시간 배율은 `_restart` 가 되돌렸다).
@@ -1413,6 +1417,20 @@ func _ult_victims(unit: TurnUnit, skill: SkillData, target: TurnUnit) -> Array[T
 		if other.is_ally() != unit.is_ally() and other.alive and _shapes.has(other.unit_id):
 			victims.append(other)
 	return victims
+
+
+# 컷인 조준 고리가 모일 자리: 필드 번개가 꽂히는 점(`_play_ult_field`)을 컷인 판 좌표로 옮긴 것.
+# 고른 대상이 있으면 그 대상, 전체·튕김이면 가운데 대상. 맞을 적이 없으면 Vector2.INF.
+func _cutin_aim_point(unit: TurnUnit, skill: SkillData, target: TurnUnit) -> Vector2:
+	if battle == null or hud == null or _cutin == null:
+		return Vector2.INF
+	var victims := _ult_victims(unit, skill, target)
+	if victims.is_empty():
+		return Vector2.INF
+	var victim: TurnUnit = victims[victims.size() / 2]
+	var on_hud := hud.unit_position(victim) + Vector2(0.0, -ULT_BOLT_TO_HEIGHT)
+	var on_canvas := hud.get_global_transform_with_canvas() * on_hud
+	return _cutin.get_global_transform_with_canvas().affine_inverse() * on_canvas
 
 
 # 캐스터에서 대상까지 가는 번개 한 줄(가는 흰 심지 + 원소색 후광). 오래 두지 않고 곧 걷는다.
