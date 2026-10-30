@@ -18,6 +18,8 @@
       SpriteFrames. 애니메이션 "ult", 24fps, 장마다 길이(duration = 1/24초 단위).
       metadata/strike_frame — 공격이 정점에 닿는 장(기술명 타이포가 이 장에서 박힌다)
       metadata/final_rect   — 마지막 장(결정 포즈)의 인물 상자(px). 짧게 모드가 이만큼만 잘라 쓴다.
+  --censored 를 주면 같은 것을 assets_censored/sprites/characters/cutins/ult/<id>/ 에 쓴다
+  (검열판 원화, #586 — docs/release-editions.md).
 
 타이밍표(선택): art/ultimate-ld/timing/<id>.json  {"durations": [24개, 1/24초 단위], "strike_frame": n}
 없으면 DEFAULT_DURATIONS / DEFAULT_STRIKE 를 쓴다.
@@ -29,7 +31,7 @@
     원화에 크기 편차가 있으면 원화를 다시 뽑는다(프롬프트: docs/ultimate-ld-animation-prompts.md).
 
 사용:
-  python tools/build_ultimate_frames.py <id> <원화 폴더|zip|ogv> [--no-ground]
+  python tools/build_ultimate_frames.py <id> <원화 폴더|zip|ogv> [--no-ground] [--censored]
   godot --headless --path . --editor --import --quit
 필요: numpy, Pillow (ogv 입력이면 opencv-python)
 """
@@ -45,6 +47,7 @@ from PIL import Image, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, "assets", "sprites", "characters", "cutins", "ult")
+CENSORED_OUT_DIR = os.path.join(ROOT, "assets_censored", "sprites", "characters", "cutins", "ult")
 TIMING_DIR = os.path.join(ROOT, "art", "ultimate-ld", "timing")
 
 FRAME_COUNT = 24
@@ -272,7 +275,7 @@ def write_tres(path, tex_paths, durations, strike, final_rect):
         f.write("\n".join(lines) + "\n")
 
 
-def build(char_id, src, grounded=True):
+def build(char_id, src, grounded=True, censored=False):
     durations, strike = load_timing(char_id)
     frames = pick_drawings(read_frames(src), durations)
     if grounded:
@@ -281,7 +284,7 @@ def build(char_id, src, grounded=True):
     scale = min(1.0, MAX_H / float(y1 - y0))
     size = (round((x1 - x0) * scale), round((y1 - y0) * scale))
 
-    out_dir = os.path.join(OUT_DIR, char_id)
+    out_dir = os.path.join(CENSORED_OUT_DIR if censored else OUT_DIR, char_id)
     os.makedirs(out_dir, exist_ok=True)
     keep = {"%s_ult_%02d.webp" % (char_id, i) for i in range(FRAME_COUNT)}
     for name in os.listdir(out_dir):
@@ -309,7 +312,7 @@ def main(argv):
     if len(args) != 2:
         print(__doc__)
         return 1
-    build(args[0], args[1], grounded="--no-ground" not in argv)
+    build(args[0], args[1], grounded="--no-ground" not in argv, censored="--censored" in argv)
     return 0
 
 

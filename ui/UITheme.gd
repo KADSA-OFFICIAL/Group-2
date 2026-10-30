@@ -62,12 +62,13 @@ static func backdrop_path(backdrop_name: String) -> String:
 # 오의 전용 컷인 일러스트 (#544). **파일을 이 경로에 넣으면 전투가 바로 쓴다** — 코드·데이터를
 # 고칠 필요가 없다. 없으면 빈 문자열이고, 전투는 전투 스프라이트의 공격 프레임으로 연출한다.
 # 규격: docs/ultimate-cutin-art-spec.md
+# 아래 두 경로는 검열판이면 assets_censored/ 의 짝을 먼저 고른다(GameEdition, #586).
 const ULTIMATE_CUTIN_DIR := "res://assets/sprites/characters/cutins/ult"
 
 static func ultimate_cutin_path(character_id: StringName) -> String:
 	if String(character_id).is_empty():
 		return ""
-	var candidate: String = "%s/char_%s_ult.png" % [ULTIMATE_CUTIN_DIR, character_id]
+	var candidate: String = GameEdition.resolve("%s/char_%s_ult.png" % [ULTIMATE_CUTIN_DIR, character_id])
 	return candidate if ResourceLoader.exists(candidate) else ""
 
 
@@ -76,7 +77,7 @@ static func ultimate_cutin_path(character_id: StringName) -> String:
 static func ultimate_frames_path(character_id: StringName) -> String:
 	if String(character_id).is_empty():
 		return ""
-	var candidate: String = "%s/%s/%s_ult.tres" % [ULTIMATE_CUTIN_DIR, character_id, character_id]
+	var candidate: String = GameEdition.resolve("%s/%s/%s_ult.tres" % [ULTIMATE_CUTIN_DIR, character_id, character_id])
 	return candidate if ResourceLoader.exists(candidate) else ""
 
 
