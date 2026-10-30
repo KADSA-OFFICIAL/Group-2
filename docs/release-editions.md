@@ -52,6 +52,14 @@
 4. 압축 파일 이름에 판을 넣는다: `StoneageShipduck-v<버전>-Windows.zip`, `StoneageShipduck-v<버전>-Windows-AllAges.zip` (macOS 도 같은 식)
 5. 릴리스 본문의 다운로드 표에 두 판을 모두 적고, 검열판에 "초상·궁극기 그림 순화" 한 줄을 단다.
 
+## v0.3.0 구성 (#588)
+
+v0.3.0 은 `Windows Censored` 프리셋 한 판만 낸다.
+
+- 전투 로스터는 하랑·강지·아린·태희 4명이다. 미나·설아는 `playable = false` 라 스토리 화자로만 나온다.
+- `assets_censored/` 에는 **전투에 나오지 않는 인물**(미나·설아·여신·girl_green)의 초상만 둔다.
+  전투 4명은 일반판 그림을 그대로 쓴다.
+
 ## 검열판 그림 넣기
 
 [assets_censored/README.md](../assets_censored/README.md). 원화 제작 프롬프트는 [censored-art-prompts.md](censored-art-prompts.md).
