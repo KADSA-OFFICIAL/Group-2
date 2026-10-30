@@ -16,6 +16,10 @@ cd Group-2
 
 Godot을 실행한 뒤 **Import** → 클론한 폴더의 `project.godot` 파일을 선택합니다.
 
+> **기본 글꼴(ONE 모바일 POP체)은 저장소에 없습니다.** 라이선스상 재배포가 금지라 각자 받아
+> `assets/fonts/ONE-Mobile-POP.otf` 로 넣어야 합니다. 방법은 [assets/fonts/README.md](assets/fonts/README.md).
+> 없어도 실행되며 그때는 엔진 기본 글꼴로 보입니다.
+
 ### 전투는 턴제입니다 (#450 · #472)
 
 `main.tscn`(기본 진입)을 실행하면 **턴제 전투**가 열립니다. 메인화면 → 출격 → 편성 →

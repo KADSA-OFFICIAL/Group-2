@@ -65,6 +65,8 @@ var ultimate_cutin_mode: int = CutinMode.FULL
 
 func _ready() -> void:
 	name = "SettingsSystem"
+	# 기본 글꼴(#580)은 화면이 뜨기 전에 갈아 끼워야 모든 Control 이 같은 글꼴로 시작한다.
+	HUDKit.apply_base_font()
 	# 저장 스키마의 설정 부분은 이 시스템이 소유한다(SaveSystem 은 내부를 모른다).
 	SaveSystem.register_provider(SAVE_KEY, self)
 	# 복원된 값(또는 기본값)을 실제 시스템에 반영한다.

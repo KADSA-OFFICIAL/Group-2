@@ -68,6 +68,35 @@ const SIZE_CAPTION: int = 10
 static var _bold_cache: Dictionary = {}
 
 
+# 게임 전체 기본 글꼴(#580) — ONE 모바일 POP체.
+#
+# **이 파일은 저장소에 없다.** 라이선스(㈜원스토어)가 임베딩·상업 이용은 허용하지만 글꼴 파일
+# 자체의 재배포는 금지하고, 이 저장소는 공개라서 커밋하면 재배포가 된다. 그래서 .gitignore 로
+# 빼고 각자 받아 둔다(assets/fonts/README.md). 파일이 없으면 지금까지처럼 엔진 기본 글꼴로 돈다.
+#
+# project.godot 의 `gui/theme/custom_font` 로 걸지 않는 이유: 파일이 없는 체크아웃에서
+# 시작할 때마다 로드 에러가 난다. 대신 시작 시 `apply_base_font()` 가 있을 때만 갈아 끼운다.
+const BASE_FONT_PATH := "res://assets/fonts/ONE-Mobile-POP.otf"
+
+# 기본 글꼴을 ONE 모바일 POP체로 바꾼다. 화면이 뜨기 전에 한 번 부른다(SettingsSystem._ready).
+#
+# `ThemeDB.fallback_font` 를 바꾸므로 테마에 글꼴을 따로 지정하지 않은 모든 Control 과,
+# 그것을 base 로 쓰는 `weight_font` · `number_font` 가 함께 바뀐다.
+# POP체에 없는 글리프(▲ ❄ ⚡ 같은 원소 문양)는 원래 엔진 글꼴로 그리도록 대체로 붙인다.
+static func apply_base_font() -> void:
+	if not ResourceLoader.exists(BASE_FONT_PATH):
+		return
+	var file := load(BASE_FONT_PATH) as FontFile
+	if file == null:
+		return
+	# 원본 리소스의 fallbacks 를 건드리지 않도록 복제해서 붙인다.
+	var fallbacks: Array[Font] = [ThemeDB.fallback_font]
+	var font := file.duplicate() as FontFile
+	font.fallbacks = fallbacks
+	ThemeDB.fallback_font = font
+	_bold_cache.clear()
+
+
 static func weight_font(embolden: float) -> FontVariation:
 	if _bold_cache.has(embolden):
 		return _bold_cache[embolden]
@@ -81,7 +110,7 @@ static func weight_font(embolden: float) -> FontVariation:
 # 전투 글자 연출용 디스플레이 폰트(#559) — Barlow Condensed Black Italic. 현세대 서브컬처 게임풍의 좁고 굵은 기울임체. 격파 타이포 · 배너 · 데미지 숫자 · 상태이상 배지가 같이 쓴다.
 #
 # Barlow Condensed 에는 한글이 없다. 스킬 이름("측정 사격")·상태이상 이름("출혈")처럼 한글이 섞이면
-# 그 글자만 대체 폰트로 그린다 — 1순위 도현(#561, 같은 톤으로 기울임), 없으면 기본 폰트를 굵게.
+# 그 글자만 대체 폰트로 그린다 — 1순위 ONE 모바일 POP체(#580) 또는 도현(#561), 같은 톤으로 기울임. 없으면 기본 폰트를 굵게.
 # 폰트 파일이 없으면 대체 폰트만 돌려준다(연출은 그대로 선다).
 const DISPLAY_FONT_PATH := "res://assets/fonts/BarlowCondensed-BlackItalic.ttf"
 static var _display_font: Font = null
@@ -89,7 +118,7 @@ static var _display_font: Font = null
 static func display_font() -> Font:
 	if _display_font != null:
 		return _display_font
-	# 한글 대체 체인: 도현(Barlow 톤에 맞춰 기울임) -> 기본 폰트 굵게.
+	# 한글 대체 체인: POP체 또는 도현(Barlow 톤에 맞춰 기울임) -> 기본 폰트 굵게.
 	var fallbacks: Array[Font] = []
 	var korean := _korean_display_font()
 	if korean != null:
@@ -117,18 +146,31 @@ static func display_font() -> Font:
 # 좁은 Barlow Condensed 와 비율이 맞는다. 도현은 똑바른 글꼴이라 Barlow Black **Italic** 과
 # 나란히 서면 한글만 서 있어 보인다 — 같은 방향으로 기울인다(궁극기 컷인 글자와 같은 기울기 0.2).
 # 굵기도 Barlow Black 에 맞춰 조금 더한다. 파일이 없으면 null(호출부가 기본 폰트로 떨어진다).
+#
+# #580 부터 한글 담당 1순위는 기본 글꼴인 ONE 모바일 POP체다(게임 전체와 같은 글꼴).
+# POP체 파일이 없는 체크아웃에서는 도현으로 떨어진다. POP체는 이미 굵은 글꼴이라 부풀리지 않고
+# 기울기만 맞춘다 — 도현용 굵기(0.35)를 그대로 얹으면 획이 뭉개진다.
 const KOREAN_DISPLAY_FONT_PATH := "res://assets/fonts/DoHyeon-Regular.ttf"
+const KOREAN_DISPLAY_EMBOLDEN := 0.35
 const DISPLAY_ITALIC_SKEW := 0.2
 
+# 한글 글꼴 파일: ONE 모바일 POP체 -> 도현 순으로 있는 쪽. 둘 다 없으면 null.
+static func _korean_font_file() -> FontFile:
+	for path in [BASE_FONT_PATH, KOREAN_DISPLAY_FONT_PATH]:
+		if ResourceLoader.exists(path):
+			var file := load(path) as FontFile
+			if file != null:
+				return file
+	return null
+
 static func _korean_display_font() -> Font:
-	if not ResourceLoader.exists(KOREAN_DISPLAY_FONT_PATH):
-		return null
-	var file := load(KOREAN_DISPLAY_FONT_PATH) as FontFile
+	var file := _korean_font_file()
 	if file == null:
 		return null
 	var v := FontVariation.new()
 	v.base_font = file
-	v.variation_embolden = 0.35
+	if file.resource_path == KOREAN_DISPLAY_FONT_PATH:
+		v.variation_embolden = KOREAN_DISPLAY_EMBOLDEN
 	v.variation_transform = Transform2D(Vector2(1, 0), Vector2(DISPLAY_ITALIC_SKEW, 1), Vector2.ZERO)
 	return v
 
@@ -138,15 +180,14 @@ static func _korean_display_font() -> Font:
 # 디스플레이 폰트(`display_font`)는 Barlow 의 영문에 도현을 한글 대체로 붙이고 기울인 것이라
 # 한글만 억지로 눕고 굵게 부풀어 임시 UI 처럼 보였다. 상태 알림은 **한글만** 쓰므로 도현을
 # 그대로(기울임·부풀림 없이) 쓰고, 위계는 크기로만 만든다. 라이선스: assets/fonts/OFL-DoHyeon.txt.
+# #580 부터는 ONE 모바일 POP체가 있으면 그것을 쓴다(`_korean_font_file`).
 # 파일이 없으면 기본 폰트를 굵게 한 대체로 떨어진다(글자가 사라지지는 않는다).
 static var _notice_font: Font = null
 
 static func notice_font() -> Font:
 	if _notice_font != null:
 		return _notice_font
-	var file: FontFile = null
-	if ResourceLoader.exists(KOREAN_DISPLAY_FONT_PATH):
-		file = load(KOREAN_DISPLAY_FONT_PATH) as FontFile
+	var file := _korean_font_file()
 	if file == null:
 		_notice_font = weight_font(0.6)
 	else:
