@@ -160,11 +160,12 @@ static func notice_font() -> Font:
 # 진한 검정 윤곽선과 겹치면 애니메이션풍 캐릭터 옆에서 아케이드처럼 거칠어 보였다.
 # Open Sans 숫자는 정자체이고 속공간이 넓어 작은 크기에서도 0·3·6·8·9 가 갈린다.
 # 엔진에 들어 있는 폰트라 새 파일·라이선스가 늘지 않는다. 가로 폭은 건드리지 않는다.
-const NUMBER_EMBOLDEN := 0.45
+# 굵기는 #578 에서 0.45 -> 0.20 으로 한 단계 얇게 했다(0.10 이하는 윤곽선이 획보다 도드라진다).
+const NUMBER_EMBOLDEN := 0.20
 ## 숫자 윤곽선: 순수 검정 대신 짙은 남색, 밝은 하늘·풀 위에서 읽힐 만큼만.
 const NUMBER_OUTLINE := Color(0.10, 0.12, 0.22, 0.92)
-## 윤곽선 두께 = 글자 크기 × 이 비(최소 3px). 그림자는 겹치지 않는다.
-const NUMBER_OUTLINE_RATIO := 0.17
+## 윤곽선 두께 = 글자 크기 × 이 비(최소 3px). 획이 얇아진 만큼 윤곽선도 조금 줄였다. 그림자는 겹치지 않는다.
+const NUMBER_OUTLINE_RATIO := 0.15
 static var _number_font: Font = null
 
 static func number_font() -> Font:
