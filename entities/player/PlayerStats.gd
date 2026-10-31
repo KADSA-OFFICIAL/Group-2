@@ -357,8 +357,8 @@ func get_derived_summary() -> Dictionary:
 ## 100이 "1사이클 1행동" 기준선이다(설계서 §4.2.3).
 @export var speed: int = 100
 
-## 오의(필살기) 게이지 최대치. 캐릭터마다 100 / 120 / 140 등으로 다르다.
-## 0이면 오의가 없는 유닛(잡몹 등)으로 취급한다.
+## 궁극기(필살기) 게이지 최대치. 캐릭터마다 100 / 120 / 140 등으로 다르다.
+## 0이면 궁극기가 없는 유닛(잡몹 등)으로 취급한다.
 @export var energy_max: int = 0
 
 # ===== 치명타 (Crit) =====
@@ -384,7 +384,7 @@ func get_derived_summary() -> Dictionary:
 
 # ===== 배율 (Multipliers) =====
 
-## 오의 회복 효율. 에너지 획득량에 곱연산. 0.0 = x1.0.
+## 궁극기 회복 효율. 에너지 획득량에 곱연산. 0.0 = x1.0.
 @export var energy_recharge: float = 0.0
 ## 회복량 증가. 힐 배율에 곱연산. 0.0 = x1.0.
 @export var heal_boost: float = 0.0

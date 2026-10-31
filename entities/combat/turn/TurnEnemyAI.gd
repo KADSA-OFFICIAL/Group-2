@@ -97,7 +97,7 @@ func build_intent(unit: TurnUnit, all_units: Array[TurnUnit]) -> TurnIntent:
 # 이 적이 다음에 쓸 스킬을 고른다.
 #
 # 규칙(설계서 §4.8.3 보스 패턴을 데이터로 표현할 수 있게 최소한만 코드에 둔다):
-#   - 오의 게이지가 찼으면 오의
+#   - 궁극기 게이지가 찼으면 궁극기
 #   - 그 외에는 저작된 전투 스킬 중 무작위, 없으면 평타
 #
 # 더 복잡한 패턴(페이즈 전환, 스택 강화)은 스킬의 조건 필드(`require_target_hp_below` 등)와
@@ -106,7 +106,7 @@ func choose_skill(unit: TurnUnit) -> SkillData:
 	if unit.enemy == null:
 		return fallback_basic()
 
-	# 오의.
+	# 궁극기.
 	var ultimates := unit.enemy.get_turn_skills(TurnCombat.ActionKind.ULTIMATE)
 	for ultimate in ultimates:
 		var cost := ultimate.get_energy_cost(unit.get_energy_max())
@@ -357,7 +357,7 @@ func _party_needs_guard(allies: Array[TurnUnit]) -> bool:
 	return true
 
 
-# 자동 전투가 오의를 쓸 것인가.
+# 자동 전투가 궁극기를 쓸 것인가.
 #
 # 게이지가 찼으면 쓴다. 턴 밖 발동의 타이밍 최적화(적 큰 공격 직전에 보호막 등)는
 # 사람이 잡는 판단이라 자동에 맡기지 않는다 — 자동은 "빠른 반복"이 목적이다.

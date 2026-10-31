@@ -188,7 +188,7 @@ func _gen_harang() -> int:
 	count += _save(ult)
 
 	var trait_skill := _skill("harang_turn_trait", "파단의 여열", TurnCombat.ActionKind.TRAIT,
-		"약점을 찌를 때마다 자신의 오의 게이지 +8. (턴당 최대 2회)")
+		"약점을 찌를 때마다 자신의 궁극기 게이지 +8. (턴당 최대 2회)")
 	trait_skill.trait_trigger = SkillData.TraitTrigger.ON_WEAKNESS_HIT
 	trait_skill.trait_per_turn_cap = 2
 	var energy := _effect(TurnSkillEffect.Kind.ENERGY, TurnSkillEffect.Scope.SELF)
@@ -203,7 +203,7 @@ func _gen_harang() -> int:
 # 아린 — 추격자 / 전격 / 관통
 # =====================================================================
 #
-# 추격자 계약: **단일 대상 배율 300% 이상 스킬.** 오의 420%가 그것이다.
+# 추격자 계약: **단일 대상 배율 300% 이상 스킬.** 궁극기 420%가 그것이다.
 # 관통 타입이라 인성치 배율이 x0.85로 낮은 대신 **다단 히트로 자물쇠를 여러 개 연다** —
 # 이것이 관통의 존재 이유다.
 #
@@ -231,7 +231,7 @@ func _gen_arin() -> int:
 
 	var pass_skill := _skill("arin_turn_baton", "표적 인계", TurnCombat.ActionKind.SKILL,
 		"아군 1명에게 배턴을 넘긴다. 그 아군은 즉시 추가 턴을 얻고 "
-		+ "배턴 중첩당 피해가 20% 증가한다 (최대 3중첩 = +60%). 오의 게이지 +20.")
+		+ "배턴 중첩당 피해가 20% 증가한다 (최대 3중첩 = +60%). 궁극기 게이지 +20.")
 	pass_skill.rp_cost = 1
 	pass_skill.turn_targeting = TurnCombat.Targeting.ALLY_SINGLE
 	var baton := _effect(TurnSkillEffect.Kind.BATON, TurnSkillEffect.Scope.TARGET)
@@ -272,7 +272,7 @@ func _gen_arin() -> int:
 # 팀 전체 딜을 올린다.
 #
 # **역설적 설계**: 적의 행동이 잦을수록 강해지므로 한기 동결 캐릭터와는 안티 시너지다.
-# 오의 코스트 140으로 회전이 느려 오의 회복 효율 서포터와 궁합이 좋다.
+# 궁극기 코스트 140으로 회전이 느려 궁극기 회복 효율 서포터와 궁합이 좋다.
 func _gen_taehee() -> int:
 	var count := 0
 

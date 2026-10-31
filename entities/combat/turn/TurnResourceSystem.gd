@@ -1,12 +1,12 @@
 extends RefCounted
 class_name TurnResourceSystem
 
-# 자원 시스템 — 공명 포인트 / 오의 게이지 / 열기 (#450).
+# 자원 시스템 — 공명 포인트 / 궁극기 게이지 / 열기 (#450).
 #
 # 자원을 **서로 다른 시간 스케일**의 3층으로 나눈 것이 전투에 리듬을 만든다.
 #
 #   공명 포인트(RP) : 파티 공유, 초단기 — "한 명이 강해지면 다른 셋이 굶는다"
-#   오의 게이지     : 개인 소유, 중기  — 턴 밖 발동. 이 게임의 심장
+#   궁극기 게이지     : 개인 소유, 중기  — 턴 밖 발동. 이 게임의 심장
 #   열기(Heat)      : 파티 공유, 온도  — 같은 스킬 반복 스팸을 억제
 #
 # **RP가 왜 천재적인가**: 4명이 하나의 지갑을 쓰므로 팀 조합이 자동으로 경제 밸런싱
@@ -30,9 +30,9 @@ var heat: float = 0.0
 ## `{"kind": int(ActionKind) | -1, "element": int | -1, "rank_min": int, "label": String}`
 var recommendation: Dictionary = {}
 
-# ===== 오의 상한 (Ultimate cap) =====
+# ===== 궁극기 상한 (Ultimate cap) =====
 
-## **한 유닛의 턴 사이에** 발동된 오의 개수. 연쇄 오의 폭주를 막는다.
+## **한 유닛의 턴 사이에** 발동된 궁극기 개수. 연쇄 궁극기 폭주를 막는다.
 var ultimates_this_turn: int = 0
 
 ## 전투 통계. 결과 화면과 밸런스 시뮬레이터가 읽는다.
@@ -91,9 +91,9 @@ func is_resonance_bankrupt() -> bool:
 	return resonance <= 0
 
 
-# ===== 오의 게이지 (Energy) =====
+# ===== 궁극기 게이지 (Energy) =====
 
-# 유닛의 오의 게이지를 채운다. **오의 회복 효율**이 곱연산으로 걸린다.
+# 유닛의 궁극기 게이지를 채운다. **궁극기 회복 효율**이 곱연산으로 걸린다.
 #
 # 반환: 실제로 오른 양.
 func gain_energy(unit: TurnUnit, base_amount: int) -> int:
@@ -102,7 +102,7 @@ func gain_energy(unit: TurnUnit, base_amount: int) -> int:
 		return 0
 
 	var amount := base_amount
-	# 손실(오의 사용)에는 효율을 곱하지 않는다 — 효율은 "획득량 배율"이다.
+	# 손실(궁극기 사용)에는 효율을 곱하지 않는다 — 효율은 "획득량 배율"이다.
 	if base_amount > 0:
 		amount = int(round(float(base_amount) * unit.stats.get_energy_recharge_multiplier()))
 
@@ -139,10 +139,10 @@ func gain_energy_on_break(unit: TurnUnit) -> int:
 	return gain_energy(unit, _tuning().energy_on_break)
 
 
-# 오의를 쓸 수 있는가.
+# 궁극기를 쓸 수 있는가.
 #
-# 두 조건: 게이지가 찼고, **이번 턴의 오의 상한**을 넘지 않았다.
-# 상한이 없으면 오의 회복 특화 4명이 한 턴에 오의를 무한 연쇄한다(설계서 §4.13).
+# 두 조건: 게이지가 찼고, **이번 턴의 궁극기 상한**을 넘지 않았다.
+# 상한이 없으면 궁극기 회복 특화 4명이 한 턴에 궁극기를 무한 연쇄한다(설계서 §4.13).
 func can_use_ultimate(unit: TurnUnit, skill: SkillData) -> bool:
 	if skill == null or not skill.is_turn_ultimate():
 		return false
@@ -153,22 +153,22 @@ func can_use_ultimate(unit: TurnUnit, skill: SkillData) -> bool:
 	return unit.energy >= skill.get_energy_cost(unit.get_energy_max())
 
 
-# 오의를 쓸 수 없는 이유. UI가 띄운다.
+# 궁극기를 쓸 수 없는 이유. UI가 띄운다.
 func ultimate_blocked_reason(unit: TurnUnit, skill: SkillData) -> String:
 	if skill == null or not skill.is_turn_ultimate():
-		return "오의가 없습니다"
+		return "궁극기가 없습니다"
 	if not unit.alive:
 		return "전투 불능"
 	var cap := _tuning().ultimate_per_turn_cap
 	if ultimates_this_turn >= cap:
-		return "이 턴의 오의 상한(%d개)에 도달했습니다" % cap
+		return "이 턴의 궁극기 상한(%d개)에 도달했습니다" % cap
 	var cost := skill.get_energy_cost(unit.get_energy_max())
 	if unit.energy < cost:
-		return "오의 게이지 %d/%d" % [unit.energy, cost]
+		return "궁극기 게이지 %d/%d" % [unit.energy, cost]
 	return ""
 
 
-# 오의 코스트를 소모한다.
+# 궁극기 코스트를 소모한다.
 func spend_ultimate(unit: TurnUnit, skill: SkillData) -> bool:
 	if not can_use_ultimate(unit, skill):
 		return false
@@ -177,9 +177,9 @@ func spend_ultimate(unit: TurnUnit, skill: SkillData) -> bool:
 	return true
 
 
-# 유닛의 턴이 시작됐다. 오의 상한 카운터를 리셋한다.
+# 유닛의 턴이 시작됐다. 궁극기 상한 카운터를 리셋한다.
 #
-# "한 유닛의 턴 사이"가 상한의 단위인 이유: 오의는 턴 밖에서 언제든 발동되므로
+# "한 유닛의 턴 사이"가 상한의 단위인 이유: 궁극기는 턴 밖에서 언제든 발동되므로
 # 턴 개념으로 셀 수밖에 없다. 턴 사이마다 2개면 사이클당으로는 충분히 여러 번 쓸 수 있다.
 func on_turn_start(unit: TurnUnit) -> void:
 	ultimates_this_turn = 0
@@ -279,7 +279,7 @@ func roll_recommendation(rng: RandomNumberGenerator) -> void:
 		{"kind": TurnCombat.ActionKind.BASIC, "element": -1, "rank_min": 0,
 			"label": "일반공격으로 행동하면 열기가 내려간다"},
 		{"kind": TurnCombat.ActionKind.ULTIMATE, "element": -1, "rank_min": 0,
-			"label": "오의로 행동하면 열기가 내려간다"},
+			"label": "궁극기로 행동하면 열기가 내려간다"},
 		{"kind": -1, "element": -1, "rank_min": 3,
 			"label": "후열(A3~A4) 캐릭터가 행동하면 열기가 내려간다"},
 	]
@@ -374,5 +374,5 @@ static func forecast_label(balance: float) -> String:
 # ===== 디버그 (Debug) =====
 
 func describe() -> String:
-	return "공명 %d/%d  열기 %.0f (%s)  이번 턴 오의 %d" \
+	return "공명 %d/%d  열기 %.0f (%s)  이번 턴 궁극기 %d" \
 		% [resonance, resonance_max, heat, heat_zone_name(), ultimates_this_turn]

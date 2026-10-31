@@ -345,14 +345,14 @@ func _test_timeline_preview() -> void:
 			"프리뷰 %d번째가 실제와 달라졌다 (예측 %s, 실제 %s)"
 				% [i + 1, predicted[i].unit_id, actual[i]])
 
-	# 오의는 턴을 소모하지 않으므로 순서를 바꾸지 않는다.
+	# 궁극기는 턴을 소모하지 않으므로 순서를 바꾸지 않는다.
 	var plain := timeline.preview(6)
 	var after_ult := timeline.preview_if_acted(a, {}, false, false, 6)
 	var same := true
 	for i in 6:
 		if plain[i] != after_ult[i]:
 			same = false
-	_expect(same, "오의(턴 미소모) 프리뷰는 순서를 바꾸지 않아야 한다")
+	_expect(same, "궁극기(턴 미소모) 프리뷰는 순서를 바꾸지 않아야 한다")
 
 
 # ===== 랭크 =====
@@ -569,26 +569,26 @@ func _test_energy_and_ultimate_cap() -> void:
 	unit.stats.energy_max = 100
 
 	_expect(resources.gain_energy_for_action(unit, TurnCombat.ActionKind.BASIC)
-		== t.energy_basic, "일반공격은 오의 게이지 +%d" % t.energy_basic)
+		== t.energy_basic, "일반공격은 궁극기 게이지 +%d" % t.energy_basic)
 	unit.energy = 0
 	_expect(resources.gain_energy_for_action(unit, TurnCombat.ActionKind.SKILL)
-		== t.energy_skill, "전투 스킬은 오의 게이지 +%d" % t.energy_skill)
+		== t.energy_skill, "전투 스킬은 궁극기 게이지 +%d" % t.energy_skill)
 	unit.energy = 0
 	_expect(resources.gain_energy_on_damage_taken(unit) == t.energy_on_hit_taken,
-		"피격은 오의 게이지 +%d" % t.energy_on_hit_taken)
+		"피격은 궁극기 게이지 +%d" % t.energy_on_hit_taken)
 	unit.energy = 0
 	_expect(resources.gain_energy_on_break(unit) == t.energy_on_break,
-		"격파 성공은 오의 게이지 +%d" % t.energy_on_break)
+		"격파 성공은 궁극기 게이지 +%d" % t.energy_on_break)
 
-	# 오의 회복 효율이 곱연산으로 걸린다.
+	# 궁극기 회복 효율이 곱연산으로 걸린다.
 	unit.energy = 0
 	unit.stats.energy_recharge = 0.5
 	_expect(resources.gain_energy_for_action(unit, TurnCombat.ActionKind.BASIC)
 		== int(round(float(t.energy_basic) * 1.5)),
-		"오의 회복 효율 +50% 는 획득량에 곱연산되어야 한다")
+		"궁극기 회복 효율 +50% 는 획득량에 곱연산되어야 한다")
 	unit.stats.energy_recharge = 0.0
 
-	# 오의 상한: 한 유닛 턴 사이에 최대 2회.
+	# 궁극기 상한: 한 유닛 턴 사이에 최대 2회.
 	var ultimate := SkillData.new()
 	ultimate.skill_id = &"test_ult"
 	ultimate.turn_action = TurnCombat.ActionKind.ULTIMATE
@@ -605,13 +605,13 @@ func _test_energy_and_ultimate_cap() -> void:
 			used += 1
 			unit.energy = 100  # 게이지가 아니라 상한에 막히는지를 본다.
 	_expect(used == t.ultimate_per_turn_cap,
-		"오의는 턴당 %d회로 막혀야 한다 (실제 %d) — 연쇄 오의 폭주 방지"
+		"궁극기는 턴당 %d회로 막혀야 한다 (실제 %d) — 연쇄 궁극기 폭주 방지"
 			% [t.ultimate_per_turn_cap, used])
 	_expect(resources.ultimate_blocked_reason(unit, ultimate).contains("상한"),
 		"막힌 이유가 상한임을 알려야 한다")
 
 	resources.on_turn_start(unit)
-	_expect(resources.ultimates_this_turn == 0, "턴이 시작되면 오의 카운터가 초기화되어야 한다")
+	_expect(resources.ultimates_this_turn == 0, "턴이 시작되면 궁극기 카운터가 초기화되어야 한다")
 
 
 func _test_heat() -> void:
@@ -1292,18 +1292,18 @@ func _test_presentation_specs() -> void:
 
 	_expect(int(basic["hitstop_frames"]) == 2, "일반공격 히트스톱은 2프레임")
 	_expect(int(skill["hitstop_frames"]) == 4, "스킬 히트스톱은 4프레임")
-	_expect(int(ultimate["hitstop_frames"]) == 8, "오의 히트스톱은 8프레임")
+	_expect(int(ultimate["hitstop_frames"]) == 8, "궁극기 히트스톱은 8프레임")
 	_expect(int(break_fb["hitstop_frames"]) == 12, "약점 격파 히트스톱은 12프레임")
 
 	_expect_near(float(break_fb["shake_px"]), 20.0, 0.001, "격파 흔들림 진폭은 20px")
 	_expect_near(float(break_fb["slowmo_scale"]), 0.15, 0.001, "격파 슬로모션은 0.15배속")
 	_expect_near(float(break_fb["flash"]), 0.70, 0.001, "격파 플래시는 70%")
 
-	# 무게 순서: 일반공격 < 스킬 < 오의 < 격파. 이 순서가 뒤집히면 연출이 거짓말을 한다.
+	# 무게 순서: 일반공격 < 스킬 < 궁극기 < 격파. 이 순서가 뒤집히면 연출이 거짓말을 한다.
 	_expect(int(basic["hitstop_frames"]) < int(skill["hitstop_frames"])
 		and int(skill["hitstop_frames"]) < int(ultimate["hitstop_frames"])
 		and int(ultimate["hitstop_frames"]) < int(break_fb["hitstop_frames"]),
-		"히트스톱은 일반공격 < 스킬 < 오의 < 격파 순이어야 한다")
+		"히트스톱은 일반공격 < 스킬 < 궁극기 < 격파 순이어야 한다")
 
 	# 데미지 숫자 규격 (설계서 §4.10.6, #576 재조정): 치명타는 일반보다 15~25% 크게, 격파가 가장 크게.
 	var crit_scale := float(PresentationQueue.NUMBER_STYLE["crit"]["scale"])
@@ -1322,18 +1322,18 @@ func _test_presentation_specs() -> void:
 	_expect(PresentationQueue.lock_pitch(4, 4) > pitches[2],
 		"전부 해제는 가장 높은 음(화음 폭발)이어야 한다")
 
-	# 오의 컷인 8단계 (3D 컷씬의 2D 대체안).
+	# 궁극기 컷인 8단계 (3D 컷씬의 2D 대체안).
 	var unit := _make_unit("cutin", 100)
 	var ult_skill := SkillData.new()
-	ult_skill.display_name = "테스트 오의"
+	ult_skill.display_name = "테스트 궁극기"
 	var cutin := PresentationQueue.ultimate_cutin_steps(unit, ult_skill)
-	_expect(cutin.size() == 8, "오의 컷인은 8단계여야 한다 (실제 %d)" % cutin.size())
+	_expect(cutin.size() == 8, "궁극기 컷인은 8단계여야 한다 (실제 %d)" % cutin.size())
 	var has_typography := false
 	for step in cutin:
 		if step.has("text"):
 			has_typography = true
 	_expect(has_typography,
-		"오의 컷인에 키네틱 타이포그래피 단계가 있어야 한다 — 글자 자체가 연출이다")
+		"궁극기 컷인에 키네틱 타이포그래피 단계가 있어야 한다 — 글자 자체가 연출이다")
 
 	# 연출을 끄면 큐가 비어 있어야 한다 (헤드리스 테스트 · 연출 감소 모드).
 	var off := PresentationQueue.new(false, 1.0)
@@ -1369,9 +1369,9 @@ func _test_authored_data() -> void:
 		_expect(character.is_turn_ready(),
 			"%s 에 턴제 일반공격이 저작되어야 한다" % id)
 		_expect(character.get_turn_ultimate() != null,
-			"%s 에 턴제 오의가 저작되어야 한다" % id)
+			"%s 에 턴제 궁극기가 저작되어야 한다" % id)
 		_expect(character.get_stats().get_energy_max() > 0,
-			"%s 의 오의 게이지 최대치가 0보다 커야 한다" % id)
+			"%s 의 궁극기 게이지 최대치가 0보다 커야 한다" % id)
 		_expect(character.get_stats().get_speed() > 0,
 			"%s 의 속도가 0보다 커야 한다" % id)
 		_expect(not character.preferred_ranks.is_empty(),
@@ -1499,7 +1499,7 @@ func _test_full_battle() -> void:
 	for unit in battle.allies():
 		if unit.energy > 0:
 			charged = true
-	_expect(charged, "준비(오의 게이지 50%)가 실제로 게이지를 채워야 한다")
+	_expect(charged, "준비(궁극기 게이지 50%)가 실제로 게이지를 채워야 한다")
 
 	battle.begin_battle()
 

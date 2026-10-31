@@ -4,10 +4,10 @@ class_name SkillResolver
 # 스킬 실행 — 대상 산출과 효과 적용 (#450).
 #
 # 실행 순서:
-#   1. 코스트 지불 (공명 포인트 / 오의 게이지)
+#   1. 코스트 지불 (공명 포인트 / 궁극기 게이지)
 #   2. **피해 효과**를 히트마다 · 대상마다 적용 (다단 히트는 자물쇠를 여러 개 연다)
 #   3. **비피해 효과**를 각자의 범위에 한 번 적용 (밀치기 · 버프 · 행동 조작 ...)
-#   4. 후처리 (오의 게이지 획득 · 열기 · 권장 행동 · 공명 획득)
+#   4. 후처리 (궁극기 게이지 획득 · 열기 · 권장 행동 · 공명 획득)
 #
 # 왜 피해와 비피해를 나누는가: 설계서 §5.2.3 의 스킬 스키마를 보면 「종언의 화로」가
 # `damage(전체) + push(전체) + buff(아군 전체)`다. 전부 히트 루프 안에서 돌리면 3단
@@ -198,7 +198,7 @@ func _apply_damage(actor: TurnUnit, skill: SkillData, effect: TurnSkillEffect,
 		if break_ctx != null:
 			result["damage"].append(break_ctx)
 			_log(result, "  " + break_ctx.summary())
-		# 격파 성공은 시전자의 오의 게이지를 채운다.
+		# 격파 성공은 시전자의 궁극기 게이지를 채운다.
 		resources.gain_energy_on_break(actor)
 		# 격파 상태이상이 요구하는 행동 지연을 타임라인에 적용한다.
 		var delay := statuses.break_delay_ratio(TurnCombat.element_break_status(element))
@@ -211,7 +211,7 @@ func _apply_damage(actor: TurnUnit, skill: SkillData, effect: TurnSkillEffect,
 		result["damage"].append(over_ctx)
 		_log(result, "  " + over_ctx.summary())
 
-	# 피격은 대상의 오의 게이지를 채운다.
+	# 피격은 대상의 궁극기 게이지를 채운다.
 	if ctx.hp_damage > 0:
 		resources.gain_energy_on_damage_taken(target)
 
@@ -338,7 +338,7 @@ func _apply_other(actor: TurnUnit, skill: SkillData, effect: TurnSkillEffect,
 
 		TurnSkillEffect.Kind.ENERGY:
 			var gained := resources.gain_energy(target, effect.amount)
-			_log(result, "  %s 오의 게이지 %+d (%d/%d)"
+			_log(result, "  %s 궁극기 게이지 %+d (%d/%d)"
 				% [target.display_name, gained, target.energy, target.get_energy_max()])
 
 		TurnSkillEffect.Kind.RESONANCE:
@@ -448,10 +448,10 @@ func _condition_met(actor: TurnUnit, target: TurnUnit, effect: TurnSkillEffect) 
 
 func _post_action(actor: TurnUnit, skill: SkillData, element: int,
 		result: Dictionary) -> void:
-	# 오의 게이지 획득.
+	# 궁극기 게이지 획득.
 	var gained := resources.gain_energy_for_action(actor, skill.turn_action)
 	if gained > 0:
-		_log(result, "  %s 오의 게이지 +%d (%d/%d)"
+		_log(result, "  %s 궁극기 게이지 +%d (%d/%d)"
 			% [actor.display_name, gained, actor.energy, actor.get_energy_max()])
 
 	# 일반공격은 공명 포인트를 번다. **파티 공유 지갑**이므로 팀 전체가 이득을 본다.
@@ -562,7 +562,7 @@ func _execute_trait(unit: TurnUnit, skill: SkillData, target: TurnUnit,
 			else:
 				_apply_other(unit, skill, scaled, scope_target, element, result)
 
-	# 특성도 오의 게이지를 조금 채운다(설계서 §7.1 — 추가공격 +10).
+	# 특성도 궁극기 게이지를 조금 채운다(설계서 §7.1 — 추가공격 +10).
 	resources.gain_energy_for_action(unit, TurnCombat.ActionKind.TRAIT)
 	return result
 

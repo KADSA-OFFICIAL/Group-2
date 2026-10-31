@@ -48,7 +48,7 @@ const FLASH_LAYER: int = 2
 ## 히트스톱 동안의 전역 시간 배율. 0 으로 두면 타이머가 영영 돌아오지 않는다.
 const HITSTOP_SCALE: float = 0.0001
 
-# ===== 오의 컷인 (#544) =====
+# ===== 궁극기 컷인 (#544) =====
 # 연출 판은 `UltimateCutin` 이 갖는다. 여기는 무엇을 보여 줄지(그림·글자·모드)와
 # 컷인 뒤 필드 연출(캐스터 줌인 · 더치 앵글 · 원소 폭발)을 맡는다.
 ## 컷인 뒤 필드 연출 (#576): 번개가 캐스터에서 실제 대상으로 이어지고 맞은 자리에서 폭발한다.
@@ -233,9 +233,9 @@ var _numbers: Node2D = null
 ## 결과(승리·패배)와 컷인 끄기 모드가 쓰는 중앙 배너. 상태 알림은 `BattleNotice` 칩이 한다 (#576).
 var _banner: Label = null
 
-## 오의 컷인 판 (#544). 한 번 만들어 두고 오의마다 그림·글자만 갈아 끼운다.
+## 궁극기 컷인 판 (#544). 한 번 만들어 두고 궁극기마다 그림·글자만 갈아 끼운다.
 var _cutin: UltimateCutin = null
-## 오의 애니메이션 캐시. 경로 -> SpriteFrames (미리 읽기 중이면 null). `_preload_ultimates` 참고.
+## 궁극기 애니메이션 캐시. 경로 -> SpriteFrames (미리 읽기 중이면 null). `_preload_ultimates` 참고.
 var _ult_frames: Dictionary = {}
 
 ## 연출을 재생 중인가. 재생 중에는 다음 턴으로 넘어가지 않는다.
@@ -557,7 +557,7 @@ func _on_canvas_resized() -> void:
 		_sync_shapes()
 
 
-# 오의 컷인 판. 플래시 층(HUD 위)에 둔다 — 컷인은 화면을 통째로 쓰는 순간이다.
+# 궁극기 컷인 판. 플래시 층(HUD 위)에 둔다 — 컷인은 화면을 통째로 쓰는 순간이다.
 func _build_cutin() -> void:
 	_cutin = UltimateCutin.new()
 	_cutin.scaled = _scaled
@@ -603,7 +603,7 @@ func _start_battle() -> void:
 
 	_build_shapes()
 
-	# 준비 페이즈는 아직 화면이 없다 — 기본 준비(오의 게이지 50%)만 쓰고 넘어간다.
+	# 준비 페이즈는 아직 화면이 없다 — 기본 준비(궁극기 게이지 50%)만 쓰고 넘어간다.
 	# 준비 페이즈 UI는 별도 이슈다(Non-goals).
 	battle.use_prep("energy")
 	battle.begin_battle()
@@ -1321,7 +1321,7 @@ func _play_break(data: Dictionary) -> void:
 	hud.refresh()
 
 
-# 오의 연출 (#544). 설정(`SettingsSystem.ultimate_cutin_mode`)에 따라 풀 / 짧게 / 끄기.
+# 궁극기 연출 (#544). 설정(`SettingsSystem.ultimate_cutin_mode`)에 따라 풀 / 짧게 / 끄기.
 #
 #   풀   — 컷인 판(약 2초) → 필드: 캐스터 줌인·더치 앵글·원소 폭발(약 0.6초)
 #   짧게 — 가운데 사선 띠(약 0.9초) → 필드: 원소 폭발(약 0.3초)
@@ -1404,7 +1404,7 @@ func _play_ult_field(unit: TurnUnit, color: Color, full: bool, skill: SkillData 
 	await _wait(ULT_FIELD_TIME)
 
 
-# 오의가 실제로 맞을 상대. 아군 대상이면 비고, 단일이면 고른 대상, 전체·튕김이면 살아 있는 적 전체.
+# 궁극기가 실제로 맞을 상대. 아군 대상이면 비고, 단일이면 고른 대상, 전체·튕김이면 살아 있는 적 전체.
 func _ult_victims(unit: TurnUnit, skill: SkillData, target: TurnUnit) -> Array[TurnUnit]:
 	var victims: Array[TurnUnit] = []
 	if skill != null and skill.targets_allies():
@@ -1458,10 +1458,10 @@ func _spawn_field_bolt(from: Vector2, to: Vector2, color: Color) -> void:
 		tween.chain().tween_callback(line.queue_free)
 
 
-# 컷인에 이 오의의 그림·색·글자를 채운다. 쓸 그림이 없으면 false(배너로 떨어진다).
+# 컷인에 이 궁극기의 그림·색·글자를 채운다. 쓸 그림이 없으면 false(배너로 떨어진다).
 #
 # 그림은 **게임 그림체와 같은 것만** 쓴다 (#544):
-#   1) LD 오의 애니메이션 마지막 장 또는 전용 일러스트 — `_cutin_art_for()` 참고
+#   1) LD 궁극기 애니메이션 마지막 장 또는 전용 일러스트 — `_cutin_art_for()` 참고
 #   2) 없으면 전투 스프라이트의 공격 프레임(없으면 정지 스프라이트)
 # 예전 2400×1350 컷인과 편성 초상은 그림체가 달라 쓰지 않는다.
 func _setup_cutin(unit: TurnUnit, skill: SkillData, color: Color) -> bool:
@@ -1515,9 +1515,9 @@ func _cutin_art_for(unit: TurnUnit) -> Dictionary:
 	return {"texture": _battle_sprite_of(unit), "dedicated": false, "frames": null}
 
 
-# 파티의 오의 애니메이션을 전투 시작 때 미리 읽어 둔다 (#549).
+# 파티의 궁극기 애니메이션을 전투 시작 때 미리 읽어 둔다 (#549).
 #
-# 예전 영상(#546)은 오의를 쓰는 순간 `load()` 하고 디코딩을 시작해서, 첫 오의의 첫 장면이
+# 예전 영상(#546)은 궁극기를 쓰는 순간 `load()` 하고 디코딩을 시작해서, 첫 궁극기의 첫 장면이
 # 0.2~0.3초 비었다(창 모드 캡처에서 실루엣이 늦게 떴다). 24장 텍스처를 그 순간에 읽어도 같은 일이 난다.
 func _preload_ultimates(party: Array[CharacterData]) -> void:
 	for member in party:
@@ -1528,7 +1528,7 @@ func _preload_ultimates(party: Array[CharacterData]) -> void:
 			_ult_frames[path] = null
 
 
-# 오의 애니메이션. 미리 읽기를 걸어 둔 것은 그 결과를(아직이면 끝날 때까지 기다린다), 아니면 바로 읽는다.
+# 궁극기 애니메이션. 미리 읽기를 걸어 둔 것은 그 결과를(아직이면 끝날 때까지 기다린다), 아니면 바로 읽는다.
 func _ultimate_frames_of(character_id: StringName) -> SpriteFrames:
 	var path := UITheme.ultimate_frames_path(character_id)
 	if path.is_empty():
@@ -1644,10 +1644,10 @@ func _on_action_chosen(skill: SkillData, target: TurnUnit) -> void:
 
 
 func _on_ultimate_requested(unit: TurnUnit) -> void:
-	# **오의는 턴 순서와 무관하게 언제든 발동한다.** 입력 대기 중이 아니어도 받는다.
+	# **궁극기는 턴 순서와 무관하게 언제든 발동한다.** 입력 대기 중이 아니어도 받는다.
 	var result := battle.use_ultimate(unit)
 	if not bool(result["ok"]):
-		print("[TurnBattle] 오의 실패: %s" % result["reason"])
+		print("[TurnBattle] 궁극기 실패: %s" % result["reason"])
 		return
 	_play()
 

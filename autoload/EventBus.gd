@@ -172,7 +172,7 @@ signal turn_resonance_changed(current: int, maximum: int)
 @warning_ignore("unused_signal")
 signal turn_heat_changed(heat: float, zone: int)
 
-# 오의 게이지가 바뀌었다.
+# 궁극기 게이지가 바뀌었다.
 @warning_ignore("unused_signal")
 signal turn_energy_changed(unit, energy: int, maximum: int)
 

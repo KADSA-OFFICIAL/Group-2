@@ -53,11 +53,11 @@ var window_size: Vector2i = WINDOW_SIZES[0]
 # 마스터 볼륨 (0.0 ~ 1.0). 데시벨 변환은 이 시스템이 감춘다.
 var master_volume: float = 1.0
 
-# 오의 연출 (#544). 전투 화면(`TurnBattle`)이 오의를 재생할 때 읽는다.
+# 궁극기 연출 (#544). 전투 화면(`TurnBattle`)이 궁극기를 재생할 때 읽는다.
 #   FULL  — 화면 전체 연출(약 3초): 암전 · 스피드라인 · 캐릭터 등장 · 기술명 타이포 · 카메라
 #   SHORT — 사선 띠에 캐릭터와 기술명만 지나가는 압축판(약 1초)
 #   OFF   — 원소색 번쩍 + 기술명 배너만
-# 오의가 자주 나오는 만큼(#542) 매번 긴 연출이 부담스러운 플레이어를 위한 선택지다.
+# 궁극기가 자주 나오는 만큼(#542) 매번 긴 연출이 부담스러운 플레이어를 위한 선택지다.
 enum CutinMode { FULL, SHORT, OFF }
 const CUTIN_MODE_NAMES := {CutinMode.FULL: "풀", CutinMode.SHORT: "짧게", CutinMode.OFF: "끄기"}
 var ultimate_cutin_mode: int = CutinMode.FULL
@@ -65,6 +65,8 @@ var ultimate_cutin_mode: int = CutinMode.FULL
 
 func _ready() -> void:
 	name = "SettingsSystem"
+	# 기본 글꼴(#580)은 화면이 뜨기 전에 갈아 끼워야 모든 Control 이 같은 글꼴로 시작한다.
+	HUDKit.apply_base_font()
 	# 저장 스키마의 설정 부분은 이 시스템이 소유한다(SaveSystem 은 내부를 모른다).
 	SaveSystem.register_provider(SAVE_KEY, self)
 	# 복원된 값(또는 기본값)을 실제 시스템에 반영한다.

@@ -19,7 +19,7 @@ Godot 4.6.3 Windows에서 다음 검증을 실행했다.
 - VerifyDedicatedCutins: PASS — 4종 크기·투명 공간·좌우 배치·아린 폴백.
 - VerifyTurnCombat: PASS — 438개.
 - VerifyTurnStageBattle: PASS — 135개.
-- 그래픽 렌더러에서도 VerifyDedicatedCutins를 실행하고 아래 4개 화면을 확인했다. 컷인 배치 확인용 정지 화면이며 전체 오의 모션 캡처는 아니다.
+- 그래픽 렌더러에서도 VerifyDedicatedCutins를 실행하고 아래 4개 화면을 확인했다. 컷인 배치 확인용 정지 화면이며 전체 궁극기 모션 캡처는 아니다.
 
 [하랑](harang-cutin.png) · [미나](mina-cutin.png) · [설아](seola-cutin.png) · [태희](taehee-cutin.png)
 

@@ -29,3 +29,7 @@ Thumbs.db
 # 압축 파일
 *.zip
 *.tar.gz
+
+# 라이선스상 재배포가 금지된 글꼴(#580) — 각자 공식 배포처에서 받아 둔다. assets/fonts/README.md 참고.
+/assets/fonts/ONE-Mobile-POP.otf
+/assets/fonts/ONE-Mobile-POP.otf.import

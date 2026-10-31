@@ -1,14 +1,14 @@
 extends Node
 
-# 전투 로직과 연출이 어긋나지 않는지, 오의가 어느 경로로든 컷인과 함께 나오는지 검증 (#542).
+# 전투 로직과 연출이 어긋나지 않는지, 궁극기가 어느 경로로든 컷인과 함께 나오는지 검증 (#542).
 #
 # 플레이 영상에서 본 것: 1웨이브에서 스킬을 눌러도 반응이 없다가 갑자기 "웨이브 2/2" 로 바뀌고,
 # 파티 카드가 사라지고(로직상 전멸), 1웨이브 적 그림은 그대로 서 있고, 보스는 보이지 않았다.
-# 다시 출격하면 그 상태로 멈춰 있었다. 오의도 나오지 않았다.
+# 다시 출격하면 그 상태로 멈춰 있었다. 궁극기도 나오지 않았다.
 #
 #   1) 턴 단위 진행 — `step_by_turn` 이면 `advance()` 한 번이 한 턴만 진행한다.
-#   2) 오의 컷인 — 자동 전투 · 스킬 목록(`act`) · 초상 배지(`use_ultimate`) 어느 경로든
-#      오의 시전 바로 앞에 `ULTIMATE_CUTIN` 이 **한 번** 있다.
+#   2) 궁극기 컷인 — 자동 전투 · 스킬 목록(`act`) · 초상 배지(`use_ultimate`) 어느 경로든
+#      궁극기 시전 바로 앞에 `ULTIMATE_CUTIN` 이 **한 번** 있다.
 #   3) 자동 전환 — 아군 턴 도중 자동을 켜면 그 아군의 턴을 건너뛰지 않고 대신 진행한다.
 #   4) 화면 재시작 — 로직이 앞서 끝난 전투를 재시작해도 옛 전투의 승패 신호가 나오지 않고,
 #      새 전투가 진행된다. 웨이브가 바뀌면 지난 웨이브의 몸이 남지 않는다.
@@ -88,7 +88,7 @@ func _verify_step_by_turn() -> void:
 	_expect(calls > 10, "턴 단위 진행이면 advance() 를 여러 번 불러야 끝난다 (%d번)" % calls)
 
 
-# 자동 전투: 아군 오의 시전마다 바로 앞에 같은 유닛의 컷인이 하나.
+# 자동 전투: 아군 궁극기 시전마다 바로 앞에 같은 유닛의 컷인이 하나.
 func _verify_ultimate_cutins_auto() -> void:
 	var ult_casts := 0
 	var cutins := 0
@@ -112,9 +112,9 @@ func _verify_ultimate_cutins_auto() -> void:
 					if last_cutin_unit == unit:
 						paired += 1
 				last_cutin_unit = null
-	_expect(ult_casts > 0, "자동 전투에서 오의가 나와야 한다")
-	_expect(paired == ult_casts, "자동 전투의 오의 %d번 모두 컷인이 앞서야 한다 (짝 %d)" % [ult_casts, paired])
-	_expect(cutins == ult_casts, "컷인 수(%d)와 오의 수(%d)가 같아야 한다(중복 없음)" % [cutins, ult_casts])
+	_expect(ult_casts > 0, "자동 전투에서 궁극기가 나와야 한다")
+	_expect(paired == ult_casts, "자동 전투의 궁극기 %d번 모두 컷인이 앞서야 한다 (짝 %d)" % [ult_casts, paired])
+	_expect(cutins == ult_casts, "컷인 수(%d)와 궁극기 수(%d)가 같아야 한다(중복 없음)" % [cutins, ult_casts])
 
 
 # 수동: 스킬 목록(act)과 초상 배지(use_ultimate) 모두 컷인이 정확히 하나.
@@ -132,12 +132,12 @@ func _verify_ultimate_cutin_manual() -> void:
 			result = b.act(ult, null if not ult.needs_target_pick() else b.ranks.valid_targets(unit, ult)[0])
 		else:
 			result = b.use_ultimate(unit)
-		_expect(bool(result.get("ok", false)), "%s: 게이지가 차 있으면 오의가 나가야 한다: %s" % [path, result.get("reason", "")])
+		_expect(bool(result.get("ok", false)), "%s: 게이지가 차 있으면 궁극기가 나가야 한다: %s" % [path, result.get("reason", "")])
 		var cutins := 0
 		for entry in _drain(b):
 			if int(entry["event"]) == PresentationQueue.Event.ULTIMATE_CUTIN:
 				cutins += 1
-		_expect(cutins == 1, "%s 로 쓴 오의에 컷인이 한 번 나와야 한다 (%d번)" % [path, cutins])
+		_expect(cutins == 1, "%s 로 쓴 궁극기에 컷인이 한 번 나와야 한다 (%d번)" % [path, cutins])
 
 	# 게이지가 모자라면 컷인도 없다.
 	var b2 := _make_battle(&"stage_1_1", 5, false)
@@ -150,7 +150,7 @@ func _verify_ultimate_cutin_manual() -> void:
 	for entry in _drain(b2):
 		if int(entry["event"]) == PresentationQueue.Event.ULTIMATE_CUTIN:
 			stray += 1
-	_expect(not bool(r2.get("ok", true)) and stray == 0, "게이지가 모자란 오의는 실패하고 컷인도 없어야 한다")
+	_expect(not bool(r2.get("ok", true)) and stray == 0, "게이지가 모자란 궁극기는 실패하고 컷인도 없어야 한다")
 
 
 func _verify_auto_act() -> void:

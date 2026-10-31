@@ -669,7 +669,7 @@ func get_effective_ally_heal(faith_boost: float = 1.0) -> int:
 
 @export_group("턴제")
 
-## 이 스킬이 어떤 행동인가. 자원 수지(RP·오의 게이지)와 턴 소모 여부가 여기서 갈린다.
+## 이 스킬이 어떤 행동인가. 자원 수지(RP·궁극기 게이지)와 턴 소모 여부가 여기서 갈린다.
 ##
 ## 기본값이 `BASIC`인 이유: 기존 스킬 `.tres`는 `turn_skills`에 들어 있지 않으므로 이 값이
 ## 읽히지 않는다. 새로 저작하는 턴제 스킬은 반드시 명시하게 되어 있다(평타가 없으면
@@ -680,7 +680,7 @@ func get_effective_ally_heal(faith_boost: float = 1.0) -> int:
 ## 일반공격은 0이며 **소모 대신 +1을 번다**(그 값은 튜닝의 `resonance_gain_basic`이 소유한다).
 @export var rp_cost: int = 0
 
-## 오의 게이지 소모량. 오의만 쓴다. 0이면 캐릭터의 `stats.energy_max` 전량을 쓴다.
+## 궁극기 게이지 소모량. 궁극기만 쓴다. 0이면 캐릭터의 `stats.energy_max` 전량을 쓴다.
 @export var energy_cost: int = 0
 
 ## 시전자가 이 랭크에 있을 때만 사용할 수 있다. 비우면 어디서든 사용 가능.
@@ -766,7 +766,7 @@ func trait_ready(turn_index: int) -> bool:
 
 # ===== 턴제 조회 (Turn accessors) =====
 
-# 턴을 소모하는가. 오의와 특성은 턴 밖에서 발동한다 — 이 게임의 심장이다.
+# 턴을 소모하는가. 궁극기와 특성은 턴 밖에서 발동한다 — 이 게임의 심장이다.
 func consumes_turn() -> bool:
 	return turn_action == TurnCombat.ActionKind.BASIC \
 		or turn_action == TurnCombat.ActionKind.SKILL
@@ -780,7 +780,7 @@ func is_turn_basic() -> bool:
 	return turn_action == TurnCombat.ActionKind.BASIC
 
 
-# 실제 오의 코스트. 0으로 저작했으면 캐릭터의 게이지 최대치 전량이다.
+# 실제 궁극기 코스트. 0으로 저작했으면 캐릭터의 게이지 최대치 전량이다.
 func get_energy_cost(owner_energy_max: int) -> int:
 	if energy_cost > 0:
 		return energy_cost
@@ -887,7 +887,7 @@ func validate_turn() -> Array[String]:
 	if turn_action == TurnCombat.ActionKind.BASIC and rp_cost > 0:
 		problems.append("일반공격은 공명 포인트를 소모하지 않습니다(오히려 법니다).")
 	if turn_action != TurnCombat.ActionKind.ULTIMATE and energy_cost > 0:
-		problems.append("오의가 아닌 스킬에 energy_cost가 있습니다.")
+		problems.append("궁극기가 아닌 스킬에 energy_cost가 있습니다.")
 	if turn_targeting == TurnCombat.Targeting.BOUNCE and bounce_count < 1:
 		problems.append("BOUNCE 타겟팅인데 bounce_count가 0입니다.")
 

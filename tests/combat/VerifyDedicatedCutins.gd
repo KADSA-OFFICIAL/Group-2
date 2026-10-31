@@ -1,14 +1,14 @@
 extends Node
 
-# 오의 연출 검증 (#544).
+# 궁극기 연출 검증 (#544).
 #
 #   1) 6명 모두 컷인이 준비된다. 그림은 게임 그림체(전투 스프라이트 공격 프레임)이거나
-#      오의 전용 일러스트(`UITheme.ultimate_cutin_path()`)뿐이다 — 예전 2400×1350 컷인과
+#      궁극기 전용 일러스트(`UITheme.ultimate_cutin_path()`)뿐이다 — 예전 2400×1350 컷인과
 #      편성 초상은 쓰지 않는다. 하드코딩된 id 목록이 없다.
 #   2) 풀 / 짧게 연출이 정해진 길이 안에서 끝나고, 끝나면 판이 사라진다.
 #      6명 모두 LD 공격 애니메이션(#549, 독립 원화 24장 SpriteFrames)이 있고 컷인 판에 실린다.
 #      장마다 길이가 있고, 공격 정점 장이 범위 안이며, 정점 장에서 기술명이 박힌다.
-#   3) 설정 "오의 연출"이 저장·복원되고, 잘못된 값은 풀로 돌아간다.
+#   3) 설정 "궁극기 연출"이 저장·복원되고, 잘못된 값은 풀로 돌아간다.
 #   4) 끄기 모드에서는 컷인 판이 뜨지 않는다.
 #
 # 창 모드로 돌리면 각 캐릭터의 풀 연출 한 장면을 docs/art-review/missing-art/ 에 남긴다.
@@ -54,7 +54,7 @@ func _ready() -> void:
 		check(field._cutin._anim == frames, "컷인 판에 애니메이션이 실려야 한다: " + String(id))
 		if frames != null:
 			var count := frames.get_frame_count(UltimateCutin.ANIM_NAME)
-			check(count == 24, "오의 원화는 24장이어야 한다: %s %d" % [id, count])
+			check(count == 24, "궁극기 원화는 24장이어야 한다: %s %d" % [id, count])
 			var strike := int(frames.get_meta(&"strike_frame", -1))
 			check(strike > 0 and strike < count - 1, "공격 정점 장이 범위 밖이다: %s %d" % [id, strike])
 			var size0 := frames.get_frame_texture(UltimateCutin.ANIM_NAME, 0).get_size()
@@ -118,9 +118,9 @@ func _ready() -> void:
 	# 3) 설정 저장·복원
 	SettingsSystem.set_ultimate_cutin_mode(SettingsSystem.CutinMode.SHORT)
 	var dict := SettingsSystem.to_save_dict()
-	check(int(dict.get("ultimate_cutin_mode", -1)) == SettingsSystem.CutinMode.SHORT, "오의 연출 설정이 저장돼야 한다")
+	check(int(dict.get("ultimate_cutin_mode", -1)) == SettingsSystem.CutinMode.SHORT, "궁극기 연출 설정이 저장돼야 한다")
 	SettingsSystem.from_save_dict({"ultimate_cutin_mode": SettingsSystem.CutinMode.OFF})
-	check(SettingsSystem.ultimate_cutin_mode == SettingsSystem.CutinMode.OFF, "오의 연출 설정이 복원돼야 한다")
+	check(SettingsSystem.ultimate_cutin_mode == SettingsSystem.CutinMode.OFF, "궁극기 연출 설정이 복원돼야 한다")
 	SettingsSystem.from_save_dict({"ultimate_cutin_mode": 99})
 	check(SettingsSystem.ultimate_cutin_mode == SettingsSystem.CutinMode.FULL, "잘못된 값은 풀로 돌아가야 한다")
 

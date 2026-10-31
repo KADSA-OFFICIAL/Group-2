@@ -388,7 +388,7 @@ func _apply_expire_burst(status: TurnStatus, target: TurnUnit,
 	return ctx
 
 
-# 속박 중첩을 즉시 폭발시킨다 (「완성된 초상」의 오의처럼 스킬이 강제로 터뜨릴 때).
+# 속박 중첩을 즉시 폭발시킨다 (「완성된 초상」의 궁극기처럼 스킬이 강제로 터뜨릴 때).
 func detonate(source: TurnUnit, target: TurnUnit, break_status: int,
 		per_stack_multiplier: float, consume: bool) -> DamageContext:
 	var status := target.find_break_status(break_status)

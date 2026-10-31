@@ -1,6 +1,6 @@
-# 오의 컷인 그림 (#544, #546, #549)
+# 궁극기 컷인 그림 (#544, #546, #549)
 
-`<id>/<id>_ult.tres` — 오의 풀 연출에서 재생하는 **LD(편성 초상 그림체) 공격 애니메이션**. 원화 24장
+`<id>/<id>_ult.tres` — 궁극기 풀 연출에서 재생하는 **LD(편성 초상 그림체) 공격 애니메이션**. 원화 24장
 (`<id>/<id>_ult_00.webp` ~ `_23.webp`)의 SpriteFrames 이고, 짧게 모드는 마지막 장(결정 포즈)을 잘라 쓴다.
 
 - `tools/build_ultimate_frames.py` 가 만든다. 원본·제작 경위: [art/ultimate-ld](../../../../../art/ultimate-ld/README.md)

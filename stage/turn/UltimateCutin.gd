@@ -1,8 +1,8 @@
 extends Control
 class_name UltimateCutin
 
-# 오의 컷인 판 (#544, 풀 연출은 #576 에서 재설계). 전투 화면(`TurnBattle`)이 한 번 만들어 두고,
-# 오의마다 그림과 글자만 갈아 끼워 재생한다.
+# 궁극기 컷인 판 (#544, 풀 연출은 #576 에서 재설계). 전투 화면(`TurnBattle`)이 한 번 만들어 두고,
+# 궁극기마다 그림과 글자만 갈아 끼워 재생한다.
 #
 # ## 풀 연출 — "정확히 조준하고, 짧은 정적 뒤 한 발로 타격한다" (기본 약 2.2초)
 #
@@ -35,7 +35,7 @@ class_name UltimateCutin
 #   `setup()` 이 받는 그림은 셋 중 하나다(고르는 것은 `TurnBattle`):
 #     - LD 공격 애니메이션(#549) — 독립 원화 24장 `SpriteFrames`. 풀 연출은 조준 장(정점 3장 앞)과
 #       정점 장·반동 장만 쓴다. 짧게 모드는 마지막 장(결정 포즈)을 쓴다. 만드는 법: tools/build_ultimate_frames.py
-#     - 오의 전용 정지 일러스트(`UITheme.ultimate_cutin_path()`) — 사양: docs/ultimate-cutin-art-spec.md
+#     - 궁극기 전용 정지 일러스트(`UITheme.ultimate_cutin_path()`) — 사양: docs/ultimate-cutin-art-spec.md
 #     - 없으면 전투 스프라이트의 공격 프레임 — 크게 키우면 무르므로 크롭을 덜 하고 작게 쓴다.
 #
 # 총구 위치는 SpriteFrames 의 `metadata/muzzle`(원화 픽셀 좌표)이다. 없으면 원화 크기에서 추정한다.

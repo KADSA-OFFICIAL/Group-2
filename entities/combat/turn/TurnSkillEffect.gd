@@ -29,7 +29,7 @@ enum Kind {
 	ADVANCE,         # 행동 앞당김 (%)
 	DELAY,           # 행동 지연 (%)
 	EXTRA_TURN,      # 추가 턴
-	ENERGY,          # 오의 게이지 증감
+	ENERGY,          # 궁극기 게이지 증감
 	RESONANCE,       # 공명 포인트 증감
 	TAUNT,           # 도발
 	CLEANSE,         # 디버프 해제
@@ -203,7 +203,7 @@ func get_label() -> String:
 		Kind.EXTRA_TURN:
 			return "추가 턴 %d회" % maxi(amount, 1)
 		Kind.ENERGY:
-			return "오의 게이지 %+d" % amount
+			return "궁극기 게이지 %+d" % amount
 		Kind.RESONANCE:
 			return "공명 포인트 %+d" % amount
 		Kind.TAUNT:

@@ -520,7 +520,7 @@ assets/sprites/enemies/battle/enemy_<id>_battle.png
 | 워크 시트 (실시간 화면 4방향 이동) | [pixel-art-prompts.md](pixel-art-prompts.md) |
 | 스킬 이펙트 | [skill-effect-gaps.md](skill-effect-gaps.md) — Codex 스크립트다 |
 | 초상 (42×36 / 칩용) | 이미 붙어 있다. [turn-combat-design.md](turn-combat-design.md) §14 |
-| 오의 컷인 · 전신 | 편성용 초상을 쓰고 있다. 컷인 전용 일러스트는 미정 |
-| 오의 엠블럼 | 역할 도형 SVG 를 임시로 쓴다. `UITheme.role_emblem_path()` |
+| 궁극기 컷인 · 전신 | 편성용 초상을 쓰고 있다. 컷인 전용 일러스트는 미정 |
+| 궁극기 엠블럼 | 역할 도형 SVG 를 임시로 쓴다. `UITheme.role_emblem_path()` |
 | 전투 리그 부품 세트 (Spine) | **이 프로젝트에 재생 경로가 없다.** 리그를 도입하기로 정해지기 전에는 그리지 않는다 |
 

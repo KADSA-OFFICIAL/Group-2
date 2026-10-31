@@ -54,7 +54,7 @@ var element_resistances: Dictionary = {}
 var current_hp: int = 0
 
 # ===== 자원 (Resources) =====
-## 오의 게이지. 최대치는 `stats.get_energy_max()`.
+## 궁극기 게이지. 최대치는 `stats.get_energy_max()`.
 var energy: int = 0
 
 # ===== 인성치 (Toughness) =====
@@ -86,7 +86,7 @@ var baton_stacks: int = 0
 var debuff_failures: int = 0
 
 ## 살아 있는가. HP 0이 되면 false. 시체를 타임라인에서 즉시 빼기보다 플래그로 두는 이유:
-## 처치 시 발동하는 특성·오의 게이지 획득이 그 순간의 참조를 필요로 한다.
+## 처치 시 발동하는 특성·궁극기 게이지 획득이 그 순간의 참조를 필요로 한다.
 var alive: bool = true
 
 ## 소환체인가. 소환체는 타임라인에 별도 유닛으로 참여하지만 파티 슬롯을 차지하지 않는다.
@@ -396,5 +396,5 @@ func describe() -> String:
 	if is_broken:
 		text += " [격파 %d턴]" % break_stun_left
 	if get_energy_max() > 0:
-		text += " 오의 %d/%d" % [energy, get_energy_max()]
+		text += " 궁극기 %d/%d" % [energy, get_energy_max()]
 	return text

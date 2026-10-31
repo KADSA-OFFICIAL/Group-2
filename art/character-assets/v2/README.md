@@ -18,7 +18,7 @@
 
 게임의 `assets/sprites/characters/portraits/{arin,gangji}.png`도 교체했다.
 공유 초상은 941×1691, 인물 높이 92%로 정규화했으며 얼굴 좌표는 `data/portraits/portrait_meta.tres`에 있다.
-편성·대화·전투 HUD·기존 오의 컷인 경로는 이 공유 초상의 새 그림체를 사용한다.
+편성·대화·전투 HUD·기존 궁극기 컷인 경로는 이 공유 초상의 새 그림체를 사용한다.
 전용 와이드 컷인은 납품 에셋이며, 현재 런타임의 초상 선택 동작을 바꾸지 않는다.
 
 PNG는 straight alpha다. 피부·눈·의상 색을 4색으로 강제 매핑하지 않는다.

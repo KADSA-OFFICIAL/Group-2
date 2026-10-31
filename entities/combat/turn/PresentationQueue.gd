@@ -29,8 +29,8 @@ enum Event {
 	STATUS_EXPIRED,
 	MOVED,           # 랭크 이동 (밀치기 · 끌기 · 자리바꿈)
 	TIMELINE_SHIFT,  # 타임라인 칩 이동 (앞당김 · 지연)
-	ULTIMATE_CUTIN,  # 오의 컷인
-	RESOURCE_CHANGED,# 공명 · 오의 게이지 · 열기
+	ULTIMATE_CUTIN,  # 궁극기 컷인
+	RESOURCE_CHANGED,# 공명 · 궁극기 게이지 · 열기
 	TURN_START,
 	TURN_END,
 	CYCLE_START,
@@ -45,7 +45,7 @@ enum Event {
 # 플래시 강도 · 색수차 · 넉백(px) · 파티클 수.
 #
 # **이 표를 코드에 두는 이유**: 연출의 "느낌"은 수치의 조합이고, 조합이 흩어지면
-# 일반공격이 오의보다 무거워지는 사고가 난다. 한 표에서만 읽는다.
+# 일반공격이 궁극기보다 무거워지는 사고가 난다. 한 표에서만 읽는다.
 const FEEDBACK := {
 	"basic": {
 		"hitstop_frames": 2, "shake_px": 2.0, "shake_time": 0.08,
@@ -283,7 +283,7 @@ static func element_break_effect(element: int) -> String:
 			return "방사형 충격파 링 + 지면 균열"
 
 
-# ===== 오의 컷인 8단계 (설계서 §4.10.4) =====
+# ===== 궁극기 컷인 8단계 (설계서 §4.10.4) =====
 #
 # 3D 카메라 컷씬의 2D 대체안이다. **타이포그래피가 핵심이다** — 글자 자체가 연출이 되면
 # 3D 카메라가 없어도 충분히 강렬하다(페르소나 5 · 리버스: 1999가 증명).
@@ -303,7 +303,7 @@ static func ultimate_cutin_steps(unit: TurnUnit, skill: SkillData) -> Array[Dict
 			"note": "캐릭터 보이스 재생"},
 		{"at": 1.00, "name": "복귀", "duration": 0.10,
 			"note": "일러스트 이탈 + 전투 화면 복귀, 카메라 줌인"},
-		{"at": 1.10, "name": "오의 모션", "duration": 1.50,
+		{"at": 1.10, "name": "궁극기 모션", "duration": 1.50,
 			"note": "스켈레탈 애니메이션 + 대형 이펙트"},
 		{"at": 2.60, "name": "마무리", "duration": 0.40,
 			"note": "히트스톱 8프레임 → 화면 흔들림 → 데미지 표시"},
