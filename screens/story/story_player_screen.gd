@@ -724,7 +724,7 @@ func _figure_portrait(line: StoryLineData) -> Texture2D:
 		return null
 	if character is CharacterData:
 		return PortraitSystem.get_portrait(character)
-	return character.portrait
+	return GameEdition.texture(character.portrait)
 
 
 func _inner_of(figure: Control) -> Control:

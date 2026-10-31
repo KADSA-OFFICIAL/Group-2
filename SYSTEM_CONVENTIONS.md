@@ -45,6 +45,7 @@
 | TurnEnemyAI | `entities/combat/turn/TurnEnemyAI.gd` | 적 행동 선택 · 예고 생성 · 자동 전투 정책 | 적 행동 결정 |
 | PresentationQueue | `entities/combat/turn/PresentationQueue.gd` | 연출 큐 · 피드백 규격표 · 격파 9단계 | 턴제 연출 규격 |
 | TurnStageEncounter | `entities/combat/turn/TurnStageEncounter.gd` | 저작 스테이지 → 턴제 조우 번역 (웨이브·적 정의) | 스테이지→턴제 대응 |
+| GameEdition | `entities/edition/GameEdition.gd` | 일반판/검열판 구분 · 검열판 그림 경로(`assets_censored/`) · 내보내기 교체는 `addons/edition_export` | 릴리스 판 · 검열판 그림 경로 규칙 |
 
 > 새 autoload/시스템을 추가하면 **이 표에 한 줄 추가**한다.
 

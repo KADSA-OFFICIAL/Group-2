@@ -95,11 +95,11 @@ func has_portrait(portrait_id: StringName) -> bool:
 	return _catalog.has(portrait_id)
 
 
-# id 로 텍스처를 얻는다. 없으면 null.
+# id 로 텍스처를 얻는다. 없으면 null. 검열판이면 검열판 그림(GameEdition, #586).
 func get_texture(portrait_id: StringName) -> Texture2D:
 	if not _catalog.has(portrait_id):
 		return null
-	return load(_catalog[portrait_id]) as Texture2D
+	return load(GameEdition.resolve(_catalog[portrait_id])) as Texture2D
 
 
 # ===== 얼굴 위치 (Head metrics) =====
@@ -129,6 +129,7 @@ func get_selected_id(character_id: StringName) -> StringName:
 #   선택이 "없음"이면 null (플레이스홀더로 떨어진다)
 #   선택이 있으면 그 텍스처
 #   선택이 없으면 저작 기본값(CharacterData.portrait)
+# 검열판이면 같은 이름의 검열판 그림으로 바뀐다(GameEdition, #586).
 func get_portrait(character: CharacterData) -> Texture2D:
 	if character == null:
 		return null
@@ -141,7 +142,7 @@ func get_portrait(character: CharacterData) -> Texture2D:
 		if texture != null:
 			return texture
 
-	return character.portrait
+	return GameEdition.texture(character.portrait)
 
 
 # 이 캐릭터의 초상을 고른다. NONE_ID 를 주면 "초상 없음"이다.
