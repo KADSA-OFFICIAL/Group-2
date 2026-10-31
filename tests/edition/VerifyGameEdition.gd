@@ -56,8 +56,7 @@ func _check_general() -> void:
 		var character: CharacterData = CharacterDatabase.get_character(id)
 		if character == null or character.portrait == null:
 			continue
-		check(PortraitSystem.get_portrait(character) == character.portrait or
-			not String(PortraitSystem.get_selected_id(id)).is_empty(), String(id) + ": 일반판 초상은 원본")
+		check(PortraitSystem.get_portrait(character) == character.portrait, String(id) + ": 일반판 초상은 원본")
 		var frames := UITheme.ultimate_frames_path(id)
 		check(frames.is_empty() or frames.begins_with(GameEdition.ART_ROOT), String(id) + ": 일반판 오의는 원본")
 
@@ -67,8 +66,6 @@ func _check_censored() -> void:
 	for id in CharacterDatabase.get_playable_ids():
 		var character: CharacterData = CharacterDatabase.get_character(id)
 		if character == null or character.portrait == null:
-			continue
-		if not String(PortraitSystem.get_selected_id(id)).is_empty():
 			continue
 		var original := character.portrait.resource_path
 		var expected := GameEdition.censored_path(original) if GameEdition.has_censored(original) else original

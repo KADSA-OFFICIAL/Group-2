@@ -87,3 +87,20 @@ func get_playable_ids() -> Array:
 
 func get_playable_count() -> int:
 	return get_playable_ids().size()
+
+
+# 선택창(캐릭터·편성 화면) 목록: 쓸 수 있는 인물 다음에 잠긴 인물(coming_soon) (#590).
+# 잠긴 인물을 고를 수 있는지는 화면이 is_available() 로 묻는다.
+func get_roster_ids() -> Array:
+	var out := get_playable_ids()
+	for id in _characters:
+		var character: CharacterData = _characters[id]
+		if character != null and not character.playable and character.coming_soon:
+			out.append(id)
+	return out
+
+
+# 편성·선택이 되는 인물인가. 선택창의 잠금 여부가 여기서 나온다.
+func is_available(id: StringName) -> bool:
+	var character: CharacterData = _characters.get(id)
+	return character != null and character.playable

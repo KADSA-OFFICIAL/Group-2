@@ -350,13 +350,15 @@ func _refresh_roster() -> void:
 	_clear(_roster_grid)
 	var total := CharacterDatabase.get_playable_count()
 	_count_label.text = "보유 %d / %d" % [total, total]
-	for id in CharacterDatabase.get_playable_ids():
+	for id in CharacterDatabase.get_roster_ids():
 		_roster_grid.add_child(_make_roster_card(id))
 
 
 func _make_roster_card(id: StringName) -> Control:
 	var character := CharacterDatabase.get_character(id)
 	var selected: bool = _selected.has(id)
+	# 잠긴 인물(#590)은 보여 주기만 한다. 누를 수 없고 편성에 들어가지 않는다.
+	var available := CharacterDatabase.is_available(id)
 
 	# 세로 카드 2열이 아니라 가로 리스트 행이다.
 	# 2열로 두면 카드 폭이 135px 밖에 안 나와서 한글 이름이 전부 잘렸다.
@@ -380,9 +382,16 @@ func _make_roster_card(id: StringName) -> Control:
 		row.add_child(box)
 
 		box.add_child(HUDKit.label(character.display_name, 15, HUDKit.text_1(), 700))
-		box.add_child(HUDKit.role_chip_row(character))
+		if available:
+			box.add_child(HUDKit.role_chip_row(character))
+		else:
+			box.add_child(HUDKit.label(HUDKit.UNAVAILABLE_TEXT, 12, HUDKit.text_3()))
 	else:
 		row.add_child(HUDKit.label(String(id), 13, HUDKit.text_2()))
+
+	if not available:
+		card.modulate = HUDKit.UNAVAILABLE_TINT
+		return card
 
 	var button := Button.new()
 	button.flat = true
