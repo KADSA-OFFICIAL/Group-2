@@ -1348,9 +1348,9 @@ func _test_presentation_specs() -> void:
 # ===== 저작 데이터 =====
 
 func _test_authored_data() -> void:
-	# 로스터 6인이 턴제 유닛으로 변환되고, 검증을 통과해야 한다.
+	# 로스터 4인(#588: 하랑·강지·아린·태희)이 턴제 유닛으로 변환되고, 검증을 통과해야 한다.
 	var ids := CharacterDatabase.get_playable_ids()
-	_expect(ids.size() == 6, "로스터는 6인이어야 한다 (실제 %d)" % ids.size())
+	_expect(ids.size() == 4, "로스터는 4인이어야 한다 (실제 %d)" % ids.size())
 
 	var elements := {}
 	var physicals := {}
@@ -1391,12 +1391,13 @@ func _test_authored_data() -> void:
 			"%s 의 스텟은 저작 리소스의 복제본이어야 한다" % id)
 
 	# 원소·물리 타입이 충분히 흩어져야 자물쇠 퍼즐이 성립한다.
-	_expect(elements.size() >= 5,
-		"로스터의 원소가 5종 이상이어야 자물쇠 조합을 풀 수 있다 (실제 %d종)" % elements.size())
+	# 4인 로스터(#588)는 원소가 사람마다 다르다 — 적마다 열 수 있는 자물쇠가 있는지는 아래에서 본다.
+	_expect(elements.size() == ids.size(),
+		"로스터의 원소가 사람마다 달라야 한다 (실제 %d종 / %d인)" % [elements.size(), ids.size()])
 	_expect(physicals.size() == 3,
 		"로스터가 물리 타입 3종을 모두 커버해야 한다 (실제 %d종)" % physicals.size())
-	_expect(classes.size() >= 5,
-		"로스터의 턴제 역할이 5종 이상이어야 한다 (실제 %d종)" % classes.size())
+	_expect(classes.size() == ids.size(),
+		"로스터의 턴제 역할이 사람마다 달라야 한다 (실제 %d종 / %d인)" % [classes.size(), ids.size()])
 
 	# 적 6종.
 	var enemy_ids := EnemyDatabase.get_all_ids()
@@ -1415,6 +1416,12 @@ func _test_authored_data() -> void:
 			"%s 의 인성치가 0보다 커야 한다" % id)
 		_expect(not enemy.get_lock_candidates().is_empty(),
 			"%s 에 자물쇠 후보(약점)가 있어야 한다 — 없으면 영원히 격파되지 않는다" % id)
+		var openable := false
+		for candidate in enemy.get_lock_candidates():
+			var pool: Dictionary = elements if candidate[0] else physicals
+			if pool.has(candidate[1]):
+				openable = true
+		_expect(openable, "%s 의 약점 중 로스터가 열 수 있는 것이 있어야 한다" % id)
 
 		var unit := TurnUnit.from_enemy(enemy, 1)
 		_expect(unit.max_toughness > 0, "%s 유닛의 인성치가 설정되어야 한다" % id)
