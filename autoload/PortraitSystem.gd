@@ -2,20 +2,18 @@ extends Node
 
 # 캐릭터 초상의 단일 출처 (autoload).
 #
-# 책임 둘:
+# 책임:
 #   1. 쓸 수 있는 초상 목록을 안다(폴더를 훑어 만든다).
-#   2. 캐릭터마다 **어느 초상을 쓸지**를 들고 저장한다.
+#   2. 캐릭터의 초상을 판(일반·검열)에 맞게 돌려준다. 화면은 여기에 묻는다.
+#   3. 초상별 얼굴 위치를 안다.
 #
-# 왜 CharacterData 에 박지 않는가:
-#   어느 그림이 어느 캐릭터인지가 아직 정해지지 않았다. .tres 에 박아 두면 바꿀 때마다
-#   데이터를 고쳐야 하고, 화면에서 보면서 고를 수 없다.
-#   그래서 저작 기본값(CharacterData.portrait)은 그대로 두고, **선택**만 여기서 덮는다.
-#   배정이 확정되면 선택을 .tres 로 옮기고 이 시스템은 목록 제공만 남기면 된다.
+# 예전에는 캐릭터마다 **어느 초상을 쓸지** 고르는 선택을 들고 저장했다(배정이 정해지기 전,
+# 캐릭터 화면의 "초상 고르기"). 배정이 확정되어 #590 에서 걷어냈다 — 남아 있던 선택이
+# 다른 인물의 그림을 붙이거나 초상을 비웠다. 이제 초상은 CharacterData.portrait 하나다.
 #
 # 단일 출처 원칙:
 #   캐릭터 정의   -> CharacterData / CharacterDatabase
-#   초상 기본값   -> CharacterData.portrait
-#   초상 선택     -> 여기 (화면은 여기에 묻는다)
+#   초상          -> CharacterData.portrait (검열판이면 GameEdition 이 바꾼다)
 #
 # 참고: autoload/StoryProgress.gd(같은 저장 규약), ui/HUDKit.gd
 
@@ -27,17 +25,8 @@ const PORTRAIT_DIR := "res://assets/sprites/characters/portraits"
 # 초상별 얼굴 위치·크기 저작본. 없으면 화면이 자동 추정으로 떨어진다.
 const META_PATH := "res://data/portraits/portrait_meta.tres"
 
-# "초상 없음"을 고를 때 쓰는 값. 빈 문자열은 "선택 안 함"(저작 기본값 사용)과 구분해야 한다.
-const NONE_ID := &"__none__"
-
-# 선택이 바뀌었다. 화면은 이 신호로만 갱신한다.
-signal portrait_changed(character_id: StringName)
-
 # portrait_id(StringName) -> 리소스 경로(String). id 는 파일 이름(확장자 제외)이다.
 var _catalog: Dictionary = {}
-
-# character_id(String) -> portrait_id(String). 저장 스키마의 키가 문자열이라 String 으로 둔다.
-var _selection: Dictionary = {}
 
 # 얼굴 위치 저작본. 로드 실패해도 목록·선택은 그대로 동작해야 하므로 null 을 허용한다.
 var _meta: PortraitMeta = null
@@ -118,72 +107,21 @@ func get_head_rect(portrait: Texture2D) -> Rect2:
 	return _meta.get_head_rect(StringName(path.get_file().get_basename()))
 
 
-# ===== 선택 (Selection) =====
-
-# 이 캐릭터가 고른 초상 id. 고른 적 없으면 빈 값(저작 기본값을 쓴다는 뜻).
-func get_selected_id(character_id: StringName) -> StringName:
-	return StringName(str(_selection.get(String(character_id), "")))
-
-
-# 화면에 실제로 그릴 초상.
-#   선택이 "없음"이면 null (플레이스홀더로 떨어진다)
-#   선택이 있으면 그 텍스처
-#   선택이 없으면 저작 기본값(CharacterData.portrait)
-# 검열판이면 같은 이름의 검열판 그림으로 바뀐다(GameEdition, #586).
+# 화면에 실제로 그릴 초상. 검열판이면 같은 이름의 검열판 그림으로 바뀐다(GameEdition, #586).
 func get_portrait(character: CharacterData) -> Texture2D:
 	if character == null:
 		return null
-
-	var selected := get_selected_id(character.character_id)
-	if selected == NONE_ID:
-		return null
-	if not String(selected).is_empty():
-		var texture := get_texture(selected)
-		if texture != null:
-			return texture
-
 	return GameEdition.texture(character.portrait)
 
 
-# 이 캐릭터의 초상을 고른다. NONE_ID 를 주면 "초상 없음"이다.
-# 알 수 없는 id 는 무시한다 — 고른 것과 다른 그림이 뜨는 것보다 그대로 두는 편이 낫다.
-func select(character_id: StringName, portrait_id: StringName) -> bool:
-	if String(character_id).is_empty():
-		return false
-	if portrait_id != NONE_ID and not has_portrait(portrait_id):
-		push_warning("PortraitSystem: 알 수 없는 portrait_id(무시): " + String(portrait_id))
-		return false
-
-	_selection[String(character_id)] = String(portrait_id)
-	SaveSystem.request_save()
-	portrait_changed.emit(character_id)
-	return true
-
-
-# 선택을 지운다(저작 기본값으로 돌아간다).
-func clear_selection(character_id: StringName) -> void:
-	if not _selection.has(String(character_id)):
-		return
-	_selection.erase(String(character_id))
-	SaveSystem.request_save()
-	portrait_changed.emit(character_id)
-
-
 # ===== 저장 (Save) =====
+#
+# 저장할 것이 없다. 공급자로 남겨 두는 이유: 옛 세이브의 "portraits" 블록(초상 선택)을
+# 읽어 들인 뒤 다음 저장 때 빈 값으로 덮어, 지운 선택이 파일에 계속 남지 않게 한다.
 
 func to_save_dict() -> Dictionary:
-	return { "selection": _selection.duplicate() }
+	return {}
 
 
-func from_save_dict(data: Dictionary) -> void:
-	_selection.clear()
-	var saved = data.get("selection", {})
-	if typeof(saved) != TYPE_DICTIONARY:
-		return
-
-	for key in saved:
-		var value := str(saved[key])
-		# 파일이 사라진 초상은 버린다(없는 그림을 계속 들고 있으면 조용히 빈 화면이 된다).
-		if value == String(NONE_ID) or has_portrait(StringName(value)):
-			_selection[str(key)] = value
-	portrait_changed.emit(&"")
+func from_save_dict(_data: Dictionary) -> void:
+	pass

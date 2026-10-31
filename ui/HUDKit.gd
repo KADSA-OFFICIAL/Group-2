@@ -54,6 +54,10 @@ const DIVIDER: int = 2           # 패널 안 구분선 두께
 const RAIL_WIDTH: int = 280      # 좌측 리스트 폭
 const DETAIL_WIDTH: int = 340    # 우측 상세 폭
 
+# 선택창의 잠긴 인물 카드(#590). 캐릭터·편성 화면이 같은 문구·같은 흐림을 쓴다.
+const UNAVAILABLE_TEXT := "아직 이용할 수 없습니다"
+const UNAVAILABLE_TINT := Color(1, 1, 1, 0.5)
+
 # ===== 타이포 =====
 # 크기 차를 크게 벌린다. 12~14 사이에 전부 몰려 있으면 위계가 안 생긴다.
 const SIZE_TITLE: int = 34

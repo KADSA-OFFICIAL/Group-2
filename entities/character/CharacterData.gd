@@ -64,6 +64,13 @@ enum SecondaryRole {
 # 해석되어 이름·초상·색이 출처에서 나온다(#187). playable 은 편성 가능 여부만 정한다.
 @export var playable: bool = false
 
+# 편성은 안 되지만 선택창(캐릭터·편성 화면) 목록에는 잠긴 카드로 보여 줄 인물 (#590).
+#
+# 미나·설아처럼 로스터 인물인데 아직 쓸 수 없는 경우다(#588: 순화 그림이 다 갖춰지기 전).
+# playable = false 만으로는 고를 수 없다 — 여신·보스도 false 이고, 그들은 선택창에 뜨면 안 된다.
+# playable 이 true 면 이 값은 무시된다(이미 쓸 수 있는 인물이다).
+@export var coming_soon: bool = false
+
 # ===== 스텟 (Stats) =====
 # 캐릭터의 스텟 출처. 비어 있으면 기본값 PlayerStats를 사용한다.
 @export var stats: PlayerStats = PlayerStats.new()
