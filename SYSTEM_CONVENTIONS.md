@@ -26,7 +26,7 @@
 | SkillData | `entities/character/SkillData.gd` | 스킬 데이터 정의 (Resource) | 스킬 정의 |
 | EquipmentData | `entities/equipment/EquipmentData.gd` | 장비 정의(슬롯/스텟보너스/제작비용) (Resource) | 장비 정의 |
 | MusicSystem | `autoload/MusicSystem.gd` | 배경음악 재생(한 번에 한 곡, 페이드) | 재생 중인 트랙 |
-| TutorialSystem | `autoload/TutorialSystem.gd` | 전투 튜토리얼 진행(단계 판정·정지·완료 저장) | 진행 상태 / `data/tutorial/*.tres` |
+| TutorialSystem | `autoload/TutorialSystem.gd` | 전투 튜토리얼 진행(단계 판정·정지·완료 저장). 실시간·턴제 시퀀스를 나란히 진행하고, 턴제는 행동자 당기기·입력 관문을 맡는다(#594) | 진행 상태 / `data/tutorial/*.tres` |
 | CaptureZoneData | `entities/stage/CaptureZoneData.gd` | 거점 존 정의(위치·반경·확보 시간) (Resource) | 점령 존 정의 |
 | TutorialSequenceData | `entities/tutorial/TutorialSequenceData.gd` | 스테이지 하나의 튜토리얼 단계 묶음 (Resource) | 튜토리얼 단계 정의 |
 | GoddessSkillSystem | `autoload/GoddessSkillSystem.gd` | 여신의 스킬 — 선택·스테이지당 1회·시전(시간 정지/부활) | 선택 상태 / `data/goddess_skills/*.tres` |
@@ -45,6 +45,8 @@
 | TurnEnemyAI | `entities/combat/turn/TurnEnemyAI.gd` | 적 행동 선택 · 예고 생성 · 자동 전투 정책 | 적 행동 결정 |
 | PresentationQueue | `entities/combat/turn/PresentationQueue.gd` | 연출 큐 · 피드백 규격표 · 격파 9단계 | 턴제 연출 규격 |
 | TurnStageEncounter | `entities/combat/turn/TurnStageEncounter.gd` | 저작 스테이지 → 턴제 조우 번역 (웨이브·적 정의) | 스테이지→턴제 대응 |
+| PrologueFlow | `screens/prologue/prologue_flow.gd` | 첫 플레이 프롤로그 순서(오프닝 스토리 → 1-1 안내 전투 → 마무리 스토리 → 메인). 순서만 쥐고 각 구간은 기존 시스템이 한다(#594) | 없음 — 완료 여부는 TutorialSystem 기록 |
+| TurnTutorialOverlay | `ui/turn/TurnTutorialOverlay.gd` | 턴제 안내의 하이라이트·대사 패널. 그리기만 한다(#594) | 없음 — 비출 자리는 `TurnBattleHUD.tutorial_rect()` |
 | GameEdition | `entities/edition/GameEdition.gd` | 일반판/검열판 구분 · 검열판 그림 경로(`assets_censored/`) · 내보내기 교체는 `addons/edition_export` | 릴리스 판 · 검열판 그림 경로 규칙 |
 
 > 새 autoload/시스템을 추가하면 **이 표에 한 줄 추가**한다.
@@ -70,6 +72,11 @@
 `stage_started` **신호는 턴제 전투가 쏘지 않는다.** 그 신호로 `TutorialSystem` 이 활성화되고,
 저작된 단계의 진행 조건이 대시·처형 같은 실시간 행동이라 턴제에서는 진행 불가로 멈춘다.
 승패는 `stage_completed` / `stage_failed` 로 알린다(결과 화면·진행도가 그것을 듣는다).
+
+턴제 전투는 대신 `turn_stage_started` 를 쏜다(#594). `TutorialSystem` 은 그 신호로 **턴제 시퀀스**
+(`combat = TURN`)만 켠다 — 같은 1-1 에 실시간 안내와 턴제 안내가 나란히 있고, 완료 기록 키도
+`stage_1_1` / `turn/stage_1_1` 로 나뉜다. 턴제 안내는 트리를 멈추지 않고, 전투 화면이 안내를 읽는
+동안 진행 루프를 세운다.
 
 설계 정본: [docs/turn-combat-design.md](docs/turn-combat-design.md)
 

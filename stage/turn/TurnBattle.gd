@@ -275,6 +275,18 @@ var _camera_home := Vector2.ZERO
 
 var _camera: Camera2D = null
 
+# ----- 턴제 튜토리얼 (#594 프롤로그) -----
+#
+# 진행 판정·입력 관문은 TutorialSystem 이 쥔다. 이 화면은 셋만 한다:
+#   1. 저작된 판(시드·HP 하한·자물쇠)을 전투에 건다.
+#   2. 안내가 부르는 아군의 차례를 당기고, 안내를 읽는 동안 진행 루프를 세운다.
+#   3. 하이라이트·대사 패널(`TurnTutorialOverlay`)을 HUD 위에 얹고, 첫 궁극기를 크게 보여 준다.
+var _tutorial_overlay: TurnTutorialOverlay = null
+# 크게 보여 줄 궁극기의 시전자. 궁극기를 누른 순간 정한다 — 연출이 재생될 때는 이미
+# 안내가 다음 단계로 넘어가 있어 TutorialSystem 에 물어도 늦다.
+var _showcase_unit: TurnUnit = null
+const SHOWCASE_BANNER := "궁극기 해방"
+
 
 func _ready() -> void:
 	# Deferred so the lobby launcher can stop its track before battle resumes.
@@ -473,6 +485,15 @@ func _build_scene() -> void:
 	hud.pause_toggled.connect(_on_pause_toggled)
 	hud.auto_toggled.connect(_on_auto_toggled)
 
+	# 안내 오버레이는 HUD 와 같은 층, HUD 위에 둔다(하이라이트가 HUD 를 덮어 어둡게 한다).
+	_tutorial_overlay = TurnTutorialOverlay.new()
+	_tutorial_overlay.hud = hud
+	hud_layer.add_child(_tutorial_overlay)
+	if not TutorialSystem.turn_actor_requested.is_connected(_on_tutorial_actor_requested):
+		TutorialSystem.turn_actor_requested.connect(_on_tutorial_actor_requested)
+	if not TutorialSystem.step_changed.is_connected(_on_tutorial_step_changed):
+		TutorialSystem.step_changed.connect(_on_tutorial_step_changed)
+
 	# 플래시 / 암전 레이어는 HUD 위에 온다 — 격파 순간에는 UI까지 덮어야 한다.
 	# 단 메타 화면보다는 아래다(위 HUD 주석과 같은 이유).
 	_flash_layer = CanvasLayer.new()
@@ -586,9 +607,23 @@ func _start_battle() -> void:
 		push_error("TurnBattle: 파티나 적을 구성할 수 없습니다.")
 		return
 
+	# 이 스테이지에 턴제 안내가 있으면 지금 켠다 — **첫 턴을 굴리기 전**이어야 안내가
+	# 첫 행동자를 당길 수 있다(`TutorialSystem._on_turn_stage_started`).
+	if _stage != null:
+		EventBus.turn_stage_started.emit(String(_stage.stage_id))
+	var tutorial := TutorialSystem.get_active_turn_sequence()
+
 	var use_seed := battle_seed
+	if tutorial != null and tutorial.battle_seed != 0:
+		use_seed = tutorial.battle_seed
 	if use_seed == 0:
 		use_seed = int(Time.get_unix_time_from_system())
+	if tutorial != null:
+		# 저작된 전투는 지지 않는다(안내가 끝나기 전에 전멸하면 다시 볼 길이 없다).
+		battle.ally_hp_floor = tutorial.ally_hp_floor
+		# 안내 중 자동 전투가 켜져 있으면 안내하는 조작을 AI 가 대신 해 버린다.
+		if hud != null:
+			hud.auto = false
 
 	# 첫 웨이브로 시작하고 나머지는 전투에 맡긴다. 아군 상태는 웨이브 사이에 이어진다.
 	# **한 턴씩 진행한다 (#542)** — 진행 루프가 그 턴의 연출을 다 재생한 뒤 다음 턴을 부른다.
@@ -599,6 +634,8 @@ func _start_battle() -> void:
 	battle.pending_waves = waves.slice(1)
 	battle.on_wave_started = _on_wave_started
 	battle.start(party, waves[0], ambush, use_seed)
+	if tutorial != null:
+		tutorial.apply_scripted_locks(battle)
 	hud.battle = battle
 
 	_build_shapes()
@@ -944,6 +981,12 @@ func _play() -> void:
 			break
 
 		if battle.phase == TurnBattleManager.Phase.AWAITING_INPUT:
+			# 안내가 이 아군이 아닌 다른 아군을 기다린다 — 이 아군의 차례는 자동으로 넘긴다.
+			# (입력을 막아 둔 채 세워 두면 전투가 멈춘다. 평소에는 안내가 차례를 당겨 두므로 드물다.)
+			if battle.active_unit != null and battle.active_unit.is_ally() \
+					and TutorialSystem.turn_ready_point(battle.active_unit.unit_id):
+				battle.auto_act()
+				continue
 			break  # 입력 대기 — 제한시간 없음.
 
 		if battle.phase == TurnBattleManager.Phase.TURN_START \
@@ -1336,6 +1379,16 @@ func _play_cutin(data: Dictionary) -> void:
 	var color := TurnCombat.element_color(unit.element)
 	var mode := SettingsSystem.ultimate_cutin_mode
 
+	# 첫 궁극기(프롤로그)는 설정과 무관하게 풀 컷인이고, 앞에 강조 연출이 붙는다.
+	var showcase := _showcase_unit != null and _showcase_unit == unit
+	if showcase:
+		_showcase_unit = null
+		mode = SettingsSystem.CutinMode.FULL
+		var gen_before := _play_gen
+		await _play_showcase_intro(unit, skill, color)
+		if gen_before != _play_gen:
+			return
+
 	if mode == SettingsSystem.CutinMode.OFF or not _setup_cutin(unit, skill, color):
 		_screen_flash(color, 0.5, 0.15)
 		await _play_banner("%s / %s" % [unit.display_name, skill.display_name], color, 0.6, 52)
@@ -1635,6 +1688,17 @@ func _show_result() -> void:
 func _on_action_chosen(skill: SkillData, target: TurnUnit) -> void:
 	if battle.phase != TurnBattleManager.Phase.AWAITING_INPUT:
 		return
+	# 강제 진행: 안내가 시킨 조작만 받는다. HUD 가 먼저 막지만 화면 밖 경로도 여기서 한 번 더 본다.
+	var actor_id: StringName = battle.active_unit.unit_id if battle.active_unit != null else &""
+	if not TutorialSystem.allows_turn_input("action", actor_id, skill) \
+			or (target != null and skill != null and skill.needs_target_pick() \
+				and not TutorialSystem.allows_turn_input("target", target.unit_id)):
+		hud.refresh()
+		return
+	# 목록에서 고른 궁극기는 초상 배지와 같은 길로 보낸다 — 첫 궁극기 강조 연출이 거기서 붙는다.
+	if skill != null and skill.is_turn_ultimate() and battle.active_unit != null:
+		_on_ultimate_requested(battle.active_unit)
+		return
 	var result := battle.act(skill, target)
 	if not bool(result["ok"]):
 		print("[TurnBattle] 행동 실패: %s" % result["reason"])
@@ -1644,12 +1708,57 @@ func _on_action_chosen(skill: SkillData, target: TurnUnit) -> void:
 
 
 func _on_ultimate_requested(unit: TurnUnit) -> void:
+	if unit == null or not TutorialSystem.allows_turn_input("ultimate", unit.unit_id):
+		return
+	var ultimate: SkillData = unit.character.get_turn_ultimate() if unit.character != null else null
+	# 첫 궁극기는 크게 보여 준다. 발동 전에 정해 둔다(발동하면 안내가 다음 단계로 넘어간다).
+	_showcase_unit = unit if TutorialSystem.is_showcase_action(unit.unit_id, ultimate) else null
 	# **궁극기는 턴 순서와 무관하게 언제든 발동한다.** 입력 대기 중이 아니어도 받는다.
 	var result := battle.use_ultimate(unit)
 	if not bool(result["ok"]):
+		_showcase_unit = null
 		print("[TurnBattle] 궁극기 실패: %s" % result["reason"])
 		return
 	_play()
+
+
+# ===== 턴제 튜토리얼 (#594) =====
+
+# 안내가 이 아군의 차례를 당겨 달라고 한다. 다음 턴 결정에 반영된다.
+func _on_tutorial_actor_requested(actor_id: StringName) -> void:
+	if battle != null and battle.timeline != null:
+		battle.timeline.forced_next_id = actor_id
+
+
+# 안내 단계가 떴다. 궁극기 단계면 그 아군의 게이지를 채워 둔다 — 안내가 "눌러 봐"라고 하는데
+# 게이지가 모자라면 누를 수 없다. 저작된 전투에서만 일어나는 일이다.
+func _on_tutorial_step_changed(step: TutorialStepData, _index: int, _total: int,
+		reading: bool) -> void:
+	if not reading or step == null or battle == null:
+		return
+	if step.advance == TutorialStepData.Advance.TURN_ULTIMATE and not String(step.actor_id).is_empty():
+		var unit := battle.find_unit(step.actor_id)
+		if unit != null and unit.alive:
+			unit.energy = maxi(unit.energy, unit.get_energy_max())
+			EventBus.turn_energy_changed.emit(unit, unit.energy, unit.get_energy_max())
+	if hud != null:
+		hud.refresh()
+
+
+# 첫 궁극기 연출의 머리 — 시간이 느려지고 화면이 하얗게 번쩍인 뒤 "궁극기 해방"이 뜬다.
+# 그다음 평소 풀 컷인이 이어진다. 연출만 키운다 — 피해 계산은 그대로다.
+func _play_showcase_intro(unit: TurnUnit, skill: SkillData, color: Color) -> void:
+	_fade_hud(0.0, 0.12)
+	_clear_transient_text()
+	Engine.time_scale = 0.35
+	_camera_zoom(1.12, 0.5)
+	_screen_flash(Color.WHITE, 0.85, 0.35)
+	_shake(BREAK_SHAKE, 0.4)
+	await _wait_real(0.55)
+	_restore_time_scale()
+	_camera_zoom(1.0, 0.3)
+	await _play_banner(SHOWCASE_BANNER, color, 1.0, 96)
+	_post_progress_notice("%s · %s" % [unit.display_name, skill.display_name])
 
 
 func _on_speed_changed(new_multiplier: float) -> void:
@@ -1675,7 +1784,8 @@ func _base_presentation_speed() -> float:
 # 연출 한 조각이 끝난 **경계**에서만 멈춘다. 트윈 도중에 끊으면 캐릭터가 어중간한
 # 위치에 남고, 재개 시 그 트윈이 이미 끝나 있어 연출이 한 칸 건너뛴다.
 func _await_unpause() -> void:
-	while _paused:
+	# 안내 대사를 읽는 동안에도 멈춘다(#594). 트리를 멈추지 않으므로 하이라이트는 계속 움직인다.
+	while _paused or TutorialSystem.is_holding_turn_battle():
 		await get_tree().process_frame
 
 
@@ -2151,6 +2261,12 @@ func _wait_real(duration: float) -> void:
 
 
 func _process(delta: float) -> void:
+	# 안내가 다음 단계를 띄우려고 기다리는데 진행 루프가 쉬고 있다(확인만 하는 단계를 넘긴 직후다).
+	# 루프를 한 번 돌려 입력 대기 지점(`turn_ready_point`)에 닿게 한다.
+	if not _playing and TutorialSystem.is_turn_step_pending() and battle != null \
+			and battle.phase == TurnBattleManager.Phase.AWAITING_INPUT and not ScreenManager.has_screen():
+		_play()
+
 	if _camera == null:
 		return
 

@@ -52,6 +52,9 @@ var element_resistances: Dictionary = {}
 
 # ===== 생명 (Life) =====
 var current_hp: int = 0
+## HP 가 이 값 아래로 내려가지 않는다. 0 이면 평소대로 쓰러진다.
+## 지면 안 되는 저작된 전투(#594 프롤로그)가 아군에게 1 을 건다 — 피해 숫자와 연출은 그대로 나온다.
+var hp_floor: int = 0
 
 # ===== 자원 (Resources) =====
 ## 궁극기 게이지. 최대치는 `stats.get_energy_max()`.

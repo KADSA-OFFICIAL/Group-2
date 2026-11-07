@@ -104,6 +104,10 @@ var cycle_limit: int = 0
 ## 알린다(`on_wave_started`). 그 경계를 지켜야 헤드리스 검사와 `use_stage = false` 경로가 산다.
 var enemy_level_bonus: int = 0
 
+## 아군 HP 하한. `start()` 가 아군 유닛에 건다. 0 이면 평소대로 쓰러진다.
+## 프롤로그(#594)처럼 **지면 안 되는** 저작된 전투가 1 로 둔다.
+var ally_hp_floor: int = 0
+
 ## 유닛별 누적 턴 수. `unit_id` -> 턴 수. 특성 주기 판정이 읽는다.
 var _turn_counts: Dictionary = {}
 
@@ -222,6 +226,11 @@ func start(party: Array[CharacterData], enemies: Array[EnemyData],
 			enemy_level_bonus)
 		units.append(unit)
 		enemy_index += 1
+
+	if ally_hp_floor > 0:
+		for unit in units:
+			if unit.is_ally():
+				unit.hp_floor = ally_hp_floor
 
 	# --- 시스템 배선 ---
 	ranks = RankSystem.new()
@@ -619,6 +628,8 @@ func _run(unit: TurnUnit, skill: SkillData, target: TurnUnit) -> Dictionary:
 
 	var result := resolver.execute(unit, skill, target)
 	_absorb(result)
+	if bool(result.get("ok", false)):
+		_signal(&"turn_action_used", [unit, skill])
 	return result
 
 

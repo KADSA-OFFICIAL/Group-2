@@ -1,0 +1,163 @@
+[gd_resource type="Resource" script_class="StoryChapterData" load_steps=23 format=3]
+
+[ext_resource type="Script" path="res://entities/story/StoryChapterData.gd" id="1"]
+[ext_resource type="Script" path="res://entities/story/StoryLineData.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/backgrounds/highland.png" id="bg_highland"]
+
+[sub_resource type="Resource" id="P0"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "6,000만 년 전. 부락 앞 공터."
+background = ExtResource("bg_highland")
+stage_id = &""
+
+[sub_resource type="Resource" id="P1"]
+script = ExtResource("2")
+kind = 1
+speaker = "???"
+text = "어이, 거기 허접 인간. 그래, 화면 앞에 있는 너 말이야."
+stage_id = &""
+
+[sub_resource type="Resource" id="P2"]
+script = ExtResource("2")
+kind = 1
+speaker = "여신"
+character_id = &"goddess"
+text = "이야기를 시작하기 전에 싸우는 법부터 가르쳐 줄게. 공룡 하나 못 잡는 녀석한테 세계를 맡길 수는 없잖아?"
+stage_id = &""
+
+[sub_resource type="Resource" id="P3"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "공터 저편에서 흙먼지가 인다. 벨로시랩터 수인 둘과 매머드 수인이 부락을 향해 달려온다."
+stage_id = &""
+screen_effect = 2
+
+[sub_resource type="Resource" id="P4"]
+script = ExtResource("2")
+kind = 1
+speaker = "벨로시랩터 수인"
+character_id = &"velociraptor_beastfolk"
+text = "허접 인간 냄새가 난다아~! 전부 밟아 주마!"
+stage_id = &""
+
+[sub_resource type="Resource" id="P5"]
+script = ExtResource("2")
+kind = 1
+speaker = "하랑"
+character_id = &"harang"
+text = "저, 저기요..! 부락 앞에서 이러시면 곤란해요..!"
+stage_id = &""
+
+[sub_resource type="Resource" id="P6"]
+script = ExtResource("2")
+kind = 1
+speaker = "강지"
+character_id = &"gangji"
+text = "난 힘이 세니까 앞에 설게. 다들 내 뒤로 와."
+stage_id = &""
+
+[sub_resource type="Resource" id="P7"]
+script = ExtResource("2")
+kind = 1
+speaker = "태희"
+character_id = &"taehee"
+text = "흥, 재미있겠네. 착각하지 마. 너희를 도와주려는 게 아니라 싸움이 좋아서야."
+stage_id = &""
+
+[sub_resource type="Resource" id="P8"]
+script = ExtResource("2")
+kind = 1
+speaker = "아린"
+character_id = &"arin"
+text = "으음.. 싸우는 거야..? 끝나면 깨워 줘.. zzz"
+stage_id = &""
+
+[sub_resource type="Resource" id="P9"]
+script = ExtResource("2")
+kind = 1
+speaker = "여신"
+character_id = &"goddess"
+text = "지휘는 네 몫이야. 내가 하나씩 알려 줄 테니까 시키는 대로만 해. 알겠지?"
+stage_id = &""
+
+[sub_resource type="Resource" id="P10"]
+script = ExtResource("2")
+kind = 2
+speaker = ""
+text = "전투 개시 — 여신의 시험장"
+stage_id = &"stage_1_1"
+
+[sub_resource type="Resource" id="P11"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "마지막 수인이 꼬리를 말고 달아난다. 공터에 흙먼지가 가라앉는다."
+stage_id = &""
+
+[sub_resource type="Resource" id="P12"]
+script = ExtResource("2")
+kind = 1
+speaker = "강지"
+character_id = &"gangji"
+text = "끝났다. 다친 사람 없지?"
+stage_id = &""
+
+[sub_resource type="Resource" id="P13"]
+script = ExtResource("2")
+kind = 1
+speaker = "하랑"
+character_id = &"harang"
+text = "궁극기.. 저 그런 거 처음 써 봤어요..! 아직도 가슴이 두근거려요..!"
+stage_id = &""
+
+[sub_resource type="Resource" id="P14"]
+script = ExtResource("2")
+kind = 1
+speaker = "아린"
+character_id = &"arin"
+text = "벌써 끝났어..? 그럼 다시 잘게.. zzz"
+stage_id = &""
+
+[sub_resource type="Resource" id="P15"]
+script = ExtResource("2")
+kind = 1
+speaker = "태희"
+character_id = &"taehee"
+text = "뭐, 지휘는 나쁘지 않았어. 칭찬은 아니야."
+stage_id = &""
+
+[sub_resource type="Resource" id="P16"]
+script = ExtResource("2")
+kind = 1
+speaker = "여신"
+character_id = &"goddess"
+text = "흠, 허접치고는 제법이네. 약점을 노리고, 자물쇠를 열고, 궁극기는 아끼지 말 것. 잊지 마."
+stage_id = &""
+
+[sub_resource type="Resource" id="P17"]
+script = ExtResource("2")
+kind = 1
+speaker = "여신"
+character_id = &"goddess"
+text = "그럼 진짜 이야기를 시작해 볼까? 네가 이 녀석들을 만나게 되는 이야기 말이야."
+stage_id = &""
+
+[sub_resource type="Resource" id="P18"]
+script = ExtResource("2")
+kind = 0
+speaker = ""
+text = "눈부신 빛이 공터를 덮는다."
+stage_id = &""
+screen_effect = 3
+
+[resource]
+script = ExtResource("1")
+chapter_id = &"prologue"
+number = 0
+title = "프롤로그 — 여신의 시험장"
+summary = "본편에 앞서 여신이 지휘하는 법을 가르친다. 부락 앞 공터에서 하랑·강지·태희·아린과 함께 첫 전투를 치른다."
+background = ExtResource("bg_highland")
+lines = Array[ExtResource("2")]([SubResource("P0"), SubResource("P1"), SubResource("P2"), SubResource("P3"), SubResource("P4"), SubResource("P5"), SubResource("P6"), SubResource("P7"), SubResource("P8"), SubResource("P9"), SubResource("P10"), SubResource("P11"), SubResource("P12"), SubResource("P13"), SubResource("P14"), SubResource("P15"), SubResource("P16"), SubResource("P17"), SubResource("P18")])
