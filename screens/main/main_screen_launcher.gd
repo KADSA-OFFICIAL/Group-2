@@ -36,6 +36,9 @@ const SCREEN_MUSIC := {
 # 메뉴를 여닫는 입력 액션 (project.godot [input] 에 정의).
 const MENU_ACTION := &"open_menu"
 
+# 진행 중인 프롤로그(#594). 그동안 메뉴 키를 막는다 — 안내 도중 메인 화면이 끼어들면 흐름이 끊긴다.
+var _prologue: PrologueFlow = null
+
 
 func _ready() -> void:
 	# 메타 화면이 떠 있으면 게임플레이가 멈추므로, 이 노드는 계속 입력을 받아야 한다.
@@ -54,11 +57,21 @@ func _ready() -> void:
 	# 스테이지가 파티를 채운 뒤에 화면을 열어야 프리뷰에 멤버가 보인다.
 	# (Stage1_1._ready() -> PartySystem.set_party())
 	await get_tree().process_frame
+
+	# 첫 플레이면 메인 화면 대신 프롤로그로 시작한다(#594). 프롤로그가 끝나면 그쪽이 메인 화면을 연다.
+	if PrologueFlow.is_needed():
+		_prologue = PrologueFlow.new()
+		_prologue.name = "PrologueFlow"
+		add_child(_prologue)
+		_prologue.start()
+		return
 	open_menu()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(MENU_ACTION):
+		return
+	if is_instance_valid(_prologue) and _prologue.is_running():
 		return
 	get_viewport().set_input_as_handled()
 	toggle_menu()

@@ -253,6 +253,8 @@ var _head_art: Dictionary = {}
 var _icons: Dictionary = {}
 ## StyleBoxFlat 캐시. 매 프레임 새로 만들면 프레임마다 수십 개가 할당된다.
 var _boxes: Dictionary = {}
+## 이번 프레임에 그린 예고 띠의 사각형. 튜토리얼 하이라이트가 읽는다(#594).
+var _intent_rect: Rect2 = Rect2()
 
 
 # 전투 하나가 끝나고 다음 전투로 넘어갈 때 버려야 하는 것들.
@@ -341,8 +343,18 @@ func unit_position(unit: TurnUnit) -> Vector2:
 
 func _draw() -> void:
 	_hit_zones.clear()
+	_intent_rect = Rect2()
 	if battle == null:
 		return
+
+	# 안내가 노리라고 한 적을 미리 조준해 둔다(#594). 그래야 그 적의 예고가 띠에 뜨고,
+	# 행동 버튼을 바로 눌러도 엉뚱한 적에게 가지 않는다.
+	var required := TutorialSystem.required_target_id()
+	if not String(required).is_empty():
+		var wanted := battle.find_unit(required)
+		if wanted != null and wanted.alive and selected_target != wanted:
+			selected_target = wanted
+			_refresh_preview()
 
 	_draw_toggles()
 	_draw_wave()
@@ -801,6 +813,7 @@ func _draw_intent_strip() -> void:
 	var origin := intent_origin()
 	var width := minf(INTENT_PAD * 2.0 + TOPBAR_ICON + 8.0 + _width(text, SIZE_LABEL, false),
 		INTENT_MAX_W)
+	_intent_rect = Rect2(origin, Vector2(width, INTENT_H))
 	_pill(origin, Vector2(width, INTENT_H), _overlay_fill(),
 		Color(TurnCombat.COLOR_ENEMY_HP, 0.75), BORDER_PICK)
 	_icon("icon_capture", origin + Vector2(INTENT_PAD, (INTENT_H - TOPBAR_ICON) * 0.5),
@@ -974,6 +987,9 @@ func _gui_input(event: InputEvent) -> void:
 	var zone := _zone_at(event.position)
 	if zone.is_empty():
 		return
+	# 강제 진행(#594): 안내가 시킨 조작이 아니면 받지 않는다.
+	if not _tutorial_allows(zone):
+		return
 
 	match String(zone["kind"]):
 		"action":
@@ -1008,6 +1024,83 @@ func _gui_input(event: InputEvent) -> void:
 			# **실제로 멈춘다.** 예전에는 `pass` 라 눌러도 아무 일이 없었다.
 			paused = not paused
 			pause_toggled.emit(paused)
+
+
+# 튜토리얼 관문. 판정은 TutorialSystem 이 하고 여기서는 히트존을 그 질문으로 옮긴다.
+func _tutorial_allows(zone: Dictionary) -> bool:
+	var data: Dictionary = zone.get("data", {})
+	var actor_id: StringName = battle.active_unit.unit_id \
+		if battle != null and battle.active_unit != null else &""
+	match String(zone["kind"]):
+		"action", "confirm":
+			return TutorialSystem.allows_turn_input("action", actor_id, data.get("skill"))
+		"target":
+			var unit: TurnUnit = data.get("unit")
+			return unit != null and TutorialSystem.allows_turn_input("target", unit.unit_id)
+		"ultimate":
+			var caster: TurnUnit = data.get("unit")
+			return caster != null and TutorialSystem.allows_turn_input("ultimate", caster.unit_id)
+		"speed", "auto", "pause":
+			return TutorialSystem.allows_turn_input("control")
+	return true
+
+
+## 튜토리얼이 강조할 화면 영역(#594). 키 문법은 `TutorialStepData.highlight` 를 따른다.
+## "a|b" 는 두 영역을 합친다. 모르는 키나 지금 그려지지 않은 영역이면 빈 사각형이다.
+##
+## 히트존을 출처로 쓰는 이유: 버튼 자리를 여기서 다시 계산하면 배치가 바뀔 때 하이라이트만
+## 엉뚱한 곳을 가리킨다. 이번 프레임에 실제로 그린 자리가 정답이다.
+func tutorial_rect(key: String) -> Rect2:
+	var out := Rect2()
+	for part in key.split("|", false):
+		var r := _tutorial_rect_one(part.strip_edges())
+		if r.has_area():
+			out = r if not out.has_area() else out.merge(r)
+	return out
+
+
+func _tutorial_rect_one(key: String) -> Rect2:
+	match key:
+		"timeline":
+			return Rect2(Vector2(TIMELINE_X, TIMELINE_Y), Vector2(TIMELINE_CARD.x,
+				(TIMELINE_CARD.y + TIMELINE_GAP) * float(TIMELINE_COUNT) - TIMELINE_GAP))
+		"resonance":
+			return Rect2(info_origin(), INFO_SIZE)
+		"intent":
+			return _intent_rect
+		"toggles":
+			return Rect2(toggle_origin(),
+				Vector2(TOGGLE_SIDE * 3.0 + TOGGLE_GAP * 2.0, TOGGLE_SIDE))
+	var colon := key.find(":")
+	if colon < 0:
+		return Rect2()
+	var kind := key.substr(0, colon)
+	var id := StringName(key.substr(colon + 1))
+	var out := Rect2()
+	for zone in _hit_zones:
+		var data: Dictionary = zone["data"]
+		var hit := false
+		match kind:
+			"action":
+				var skill: SkillData = data.get("skill")
+				# 목록 항목과 큰 실행 버튼(confirm)을 함께 비춘다 — 둘 다 그 행동을 낸다.
+				hit = String(zone["kind"]) in ["action", "confirm"] and skill != null and skill.skill_id == id
+			"ultimate":
+				var caster: TurnUnit = data.get("unit")
+				hit = String(zone["kind"]) == "ultimate" and caster != null and caster.unit_id == id
+			"target":
+				var unit: TurnUnit = data.get("unit")
+				hit = String(zone["kind"]) == "target" and unit != null and unit.unit_id == id
+		if hit:
+			var r: Rect2 = zone["rect"]
+			out = r if not out.has_area() else out.merge(r)
+	# 적은 몸통 위의 정보 카드(자물쇠·인성치 칸)까지 함께 비춘다 — 가르치는 것이 그 칸이다.
+	if kind == "target" and battle != null:
+		var unit := battle.find_unit(id)
+		if unit != null and unit.alive:
+			var card := Rect2(cluster_origin(unit), Vector2(CLUSTER_W, CLUSTER_H))
+			out = card if not out.has_area() else out.merge(card)
+	return out
 
 
 func _emit_action(skill: SkillData) -> void:

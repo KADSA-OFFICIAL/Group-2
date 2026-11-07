@@ -184,3 +184,13 @@ signal turn_rank_changed(unit, from_rank: int, to_rank: int)
 # 그쪽을 재사용하면 실시간 HUD·스테이지 로직이 턴제 전투에 반응한다.
 @warning_ignore("unused_signal")
 signal turn_death(unit)
+
+# 턴제 행동 하나가 실행됐다(평타·스킬·궁극기). unit 은 TurnUnit, skill 은 SkillData.
+# 실행이 거절된 행동(공명 부족 등)은 쏘지 않는다. 튜토리얼이 "그 조작을 했다"를 이것으로 센다(#594).
+@warning_ignore("unused_signal")
+signal turn_action_used(unit, skill)
+
+# 턴제 전투가 스테이지로 시작됐다(#594). 실시간 `stage_started` 를 쏘지 않는 이유는
+# SYSTEM_CONVENTIONS §1 참고 — 그 신호는 실시간 튜토리얼을 켠다.
+@warning_ignore("unused_signal")
+signal turn_stage_started(stage_name)

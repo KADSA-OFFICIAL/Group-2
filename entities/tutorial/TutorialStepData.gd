@@ -25,7 +25,18 @@ enum Advance {
 	EFFECT_APPLIED,   # 적에게 effect_id 가 부여됐다 (EventBus.status_effect_applied)
 	EFFECT_BURST,     # effect_id 게이지가 임계치에서 터졌다 (EventBus.status_effect_burst)
 	EXECUTE,          # 처형이 성사됐다 (EventBus.enemy_executed)
+	# ----- 턴제 (#594) — 값이 .tres 에 숫자로 저작되므로 반드시 뒤에 붙인다 -----
+	TURN_BASIC,        # actor_id 가 평타를 썼다 (EventBus.turn_action_used)
+	TURN_SKILL,        # actor_id 가 전투 스킬을 썼다 (skill_id 가 있으면 그 스킬)
+	TURN_ULTIMATE,     # actor_id 가 궁극기를 썼다
+	TURN_LOCK_CLEARED, # target_id 적의 자물쇠가 열렸다 (EventBus.turn_lock_cleared)
+	TURN_BREAK,        # target_id 적이 격파됐다 (EventBus.turn_weakness_broken)
+	TURN_VICTORY,      # 전투에서 이겼다 (EventBus.turn_battle_ended)
 }
+
+## 턴제 진행 조건인가. 턴제 조건은 실시간 전투에서 영원히 오지 않고, 그 반대도 같다.
+static func is_turn_advance(value: int) -> bool:
+	return value >= Advance.TURN_BASIC
 
 # ===== 식별 (Identity) =====
 @export var step_id: StringName = &""    # 시퀀스 안에서 고유 (예: &"dash")
@@ -44,6 +55,37 @@ enum Advance {
 ## 조건이 이 횟수만큼 성립해야 넘어간다. 1 이면 한 번으로 넘어간다.
 @export var required_count: int = 1
 
+# ===== 턴제 안내 (#594) — 실시간 단계는 전부 비워 둔다 =====
+#
+# 턴제 단계는 "누가 · 무엇을 · 누구에게"를 정해 두고 **그 조작만** 받는다(강제 진행).
+# 판정·입력 차단은 TutorialSystem 이, 그리기(하이라이트·대사 패널)는 화면이 한다.
+
+## 이 단계를 말하는 인물의 id. 스토리 대사(`StoryLineData.character_id`)와 같은 순서로 푼다 —
+## CharacterDatabase -> EnemyDatabase -> StoryCastDatabase. 이름·초상은 거기서 온다(복제하지 않는다).
+## 비우면 이름표 없는 안내문으로 뜬다.
+@export var speaker_id: StringName = &""
+
+## 화면이 강조할 곳. 화면이 아는 키다:
+##   timeline · resonance · intent · toggles
+##   action:<skill_id> · ultimate:<unit_id> · target:<unit_id>
+## 비우면 강조하지 않는다.
+@export var highlight: StringName = &""
+
+## 행동해야 할 아군(`TurnUnit.unit_id` = character_id). 이 단계가 오면 이 아군의 차례를 당긴다.
+@export var actor_id: StringName = &""
+
+## 써야 할 행동(`SkillData.skill_id`). 비우면 그 아군의 어떤 행동이든 된다.
+@export var skill_id: StringName = &""
+
+## 노려야 할 적(`TurnUnit.unit_id`, 예: &"mammoth_beastfolk#1"). 비우면 대상 제한 없음.
+@export var target_id: StringName = &""
+
+## 이 단계부터 배속·자동·일시정지를 쓸 수 있다. 그 전에는 안내가 끝까지 보이도록 잠근다.
+@export var unlock_controls: bool = false
+
+## 첫 궁극기처럼 **크게 보여 줄** 단계. 화면이 연출을 키운다(컷인 설정과 무관하게 풀 컷인).
+@export var showcase: bool = false
+
 
 # ===== 무결성 점검 (Validation) =====
 # EnemyData / StageData 와 같은 규약. 문제 메시지 배열을 반환한다.
@@ -60,5 +102,11 @@ func validate() -> Array[String]:
 	# 튜토리얼이 전투를 멈춘 채 대기하므로 게임이 사실상 멈춘다 — 로드 때 잡는다.
 	if advance in [Advance.EFFECT_APPLIED, Advance.EFFECT_BURST] and String(effect_id).is_empty():
 		problems.append("effect_id가 필요한 진행 조건입니다: " + String(step_id))
+
+	# 누가 행동해야 하는지 모르면 그 아군의 차례를 당길 수 없어 단계가 멈춘다.
+	if advance in [Advance.TURN_BASIC, Advance.TURN_SKILL, Advance.TURN_ULTIMATE] 			and String(actor_id).is_empty():
+		problems.append("actor_id가 필요한 진행 조건입니다: " + String(step_id))
+	if advance in [Advance.TURN_LOCK_CLEARED, Advance.TURN_BREAK] and String(target_id).is_empty():
+		problems.append("target_id가 필요한 진행 조건입니다: " + String(step_id))
 
 	return problems
