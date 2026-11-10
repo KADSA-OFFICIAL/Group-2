@@ -108,8 +108,9 @@ func get_head_rect(portrait: Texture2D) -> Rect2:
 
 
 # 화면에 실제로 그릴 초상. 검열판이면 같은 이름의 검열판 그림으로 바뀐다(GameEdition, #586).
+# 그림을 잠시 숨긴 캐릭터(GameEdition.is_art_held, #596)는 null — 화면은 초상 없음 표시로 떨어진다.
 func get_portrait(character: CharacterData) -> Texture2D:
-	if character == null:
+	if character == null or GameEdition.is_art_held(character.character_id):
 		return null
 	return GameEdition.texture(character.portrait)
 
