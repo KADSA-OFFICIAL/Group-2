@@ -63,10 +63,11 @@ static func backdrop_path(backdrop_name: String) -> String:
 # 고칠 필요가 없다. 없으면 빈 문자열이고, 전투는 전투 스프라이트의 공격 프레임으로 연출한다.
 # 규격: docs/ultimate-cutin-art-spec.md
 # 아래 두 경로는 검열판이면 assets_censored/ 의 짝을 먼저 고른다(GameEdition, #586).
+# 그림을 잠시 숨긴 캐릭터(GameEdition.is_art_held, #596)는 빈 문자열 — 전투 스프라이트로 연출한다.
 const ULTIMATE_CUTIN_DIR := "res://assets/sprites/characters/cutins/ult"
 
 static func ultimate_cutin_path(character_id: StringName) -> String:
-	if String(character_id).is_empty():
+	if String(character_id).is_empty() or GameEdition.is_art_held(character_id):
 		return ""
 	var candidate: String = GameEdition.resolve("%s/char_%s_ult.png" % [ULTIMATE_CUTIN_DIR, character_id])
 	return candidate if ResourceLoader.exists(candidate) else ""
@@ -75,7 +76,7 @@ static func ultimate_cutin_path(character_id: StringName) -> String:
 # 궁극기 LD 공격 애니메이션 (#549). 독립 원화 24장의 SpriteFrames — tools/build_ultimate_frames.py 가 만든다.
 # 있으면 풀 연출이 이것을 재생하고, 짧게 모드는 마지막 장(결정 포즈)을 쓴다.
 static func ultimate_frames_path(character_id: StringName) -> String:
-	if String(character_id).is_empty():
+	if String(character_id).is_empty() or GameEdition.is_art_held(character_id):
 		return ""
 	var candidate: String = GameEdition.resolve("%s/%s/%s_ult.tres" % [ULTIMATE_CUTIN_DIR, character_id, character_id])
 	return candidate if ResourceLoader.exists(candidate) else ""

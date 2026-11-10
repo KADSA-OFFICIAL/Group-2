@@ -8,6 +8,7 @@ extends Node
 #      임시 SpriteFrames 를 assets_censored/ 에 써서 오의 경로가 실제로 바뀌는지 본다(끝나면 지운다).
 #   4) 들어와 있는 검열판 오의 애니메이션은 24장이고 모두 assets_censored/ 의 그림을 가리킨다.
 #   5) 검열판 그림이 아직 없는 목록을 출력한다(실패 아님 — 릴리스 전 확인용).
+#   2·3 공통) 그림을 잠시 숨긴 캐릭터(GameEdition.is_art_held, #596)는 두 판 모두 초상·오의 그림이 없다.
 #   6) 내보낸 검열판 빌드에서 돌리면: 원본 경로를 직접 읽어도 검열판 그림이 나온다
 #      (addons/edition_export 가 바꿔 넣었다).
 #
@@ -54,7 +55,7 @@ func _check_general() -> void:
 	GameEdition.force_censored(false)
 	for id in CharacterDatabase.get_playable_ids():
 		var character: CharacterData = CharacterDatabase.get_character(id)
-		if character == null or character.portrait == null:
+		if character == null or character.portrait == null or _check_held(id, character):
 			continue
 		check(PortraitSystem.get_portrait(character) == character.portrait, String(id) + ": 일반판 초상은 원본")
 		var frames := UITheme.ultimate_frames_path(id)
@@ -65,7 +66,7 @@ func _check_censored() -> void:
 	GameEdition.force_censored(true)
 	for id in CharacterDatabase.get_playable_ids():
 		var character: CharacterData = CharacterDatabase.get_character(id)
-		if character == null or character.portrait == null:
+		if character == null or character.portrait == null or _check_held(id, character):
 			continue
 		var original := character.portrait.resource_path
 		var expected := GameEdition.censored_path(original) if GameEdition.has_censored(original) else original
@@ -78,6 +79,16 @@ func _check_censored() -> void:
 		var frames := UITheme.ultimate_frames_path(id)
 		if frames.begins_with(GameEdition.CENSORED_ROOT):
 			_check_censored_frames(id, load(frames) as SpriteFrames)
+
+
+# 그림을 잠시 숨긴 캐릭터(#596)는 어느 판에서도 초상·오의 그림을 내보이지 않는다. 숨긴 캐릭터면 true.
+func _check_held(id: StringName, character: CharacterData) -> bool:
+	if not GameEdition.is_art_held(id):
+		return false
+	check(PortraitSystem.get_portrait(character) == null, String(id) + ": 숨긴 초상은 쓰지 않는다")
+	check(UITheme.ultimate_frames_path(id).is_empty() and UITheme.ultimate_cutin_path(id).is_empty(),
+		String(id) + ": 숨긴 오의 그림은 쓰지 않는다")
+	return true
 
 
 func _check_censored_frames(id: StringName, frames: SpriteFrames) -> void:

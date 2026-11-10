@@ -46,6 +46,13 @@ func _ready() -> void:
 		var path := texture.resource_path if texture != null else ""
 		check(not path.begins_with(legacy_dir), "그림체가 다른 예전 컷인을 쓰면 안 된다: " + path)
 		check(texture != PortraitSystem.get_portrait(character), "그림체가 다른 편성 초상을 쓰면 안 된다: " + String(id))
+		# 그림을 잠시 숨긴 캐릭터(#596)는 LD 애니메이션·전용 일러스트 없이 전투 스프라이트로 연출한다.
+		if GameEdition.is_art_held(id):
+			check(UITheme.ultimate_frames_path(id).is_empty() and UITheme.ultimate_cutin_path(id).is_empty(),
+				"숨긴 캐릭터는 궁극기 LD 그림 경로가 비어야 한다: " + String(id))
+			check(not bool(picked["dedicated"]) and picked.get("frames") == null,
+				"숨긴 캐릭터는 전투 스프라이트로 연출해야 한다: " + String(id))
+			continue
 		# LD 공격 애니메이션 (#549): 원화 24장이 컷인 판에 실린다.
 		var frames_path := UITheme.ultimate_frames_path(id)
 		check(not frames_path.is_empty(), "LD 공격 애니메이션이 있어야 한다: " + String(id))

@@ -27,6 +27,19 @@ const CENSORED_ROOT := "res://assets_censored/"
 # null = 아직 판정 안 함. 테스트가 force_censored() 로 덮는다.
 static var _censored: Variant = null
 
+# 그림을 **잠시 내보이지 않는** 캐릭터 (#596). 판(일반·검열)과 상관없이 숨긴다.
+#
+# 강지·아린의 LD 그림(초상·궁극기 애니메이션)은 이미지 생성(AI)으로 만든 것이라(#485, #548),
+# AI 일러스트 이슈가 정리될 때까지 화면에 쓰지 않는다. 숨기면 초상 자리는 초상 없음 표시(tint 판)로,
+# 궁극기 컷인은 전투 스프라이트 공격 프레임으로 떨어진다 — 둘 다 원래 있던 대체 경로다.
+# 원본 파일과 .tres 연결은 그대로다. **되돌리려면 이 목록에서 빼기만 하면 된다.**
+# 판정은 PortraitSystem.get_portrait() / UITheme 의 궁극기 경로가 여기에 묻는다.
+const HELD_CHARACTER_ART: Array[StringName] = [&"arin", &"gangji"]
+
+
+static func is_art_held(character_id: StringName) -> bool:
+	return character_id in HELD_CHARACTER_ART
+
 
 static func is_censored() -> bool:
 	if _censored == null:
