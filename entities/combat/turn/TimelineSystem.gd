@@ -39,6 +39,18 @@ var current_actor_id: StringName = &""
 ## AV 가 리필되어 추가 턴이 정상 턴을 먹고 있었다**(#495).
 var current_is_extra: bool = false
 
+## **저작된 전투의 다음 행동자** (#594 프롤로그). 비어 있으면 평소 규칙(AV 최저)을 따른다.
+##
+## 튜토리얼은 "하랑으로 평타 → 아린으로 스킬"처럼 **누가 행동할지를 정해 두고** 가르친다.
+## 속도로 정해지는 순서에 맡기면 시드·밸런스가 바뀔 때마다 대본이 어긋난다.
+## 앞당김(`advance_action`)을 쓰지 않는 이유: 연속 앞당김은 효율이 줄어드는 가드레일이 있어
+## 같은 아군을 두 번 부르면 맨 앞에 오지 않는다.
+##
+## 시간은 평소처럼 흐른다 — 이 유닛의 AV 만큼 전체에서 차감한다. 그래서 대본이 끝나면
+## 그 사이 밀려 있던 적이 곧바로 행동하고, 타임라인 계산이 어긋나지 않는다.
+## 한 번 쓰면 비워진다.
+var forced_next_id: StringName = &""
+
 
 func _tuning() -> TurnCombatTuning:
 	return PlayerStats.get_tuning_turn()
@@ -144,6 +156,21 @@ func _active_units() -> Array[TurnUnit]:
 func advance_to_next() -> TurnUnit:
 	current_is_extra = false
 
+	# 0) 저작된 다음 행동자(#594). 추가 턴보다 먼저다 — 특성이 준 추가 턴(아린 「연격」 등)이
+	#    대본 사이에 끼어들면 안내가 기다리는 아군이 아닌 아군이 차례를 받는다.
+	#    추가 턴은 버리지 않는다. 대기열에 남아 대본이 끝난 뒤 평소대로 돈다.
+	if not String(forced_next_id).is_empty():
+		var forced := _find_unit(forced_next_id)
+		forced_next_id = &""
+		if forced != null and forced.alive and forced.can_act() and _av.has(forced.unit_id):
+			var wait := get_av(forced)
+			if wait > 0.0:
+				for unit in _active_units():
+					_av[unit.unit_id] = maxf(get_av(unit) - wait, 0.0)
+				elapsed_av += wait
+			current_actor_id = forced.unit_id
+			return forced
+
 	# 1) 추가 턴 우선.
 	while not _extra_queue.is_empty():
 		var id: StringName = _extra_queue.pop_front()
@@ -168,6 +195,7 @@ func advance_to_next() -> TurnUnit:
 		if av < lowest or (is_equal_approx(av, lowest) and _breaks_tie(unit, next_unit)):
 			lowest = av
 			next_unit = unit
+
 
 	if next_unit == null:
 		return null

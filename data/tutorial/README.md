@@ -49,4 +49,41 @@
 
 | 파일 | 스테이지 | 가르치는 것 |
 |---|---|---|
-| `stage_1_1.tres` | `stage_1_1` | 역할군 시너지 1단계 3개, 대시 회피, 표식 → 기절 → 처형 체인 |
+| `stage_1_1.tres` | `stage_1_1` | (실시간) 역할군 시너지 1단계 3개, 대시 회피, 표식 → 기절 → 처형 체인 |
+| `prologue_turn_1_1.tres` | `stage_1_1` | (턴제, 프롤로그 #594) 행동 순서 → 평타 → 약점·자물쇠 → 스킬·공명 → 예고·격파 → 첫 궁극기 → 자유 전투 |
+
+## 턴제 시퀀스 (#594)
+
+`combat = TURN` 인 시퀀스는 턴제 전투(`TurnBattle`)가 쏘는 `EventBus.turn_stage_started` 로 켜진다.
+실시간 시퀀스와 같은 `stage_id` 를 써도 되고, 완료 기록은 `turn/<stage_id>` 로 따로 남는다.
+
+### 한 단계가 지나가는 방식
+
+실시간과 같이 **읽는 중 → 하는 중** 두 국면이지만 트리를 멈추지 않는다.
+
+1. 단계가 바뀌면 바로 띄우지 않고 `actor_id` 아군의 차례를 당긴다(`turn_actor_requested` →
+   `TimelineSystem.forced_next_id`). 확인 단계는 다음 행동 단계의 아군을 미리 당긴다.
+2. 연출이 끝나고 그 아군이 입력을 기다리면 띄운다(읽는 중 — 전투 화면이 진행 루프를 세운다).
+3. 확인하면 하는 중이 된다. 화면은 `allows_turn_input()` 관문으로 **시킨 조작만** 받는다
+   (행동자·`skill_id`·`target_id`). 배속·자동·일시정지는 `unlock_controls` 단계부터 열린다.
+
+| 값 | 조건 | 듣는 신호 | 필수 필드 |
+|---|---|---|---|
+| `TURN_BASIC` / `TURN_SKILL` / `TURN_ULTIMATE` | 그 아군이 그 행동을 했다 | `EventBus.turn_action_used` | `actor_id` |
+| `TURN_LOCK_CLEARED` | 그 적의 자물쇠가 열렸다 | `EventBus.turn_lock_cleared` | `target_id` |
+| `TURN_BREAK` | 그 적이 격파됐다 | `EventBus.turn_weakness_broken` | `target_id` |
+| `TURN_VICTORY` | 전투에서 이겼다 | `EventBus.turn_battle_ended` | — |
+
+`highlight` 키: `timeline` · `resonance` · `intent` · `toggles` · `action:<skill_id>` ·
+`ultimate:<unit_id>` · `target:<unit_id>`. `a|b` 로 두 영역을 합친다. 자리는 HUD 가 이번 프레임에
+실제로 그린 히트존에서 온다(`TurnBattleHUD.tutorial_rect()`).
+
+`showcase` 단계의 궁극기는 컷인 설정과 무관하게 풀 컷인이고 앞에 강조 연출이 붙는다.
+`TURN_ULTIMATE` 단계가 뜨면 전투 화면이 그 아군의 게이지를 채운다.
+
+### 저작된 판
+
+안내는 "하랑의 충격이 자물쇠를 연다"처럼 결과를 약속한다. 그래서 판을 고정한다:
+`battle_seed`(시드), `ally_hp_floor`(1 이면 지지 않는다), `scripted_locks`(첫 예고의 자물쇠,
+`"e<원소>"`/`"p<물리>"`). 적 정의나 키트가 바뀌면 `tests/tutorial/VerifyPrologueTutorial.tscn` 이
+저작된 시퀀스를 실제 전투로 끝까지 재생해 어긋남을 잡는다.

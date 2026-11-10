@@ -1,0 +1,107 @@
+[gd_resource type="Resource" script_class="TutorialSequenceData" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://entities/tutorial/TutorialSequenceData.gd" id="1_sequence"]
+[ext_resource type="Script" path="res://entities/tutorial/TutorialStepData.gd" id="2_step"]
+
+[sub_resource type="Resource" id="Step_timeline"]
+script = ExtResource("2_step")
+step_id = &"timeline"
+title = "① 행동 순서"
+body = "왼쪽 위 줄이 행동 순서야. 맨 앞 카드가 지금 움직일 차례고, 빠른 녀석일수록 자주 돌아와.
+이번엔 하랑이 먼저야."
+advance = 0
+required_count = 1
+speaker_id = &"goddess"
+highlight = &"timeline"
+
+[sub_resource type="Resource" id="Step_basic_attack"]
+script = ExtResource("2_step")
+step_id = &"basic_attack"
+title = "② 평타 — 하랑"
+body = "저부터 할게요..! 벨로시랩터한테 「베어내기」를 써 주세요.
+평타는 공명 포인트를 1 채워 줘요."
+advance = 5
+required_count = 1
+speaker_id = &"harang"
+highlight = &"action:harang_turn_basic"
+actor_id = &"harang"
+skill_id = &"harang_turn_basic"
+target_id = &"velociraptor_beastfolk#2"
+
+[sub_resource type="Resource" id="Step_weakness_lock"]
+script = ExtResource("2_step")
+step_id = &"weakness_lock"
+title = "③ 약점과 자물쇠"
+body = "방금 그 칸 봤어? 적 머리 위 칸이 자물쇠야. 하랑의 충격이 약점이라 하나가 열렸지.
+약점 공격만 자물쇠를 열고 인성치를 깎아. 내 침식은 쟤 약점이 아니라 체력만 깎이고. 상대를 보고 사람을 골라."
+advance = 0
+required_count = 1
+speaker_id = &"taehee"
+highlight = &"target:velociraptor_beastfolk#2"
+
+[sub_resource type="Resource" id="Step_skill_resonance"]
+script = ExtResource("2_step")
+step_id = &"skill_resonance"
+title = "④ 스킬과 공명 포인트 — 아린"
+body = "으음.. 내 차례..? 두 번째 랩터한테 「사냥의 표식」..
+스킬은 공명 포인트를 1 써. 넷이 같이 쓰는 지갑이니까 평타로 채우고 스킬로 쓰는 거야.. zzz"
+advance = 6
+required_count = 1
+speaker_id = &"arin"
+highlight = &"action:arin_turn_skill"
+actor_id = &"arin"
+skill_id = &"arin_turn_skill"
+target_id = &"velociraptor_beastfolk_2#3"
+
+[sub_resource type="Resource" id="Step_intent_break"]
+script = ExtResource("2_step")
+step_id = &"intent_break"
+title = "⑤ 적의 예고와 격파 — 강지"
+body = "매머드가 큰 걸 준비하고 있어. 머리 위가 그 예고고, 칸이 열어야 할 자물쇠야.
+자물쇠를 전부 열면 그 행동은 무산되고 격파돼. 매머드 약점은 내 강타야. 「타격 진단」으로 쳐 줘."
+advance = 9
+required_count = 1
+speaker_id = &"gangji"
+highlight = &"target:mammoth_beastfolk#1|intent"
+actor_id = &"gangji"
+skill_id = &"gangji_turn_basic"
+target_id = &"mammoth_beastfolk#1"
+
+[sub_resource type="Resource" id="Step_first_ultimate"]
+script = ExtResource("2_step")
+step_id = &"first_ultimate"
+title = "⑥ 궁극기 — 하랑"
+body = "하랑의 게이지가 가득 찼어. 아래 카드에서 빛나는 게 궁극기야.
+궁극기는 차례를 기다리지 않아. 게이지만 차 있으면 언제든 쓸 수 있어. 자, 눌러!"
+advance = 7
+required_count = 1
+speaker_id = &"goddess"
+highlight = &"ultimate:harang|action:harang_turn_ult"
+actor_id = &"harang"
+skill_id = &"harang_turn_ult"
+showcase = true
+
+[sub_resource type="Resource" id="Step_free_battle"]
+script = ExtResource("2_step")
+step_id = &"free_battle"
+title = "⑦ 남은 적을 정리해"
+body = "좋아, 이제 네 마음대로 해 봐. 오른쪽 위 버튼으로 배속을 올리거나 자동 전투를 켤 수 있어.
+남은 녀석들을 정리하면 끝이야."
+advance = 10
+required_count = 1
+speaker_id = &"goddess"
+highlight = &"toggles"
+unlock_controls = true
+
+[resource]
+script = ExtResource("1_sequence")
+stage_id = &"stage_1_1"
+steps = Array[ExtResource("2_step")]([SubResource("Step_timeline"), SubResource("Step_basic_attack"), SubResource("Step_weakness_lock"), SubResource("Step_skill_resonance"), SubResource("Step_intent_break"), SubResource("Step_first_ultimate"), SubResource("Step_free_battle")])
+combat = 1
+battle_seed = 594
+ally_hp_floor = 1
+scripted_locks = {
+"mammoth_beastfolk#1": ["p2"],
+"velociraptor_beastfolk#2": ["e0", "e2"],
+"velociraptor_beastfolk_2#3": ["e3", "p1", "p1"]
+}

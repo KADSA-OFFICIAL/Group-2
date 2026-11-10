@@ -333,7 +333,9 @@ func _step_apply(ctx: DamageContext) -> void:
 			% [ctx.target.current_hp, ctx.target.get_max_hp()])
 		return
 
-	ctx.target.current_hp = maxi(ctx.target.current_hp - ctx.hp_damage, 0)
+	# `hp_floor` 는 지면 안 되는 저작된 전투용이다(#594). 평소에는 0 이다.
+	ctx.target.current_hp = maxi(ctx.target.current_hp - ctx.hp_damage,
+		maxi(ctx.target.hp_floor, 0))
 	if ctx.target.current_hp <= 0:
 		ctx.target.alive = false
 		ctx.killed = true

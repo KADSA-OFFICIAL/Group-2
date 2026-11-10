@@ -194,21 +194,62 @@ class SkewPlate:
 		]), fill)
 
 
+# ===== 흐름 모드 (#594 프롤로그) =====
+#
+# 평소 이 화면은 "챕터를 끝까지 보고 목록으로 돌아간다"만 한다. 프롤로그는 대본 한가운데의
+# 전투 줄에서 **진짜 전투로 넘어갔다가**, 이긴 뒤 그다음 줄부터 이어 본다. 그 흐름을
+# 이 화면이 아니라 부르는 쪽(PrologueFlow)이 쥐고, 여기서는 두 가지만 바꾼다:
+#   stop_at_battle — 전투 줄을 넘기면 `battle_reached` 를 알리고 닫는다.
+#   close_at_end   — 끝 카드("다시 보기 / 목록으로") 없이 바로 닫는다. 목록에서 연 게 아니다.
+# 흐름 모드에서는 닫기 버튼을 숨긴다 — 대본 중간에 닫으면 돌아갈 곳이 없다. 건너뛰기는 남는다.
+
+## 전투 줄을 넘겼다. `resume_index` 는 전투가 끝난 뒤 이어 볼 줄이다.
+signal battle_reached(stage_id: StringName, resume_index: int)
+## 화면이 닫히기 시작했다(어두워지기 전). 흐름 모드에서 다음 단계를 여는 신호다.
+signal closing
+
+var stop_at_battle: bool = false
+var close_at_end: bool = false
+var _close_button: Button = null
+var _reached_battle: bool = false
+
+
 func _ready() -> void:
 	_build()
 	set_process(true)
 
 
+## 흐름 모드를 켠다. `open_chapter()` 전에 부른다.
+func configure_flow(stop_at_battle_line: bool, close_when_done: bool) -> void:
+	stop_at_battle = stop_at_battle_line
+	close_at_end = close_when_done
+	if _close_button != null:
+		_close_button.visible = not (stop_at_battle or close_at_end)
+
+
 # 바깥(챕터 선택 화면)에서 불러 어떤 챕터를 재생할지 정한다.
 # push() 직후에 부르므로 _ready() 는 이미 끝나 있다.
-func open_chapter(chapter_id: StringName) -> void:
+func open_chapter(chapter_id: StringName, start_index: int = 0) -> void:
 	_chapter = StoryDatabase.get_chapter(chapter_id)
 	# 연 시점에 읽음으로 기록한다. 끝까지 봐야 기록하면 중간에 닫은 사람이 계속 NEW 를 본다.
 	if _chapter != null:
 		StoryProgress.mark_read(chapter_id)
 	_apply_chapter_background()
-	_index = 0
+	_index = maxi(start_index, 0)
+	# 이어 보기(전투 뒤)는 그 자리까지 지나간 배경 지시를 따라간다 — 처음 배경으로 돌아가면 장면이 튄다.
+	if _chapter != null and _index > 0:
+		for i in range(mini(_index, _chapter.lines.size())):
+			var passed: StoryLineData = _chapter.lines[i]
+			if passed != null and passed.background != null:
+				_set_background(passed.background, false)
 	_show_line()
+	if _index > 0:
+		# 이어 보기에는 챕터 제목을 다시 띄우지 않는다. 막만 걷는다.
+		_curtain.color.a = 1.0
+		_title_card.modulate.a = 0.0
+		_intro_active = false
+		create_tween().tween_property(_curtain, "color:a", 0.0, CURTAIN_OPEN)
+		return
 	_play_intro()
 
 
@@ -249,6 +290,7 @@ func _close() -> void:
 	if _closing:
 		return
 	_closing = true
+	closing.emit()
 	if _intro_tween != null and _intro_tween.is_valid():
 		_intro_tween.kill()
 	_title_card.modulate.a = 0.0
@@ -439,13 +481,14 @@ func _build_top_bar() -> void:
 
 	var skip := HUDKit.make_ghost("건너뛰기", 110)
 	skip.custom_minimum_size = Vector2(110, 44)
-	skip.pressed.connect(_finish)
+	skip.pressed.connect(_skip)
 	row.add_child(skip)
 
 	var close := HUDKit.make_ghost("닫기", 96, "icon_close")
 	close.custom_minimum_size = Vector2(96, 44)
 	close.pressed.connect(_close)
 	row.add_child(close)
+	_close_button = close
 
 
 # ── 전투 줄에 뜨는 카드 ──
@@ -1098,6 +1141,12 @@ func _advance() -> void:
 		_text_label.visible_characters = total
 		return
 
+	# 흐름 모드: 전투 줄을 넘기면 진짜 전투로 넘어간다.
+	var line := _current_line()
+	if stop_at_battle and line != null and line.kind == StoryLineData.Kind.BATTLE:
+		_reach_battle()
+		return
+
 	_index += 1
 	if _index >= _chapter.lines.size():
 		_finish()
@@ -1130,7 +1179,35 @@ func _restart() -> void:
 	_play_intro()
 
 
+# 건너뛰기. 흐름 모드에서는 **다음 전투 줄까지만** 건너뛴다 — 전투(튜토리얼)는 건너뛰지 않는다.
+func _skip() -> void:
+	if _chapter == null or _closing:
+		return
+	if stop_at_battle:
+		for i in range(_index, _chapter.lines.size()):
+			var line: StoryLineData = _chapter.lines[i]
+			if line != null and line.kind == StoryLineData.Kind.BATTLE:
+				_index = i
+				_reach_battle()
+				return
+	_finish()
+
+
+# 지금 줄(전투 줄)에서 전투로 넘긴다. 이어 볼 자리는 그다음 줄이다.
+func _reach_battle() -> void:
+	if _reached_battle:
+		return
+	_reached_battle = true
+	var line := _current_line()
+	var stage_id: StringName = line.stage_id if line != null else &""
+	battle_reached.emit(stage_id, _index + 1)
+	_close()
+
+
 func _finish() -> void:
+	if close_at_end:
+		_close()
+		return
 	_auto = false
 	_battle_card.visible = false
 	_end_card.visible = true

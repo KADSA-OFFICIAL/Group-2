@@ -5,11 +5,13 @@ var _failures: Array[String] = []
 
 func _ready() -> void:
 	await get_tree().process_frame
+	# 프롤로그(#594)는 챕터 1 앞에 온다(number 0).
 	var expected_ids := [
+		&"prologue",
 		&"chapter_1", &"chapter_2", &"chapter_3", &"chapter_4",
 		&"chapter_5", &"chapter_6", &"chapter_7",
 	]
-	_expect(StoryDatabase.get_all_ids() == expected_ids, "story catalog must contain Chapters 1-7 in order")
+	_expect(StoryDatabase.get_all_ids() == expected_ids, "story catalog must contain the prologue and Chapters 1-7 in order")
 
 	var expected_line_counts := {
 		&"chapter_5": 42,
