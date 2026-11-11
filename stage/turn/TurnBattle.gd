@@ -36,6 +36,10 @@ extends Node2D
 @export var battle_seed: int = 0
 ## 선공(1) / 일반(0) / 피습(-1).
 @export var ambush: int = 0
+## 출격할 때 전환 연출(#584)을 튼다. `use_stage` 가 켜져 있고 화면이 있을 때만 의미가 있다.
+@export var sortie_transition: bool = true
+
+const SortieTransition := preload("res://stage/turn/SortieTransition.gd")
 
 # 전투 UI 가 올라가는 CanvasLayer 번호.
 #
@@ -275,6 +279,9 @@ var _camera_home := Vector2.ZERO
 
 var _camera: Camera2D = null
 
+## 출격 전환 연출(#584). 출격 경로가 없거나(`use_stage = false`) 헤드리스면 null.
+var _sortie: SortieTransition = null
+
 
 func _ready() -> void:
 	# Deferred so the lobby launcher can stop its track before battle resumes.
@@ -289,6 +296,9 @@ func _ready() -> void:
 	# 출격 화면은 어느 전장이 떠 있는지 몰라도 된다.
 	if use_stage:
 		StageSystem.stage_requested.connect(_on_stage_requested)
+		if sortie_transition and SortieTransition.is_supported():
+			_sortie = SortieTransition.new()
+			add_child(_sortie)
 
 	_start_battle()
 
@@ -364,7 +374,15 @@ func _play_se(sound: String, pitch: float = 1.0) -> AudioStreamPlayer:
 
 
 func _on_stage_requested(_stage_id: StringName) -> void:
+	# 출격 전환(#584): **전투를 다시 만들기 전에** 덮기를 시작한다. 그래야 새 전투의 진행 루프가
+	# 시작하자마자 붙잡혀 첫 턴을 전환 뒤로 미룬다. 카드 내용(웨이브 수)은 전투를 만든 뒤에 안다.
+	if _sortie != null:
+		_sortie.begin()
 	_restart()
+	if _sortie != null:
+		var number := _stage.get_stage_number_text() if _stage != null else ""
+		var title := _stage.display_name if _stage != null else ""
+		_sortie.set_card(number, title, battle.wave_total)
 
 
 # 전투를 처음부터 다시 만든다. 도형과 연출 잔여물을 치우고 새로 시작한다.
@@ -928,6 +946,11 @@ func _play() -> void:
 		return
 	_playing = true
 	var gen := _play_gen
+
+	# 출격 전환(#584)이 화면을 덮고 있는 동안 첫 턴을 재생하지 않는다(적 선공 포함).
+	await _await_sortie()
+	if gen != _play_gen:
+		return
 
 	while true:
 		await _await_unpause()
@@ -1676,6 +1699,12 @@ func _base_presentation_speed() -> float:
 # 위치에 남고, 재개 시 그 트윈이 이미 끝나 있어 연출이 한 칸 건너뛴다.
 func _await_unpause() -> void:
 	while _paused:
+		await get_tree().process_frame
+
+
+# 출격 전환이 판을 걷기 시작할 때까지 붙잡는다 (#584).
+func _await_sortie() -> void:
+	while _sortie != null and _sortie.is_holding():
 		await get_tree().process_frame
 
 
